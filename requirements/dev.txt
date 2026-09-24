@@ -1,0 +1,24 @@
+# ---------------------------------------------------------------------------
+# Nova Studio — development & CI toolchain
+#
+# Install on top of base.txt:  pip install -r requirements/dev.txt
+# Versions are pinned to the set validated for this repository so that a
+# contributor and CI see identical diagnostics.
+# ---------------------------------------------------------------------------
+
+-r base.txt
+
+# --- Static analysis -------------------------------------------------------
+ruff==0.14.14
+mypy==1.20.2
+
+# --- Testing ---------------------------------------------------------------
+pytest==8.4.2
+pytest-asyncio==1.2.0
+pytest-cov==7.0.0
+httpx>=0.27,<1.0
+
+# --- Packaging smoke test --------------------------------------------------
+# pyinstaller is only needed by the release job; kept out of the default dev
+# install so contributors on machines without a C toolchain are unaffected.
+# pyinstaller>=6.9,<7.0   # enable in requirements/release.txt
