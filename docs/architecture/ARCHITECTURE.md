@@ -397,6 +397,86 @@ normalise target LUFS). Preview streams a rolling window; export writes a WAV st
 muxed by the export pipeline. Beat/silence detection run as IDLE jobs and cache results in
 `audio_analysis`.
 
+### 7.5 The media record and the media port
+
+Two L2 modules carry everything that is true about footage before a single packet is
+decoded. They are the seam the whole frame pipeline in §7.2 reads through.
+
+**`domain/media.py` — what footage *is*, with no I/O at all:**
+
+| Object | Role |
+| --- | --- |
+| `ColourSpace` / `ColourRange` / `ColourPrimaries` / `ColourTransfer` | Container colour signalling, values read back from the bundled FFmpeg 7.0.2 (§7.6) |
+| `ColourMeta`, `FrameBuffer` | The four tags every frame carries, and the pixels they describe (ADR-0007 §6) |
+| `ContentHash` | Identity of a file's bytes, algorithm travelling with the digest |
+| `VideoStreamInfo` / `AudioStreamInfo` | Per-stream geometry, rate, codec, colour, SAR/rotation |
+| `MediaInfo` | The probe summary — the only part of a probe that is persisted |
+| `AudioBuffer` | Decoded audio: float32, `(n_samples, n_channels)`, nominal ±1.0 |
+| `MediaAsset` | The project's reference: `asset_id`, path, kind, hash, link state, probe |
+| `NDArray` | The one third-party type allowed in port signatures, re-exported so frames have a single home (ADR-0002 rule 2) |
+
+State changes on `MediaAsset` are methods, not attribute assignment, because two fields are
+coupled: a content hash and a probe summary describe the same bytes, so a relink that cannot
+prove the content is unchanged discards both. This is what makes "the path moved but the
+probe says 1920×1080" a provable statement rather than a hope (ADR-0015 rule 3).
+
+**`ports/media.py` — how footage is read, without naming a library:**
+
+| Protocol | Lifetime | Answers |
+| --- | --- | --- |
+| `MediaProber` | stateless, shared | "what does this file say about itself" |
+| `MediaDecoder` | one per process | "open me a handle" |
+| `DecodedMedia` | one per asset, pooled | "give me stream N" |
+| `VideoFrameSource` / `AudioSampleSource` | one per open stream | frames, or blocks of samples |
+| `AudioResampler` | one per mixer | rate and channel conversion |
+
+Contract rules an adapter must honour:
+
+1. **Entry points return `Result`.** `probe()` and `open()` answer I/O failure with `Err`
+   carrying a `MediaErrorCode` (`NS-MEDIA-4001` unreadable, `-4003` unsupported; `-4002`
+   belongs to the render port's missing-encoder case, per ADR-0007 §7).
+2. **A failure *during* reading is latched, not raised.** An `Iterator[FrameBuffer]` has no
+   `Result` channel, and allocating one `Result` per frame buys nothing on a 60 fps path; the
+   source latches the error and the consumer reads `last_error()` once after the loop.
+   `frame_at()` returning `None` means "no frame"; `last_error()` says whether that was the
+   end of the stream or damage.
+3. **Positions are integers** — frames for video, samples for audio (ADR-0006). No method
+   takes seconds.
+4. **Sequencing is the fast path.** `frame_at()` may cost a whole GOP; `keyframe_indices()`
+   tells a scrubber where the cheap landing spots are and may be empty when the container
+   exposes no index — never fabricated.
+5. **Handles are closed**, idempotently: a pooled handle may be closed by the pool and by a
+   `finally` in the same stack.
+6. **No third-party types.** Frames are `FrameBuffer`, audio is `AudioBuffer`, both from
+   `domain`.
+
+*Still to build:* `infra/media/pyav/` and `infra/media/cli/` (the two adapters), the
+`FrameSourcePool` that owns handle lifetimes, and
+`tests/media/test_backend_conformance.py`, which runs both backends over the same generated
+assets and asserts identical output metadata (ADR-0007).
+
+### 7.6 Colour truth
+
+Every frame carries `(space, range, primaries, transfer)` — ADR-0007 §6 — and the enum
+values are **measured, not recalled**. On 2026-09-24 they were read back from the bundled
+FFmpeg 7.0.2 two ways: libavutil's `av_color_*_name` tables via `ctypes` on the PyAV wheel's
+`libavutil`, and an encode/decode round-trip through libx264. Key values:
+
+* space: `1 bt709`, `5 bt470bg`, `6 smpte170m`, `9 bt2020nc`, `10 bt2020c`, `14 ictcp`
+* primaries: `9 bt2020`, `22 ebu3213`
+* transfer: `16 smpte2084` (PQ/HDR10), `18 arib-std-b67` (HLG)
+* range: `0 unspecified`, `1 limited` (ffprobe prints `tv`), `2 full` (ffprobe prints `pc`)
+
+**Known divergence, pinned by a test:** PyAV 18.1's `Colorspace.SMPTE170M` is `5`, which is
+`bt470bg` in FFmpeg — `smpte170m` is `6`. An encode/decode round-trip proves FFmpeg's
+numbering, and the domain follows FFmpeg. `tests/media/test_av_colour_contract.py` pins
+PyAV's values *as shipped*, so a library fix flips the test instead of silently changing the
+look of every SD clip.
+
+Rules that follow: never trust a binding's alias over the measured toolchain; conversions
+happen explicitly at the compositor boundary, never implicitly in `swscale`; and an
+unspecified tag means "choose a defined default", not "a distinct colourspace".
+
 ---
 
 ## 8. Caption engine architecture

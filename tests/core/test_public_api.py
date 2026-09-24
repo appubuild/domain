@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import importlib
 import pathlib
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 import pytest
@@ -43,7 +44,7 @@ CORE_MODULES: tuple[str, ...] = (
 )
 
 #: The submodules that make up the L2 port layer, so far.
-PORT_MODULES: tuple[str, ...] = ("clock", "ident")
+PORT_MODULES: tuple[str, ...] = ("clock", "ident", "media")
 
 
 def _module(name: str) -> Any:
@@ -251,9 +252,15 @@ class TestPortLayer:
         for exported in module.__all__:
             obj = getattr(module, exported)
             assert isinstance(obj, type), f"{exported} is not a class"
-            assert issubclass(obj, Protocol) or hasattr(obj, "__abstractmethods__"), (
-                f"ports.{name}.{exported} must be a Protocol or an ABC"
+            # A closed set of constants is a declaration too: `MediaErrorCode`
+            # is the vocabulary an adapter must speak, and putting it beside the
+            # protocol that consumes it is what stops `infra` inventing codes.
+            is_declaration = (
+                issubclass(obj, Protocol)
+                or hasattr(obj, "__abstractmethods__")
+                or (isinstance(obj, type) and issubclass(obj, Enum))
             )
+            assert is_declaration, f"ports.{name}.{exported} must be a Protocol or an ABC"
 
     @pytest.mark.parametrize("name", PORT_MODULES)
     def test_port_module_imports_nothing_from_an_outer_ring(self, name: str) -> None:
