@@ -40,8 +40,11 @@ crash recovery that never leaves a half-written project.
    `busy_timeout=5000`, `cache_size=-65536` (64 MiB), `temp_store=MEMORY`,
    `mmap_size=268435456`. One writer connection serialised by an in-process lock; readers
    are concurrent.
-5. **No ORM.** Hand-written SQL in repository adapters behind `ports/repositories.py`, with
-   typed row mappers. Migrations are ordered, versioned, forward-only SQL files
+5. **No ORM.** Hand-written SQL in repository adapters behind `ports/persistence.py`, with
+   typed row mappers. (The port module is named `persistence` rather than `repositories`
+   because it declares more than repositories: the project archive, the crash-recovery
+   journal and the cache index live there too, and one name per concept beats two modules
+   that both claim the seam.) Migrations are ordered, versioned, forward-only SQL files
    (`infra/persistence/migrations/NNNN_*.sql`) applied inside a transaction and recorded in
    `schema_migrations`.
 6. **Two databases per install:** a global `nova.db` (settings, recent files, fonts,

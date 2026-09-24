@@ -287,6 +287,49 @@ SQLite runs in **WAL mode**, `synchronous=NORMAL`, with a single writer connecti
 SQL behind repository ports. An ORM's identity map is a liability when frames and documents
 are large; explicit SQL is auditable and fast.
 
+### 6.1 The persistence port and what it stores
+
+`ports/persistence.py` declares four protocols; `domain/persistence.py` holds the
+vocabulary they move. Neither names SQLite, ZIP or a filesystem.
+
+| Protocol | Lifetime | Answers |
+| --- | --- | --- |
+| `UnitOfWork` | one save / one command batch | "commit these together or not at all" |
+| `ProjectArchive` | one per open project | "read/write/checkpoint this `.nova` container" |
+| `Journal` | one per open project | "what has happened since the last checkpoint" |
+| `CacheIndex` | one per install | "what derived bytes do we hold, and how old are they" |
+
+| Vocabulary (domain) | Role |
+| --- | --- |
+| `ProjectManifest` | Format level, project id, app version, created/modified |
+| `RevisionRef` | One numbered checkpoint; `document_name` is where it lives in the archive |
+| `JournalEntry`, `JournalWindow` | One logged command, and a resumable read of them |
+| `CacheEntry`, `CacheKind`, `CacheBudget` | Derived artefacts, what kind they are, how much is allowed |
+| `CheckpointPolicy`, `select_for_eviction`, `revisions_to_prune` | Pure policy: when to checkpoint, what to evict, what history to keep |
+| `is_valid_document_name`, `revision_document`, `caption_document` | Entry naming — including the zip-slip guard |
+
+Rules the port makes mechanical rather than conventional:
+
+1. **Writes are staged; `commit()` is the atomic step.** A crash may leave a
+   `.nova.tmp-<rand>` file, never a truncated project (ADR-0015 rule 4).
+2. **Commit the document before the rows.** The document is authoritative, the tables are
+   a derived index (ADR-0004 §3), so the only divergence a crash can produce is *rows
+   behind*, which the integrity checker repairs by rebuilding. The reverse order can lose
+   an edit the user was told had been saved.
+3. **A newer format version is refused whole** — `NS-STORAGE-4003`, never a partial parse
+   (ADR-0015 rule 5).
+4. **A torn journal tail is data, not an error.** Dying mid-write is the normal state of a
+   journal, so `read_since` returns what parsed and sets `JournalWindow.torn_tail`.
+5. **Entry names are validated** by the domain predicate before anything is written.
+
+*Open decision — needs a call before `infra/persistence` is written:* ADR-0004 §6 calls the
+per-project store a SQLite container while ADR-0015 defines `.nova` as a ZIP of
+canonical-JSON documents. SQLite's WAL and shared-memory files cannot live inside a ZIP
+member, which argues for **a sidecar SQLite database in the project's data directory with
+the archive kept as the portable artefact** (and the tables rebuilt from the document when
+the sidecar is missing — which is the recovery path anyway). The port accepts either
+answer as one adapter, not one rewrite, but the choice should be made explicitly.
+
 ---
 
 ## 7. Media & rendering architecture
