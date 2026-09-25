@@ -28,6 +28,7 @@ Modules (populated in Stage 3, in dependency order)::
 
     media.py       asset identity, streams, codecs, frame geometry
     persistence.py what we store: manifests, revisions, journal, cache entries
+    asr.py         transcripts, words, speech regions, model references
     timeline.py    tracks, clips, transitions, the edit decision list
     captions.py    caption cues, words, speakers, templates
     effects.py     effect graphs and parameter values

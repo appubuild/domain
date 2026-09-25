@@ -577,6 +577,54 @@ because a compute device has a different lifetime from an encoder.
 
 ## 8. Caption engine architecture
 
+### 8.1 The ASR half of the pipeline (`ports/asr.py`, `domain/asr.py`)
+
+Six protocols cover the stages of ADR-0009 §3 that touch a model — `Extract → VAD →
+Transcribe → Refine → Diarise → Translate` — with the rest of the pipeline
+(`Break → Emoji → Highlight → Position → Resolve → Bake`) pure and built later on
+`domain/captions.py`.
+
+| Protocol | Stage | Answers |
+| --- | --- | --- |
+| `VoiceActivityDetector` | VAD | "where is the speech" |
+| `TranscriptionProvider` | Transcribe | "audio in, normalised `Transcript` out" |
+| `WordAligner` | Refine | "put times on the words that are already there" |
+| `SpeakerDiariser` | Diarise | "who said it" |
+| `Translator` | Translate | "the same transcript in another language" |
+| `ModelResolver` | — | "which models exist, and are the weights here" |
+
+`domain/asr.py` is the vocabulary: `Transcript` → `TranscriptSegment` → `TranscriptWord`,
+plus `SpeechRegion`, `TranscriptionOptions`, `AsrModelRef`, `AsrCapability` and the pure
+helpers `merge_regions`, `validate_transcript`, `frames_for_ms`. ADR-0009 §1 calls the
+provider's output a `TranscriptGraph`; the code spells it `Transcript` — it is a document,
+not a graph.
+
+Rules the port makes mechanical:
+
+1. **Time in a transcript is integer milliseconds.** A transcript does not know the
+   project's edit rate, so frames would be meaningless and float seconds would drift.
+   Conversion to frames happens once, at the caption boundary, with a stated rounding
+   mode (`frames_for_ms`, ADR-0006).
+2. **Audio arrives at 16 kHz mono float32** (ADR-0009 §4). Anything else is
+   `NS-CAPTION-4001`, never a silent resample.
+3. **The alignment pass runs with VAD off** — `TranscriptionOptions.alignment()` is the
+   only sanctioned way to build it, because VAD frame removal desynchronises the
+   token↔time mapping. Silence trimming happens earlier and its offsets are applied to
+   the timings.
+4. **A broken result is reported, not returned** — empty word lists and timings past the
+   end of the audio become `NS-CAPTION-4004` with the sentence
+   `validate_transcript` wrote.
+5. **A missing model is a state with a remedy**, not a crash: `NS-CAPTION-4002` carries
+   "connect to download" and the UI offers the download.
+6. **No module outside an adapter names a model framework.** `tests/ports/test_asr_ports.py`
+   parses the port's imports to enforce it, and `make check` runs that test.
+
+The decisive consequence (ADR-0009): because every stage after `Transcribe` is pure, the
+caption engine is verifiable in CI **with no model weights and no network** — which is why
+`ManualProvider`, the typed transcript, is both a real implementation and the deterministic
+test double.
+
+
 The heart of the product. Full detail: `docs/architecture/module-catalog.md#caption-engine`
 and `services/captions/`.
 

@@ -26,8 +26,10 @@ Three hazards must be designed out from day one:
 1. **`TranscriptionProvider` is a port.** Implementations: `FasterWhisperProvider`
    (default), `ExternalTranscriptProvider` (import SRT/VTT/JSON/txt with timings),
    `ManualTranscriptProvider` (typed transcript — also the deterministic test double), and
-   any plugin-contributed provider. The provider returns a normalised `TranscriptGraph`,
-   never a vendor-specific object. No other module may import `faster_whisper`.
+   any plugin-contributed provider. The provider returns a normalised `Transcript`
+   (called `TranscriptGraph` in earlier drafts; it is a document, not a graph, and
+   `domain/asr.py` spells it `Transcript`), never a vendor-specific object. No other
+   module may import `faster_whisper`.
 2. **Three granularities are first-class in the model**: `CaptionSegment` → `CaptionWord` →
    `CaptionChar`. Character timings are derived by proportional splitting of a word's
    interval weighted by character class (vowels/long glyphs get more time) when the provider
