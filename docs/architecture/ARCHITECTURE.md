@@ -520,6 +520,59 @@ Rules that follow: never trust a binding's alias over the measured toolchain; co
 happen explicitly at the compositor boundary, never implicitly in `swscale`; and an
 unspecified tag means "choose a defined default", not "a distinct colourspace".
 
+### 7.7 The render port and the export vocabulary
+
+`ports/render.py` is where composed frames leave the process. Four protocols:
+
+| Protocol | Lifetime | Answers |
+| --- | --- | --- |
+| `FrameSink` / `AudioSink` | one stream of one export | "here is a frame / a block of samples" |
+| `RenderTarget` | one export | "a muxed output: video + optional audio, one finish" |
+| `Renderer` | one per process | "open me a target for this spec and path" |
+| `CapabilityProbe` | one per session, cached | "what can this machine actually encode" |
+
+`domain/export.py` holds what the port moves: `OutputSpec` (container + video +
+optional audio + faststart), `VideoEncodeSpec`, `AudioEncodeSpec`, `RateControl`,
+`RenderStats`, and `ToolchainCapabilities`. Every one has a canonical JSON form,
+because export presets are stored in `templates/` and export history is listed.
+
+The encoder names in that module were **measured**, not recalled, from the bundled
+FFmpeg 7.0.2 static build (imageio-ffmpeg 0.6.0) on 2026-09-25, and
+`tests/media/test_encoder_contract.py` re-checks them against the real binary:
+
+* video: `libx264`, `libx265`, `libvpx-vp9`, `libaom-av1`, `prores_ks`, `mpeg4`, `dnxhd`
+* audio: `aac`, `libmp3lame`, `libopus`, `flac`, `pcm_s16le`, `libvorbis`, `ac3`
+* containers: `mp4`, `mov`, `matroska`, `webm`, `wav`, `mp3`, `mxf`
+* pixel formats: `yuv420p`, `yuv422p`, `yuv444p`, `yuv420p10le`, `yuv422p10le`,
+  `yuv444p10le`, `nv12`, `p010le`, `rgb24`, `rgba`, `gbrp`, `gray`
+
+The same probe reports **one** hardware acceleration method on this machine
+(`vdpau`) and none of the hardware encoders we know the names of — which is the
+whole argument for `CapabilityProbe` and for ADR-0012 §6: capability is detected
+once, cached, and re-probed only on explicit user action.
+
+Contract rules the port makes mechanical:
+
+1. **A render that cannot succeed fails at `open`, before frame one** —
+   `NS-MEDIA-4002` (ADR-0007 §7) with the remedy
+   `ToolchainCapabilities.describe_missing` wrote ("this build has no libx265
+   encoder"), never a failure at minute forty.
+2. **`finish` is the only point at which the file is valid** — index written,
+   duration known, faststart applied. Encoder delay frames are flushed there, so
+   a render that stops after the last `write` does not lose the tail.
+3. **`abort` removes the partial output.** A half-written file that plays for
+   nine seconds is worse than no file, because it looks like success.
+4. **Cancellation is a value** — `Err(NS-RENDER-4005)` — so the UI can say
+   "stopped" rather than "failed".
+5. **Progress is the job's business, not the sink's.** The sink counts;
+   `RenderStats` is its answer at the end.
+
+*Still to build:* `infra/render/pyav_encoder.py` and `infra/render/cli_encoder.py`
+(the two adapters), the `ExportSink` wiring in §7.2, and
+`tests/render/test_gpu_cpu_parity.py` for ADR-0012 §5. The GPU half itself gets its
+own port — `ports/gpu.py`, `GpuBackend` with `supports/allocate/execute/release` —
+because a compute device has a different lifetime from an encoder.
+
 ---
 
 ## 8. Caption engine architecture

@@ -44,7 +44,7 @@ CORE_MODULES: tuple[str, ...] = (
 )
 
 #: The submodules that make up the L2 port layer, so far.
-PORT_MODULES: tuple[str, ...] = ("clock", "ident", "media", "persistence")
+PORT_MODULES: tuple[str, ...] = ("clock", "ident", "media", "persistence", "render")
 
 
 def _module(name: str) -> Any:

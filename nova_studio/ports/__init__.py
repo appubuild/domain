@@ -40,7 +40,8 @@ Modules (populated in Stage 3)::
     ident.py       IdSource, IdGenerator — the injected identity
     media.py       probing, decoding, frame access, audio resampling
     persistence.py project store, crash-recovery log, asset cache
-    render.py      frame sinks, encoders, GPU capability probes
+    render.py      frame/audio sinks, render targets, toolchain capability probe
+    gpu.py         GpuBackend: per-operation acceleration (ADR-0012 §2)
     asr.py         transcription, alignment, translation
     jobs.py        worker execution, cancellation, progress reporting
     filesystem.py  media discovery, thumbnails, file watching
