@@ -71,6 +71,7 @@ const ADMIN_NAV: { title: string; items: { to: string; label: string; icon: stri
       { to: '/admin/email', label: 'Email', icon: '✉' },
       { to: '/admin/settings', label: 'Settings', icon: '⚙' },
       { to: '/admin/audit-logs', label: 'Audit log', icon: '⌚' },
+      { to: '/admin/demo', label: 'Demo flow', icon: '✦' },
     ],
   },
 ];

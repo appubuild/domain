@@ -2,6 +2,8 @@ import * as React from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge, Button, Input } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
+import { DemoRunner } from '@/components/shared/DemoRunner';
+import { ADMIN_DEEP_CUTS, ADMIN_FLOW_STEPS } from '@/lib/demo';
 import { useAuth } from '@/providers/AuthProvider';
 import { cn } from '@/lib/utils';
 
@@ -106,3 +108,19 @@ export const ROLE_FILTERS = [
   { value: 'moderator', label: 'Moderators' },
   { value: 'admin', label: 'Admins' },
 ];
+
+
+export function AdminDemoRunner() {
+  return (
+    <div className="-m-4">
+      <DemoRunner
+        run="admin"
+        title="Admin console in 15 steps"
+        intro="Work the whole back office: metrics, users, moderation, money, plans that drive entitlements, the CMS that powers the public site, feature flags and the audit trail that records everything you touched."
+        steps={ADMIN_FLOW_STEPS}
+        signIn={{ role: 'admin', label: 'Sign in as admin' }}
+        deepCuts={ADMIN_DEEP_CUTS}
+      />
+    </div>
+  );
+}

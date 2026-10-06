@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Editor } from '@tiptap/react';
 import {
@@ -45,6 +45,19 @@ function EditorPage() {
     addSection, patchSection, removeSection, reorderSections, splitSection, generateToc, undo, redo, canUndo, canRedo,
     saveNow, versions, createCheckpoint, restoreVersion,
   } = project;
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedMode = searchParams.get('mode');
+
+  React.useEffect(() => {
+    if (!requestedMode) return;
+    const match = MODES.find((entry) => entry.value === requestedMode);
+    if (match) {
+      setMode(match.value);
+      if (match.value === 'cover' || match.value === 'design') setTab(match.value === 'cover' ? 'templates' : 'elements');
+    }
+    setSearchParams({}, { replace: true });
+  }, [requestedMode, setMode, setSearchParams]);
 
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const [rightOpen, setRightOpen] = React.useState(true);

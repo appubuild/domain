@@ -4,6 +4,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useAdminSettings } from '@/hooks/queries';
 import { useIsMobile } from '@/hooks/useMediaQuery';
 import { PublicLayout } from '@/components/layout/PublicLayout';
+import { DemoBar } from '@/components/shared/DemoRunner';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { ForbiddenPage, MaintenancePage, NotFoundPage, ServerErrorPage } from '@/pages/states/StatePages';
@@ -52,6 +53,7 @@ const CopyrightPage = React.lazy(() => import('@/pages/public/CopyrightPage'));
 const CommunityGuidelinesPage = React.lazy(() => import('@/pages/public/CommunityGuidelinesPage'));
 const CmsPageBySlug = React.lazy(() => import('@/pages/public/PublicCmsPage'));
 const ReaderPage = React.lazy(() => import('@/pages/public/ReaderPage'));
+const DemoPage = React.lazy(() => import('@/pages/DemoPage'));
 
 const DashboardHomePage = React.lazy(() => import('@/pages/dashboard/DashboardHomePage'));
 const OnboardingPage = React.lazy(() => import('@/pages/dashboard/OnboardingPage'));
@@ -104,6 +106,7 @@ const AdminFlagsPage = React.lazy(() => import('@/pages/admin/AdminFlagsPage'));
 const AdminEmailPage = React.lazy(() => import('@/pages/admin/AdminEmailPage'));
 const AdminSettingsPage = React.lazy(() => import('@/pages/admin/AdminSettingsPage'));
 const AdminAuditLogsPage = React.lazy(() => import('@/pages/admin/AdminAuditLogsPage'));
+const AdminDemoPage = React.lazy(() => import('@/pages/admin/AdminDemoPage'));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -150,7 +153,9 @@ export function AppRoutes() {
   const isMobile = useIsMobile();
 
   return (
-    <Routes>
+    <>
+      <DemoBar />
+      <Routes>
       {/* ------------------------------------------------------- public site */}
       <Route element={<PublicLayout />}>
         <Route index element={<Lazy><HomePage /></Lazy>} />
@@ -177,6 +182,7 @@ export function AppRoutes() {
         <Route path="copyright" element={<Lazy><CopyrightPage /></Lazy>} />
         <Route path="community-guidelines" element={<Lazy><CommunityGuidelinesPage /></Lazy>} />
         <Route path="pages/:slug" element={<Lazy><CmsPageBySlug /></Lazy>} />
+        <Route path="demo" element={<Lazy><DemoPage /></Lazy>} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
@@ -285,6 +291,7 @@ export function AppRoutes() {
         <Route path="email" element={<Lazy><AdminEmailPage /></Lazy>} />
         <Route path="settings" element={<Lazy><AdminSettingsPage /></Lazy>} />
         <Route path="audit-logs" element={<Lazy><AdminAuditLogsPage /></Lazy>} />
+        <Route path="demo" element={<Lazy><AdminDemoPage /></Lazy>} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
@@ -293,7 +300,8 @@ export function AppRoutes() {
       <Route path="/500" element={<ServerErrorPage />} />
       <Route path="/maintenance" element={<MaintenancePage />} />
       <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
 

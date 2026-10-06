@@ -69,7 +69,7 @@ import {
 } from './seedOps';
 import { seedBlogPosts, seedCmsPages, seedFaqs, seedFooter, seedHomeSections, seedNavItems, seedPromos, seedTestimonials } from './seedCms';
 
-export const SEED_VERSION = 7;
+export const SEED_VERSION = 8;
 
 export interface Database {
   version: number;
