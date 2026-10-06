@@ -1,4 +1,6 @@
-import type { ID, Template } from '@/types/domain';
+import type {
+  Category,
+  Tag, ID, Template } from '@/types/domain';
 import { delay, uid } from '@/lib/utils';
 import { templateRepo, type TemplateFilters } from '@/repositories';
 import { bookService } from './bookService';
@@ -103,5 +105,42 @@ export const templateService = {
   },
   categoriesAll() {
     return templateRepo.categories();
+  },
+
+  // ------------------------------------------------- admin: categories & tags
+  createCategory(input: { name: string; slug: string; kind: Category['kind']; description: string; color: string; featured?: boolean }): Category {
+    const existing = templateRepo.categories();
+    const category: Category = {
+      id: uid('cat'),
+      name: input.name,
+      slug: input.slug,
+      kind: input.kind,
+      description: input.description,
+      color: input.color,
+      parentId: null,
+      featured: input.featured ?? false,
+      order: existing.length + 1,
+      active: true,
+    };
+    return templateRepo.createCategory(category);
+  },
+  updateCategory(id: ID, patch: Partial<Category>) {
+    return templateRepo.updateCategory(id, patch);
+  },
+  removeCategory(id: ID) {
+    templateRepo.removeCategory(id);
+  },
+  reorderCategories(orderedIds: ID[]) {
+    orderedIds.forEach((id, index) => templateRepo.updateCategory(id, { order: index + 1 }));
+  },
+  tags(type?: Tag['type']) {
+    return templateRepo.tags(type);
+  },
+  createTag(input: { name: string; slug: string; type: Tag['type'] }) {
+    const tag: Tag = { id: uid('tag'), name: input.name, slug: input.slug, type: input.type, usageCount: 0 };
+    return templateRepo.createTag(tag);
+  },
+  removeTag(id: ID) {
+    templateRepo.removeTag(id);
   },
 };
