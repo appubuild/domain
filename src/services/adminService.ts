@@ -481,6 +481,51 @@ export const adminService = {
       },
     };
   },
+  /** Deletes an orphaned storage object and records the cleanup. */
+  async removeStorageObject(objectId: ID, actor: { id: ID; name: string }) {
+    await delay(320);
+    const object = adminRepo.storageObjects().find((entry) => entry.id === objectId);
+    adminRepo.removeStorageObject(objectId);
+    if (object) {
+      adminRepo.addAuditLog({
+        id: uid('audit'),
+        adminId: actor.id,
+        adminName: actor.name,
+        action: 'storage.object_deleted',
+        target: object.key,
+        targetType: object.kind,
+        before: `${object.sizeBytes} bytes`,
+        after: 'deleted',
+        ip: '10.0.0.1',
+        createdAt: new Date().toISOString(),
+      });
+    }
+    return object;
+  },
+  /** Recomputes per-user storage from the object store — the cleanup routine. */
+  async reconcileStorage(actor: { id: ID; name: string }) {
+    await delay(700);
+    const db = getDatabase();
+    const rows = userRepo.all();
+    rows.forEach((user) => {
+      const used = db.storageObjects.filter((object) => object.ownerId === user.id).reduce((total, object) => total + object.sizeBytes, 0);
+      userRepo.update(user.id, { storageUsedBytes: used });
+    });
+    adminRepo.addAuditLog({
+      id: uid('audit'),
+      adminId: actor.id,
+      adminName: actor.name,
+      action: 'storage.reconciled',
+      target: `${rows.length} accounts`,
+      targetType: 'storage',
+      before: 'drift detected',
+      after: 'usage recomputed',
+      ip: '10.0.0.1',
+      createdAt: new Date().toISOString(),
+    });
+    return rows.length;
+  },
+
   // --------------------------------------------------------------- settings
   settings(): AdminSettings {
     return adminRepo.settings();

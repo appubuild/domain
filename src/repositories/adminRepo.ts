@@ -152,6 +152,11 @@ export const adminRepo = {
       .storageObjects.slice()
       .sort((a, b) => b.sizeBytes - a.sizeBytes);
   },
+  removeStorageObject(id: ID) {
+    return mutateDatabase((db) => {
+      db.storageObjects = db.storageObjects.filter((object) => object.id !== id);
+    });
+  },
   // ------------------------------------------------------- moderation tools
   moderationQueue(): Review[] {
     return getDatabase()
