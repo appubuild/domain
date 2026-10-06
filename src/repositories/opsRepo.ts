@@ -200,4 +200,15 @@ export const activityRepo = {
       return item;
     });
   },
+  all(): ActivityItem[] {
+    return getDatabase().activity.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  },
+  update(id: ID, patch: Partial<ActivityItem>): ActivityItem | undefined {
+    return mutateDatabase((db) => {
+      const index = db.activity.findIndex((item) => item.id === id);
+      if (index === -1) return undefined;
+      db.activity[index] = { ...db.activity[index], ...patch };
+      return db.activity[index];
+    });
+  },
 };

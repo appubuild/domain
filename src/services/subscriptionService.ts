@@ -1,7 +1,7 @@
 import type { ID, Invoice, Plan, Subscription, User } from '@/types/domain';
 import { delay, uid } from '@/lib/utils';
 import { getDatabase } from '@/store/db';
-import { userRepo } from '@/repositories';
+import { adminRepo, userRepo } from '@/repositories';
 import { entitlementsFor } from './entitlements';
 import { emailService } from './notificationService';
 
@@ -99,6 +99,61 @@ export const subscriptionService = {
     if (subscription) userRepo.upsertSubscription({ ...subscription, status: 'canceled', planId: 'plan_free', canceledAt: new Date().toISOString() });
     userRepo.update(userId, { planId: 'plan_free' });
   },
+  // ------------------------------------------------------------ admin views
+  /** Every subscription joined with its account and plan, for the admin table. */
+  adminSubscriptions() {
+    const db = getDatabase();
+    return userRepo
+      .subscriptions()
+      .map((subscription) => {
+        const user = db.users.find((entry) => entry.id === subscription.userId);
+        const plan = userRepo.plan(subscription.planId);
+        return {
+          ...subscription,
+          userName: user?.name ?? 'Unknown account',
+          email: user?.email ?? '',
+          planName: plan?.name ?? subscription.planId,
+          mrr: plan ? (subscription.interval === 'yearly' ? Number((plan.priceYearly / 12).toFixed(2)) : plan.priceMonthly) : 0,
+        };
+      })
+      .sort((a, b) => b.mrr - a.mrr);
+  },
+  /** Pushes the renewal date out — used by support for goodwill extensions. */
+  extend(subscriptionId: ID, days: number) {
+    const subscription = userRepo.subscriptions().find((entry) => entry.id === subscriptionId);
+    if (!subscription) return undefined;
+    const renewsAt = new Date(new Date(subscription.renewsAt).getTime() + days * 86400000).toISOString();
+    return userRepo.upsertSubscription({ ...subscription, renewsAt, status: 'active', canceledAt: undefined });
+  },
+  /** Refunds the most recent paid invoice for an account, if one exists. */
+  async refundLatest(userId: ID, actor: { id: ID; name: string }) {
+    const invoice = userRepo.invoices(userId).find((entry) => entry.status === 'paid');
+    if (!invoice) return undefined;
+    return subscriptionService.refundInvoice(invoice.id, actor);
+  },
+  /** Marks an invoice refunded, records the audit entry and emails the customer. */
+  async refundInvoice(invoiceId: ID, actor: { id: ID; name: string }) {
+    await delay(500);
+    const invoice = userRepo.invoices().find((entry) => entry.id === invoiceId);
+    if (!invoice) return undefined;
+    const updated = userRepo.updateInvoice(invoiceId, { status: 'refunded' });
+    const user = userRepo.find(invoice.userId);
+    adminRepo.addAuditLog({
+      id: uid('audit'),
+      adminId: actor.id,
+      adminName: actor.name,
+      action: 'subscription.refund',
+      target: invoice.number,
+      targetType: 'invoice',
+      before: `status: ${invoice.status}`,
+      after: 'status: refunded',
+      ip: '10.0.0.1',
+      createdAt: new Date().toISOString(),
+    });
+    if (user) await emailService.send({ to: user.email, toName: user.name, template: 'system', meta: `Refund for ${invoice.number}` });
+    return updated;
+  },
+
   comparison() {
     const plans = subscriptionService.plans();
     const featureKeys: { key: keyof Plan['features']; label: string; format?: (value: unknown) => string }[] = [

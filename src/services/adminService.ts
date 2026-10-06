@@ -13,7 +13,7 @@ import type {
 } from '@/types/domain';
 import { delay, uid } from '@/lib/utils';
 import { getDatabase } from '@/store/db';
-import { adminRepo, bookRepo, marketplaceRepo, submissionRepo, userRepo, cmsRepo } from '@/repositories';
+import { activityRepo, adminRepo, bookRepo, marketplaceRepo, submissionRepo, userRepo, cmsRepo } from '@/repositories';
 import { revenueService, type PeriodKey } from './revenueService';
 import { subscriptionService } from './subscriptionService';
 
@@ -562,6 +562,144 @@ export const adminService = {
   },
   revenueByPeriod(period: PeriodKey = '30d') {
     return revenueService.timeseries('user_demo', period, 'revenue');
+  },
+
+  // ---------------------------------------------------- orders & revenue
+  /** Every order on the platform, joined with buyer, author and book. */
+  orders(filters: { query?: string; status?: string; method?: string; sort?: 'recent' | 'amount' | 'fee' } = {}) {
+    const db = getDatabase();
+    let list = marketplaceRepo.orders().slice();
+    if (filters.query) {
+      const needle = filters.query.toLowerCase();
+      list = list.filter((order) => `${order.number} ${order.bookTitle} ${order.buyerName} ${order.authorName}`.toLowerCase().includes(needle));
+    }
+    if (filters.status && filters.status !== 'all') list = list.filter((order) => order.status === filters.status);
+    if (filters.method && filters.method !== 'all') list = list.filter((order) => order.method === filters.method);
+    if (filters.sort === 'amount') list.sort((a, b) => b.amount - a.amount);
+    else if (filters.sort === 'fee') list.sort((a, b) => b.platformFee - a.platformFee);
+    else list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return list.map((order) => ({
+      ...order,
+      buyerEmail: db.users.find((user) => user.id === order.buyerId)?.email ?? '',
+    }));
+  },
+  /** Refunds an order, records the audit entry and notifies the buyer. */
+  async refundOrder(orderId: ID, reason: string, actor: { id: ID; name: string }) {
+    const before = marketplaceRepo.orders().find((order) => order.id === orderId);
+    const updated = await revenueService.refundOrder(orderId, reason, actor.id);
+    if (before) {
+      adminRepo.addAuditLog({
+        id: uid('audit'),
+        adminId: actor.id,
+        adminName: actor.name,
+        action: 'order.refunded',
+        target: before.number,
+        targetType: 'order',
+        before: `${before.status} · ${before.amount}`,
+        after: `refunded — ${reason}`,
+        ip: '10.0.0.1',
+        createdAt: new Date().toISOString(),
+      });
+    }
+    return updated;
+  },
+  /** Revenue totals per day for the admin charts. */
+  revenueSeries(period: PeriodKey = '30d') {
+    const days = revenueService.periods.find((entry) => entry.key === period)?.days ?? 30;
+    const bucket = days <= 30 ? 1 : days <= 90 ? 3 : 30;
+    const orders = marketplaceRepo.orders().filter((order) => Date.now() - new Date(order.createdAt).getTime() <= days * 86400000);
+    const points: { date: string; label: string; revenue: number; fees: number; refunds: number; orders: number }[] = [];
+    for (let index = Math.ceil(days / bucket) - 1; index >= 0; index -= 1) {
+      const bucketEnd = index * bucket;
+      const bucketStart = bucketEnd + bucket;
+      const date = new Date(Date.now() - bucketEnd * 86400000);
+      const belongs = (iso: string) => {
+        const age = (Date.now() - new Date(iso).getTime()) / 86400000;
+        return age >= bucketEnd && age < bucketStart;
+      };
+      const inBucket = orders.filter((order) => belongs(order.createdAt));
+      points.push({
+        date: date.toISOString(),
+        label: `${date.getMonth() + 1}/${date.getDate()}`,
+        revenue: Number(inBucket.filter((order) => order.status === 'completed').reduce((total, order) => total + order.amount, 0).toFixed(2)),
+        fees: Number(inBucket.filter((order) => order.status === 'completed').reduce((total, order) => total + order.platformFee, 0).toFixed(2)),
+        refunds: Number(inBucket.filter((order) => order.status === 'refunded').reduce((total, order) => total + order.amount, 0).toFixed(2)),
+        orders: inBucket.length,
+      });
+    }
+    return points;
+  },
+  /** Payout requests raised by authors, newest first. */
+  payoutQueue() {
+    const db = getDatabase();
+    return activityRepo
+      .all()
+      .filter((item) => item.meta?.startsWith('payout:'))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((item) => {
+        const user = db.users.find((entry) => entry.id === item.userId);
+        return {
+          id: item.id,
+          userId: item.userId,
+          userName: user?.name ?? 'Unknown author',
+          email: user?.email ?? '',
+          amount: Number((item.meta ?? 'payout:0').split(':')[1] ?? 0),
+          method: user?.payoutMethod?.label ?? 'Bank transfer',
+          requestedAt: item.createdAt,
+          status: item.message.toLowerCase().includes('paid') ? ('paid' as const) : ('pending' as const),
+        };
+      });
+  },
+  /** Marks a payout as paid. */
+  markPayoutPaid(activityId: ID, actor: { id: ID; name: string }, action: 'approve' | 'reject' = 'approve') {
+    const entry = activityRepo.all().find((item) => item.id === activityId);
+    if (!entry) return undefined;
+    const updated = activityRepo.update(activityId, {
+      message: action === 'approve' ? `${entry.message} — paid by ${actor.name}` : `${entry.message} — rejected by ${actor.name}`,
+    });
+    adminRepo.addAuditLog({
+      id: uid('audit'),
+      adminId: actor.id,
+      adminName: actor.name,
+      action: action === 'approve' ? 'payout.approved' : 'payout.rejected',
+      target: entry.userId,
+      targetType: 'payout',
+      before: 'pending',
+      after: action,
+      ip: '10.0.0.1',
+      createdAt: new Date().toISOString(),
+    });
+    return updated;
+  },
+  /** Platform-wide payout + commission summary. */
+  revenueSummary(period: PeriodKey = '30d') {
+    const days = revenueService.periods.find((entry) => entry.key === period)?.days ?? 30;
+    const orders = marketplaceRepo.orders().filter((order) => Date.now() - new Date(order.createdAt).getTime() <= days * 86400000);
+    const completed = orders.filter((order) => order.status === 'completed');
+    const refunded = orders.filter((order) => order.status === 'refunded');
+    const byMethod = ['card', 'paypal', 'apple-pay', 'credits'].map((method) => ({
+      method,
+      orders: orders.filter((order) => order.method === method).length,
+      revenue: Number(orders.filter((order) => order.method === method && order.status === 'completed').reduce((total, order) => total + order.amount, 0).toFixed(2)),
+    }));
+    return {
+      gross: Number(completed.reduce((total, order) => total + order.amount, 0).toFixed(2)),
+      fees: Number(completed.reduce((total, order) => total + order.platformFee, 0).toFixed(2)),
+      authorEarnings: Number(completed.reduce((total, order) => total + order.authorEarnings, 0).toFixed(2)),
+      refunds: Number(refunded.reduce((total, order) => total + order.amount, 0).toFixed(2)),
+      orders: orders.length,
+      conversion: orders.length > 0 ? Number(((completed.length / orders.length) * 100).toFixed(1)) : 0,
+      byMethod,
+      topCountries: Object.entries(
+        completed.reduce<Record<string, number>>((accumulator, order) => {
+          accumulator[order.country] = (accumulator[order.country] ?? 0) + order.amount;
+          return accumulator;
+        }, {}),
+      )
+        .map(([country, revenue]) => ({ country, revenue: Number(revenue.toFixed(2)) }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 8),
+    };
   },
   adminUsersList() {
     return getDatabase().users.filter((user) => user.role === 'admin' || user.role === 'moderator');

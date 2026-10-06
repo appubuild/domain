@@ -76,6 +76,10 @@ export const marketplaceService = {
       ? Number((book.marketplace.price * (1 - book.marketplace.discountPercent / 100)).toFixed(2))
       : book.marketplace.price;
   },
+  /** Admin view: every review on the platform, newest first. */
+  allReviews(): Review[] {
+    return marketplaceRepo.allReviews().slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
   reviews(bookId: ID): Review[] {
     return marketplaceRepo.reviews(bookId);
   },
