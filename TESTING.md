@@ -91,3 +91,24 @@ screenshot if it is visual. I fix on this same branch and the preview hot-reload
 - `ThemeProvider` polls the CMS theme every 1.5 s (deliberate, cheap, being optimised).
 - `PricingPage` fetches plans twice; `CreateBookPage`'s "Estimated pages" is a placeholder.
 - PDF export is a simplified generator through a cast — it opens, but it is not a print engine.
+
+## 6. Headless checks (no browser needed)
+
+```bash
+npm run smoke                                  # render every route anonymously
+SMOKE_AS=demo  node scripts/smoke.mjs /dashboard /dashboard/books
+SMOKE_AS=admin node scripts/smoke.mjs /admin /admin/settings /admin/audit-logs
+SMOKE_BUILD=1 node scripts/smoke.mjs /        # rebuild the test bundle first
+```
+
+`scripts/smoke.mjs` bundles the app into one classic script (`vite.smoke.config.ts`)
+and renders it in jsdom, so it catches the class of failure that typechecking misses:
+a runtime exception that blanks the page. It prints rendered size, first text,
+headings, link/button counts and any thrown error per route.
+
+**Fixed by this harness:** a seed chapter (`mbook_saltstone` → "The Twenty-Minute Braise")
+referenced `chapterBodies.saltandstone[3]`/`[4]` when the array only had three entries, so
+`countWords(null)` threw while the seed was being built and **every** page rendered blank.
+The seed now points at its own prose block, `stripHtml`/`countWords` tolerate null, and
+`App.tsx` wraps the whole tree in `ErrorBoundary` so a future runtime error shows a
+recoverable error screen instead of a white page.

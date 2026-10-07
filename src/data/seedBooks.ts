@@ -101,7 +101,7 @@ const marketSeeds: MarketBookSeed[] = [
     chapters: [
       chapter('The Case for Cooking Three Things Well', 'Technique One', 'Why this book teaches six techniques and nothing else.', chapterBodies.saltandstone.slice(0, 2)),
       chapter('Salt, Fat, and the Wrong Kind of Patience', 'Technique Two', 'The two adjustments you can always make, and the one you cannot undo.', chapterBodies.saltandstone.slice(2)),
-      chapter('The Twenty-Minute Braise', 'Technique Three', 'Geometry, not time, is what makes a braise work.', [chapterBodies.saltandstone[3], chapterBodies.saltandstone[4]]),
+      chapter('The Twenty-Minute Braise', 'Technique Three', 'Geometry, not time, is what makes a braise work.', chapterBodies.braise),
     ],
     createdDaysAgo: 260,
     publishedDaysAgo: 180,

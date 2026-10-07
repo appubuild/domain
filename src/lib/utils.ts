@@ -55,15 +55,17 @@ export function truncate(text: string, length: number) {
   return `${text.slice(0, length).trimEnd()}…`;
 }
 
-export function stripHtml(html: string) {
-  return html
+export function stripHtml(html: string | null | undefined) {
+  // Defensive: content can arrive as null from imported documents or sparse seed data,
+  // and a single bad record must never blank the whole application.
+  return String(html ?? '')
     .replace(/<[^>]*>/g, ' ')
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-export function countWords(html: string) {
+export function countWords(html: string | null | undefined) {
   const text = stripHtml(html);
   if (!text) return 0;
   return text.split(/\s+/).filter(Boolean).length;

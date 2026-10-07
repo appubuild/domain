@@ -124,6 +124,25 @@ export const chapterBodies: Record<string, string[]> = {
       p('The question he settled on was: <em>where does the canal go when nobody is looking at it?</em>'),
       p('This was an excellent question, and also the reason that Fox did not get home until very after dark, and also the reason that Bramblewick now has a lamp-post at the end of the towpath with a small newspaper hat on top of it, which is honestly a story for another day.'),
   ],
+  braise: [
+    h2('Geometry, Not Time') +
+      p(
+        'The Twenty-Minute Braise is not a cheat and it is not a shortcut; it is a different shape of cooking. A traditional braise asks a large cut of meat to sit in liquid for three hours until it surrenders, and it earns that time by building flavour slowly. This one asks you to cut first, and then to cook quickly, so that the surface browns and the interior stays tender in the same twenty minutes.',
+      ) +
+      p(
+        'The geometry is the trick. Cube the meat into pieces no bigger than a walnut so every face can brown, keep the liquid shallow — a centimetre, not a bath — and use a pan wide enough that the pieces never touch. Crowd the pan and the temperature drops; the meat steams in its own moisture and you have made a stew, not a braise.',
+      ),
+    h2('The Order of Operations') +
+      p(
+        'Salt the pieces and leave them for fifteen minutes while you prepare everything else. Not a moment more: salt needs time to travel, but it also pulls water to the surface, and water is the enemy of browning. Dry the pieces on a cloth, and only then put them in the pan.',
+      ) +
+      p(
+        'Brown in one layer, in batches if you have to, and resist turning things before they release themselves from the pan. Add your aromatics to the empty space between the pieces rather than on top of them, deglaze with a splash of something acidic — wine, cider, vinegar cut with stock — and finish with a lid for the last six minutes so the inside cooks through without drying the outside.',
+      ) +
+      p(
+        'That is the whole technique. Everything else in this chapter is variation: how to swap pork shoulder for mushrooms, how to keep the sauce from going flat, and why the pan you finished in is the pan you should serve from. If you learn to read the pan, you will not need a timer.',
+      ),
+  ],
   saltandstone: [
     h2('The Case for Cooking Three Things Well') +
       p(

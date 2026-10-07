@@ -12,3 +12,7 @@ coverage
 .arena
 
 *.tsbuildinfo
+
+# test + smoke build output
+artifacts/
+dist-smoke/
