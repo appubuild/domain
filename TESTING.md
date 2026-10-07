@@ -112,3 +112,21 @@ referenced `chapterBodies.saltandstone[3]`/`[4]` when the array only had three e
 The seed now points at its own prose block, `stripHtml`/`countWords` tolerate null, and
 `App.tsx` wraps the whole tree in `ErrorBoundary` so a future runtime error shows a
 recoverable error screen instead of a white page.
+
+## 7. Editor canvas regression (fixed)
+
+Symptom: in Write and Design mode the page looked blank and you could not type.
+
+Cause: `EditorPage` keeps `zoom` as a multiplier (1 = 100%) but `PageCanvas` consumed it as a
+percentage, so the page box was computed as `5in x 96 x 0.01` = **4.8px** and the text was
+scaled to 1%. Only the Cover/title pages (drawn with elements, not the flow editor) looked
+sane, which is why it survived earlier checks.
+
+Fix: the page is laid out at its natural pixel size (`480 x 768` for 5 x 8 in) and scaled
+once with `transform: scale(zoom)`; the flow editor no longer scales itself. Also added
+click-anywhere-on-the-page focus (`focus('end')`) and a full-height prose area, so a click
+on empty space drops the caret into the text.
+
+Guard: `npm run check:editor` asserts the page box is 480x768, that the prose holds the page
+text, that clicking the page focuses the editor, that zoom-in scales to 1.1, and that Design
+and Write modes both render.

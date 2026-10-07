@@ -209,12 +209,10 @@ export function ElementRenderer({ element }: { element: PageElement }) {
 
 function FlowEditor({
   page,
-  zoom,
   onContentChange,
   registerEditor,
 }: {
   page: BookPage;
-  zoom: number;
   onContentChange: (html: string) => void;
   registerEditor: (editor: Editor | null) => void;
 }) {
@@ -236,7 +234,7 @@ function FlowEditor({
       editorProps: {
         attributes: {
           class: 'ProseMirror focus:outline-none',
-          style: 'font-size: 15px;',
+          style: 'font-size: 15px; min-height: 100%;',
         },
       },
       onUpdate: ({ editor: instance }) => onContentChange(instance.getHTML()),
@@ -249,11 +247,7 @@ function FlowEditor({
     return () => registerEditor(null);
   }, [editor, registerEditor]);
 
-  return (
-    <div style={{ zoom: zoom / 100 }}>
-      <EditorContent editor={editor} />
-    </div>
-  );
+  return <EditorContent editor={editor} />;
 }
 
 export function FlowToolbar({ editor }: { editor: Editor | null }) {
@@ -393,6 +387,21 @@ export function PageCanvas({
   canUseAdvancedEditor,
 }: CanvasProps) {
   const surfaceRef = React.useRef<HTMLDivElement>(null);
+  const flowEditorRef = React.useRef<Editor | null>(null);
+  const handleRegisterEditor = React.useCallback(
+    (instance: Editor | null) => {
+      flowEditorRef.current = instance;
+      registerEditor(instance);
+    },
+    [registerEditor],
+  );
+  /** Clicking any empty part of the page drops the caret into the text, so writing never "does nothing". */
+  const focusEditorEnd = React.useCallback(() => {
+    const instance = flowEditorRef.current;
+    if (!instance) return;
+    if (!instance.isEditable) return;
+    instance.chain().focus('end').run();
+  }, []);
   const [drag, setDrag] = React.useState<{
     id: string;
     mode: 'move' | 'resize' | 'rotate';
@@ -403,7 +412,11 @@ export function PageCanvas({
   } | null>(null);
   const [guides, setGuides] = React.useState<{ x?: number; y?: number }>({});
 
-  const size = pagePixelSize(book.trimSize, book.orientation, zoom / 100);
+  // `zoom` is a multiplier (1 === 100%), matching EditorPage's state. The page is
+  // laid out at its natural pixel size and scaled once, so text scales with the page
+  // instead of the page shrinking to a few pixels (which made the canvas look empty).
+  const natural = pagePixelSize(book.trimSize, book.orientation, 1);
+  const size = pagePixelSize(book.trimSize, book.orientation, zoom);
   const palette = book.theme.palette;
   const margin = book.margins;
   const isDesign = page.layout === 'canvas' || page.layout === 'blank';
@@ -522,15 +535,21 @@ export function PageCanvas({
           <span className="w-20 text-right">{book.trimSize.label}</span>
         </div>
       )}
-      <div className="relative">
+      <div className="relative" style={{ width: size.width, height: size.height }}>
         {showRulers && (
           <div className="absolute -left-6 top-0 h-full w-4 ruler" aria-hidden />
         )}
         <div
           ref={surfaceRef}
-          onClick={() => onSelectElement(null)}
+          onClick={() => { onSelectElement(null); if (editable) focusEditorEnd(); }}
           className={cn('page-card relative overflow-hidden shadow-page', showGuides && editable && 'grid-lines')}
-          style={{ width: size.width, height: size.height, ...background, backgroundColor: background.background ? undefined : undefined }}
+          style={{
+            width: natural.width,
+            height: natural.height,
+            transform: zoom === 1 ? undefined : `scale(${zoom})`,
+            transformOrigin: 'top left',
+            ...background,
+          }}
           data-page-id={page.id}
           role="region"
           aria-label={`Page ${pageIndex + 1}`}
@@ -564,9 +583,9 @@ export function PageCanvas({
                 color: '#111827',
               }}
             >
-              <div style={{ width: `calc(100% * ${100 / (zoom / 100)})`, transform: `scale(${zoom / 100})`, transformOrigin: 'top left', zoom: 1 / (zoom / 100) }}>
+              <div className="h-full w-full">
                 {editable ? (
-                  <FlowEditor page={page} zoom={zoom} onContentChange={onContentChange} registerEditor={registerEditor} />
+                  <FlowEditor page={page} onContentChange={onContentChange} registerEditor={handleRegisterEditor} />
                 ) : (
                   <div className="ProseMirror" dangerouslySetInnerHTML={{ __html: page.content || '<p class="text-muted-foreground italic">This page is empty.</p>' }} />
                 )}

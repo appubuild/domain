@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "dev:auto": "bash scripts/preview.sh",
     "dev:recover": "bash scripts/restore.sh",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "check:editor": "node scripts/editor-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.16",
