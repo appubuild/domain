@@ -14,6 +14,8 @@ import type {
 import { delay, uid } from '@/lib/utils';
 import { getDatabase } from '@/store/db';
 import { activityRepo, adminRepo, bookRepo, marketplaceRepo, submissionRepo, userRepo, cmsRepo } from '@/repositories';
+import { LIBRARY_ASSETS } from '@/data/libraryAssets';
+import { assetService } from './storageService';
 import { revenueService, type PeriodKey } from './revenueService';
 import { subscriptionService } from './subscriptionService';
 
@@ -28,6 +30,30 @@ export interface AdminOverview {
 }
 
 export const adminService = {
+  /* --------------------------------------------------- asset library admin */
+
+  /**
+   * Global asset library summary for the admin app: what ships, what was published,
+   * what was retired. Phase 2 wires a screen to these numbers; the editor already
+   * reads the same list through `assetService.library()`.
+   */
+  assetLibrary: () => {
+    const db = getDatabase();
+    const shipped = LIBRARY_ASSETS.length;
+    const published = (db.libraryAssets ?? []).filter((asset) => !(db.libraryRetired ?? []).includes(asset.id)).length;
+    const retired = (db.libraryRetired ?? []).length;
+    const byFolder = assetService.library('all').reduce<Record<string, number>>((total, asset) => {
+      total[asset.folder] = (total[asset.folder] ?? 0) + 1;
+      return total;
+    }, {});
+    return { shipped, published, retired, total: assetService.library('all').length, byFolder };
+  },
+
+  publishAssetToLibrary: (assetId: ID) => assetService.publishToLibrary(assetId),
+
+  retireAssetFromLibrary: (assetId: ID) => assetService.retireFromLibrary(assetId),
+
+
   overview(): AdminOverview {
     const db = getDatabase();
     const now = Date.now();

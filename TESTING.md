@@ -156,6 +156,8 @@ the smoke bundle in jsdom and walks the real editor:
 | Layers + lock | lock toggles exist, toggling changes the label (so a locked object can be unlocked), hide/show toggles exist |
 | Preview parity | preview renders the same `data-page-id` canvas, read-only |
 | Export safety | export modal shows *Canvas checks* with the page count |
+| Tables | entries exist in the library; the table renders; cells render and are editable; the toolbar exposes merge, split, insert row/column, cell fill and alignment; merging applies `colspan`; splitting restores the cells; adding a row changes the grid |
+| Asset library (admin-managed) | all 12 categories present; shipped library assets populate *Illustrations*; free-image search returns insertable results |
 
 Result on this branch: **RESULT: PASS**, `errors: []`.
 

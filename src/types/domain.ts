@@ -429,10 +429,16 @@ export interface PageElement {
     cells: string[][];
     headerRow: boolean;
     borderColor: string;
-    /** Cells merged away by the cell-merge tool, as "r,c" keys. */
+    /** Cells absorbed by a merge, as "r,c" keys — they are not rendered. */
     merged?: string[];
+    /** Span of an anchor cell after a merge, keyed "r,c". */
+    spans?: Record<string, { rowSpan: number; colSpan: number }>;
     /** Per-cell text alignment, keyed "r,c". */
     align?: Record<string, 'left' | 'center' | 'right'>;
+    /** Per-cell background colour, keyed "r,c". */
+    fills?: Record<string, string>;
+    /** Per-cell emphasis, keyed "r,c". */
+    cellStyles?: Record<string, { bold?: boolean; italic?: boolean; fontSize?: number }>;
     /** Caption rendered under the table (book standard). */
     caption?: string;
   };

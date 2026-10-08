@@ -13,7 +13,7 @@ import {
   ChevronDown, Columns2, Eraser, FlipHorizontal, FlipVertical, Heading1, Heading2,
   Highlighter, Image as ImageIcon, Indent, Italic, Link2, Link2Off, List, ListChecks,
   ListOrdered, Lock, Merge, Minus, MoveDown, MoveUp, Palette, Pilcrow, Plus, Quote, Redo2,
-  Rows3, Scissors, ScissorsLineDashed, Sigma, SquareSplitHorizontal, Strikethrough, Subscript, Superscript,
+  Rows3, Scissors, ScissorsLineDashed, Sigma, Split, SquareSplitHorizontal, Strikethrough, Subscript, Superscript,
   Table as TableIcon, Trash2, Type, Underline as UnderlineIcon, Undo2, Unlock, Wand2,
 } from 'lucide-react';
 import { Badge, Button, Input, Label, Separator, Slider, Switch } from '@/components/ui/primitives';
@@ -634,27 +634,148 @@ function TableToolbar({
   element,
   onPatch,
   onDelete,
+  activeCell,
+  onSelectCell,
 }: {
   element: PageElement;
   onPatch: (patch: Partial<PageElement>) => void;
   onDelete: () => void;
+  activeCell: { elementId: string; row: number; col: number } | null;
+  onSelectCell: (elementId: string, row: number, col: number) => void;
 }) {
   const table = element.table ?? { rows: 3, cols: 3, cells: [], headerRow: true, borderColor: '#d4d4d8' };
-  const ensureCells = (rows: number, cols: number, cells: string[][]) => {
-    const next = Array.from({ length: rows }, (_, row) =>
-      Array.from({ length: cols }, (_, col) => cells[row]?.[col] ?? ''),
-    );
+  const row = Math.min(activeCell?.row ?? 0, table.rows - 1);
+  const col = Math.min(activeCell?.col ?? 0, table.cols - 1);
+  const key = `${row},${col}`;
+
+  const grid = (rows: number, cols: number, cells: string[][], moved: { fromRow: number; fromCol: number; toRow: number; toCol: number } | null) => {
+    const next = Array.from({ length: rows }, (_, r) => Array.from({ length: cols }, (_, c) => cells[r]?.[c] ?? ''));
+    if (moved) next[moved.toRow][moved.toCol] = cells[moved.fromRow]?.[fromColOf(moved)] ?? next[moved.toRow][moved.toCol];
     return next;
   };
-  const setSize = (rows: number, cols: number) => onPatch({ table: { ...table, rows, cols, cells: ensureCells(rows, cols, table.cells) } });
+  const fromColOf = (moved: { fromCol: number }) => moved.fromCol;
+
+  const insertRow = (where: 'above' | 'below') => {
+    const at = where === 'above' ? row : row + 1;
+    const cells = Array.from({ length: table.rows + 1 }, (_, r) => Array.from({ length: table.cols }, (_, c) => (r === at ? '' : table.cells?.[r < at ? r : r - 1]?.[c] ?? '')));
+    onPatch({ table: { ...table, rows: table.rows + 1, cells } });
+  };
+
+  const deleteRow = () => {
+    if (table.rows <= 1) return;
+    const cells = Array.from({ length: table.rows - 1 }, (_, r) => Array.from({ length: table.cols }, (_, c) => table.cells?.[r < row ? r : r + 1]?.[c] ?? ''));
+    onPatch({ table: { ...table, rows: table.rows - 1, cells } });
+  };
+
+  const insertColumn = (where: 'left' | 'right') => {
+    const at = where === 'left' ? col : col + 1;
+    const cells = Array.from({ length: table.rows }, (_, r) => Array.from({ length: table.cols + 1 }, (_, c) => (c === at ? '' : table.cells?.[r]?.[c < at ? c : c - 1] ?? '')));
+    onPatch({ table: { ...table, cols: table.cols + 1, cells } });
+  };
+
+  const deleteColumn = () => {
+    if (table.cols <= 1) return;
+    const cells = Array.from({ length: table.rows }, (_, r) => Array.from({ length: table.cols - 1 }, (_, c) => table.cells?.[r]?.[c < col ? c : c + 1] ?? ''));
+    onPatch({ table: { ...table, cols: table.cols - 1, cells } });
+  };
+
+  const mergeWith = (direction: 'right' | 'down') => {
+    const targetRow = direction === 'down' ? row + 1 : row;
+    const targetCol = direction === 'right' ? col + 1 : col;
+    if (targetRow >= table.rows || targetCol >= table.cols) return;
+    const targetKey = `${targetRow},${targetCol}`;
+    const current = table.spans?.[key] ?? { rowSpan: 1, colSpan: 1 };
+    const spans = {
+      ...(table.spans ?? {}),
+      [key]: {
+        rowSpan: current.rowSpan + (direction === 'down' ? 1 : 0),
+        colSpan: current.colSpan + (direction === 'right' ? 1 : 0),
+      },
+    };
+    onPatch({ table: { ...table, spans, merged: [...new Set([...(table.merged ?? []), targetKey])] } });
+  };
+
+  const splitCell = () => {
+    if (!table.spans?.[key]) return;
+    const spans = { ...(table.spans ?? {}) };
+    const span = spans[key];
+    delete spans[key];
+    const released: string[] = [];
+    for (let r = row; r < row + span.rowSpan; r += 1) {
+      for (let c = col; c < col + span.colSpan; c += 1) {
+        if (r === row && c === col) continue;
+        released.push(`${r},${c}`);
+      }
+    }
+    onPatch({ table: { ...table, spans, merged: (table.merged ?? []).filter((entry) => !released.includes(entry)) } });
+  };
+
+  const setCell = (patch: { align?: 'left' | 'center' | 'right'; fill?: string | undefined; bold?: boolean; italic?: boolean; fontSize?: number }) => {
+    const align = { ...(table.align ?? {}) };
+    const fills = { ...(table.fills ?? {}) };
+    const cellStyles = { ...(table.cellStyles ?? {}) };
+    if (patch.align !== undefined) align[key] = patch.align;
+    if ('fill' in patch) {
+      if (patch.fill) fills[key] = patch.fill;
+      else delete fills[key];
+    }
+    if (patch.bold !== undefined || patch.italic !== undefined || patch.fontSize !== undefined) {
+      cellStyles[key] = { ...cellStyles[key], ...(patch.bold !== undefined ? { bold: patch.bold } : {}), ...(patch.italic !== undefined ? { italic: patch.italic } : {}), ...(patch.fontSize !== undefined ? { fontSize: patch.fontSize } : {}) };
+    }
+    onPatch({ table: { ...table, align, fills, cellStyles } });
+  };
+
+  const mergedCount = table.merged?.length ?? 0;
+
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <Badge variant="secondary" className="text-2xs"><TableIcon className="mr-1 inline h-3 w-3" />{table.rows}×{table.cols} table</Badge>
-      <ToolButton label="Add row" onClick={() => setSize(table.rows + 1, table.cols)}><Plus className="h-3.5 w-3.5" /> Row</ToolButton>
-      <ToolButton label="Remove row" onClick={() => setSize(Math.max(1, table.rows - 1), table.cols)}><Minus className="h-3.5 w-3.5" /> Row</ToolButton>
-      <ToolButton label="Add column" onClick={() => setSize(table.rows, table.cols + 1)}><Plus className="h-3.5 w-3.5" /> Col</ToolButton>
-      <ToolButton label="Remove column" onClick={() => setSize(table.rows, Math.max(1, table.cols - 1))}><Minus className="h-3.5 w-3.5" /> Col</ToolButton>
-      <ToolButton label="Merge cells" onClick={() => onPatch({ table: { ...table, merged: [...(table.merged ?? []), '0,0'], cells: table.cells } })}><Merge className="h-3.5 w-3.5" /></ToolButton>
+      <Badge variant="secondary" className="text-2xs"><TableIcon className="mr-1 inline h-3 w-3" />{table.rows}×{table.cols}</Badge>
+      <span className="flex items-center gap-1 rounded border px-1.5 py-0.5">
+        <Label className="text-2xs">Cell</Label>
+        <Input
+          type="number"
+          min={1}
+          max={table.rows}
+          value={row + 1}
+          onChange={(event) => onSelectCell(element.id, Math.max(0, Math.min(table.rows - 1, Number(event.target.value) - 1)), col)}
+          className="h-6 w-12 text-2xs"
+          aria-label="Active table row"
+        />
+        <span className="text-2xs text-muted-foreground">×</span>
+        <Input
+          type="number"
+          min={1}
+          max={table.cols}
+          value={col + 1}
+          onChange={(event) => onSelectCell(element.id, row, Math.max(0, Math.min(table.cols - 1, Number(event.target.value) - 1)))}
+          className="h-6 w-12 text-2xs"
+          aria-label="Active table column"
+        />
+      </span>
+      <ToolButton label="Insert row above" onClick={() => insertRow('above')}><Plus className="h-3.5 w-3.5" /> Row ↑</ToolButton>
+      <ToolButton label="Insert row below" onClick={() => insertRow('below')}><Plus className="h-3.5 w-3.5" /> Row ↓</ToolButton>
+      <ToolButton label="Delete row" onClick={deleteRow} disabled={table.rows <= 1}><Minus className="h-3.5 w-3.5" /> Row</ToolButton>
+      <ToolButton label="Insert column left" onClick={() => insertColumn('left')}><Plus className="h-3.5 w-3.5" /> Col ←</ToolButton>
+      <ToolButton label="Insert column right" onClick={() => insertColumn('right')}><Plus className="h-3.5 w-3.5" /> Col →</ToolButton>
+      <ToolButton label="Delete column" onClick={deleteColumn} disabled={table.cols <= 1}><Minus className="h-3.5 w-3.5" /> Col</ToolButton>
+      <Separator orientation="vertical" className="mx-1 h-4" />
+      <ToolButton label="Merge with cell to the right" onClick={() => mergeWith('right')} disabled={col + 1 >= table.cols}><Merge className="h-3.5 w-3.5" /></ToolButton>
+      <ToolButton label="Merge with cell below" onClick={() => mergeWith('down')} disabled={row + 1 >= table.rows}><Merge className="h-3.5 w-3.5 rotate-90" /></ToolButton>
+      <ToolButton label="Split cell" onClick={splitCell} disabled={!table.spans?.[key]}><Split className="h-3.5 w-3.5" /></ToolButton>
+      {mergedCount > 0 && <span className="text-2xs text-muted-foreground">{mergedCount} merged</span>}
+      <Separator orientation="vertical" className="mx-1 h-4" />
+      <span className="flex items-center gap-1">
+        <Label className="text-2xs">Cell align</Label>
+        {(['left', 'center', 'right'] as const).map((value) => (
+          <ToolButton key={value} label={`Cell align ${value}`} active={(table.align?.[key] ?? 'left') === value} onClick={() => setCell({ align: value })}>
+            {value === 'left' ? <AlignLeft className="h-3.5 w-3.5" /> : value === 'center' ? <AlignCenter className="h-3.5 w-3.5" /> : <AlignRight className="h-3.5 w-3.5" />}
+          </ToolButton>
+        ))}
+      </span>
+      <ToolButton label="Cell bold" active={Boolean(table.cellStyles?.[key]?.bold)} onClick={() => setCell({ bold: !table.cellStyles?.[key]?.bold })}><Bold className="h-3.5 w-3.5" /></ToolButton>
+      <ToolButton label="Cell italic" active={Boolean(table.cellStyles?.[key]?.italic)} onClick={() => setCell({ italic: !table.cellStyles?.[key]?.italic })}><Italic className="h-3.5 w-3.5" /></ToolButton>
+      <TextColorControl label="Cell fill" value={table.fills?.[key]} onChange={(color) => setCell({ fill: color })} />
+      <Separator orientation="vertical" className="mx-1 h-4" />
       <span className="flex items-center gap-1">
         <Label className="text-2xs">Header row</Label>
         <Switch checked={table.headerRow} onCheckedChange={(checked) => onPatch({ table: { ...table, headerRow: checked } })} />
@@ -665,9 +786,10 @@ function TableToolbar({
         onChange={(event) => onPatch({ table: { ...table, caption: event.target.value } })}
         placeholder="Table caption"
         aria-label="Table caption"
-        className="h-7 w-40 text-2xs"
+        className="h-7 w-36 text-2xs"
       />
       <ToolButton label="Delete table" onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /></ToolButton>
+      <span className="w-full text-[10px] text-muted-foreground">Click a cell on the page to edit its text; the table shrinks its type to stay inside the page.</span>
     </div>
   );
 }
@@ -693,6 +815,9 @@ export interface ContextToolbarProps {
   onDistribute: (axis: 'horizontal' | 'vertical') => void;
   recentColors: string[];
   pushRecentColor: (color: string) => void;
+  /** Active table cell, shared with the canvas. */
+  activeCell?: { elementId: string; row: number; col: number } | null;
+  onSelectCell?: (elementId: string, row: number, col: number) => void;
   /** Split the page at the cursor so the rest flows onto a new page. */
   onPageBreak?: () => void;
   /** Insert a blank page after this one. */
@@ -740,7 +865,15 @@ export function ContextToolbar(props: ContextToolbarProps) {
   }
 
   if (primary?.type === 'table') {
-    return <TableToolbar element={primary} onPatch={(patch) => props.onPatchElement(primary.id, patch)} onDelete={() => props.onDeleteElement(primary.id)} />;
+    return (
+      <TableToolbar
+        element={primary}
+        onPatch={(patch) => props.onPatchElement(primary.id, patch)}
+        onDelete={() => props.onDeleteElement(primary.id)}
+        activeCell={props.activeCell ?? null}
+        onSelectCell={props.onSelectCell ?? (() => undefined)}
+      />
+    );
   }
 
   if (primary) {

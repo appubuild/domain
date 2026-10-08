@@ -77,6 +77,7 @@ function EditorPage() {
   const [modal, setModal] = React.useState<null | 'share' | 'versions' | 'comments' | 'export' | 'find' | 'help' | 'publish'>(null);
   const [summaryOpen, setSummaryOpen] = React.useState(false);
   const [elementClipboard, setElementClipboard] = React.useState<PageElement[]>([]);
+  const [activeCell, setActiveCell] = React.useState<{ elementId: string; row: number; col: number } | null>(null);
   const [recentColors, setRecentColors] = React.useState<string[]>([]);
   const [extraSelection, setExtraSelection] = React.useState<string[]>([]);
   const [lastSaved, setLastSaved] = React.useState<string | null>(lastSavedAt);
@@ -88,6 +89,13 @@ function EditorPage() {
   const activePage = book?.pages.find((page) => page.id === activePageId);
   const activePageIndex = book ? book.pages.findIndex((page) => page.id === activePageId) : -1;
   const selectedElement = activePage?.elements.find((element) => element.id === selectedElementId);
+
+  // Drop the active table cell when its table is gone or hidden.
+  React.useEffect(() => {
+    if (!activeCell) return;
+    const element = activePage?.elements.find((entry) => entry.id === activeCell.elementId && entry.type === 'table');
+    if (!element || !element.visible) setActiveCell(null);
+  }, [activePage, activeCell]);
   const selectedElements = activePage
     ? activePage.elements.filter((element) => element.id === selectedElementId || extraSelection.includes(element.id))
     : [];
@@ -100,6 +108,15 @@ function EditorPage() {
     const metrics = inspectPage(book, activePage);
     return { overflow: metrics.overflow, overflowRatio: metrics.overflowRatio, unmeasurable: metrics.unmeasurable };
   }, [book, activePage, mode, activePage?.content, activePage?.elements]);
+
+  const editTableCell = React.useCallback((elementId: string, row: number, col: number, value: string) => {
+    if (!activePage) return;
+    const element = activePage.elements.find((entry) => entry.id === elementId);
+    const table = element?.table;
+    if (!table) return;
+    const cells = Array.from({ length: table.rows }, (_, r) => Array.from({ length: table.cols }, (_, c) => (r === row && c === col ? value : table.cells?.[r]?.[c] ?? '')));
+    patchElement(activePage.id, elementId, { table: { ...table, cells } });
+  }, [activePage, patchElement]);
 
   const pushRecentColor = React.useCallback((color: string) => {
     setRecentColors((current) => [color, ...current.filter((entry) => entry !== color)].slice(0, 8));
@@ -446,6 +463,8 @@ function EditorPage() {
                     onDistribute={distributeSelection}
                     recentColors={recentColors}
                     pushRecentColor={pushRecentColor}
+                    activeCell={activeCell}
+                    onSelectCell={(elementId, row, col) => { selectElement(elementId); setActiveCell({ elementId, row, col }); }}
                     onPageBreak={insertPageBreakAtCursor}
                     onInsertBlankPage={() => activePage && insertPage(activePage.id, 'after', 'blank')}
                   />
@@ -493,6 +512,9 @@ function EditorPage() {
                   canUseAdvancedEditor={entitlements.canUseAdvancedEditor()}
                   overflow={overflow}
                   designMode={mode === 'design'}
+                  activeCell={activeCell}
+                  onSelectCell={(elementId, row, col) => { selectElement(elementId); setActiveCell({ elementId, row, col }); }}
+                  onEditCell={editTableCell}
                   onAutoFlow={() => { if (activePage) autoFlowPage(activePage.id); }}
                   canAutoFlow={Boolean(overflow?.overflow && !overflow.unmeasurable)}
                 />

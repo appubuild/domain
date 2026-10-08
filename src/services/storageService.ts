@@ -8,6 +8,7 @@
  */
 import type { Asset, AssetKind, ID, StorageObject } from '@/types/domain';
 import { getDatabase, mutateDatabase } from '@/store/db';
+import { LIBRARY_ASSETS } from '@/data/libraryAssets';
 import { uid } from '@/lib/utils';
 
 export interface UploadResult {
@@ -182,6 +183,51 @@ export const assetService = {
         if (user) user.storageUsedBytes = Math.max(0, user.storageUsedBytes - asset.sizeBytes);
       }
     }),
+  /* ------------------------------------------------- admin-managed library */
+
+  /** The global library: shipped catalogue + admin-published assets, minus retired ones. */
+  library: (kind: AssetKind | 'all' = 'all') => {
+    const db = getDatabase();
+    const retired = new Set(db.libraryRetired ?? []);
+    const shipped: Asset[] = LIBRARY_ASSETS.map((seed) => ({
+      id: seed.id,
+      ownerId: 'user_admin',
+      name: seed.name,
+      kind: seed.kind,
+      url: seed.url,
+      mimeType: seed.mimeType,
+      sizeBytes: 96 * 1024,
+      width: seed.width,
+      height: seed.height,
+      folder: seed.folder,
+      tags: seed.tags,
+      createdAt: '2024-01-01T09:00:00.000Z',
+      favorite: false,
+      storageKey: `library/${seed.folder.toLowerCase()}/${seed.id}`,
+    }));
+    const published = (db.libraryAssets ?? []).filter((asset) => !retired.has(asset.id));
+    const all = [...published, ...shipped].filter((asset) => !retired.has(asset.id));
+    return kind === 'all' ? all : all.filter((asset) => asset.kind === kind);
+  },
+
+  /** Admin action: publish one of a user's uploads into the global library. */
+  publishToLibrary: (assetId: ID) =>
+    mutateDatabase((db) => {
+      const asset = db.assets.find((entry) => entry.id === assetId);
+      if (!asset) return undefined;
+      const published: Asset = { ...asset, id: `lib_${asset.id}`, ownerId: 'user_admin', folder: asset.folder || 'Library' };
+      db.libraryAssets = [published, ...(db.libraryAssets ?? [])];
+      return published;
+    }),
+
+  /** Admin action: retire an asset (shipped or published) from the global library. */
+  retireFromLibrary: (assetId: ID) =>
+    mutateDatabase((db) => {
+      db.libraryRetired = [...new Set([...(db.libraryRetired ?? []), assetId])];
+      db.libraryAssets = (db.libraryAssets ?? []).filter((asset) => asset.id !== assetId);
+      return true;
+    }),
+
   update: (id: ID, patch: Partial<Asset>) =>
     mutateDatabase((db) => {
       const index = db.assets.findIndex((asset) => asset.id === id);

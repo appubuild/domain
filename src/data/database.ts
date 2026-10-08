@@ -115,6 +115,10 @@ export interface Database {
   navItems: NavItem[];
   footer: FooterConfig;
   authorProfiles: AuthorProfile[];
+  /** Assets an admin published to the global library (optional: older saves lack it). */
+  libraryAssets?: Asset[];
+  /** Ids retired by an admin, so the shipped catalogue can be curated without a release. */
+  libraryRetired?: string[];
 }
 
 function buildVersions(books: Book[], userId: string, userName: string): VersionEntry[] {

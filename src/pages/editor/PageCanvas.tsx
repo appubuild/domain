@@ -116,7 +116,24 @@ export function isBehindText(element: PageElement) {
   return (element.wrap ?? 'square') === 'behind';
 }
 
-export function ElementRenderer({ element }: { element: PageElement }) {
+export interface TableCellBinding {
+  activeCell: { elementId: string; row: number; col: number } | null;
+  onSelectCell: (elementId: string, row: number, col: number) => void;
+  onEditCell: (elementId: string, row: number, col: number, value: string) => void;
+  editable: boolean;
+  pageHeightIn: number;
+}
+
+const TableCellContext = React.createContext<TableCellBinding>({
+  activeCell: null,
+  onSelectCell: () => undefined,
+  onEditCell: () => undefined,
+  editable: false,
+  pageHeightIn: 8,
+});
+
+function ElementRenderer({ element }: { element: PageElement }) {
+  const { activeCell, onSelectCell, onEditCell, editable, pageHeightIn } = React.useContext(TableCellContext);
   if (!element.visible) return null;
   const base = elementStyle(element);
   switch (element.type) {
@@ -210,27 +227,55 @@ export function ElementRenderer({ element }: { element: PageElement }) {
       );
     case 'table': {
       const table = element.table ?? { rows: 3, cols: 3, cells: [], headerRow: true, borderColor: 'hsl(var(--border))' };
+      const absorbed = new Set(table.merged ?? []);
+      const activeKey = activeCell && activeCell.elementId === element.id ? `${activeCell.row},${activeCell.col}` : null;
+      const cellStyle = (row: number, col: number) => table.cellStyles?.[`${row},${col}`];
+      // Tables must stay inside the page: shrink the type until the grid fits the box.
+      const linePx = (element.style?.fontSize ?? 12) * 1.35;
+      const needed = table.rows * (linePx + 8);
+      const boxPx = (element.h / 100) * (pageHeightIn * 96);
+      const fitScale = needed > boxPx && needed > 0 ? Math.max(0.55, boxPx / needed) : 1;
+      const fontSize = (element.style?.fontSize ?? 12) * fitScale;
+
       return (
-        <div style={{ ...base, overflow: 'hidden' }}>
-          <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize: element.style?.fontSize ?? 12 }}>
+        <div style={{ ...base, overflow: 'hidden' }} data-table-element={element.id}>
+          <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', fontSize, tableLayout: 'fixed' }}>
             <tbody>
               {Array.from({ length: table.rows }).map((_, row) => (
                 <tr key={row}>
                   {Array.from({ length: table.cols }).map((__, col) => {
-                    const cell = table.cells?.[row]?.[col] ?? '';
+                    const key = `${row},${col}`;
+                    if (absorbed.has(key)) return null;
+                    const span = table.spans?.[key];
                     const isHeader = table.headerRow && row === 0;
+                    const style = cellStyle(row, col);
+                    const align: React.CSSProperties['textAlign'] = table.align?.[key] ?? (table.headerRow && row === 0 ? 'left' : 'left');
                     return (
                       <td
                         key={col}
+                        rowSpan={span?.rowSpan}
+                        colSpan={span?.colSpan}
+                        data-cell={key}
+                        contentEditable={editable && !element.locked}
+                        suppressContentEditableWarning
+                        onFocus={() => onSelectCell?.(element.id, row, col)}
+                        onClick={(event) => { event.stopPropagation(); onSelectCell?.(element.id, row, col); }}
+                        onBlur={(event) => onEditCell?.(element.id, row, col, event.currentTarget.textContent ?? '')}
                         style={{
                           border: `1px solid ${table.borderColor}`,
                           padding: '4px 6px',
-                          background: isHeader ? 'hsl(var(--muted))' : undefined,
-                          fontWeight: isHeader ? 600 : undefined,
-                          textAlign: 'left',
+                          background: table.fills?.[key] ?? (isHeader ? 'hsl(var(--muted))' : undefined),
+                          fontWeight: style?.bold ? 700 : isHeader ? 600 : undefined,
+                          fontStyle: style?.italic ? 'italic' : undefined,
+                          fontSize: style?.fontSize ? style.fontSize * fitScale : undefined,
+                          textAlign: align,
+                          verticalAlign: 'top',
+                          outline: activeKey === key ? '2px solid hsl(var(--primary))' : undefined,
+                          outlineOffset: -2,
+                          cursor: editable && !element.locked ? 'text' : undefined,
                         }}
                       >
-                        {cell}
+                        {table.cells?.[row]?.[col] ?? ''}
                       </td>
                     );
                   })}
@@ -238,6 +283,9 @@ export function ElementRenderer({ element }: { element: PageElement }) {
               ))}
             </tbody>
           </table>
+          {table.caption && (
+            <p style={{ margin: '4px 0 0', fontSize: Math.max(7, fontSize * 0.8), color: '#6b7280', textAlign: 'center' }}>{table.caption}</p>
+          )}
         </div>
       );
     }
@@ -444,6 +492,10 @@ interface CanvasProps {
   canAutoFlow?: boolean;
   /** True while the editor is in Design mode (objects become manipulable on any page). */
   designMode?: boolean;
+  /** Currently focused table cell, shared with the table toolbar. */
+  activeCell?: { elementId: string; row: number; col: number } | null;
+  onSelectCell?: (elementId: string, row: number, col: number) => void;
+  onEditCell?: (elementId: string, row: number, col: number, value: string) => void;
 }
 
 export function PageCanvas({
@@ -467,6 +519,9 @@ export function PageCanvas({
   onAutoFlow,
   canAutoFlow = false,
   designMode = false,
+  activeCell = null,
+  onSelectCell,
+  onEditCell,
 }: CanvasProps) {
   const surfaceRef = React.useRef<HTMLDivElement>(null);
   const flowEditorRef = React.useRef<Editor | null>(null);
@@ -648,6 +703,17 @@ export function PageCanvas({
       ]
     : [];
 
+  const tableBinding = React.useMemo<TableCellBinding>(
+    () => ({
+      activeCell,
+      onSelectCell: onSelectCell ?? (() => undefined),
+      onEditCell: onEditCell ?? (() => undefined),
+      editable,
+      pageHeightIn,
+    }),
+    [activeCell, onSelectCell, onEditCell, editable, pageHeightIn],
+  );
+
   return (
     <div className="flex flex-col items-center gap-2">
       {showRulers && (
@@ -768,9 +834,11 @@ export function PageCanvas({
                   floatStyle.shapeMargin = '0.35em';
                 }
                 return (
-                  <div key={`float-${element.id}`} data-float-anchor={element.id} className="pointer-events-none" style={floatStyle} aria-hidden={editable}>
-                    {!editable && <ElementRenderer element={{ ...element, x: 0, y: 0, w: 100, h: 100, rotation: 0 }} />}
-                  </div>
+                  <TableCellContext.Provider key={`float-${element.id}`} value={tableBinding}>
+                    <div data-float-anchor={element.id} className="pointer-events-none" style={floatStyle} aria-hidden={editable}>
+                      {!editable && <ElementRenderer element={{ ...element, x: 0, y: 0, w: 100, h: 100, rotation: 0 }} />}
+                    </div>
+                  </TableCellContext.Provider>
                 );
               })}
               <div className="relative z-10 h-full w-full" style={editable ? undefined : { position: 'relative' }}>
@@ -782,7 +850,9 @@ export function PageCanvas({
               </div>
               {/* Absolutely placed art that does not float: behind or in front of the text. */}
               {page.elements.filter((element) => element.visible && !wrappingElements(page).some((wrapEl) => wrapEl.id === element.id) && element.type !== 'pageNumber').map((element) => (
-                <ElementRenderer key={element.id} element={{ ...element, z: isBehindText(element) || (element.wrap ?? 'square') === 'none' ? -1 : 5 }} />
+                <TableCellContext.Provider key={element.id} value={tableBinding}>
+                  <ElementRenderer element={{ ...element, z: isBehindText(element) || (element.wrap ?? 'square') === 'none' ? -1 : 5 }} />
+                </TableCellContext.Provider>
               ))}
             </div>
           ) : null}
@@ -823,7 +893,9 @@ export function PageCanvas({
                       }}
                     >
                       {!(designMode && page.layout !== 'canvas' && page.layout !== 'blank' && wrappingElements(page).some((entry) => entry.id === element.id && !isStacked(entry))) && (
-                        <ElementRenderer element={element} />
+                        <TableCellContext.Provider value={tableBinding}>
+                          <ElementRenderer element={element} />
+                        </TableCellContext.Provider>
                       )}
                       {selected && editable && canUseAdvancedEditor && (
                         <>

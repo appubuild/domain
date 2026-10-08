@@ -621,9 +621,14 @@ function AssetsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequest
   const fileRef = React.useRef<HTMLInputElement>(null);
 
   const kinds = assetKindsFor(category);
-  const filtered = (assets ?? [])
-    .filter((asset) => (category === 'free' ? false : kinds.length ? kinds.includes(asset.kind) : true))
-    .filter((asset) => !query || asset.name.toLowerCase().includes(query.toLowerCase()) || asset.tags.some((tag) => tag.includes(query.toLowerCase())));
+  // Own uploads + the admin-managed global library, both read through the service layer.
+  const library = React.useMemo(() => (category === 'free' ? [] : assetService.library('all')), [category]);
+  const merged = category === 'uploads'
+    ? (assets ?? [])
+    : [...(assets ?? []).filter((asset) => (kinds.length ? kinds.includes(asset.kind) : true)), ...library.filter((asset) => (kinds.length ? kinds.includes(asset.kind) : true))];
+  const filtered = merged
+    .filter((asset) => !query || asset.name.toLowerCase().includes(query.toLowerCase()) || asset.tags.some((tag) => tag.includes(query.toLowerCase())))
+    .filter((asset, index, list) => list.findIndex((entry) => entry.id === asset.id) === index);
 
   const insert = (url: string, name: string, credit?: { provider: string; author?: string }) => {
     if (!activePage) return;
@@ -718,6 +723,7 @@ function AssetsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequest
                   )}
                 </button>
                 {asset.kind === 'ai-image' && <span className="absolute right-0.5 top-0.5 rounded bg-primary px-1 text-[8px] text-primary-foreground">AI</span>}
+                {asset.ownerId === 'user_admin' && <span className="absolute right-0.5 top-0.5 rounded bg-foreground/70 px-1 text-[8px] text-background">Library</span>}
                 <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/60 px-1 py-0.5 opacity-0 transition-opacity group-hover:opacity-100">
                   <span className="truncate text-[8px] text-white">{asset.name}</span>
                   <button
