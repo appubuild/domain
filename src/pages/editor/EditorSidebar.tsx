@@ -19,6 +19,7 @@ import { AiPanel } from './AiPanel';
 import { ASSET_CATEGORIES, ELEMENT_LIBRARY, assetKindsFor, type AssetCategoryId, type LibraryEntry } from './libraries';
 import { freeImageService, type FreeImageProviderId, type FreeImageResult } from '@/services/freeImageService';
 import { PageThumbnail } from './PageThumbnail';
+import { canvasPrefs } from '@/data/migrations';
 import type { Book, BookPage, BookSection, ElementType, PageElement, SectionKind, Template } from '@/types/domain';
 
 export type SidebarTab = 'pages' | 'chapters' | 'elements' | 'templates' | 'assets' | 'ai' | 'structure';
@@ -139,7 +140,7 @@ function PagesPanel({
   const filtered = book.pages.filter((page) => !query || (page.title || '').toLowerCase().includes(query.toLowerCase()));
   const sectionTitle = (sectionId: string) => book.sections.find((section) => section.id === sectionId)?.title ?? 'Section';
   // Long books: only the window around the active page renders until the author asks for all.
-  const virtualise = !showAll && !query && book.pages.length > (book.canvas.virtualizeAfter || 40);
+  const virtualise = !showAll && !query && book.pages.length > (canvasPrefs(book).virtualizeAfter || 40);
   const activeIndex = book.pages.findIndex((page) => page.id === activePage?.id);
   const windowStart = virtualise ? Math.max(0, Math.min(activeIndex - 12, book.pages.length - 40)) : 0;
   const visible = virtualise ? filtered.slice(windowStart, windowStart + 40) : filtered;

@@ -172,3 +172,28 @@ Also re-run after the upgrade: `npm run smoke` (all routes OK), `npm run check:t
   `continuationOf`; on a page with nothing after the cursor the action explains itself.
 * Text floats respect an image's area in both the editor and preview (same component).
 * Space-separated repo path on Windows still works (`npm run dev:recover`).
+
+## 10. Schema migration guard (`npm run check:migration`)
+
+Old saves live in the browser, so a book written before a field existed has no
+`canvas` / `footnotes` / `textStyles`. Reading those directly crashed the editor with
+*"Cannot read properties of undefined (reading 'collapsedSections')"*.
+
+`src/data/migrations.ts` fills missing fields at hydrate time (`migrateDatabase` in
+`src/store/db.ts`), and the editor reads canvas settings through `canvasPrefs(book)` so a
+stale in-memory book cannot crash a screen either.
+
+The guard writes an old-shaped database into localStorage, boots the editor and asserts:
+
+| Step | Assertions |
+| --- | --- |
+| capture | a real payload is available (localStorage or the debug export hook) |
+| strip | the payload really has no `canvas`/`footnotes`/`textStyles` |
+| boot | no crash screen, no `collapsedSections` error, canvas renders, page prose renders |
+| panels | chapters list and collapse, pages panel renders |
+| write-back | `canvas` (with `virtualizeAfter`), `footnotes` and `textStyles` are persisted again |
+
+Verified by temporarily disabling the migration: the guard fails with
+`TypeError: Cannot read properties of undefined (reading 'map')` and the ErrorBoundary
+screen — the same class of failure as the reported bug. With the migration in place:
+**MIGRATION CHECK: PASS**, `errors: []`.

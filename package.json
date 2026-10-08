@@ -13,7 +13,8 @@
     "smoke": "node scripts/smoke.mjs",
     "check:editor": "node scripts/editor-check.mjs",
     "report:size": "node scripts/chunk-report.mjs",
-    "check:theme": "node scripts/theme-check.mjs"
+    "check:theme": "node scripts/theme-check.mjs",
+    "check:migration": "node scripts/migration-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.16",

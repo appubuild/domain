@@ -14,6 +14,7 @@ import { ContextToolbar } from './ContextToolbar';
 import { inspectPage } from './flow';
 import { auditBook } from './exportSafety';
 import { applyStyleToContent } from './textStyles';
+import { canvasPrefs } from '@/data/migrations';
 import { EditorSidebar, type SidebarTab } from './EditorSidebar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CoverDesigner } from './CoverDesigner';
@@ -422,14 +423,14 @@ function EditorPage() {
               <Button
                 size="xs"
                 variant={showRulers ? 'secondary' : 'ghost'}
-                onClick={() => { const next = !showRulers; setShowRulers(next); patchBook({ canvas: { ...book.canvas, showRulers: next } }); }}
+                onClick={() => { const next = !showRulers; setShowRulers(next); patchBook({ canvas: { ...canvasPrefs(book), showRulers: next } }); }}
               >
                 <Ruler className="h-3.5 w-3.5" /> Rulers
               </Button>
               <Button
                 size="xs"
                 variant={showGuides ? 'secondary' : 'ghost'}
-                onClick={() => { const next = !showGuides; setShowGuides(next); patchBook({ canvas: { ...book.canvas, showGuides: next } }); }}
+                onClick={() => { const next = !showGuides; setShowGuides(next); patchBook({ canvas: { ...canvasPrefs(book), showGuides: next } }); }}
               >
                 <Grid2X2 className="h-3.5 w-3.5" /> Guides
               </Button>
@@ -438,8 +439,8 @@ function EditorPage() {
                 onPatch={patchBook}
                 showRulers={showRulers}
                 showGuides={showGuides}
-                onToggleRulers={() => { const next = !showRulers; setShowRulers(next); patchBook({ canvas: { ...book.canvas, showRulers: next } }); }}
-                onToggleGuides={() => { const next = !showGuides; setShowGuides(next); patchBook({ canvas: { ...book.canvas, showGuides: next } }); }}
+                onToggleRulers={() => { const next = !showRulers; setShowRulers(next); patchBook({ canvas: { ...canvasPrefs(book), showRulers: next } }); }}
+                onToggleGuides={() => { const next = !showGuides; setShowGuides(next); patchBook({ canvas: { ...canvasPrefs(book), showGuides: next } }); }}
               />
               <Button size="xs" variant={focusMode ? 'secondary' : 'ghost'} onClick={() => setFocusMode((value) => !value)}><Eye className="h-3.5 w-3.5" /> Focus</Button>
               {(
@@ -744,7 +745,7 @@ function CanvasSettings({
   onToggleRulers: () => void;
   onToggleGuides: () => void;
 }) {
-  const canvas = book.canvas;
+  const canvas = canvasPrefs(book);
   const set = (patch: Partial<Book['canvas']>) => onPatch({ canvas: { ...canvas, ...patch } });
   const rows: { key: keyof Book['canvas']; label: string; hint: string }[] = [
     { key: 'showSafeArea', label: 'Safe area', hint: 'Keep important art inside the trim safety zone.' },

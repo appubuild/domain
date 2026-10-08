@@ -7,6 +7,8 @@
  * seed data. Swapping this for real API calls means replacing repositories only.
  */
 import { buildSeedDatabase, SEED_VERSION, type Database } from '@/data/database';
+import { migrateDatabase } from '@/data/migrations';
+import type { Book } from '@/types/domain';
 
 const STORAGE_KEY = `scriptora.db.v${SEED_VERSION}`;
 const LITE_KEYS = ['versions', 'auditLogs', 'aiUsage', 'emailEvents', 'viewEvents'] as const;
@@ -42,12 +44,14 @@ function hydrate() {
       if (!raw) continue;
       const parsed = JSON.parse(raw) as { version: number; data: Partial<Database>; lite?: boolean };
       if (parsed.version !== SEED_VERSION) continue;
-      if (parsed.lite) {
-        const fresh = buildSeedDatabase();
-        database = { ...fresh, ...parsed.data } as Database;
-      } else {
-        database = { ...buildSeedDatabase(), ...parsed.data } as Database;
-      }
+      const merged = parsed.lite
+        ? ({ ...buildSeedDatabase(), ...parsed.data } as Database)
+        : ({ ...buildSeedDatabase(), ...parsed.data } as Database);
+      // Data saved by an older build can be missing fields that newer screens read
+      // (book.canvas, footnotes, textStyles…). Fill them before anything renders.
+      const { database: migrated, migratedBooks } = migrateDatabase(merged as unknown as { books?: Book[] } & Record<string, unknown>) as unknown as { database: Database; migratedBooks: number };
+      database = migrated;
+      if (migratedBooks > 0) persist();
       return;
     } catch {
       // Corrupt payload — fall through and keep the freshly generated seed.

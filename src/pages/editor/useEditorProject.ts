@@ -5,6 +5,7 @@ import { bookService } from '@/services';
 import { countWords, uid } from '@/lib/utils';
 import { flowPage, titlePage } from '@/data/bookFactory';
 import { flowContextFor, pageTextColumn, planSpill, splitAtBlock } from './flow';
+import { canvasPrefs } from '@/data/migrations';
 import type { Book, BookPage, BookSection, Footnote, ID, PageElement, SectionKind, VersionEntry } from '@/types/domain';
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
@@ -571,7 +572,7 @@ export function useEditorProject(bookId: string | undefined): EditorProject {
     };
 
     const toggleSectionCollapsed = (sectionId: ID) => {
-      const canvas = projectRef.current?.canvas;
+      const canvas = projectRef.current ? canvasPrefs(projectRef.current) : undefined;
       if (!canvas) return;
       const current = canvas.collapsedSections ?? [];
       patchBook({ canvas: { ...canvas, collapsedSections: current.includes(sectionId) ? current.filter((id) => id !== sectionId) : [...current, sectionId] } });
@@ -782,7 +783,7 @@ export function useEditorProject(bookId: string | undefined): EditorProject {
       patchSection,
       duplicateSection,
       moveSection,
-      collapsedSections: project?.canvas.collapsedSections ?? [],
+      collapsedSections: canvasPrefs(project).collapsedSections ?? [],
       toggleSectionCollapsed,
       removeSection,
       reorderSections,

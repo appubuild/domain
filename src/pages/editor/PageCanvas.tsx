@@ -25,6 +25,7 @@ import {
   TaskList,
   bookTypographyExtensions,
 } from './extensions';
+import { canvasPrefs } from '@/data/migrations';
 import type { Book, BookPage, ElementWrap, PageElement, TrimSize } from '@/types/domain';
 
 /* ------------------------------------------------------------------ shared */
@@ -554,7 +555,7 @@ export function PageCanvas({
   // instead of the page shrinking to a few pixels (which made the canvas look empty).
   const natural = pagePixelSize(book.trimSize, book.orientation, 1);
   const size = pagePixelSize(book.trimSize, book.orientation, zoom);
-  const prefs = book.canvas;
+  const prefs = canvasPrefs(book);
   const pageWidthIn = book.orientation === 'landscape' ? book.trimSize.heightIn : book.trimSize.widthIn;
   const pageHeightIn = book.orientation === 'landscape' ? book.trimSize.widthIn : book.trimSize.heightIn;
   const palette = book.theme.palette;
