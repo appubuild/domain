@@ -141,3 +141,32 @@ npm run check:theme                    # theme written to the database reaches t
 See `PERFORMANCE.md` for the before/after numbers, what changed (vendor chunk splitting,
 no more 1.5 s theme polling, one `usePlans()` call instead of two) and what was deliberately
 left alone.
+
+## 9. Editor canvas upgrade checks (headless)
+
+`npm run check:editor` now asserts behaviour instead of printing a transcript. It builds
+the smoke bundle in jsdom and walks the real editor:
+
+| Group | Assertions |
+| --- | --- |
+| Context toolbar | toolbar renders; font family/weight/size, highlight, colour, super/subscript, clear formatting, paragraph spacing, text direction, hyperlink, alignment |
+| Page management | page actions menu opens; *Insert page after* increases the page count; thumbnails render |
+| Chapters | collapse/expand toggle exists and the state actually changes |
+| Elements library | entries render; Design mode activates the object layer; inserting an entry adds an object to the page; the new object appears in the layer list |
+| Layers + lock | lock toggles exist, toggling changes the label (so a locked object can be unlocked), hide/show toggles exist |
+| Preview parity | preview renders the same `data-page-id` canvas, read-only |
+| Export safety | export modal shows *Canvas checks* with the page count |
+
+Result on this branch: **RESULT: PASS**, `errors: []`.
+
+Also re-run after the upgrade: `npm run smoke` (all routes OK), `npm run check:theme`
+(PASS), `npm run build` (entry 490.6 kB raw / 149.6 kB gzip; EditorPage lazy at 643.3 kB /
+190.1 kB gzip).
+
+### Behaviour verified by hand before committing
+
+* Write ↔ Design switching preserves text and objects (same model, different rendering).
+* Overflow badge + *Continue on a new page* splits content and links the new page with
+  `continuationOf`; on a page with nothing after the cursor the action explains itself.
+* Text floats respect an image's area in both the editor and preview (same component).
+* Space-separated repo path on Windows still works (`npm run dev:recover`).

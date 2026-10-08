@@ -228,6 +228,11 @@ export interface BookTheme {
   paragraphIndent: number;
   paragraphSpacing: number;
   lineHeight: number;
+  /** First-line indent used by the typography toolbar (falls back to paragraphIndent). */
+  firstLineIndent?: number;
+  /** Space between paragraphs as a multiple of the font size. */
+  widowControl?: boolean;
+  orphanControl?: boolean;
 }
 
 export interface BookFonts {
@@ -305,6 +310,64 @@ export interface TextStyleProps {
   opacity: number;
   shadow?: string;
   columns?: number;
+  /** Space after each paragraph, in em. */
+  paragraphSpacing?: number;
+  /** First-line indent in em — the typesetter's answer to paragraph spacing. */
+  indent?: number;
+  /** Text box fill. */
+  background?: string;
+  /** Text box border. */
+  borderWidth?: number;
+  borderColor?: string;
+  borderRadius?: number;
+  /** Inner padding of the text box, in em. */
+  padding?: number;
+  /** Writing direction; RTL is opt-in per text box. */
+  direction?: 'ltr' | 'rtl';
+  /** Optional drop cap for the paragraph this box starts. */
+  dropCap?: boolean;
+  /** Vertical alignment for fixed-size text boxes. */
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  /** Named style this text box follows (see Book.textStyles). */
+  styleName?: string;
+}
+
+export type ElementWrap = 'around' | 'square' | 'tight' | 'top-bottom' | 'behind' | 'front' | 'none';
+
+export interface BookTextStyle {
+  id: string;
+  /** Stable name used by elements and by "apply to matching content". */
+  name: string;
+  label: string;
+  /** Which content types this style targets when applied globally. */
+  appliesTo: 'paragraph' | 'heading' | 'title' | 'quote' | 'caption' | 'any';
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: number;
+  lineHeight: number;
+  letterSpacing: number;
+  textTransform: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+  align: 'left' | 'center' | 'right' | 'justify';
+  color: string;
+  italic?: boolean;
+  /** Space before/after in em. */
+  spaceBefore?: number;
+  spaceAfter?: number;
+  /** Keep with the following block (typesetting behaviour). */
+  keepWithNext?: boolean;
+  /** Start this style on a new page. */
+  pageBreakBefore?: boolean;
+}
+
+export interface Footnote {
+  id: ID;
+  bookId: ID;
+  pageId: ID;
+  /** 1-based, recomputed on every save so numbering is always sequential. */
+  number: number;
+  text: string;
+  kind: 'footnote' | 'endnote';
+  createdAt: ISODate;
 }
 
 export interface ImageProps {
@@ -323,6 +386,15 @@ export interface ImageProps {
     contrast: number;
   };
   crop?: { x: number; y: number; scale: number };
+  flipH?: boolean;
+  flipV?: boolean;
+  saturation?: number;
+  /** Text-flow behaviour for this image inside a flow page. */
+  wrap?: ElementWrap;
+  /** Reusable library asset this element came from, if any. */
+  assetId?: ID;
+  /** Free-image provider + credit, kept for attribution requirements. */
+  credit?: { provider: string; author?: string; sourceUrl?: string };
 }
 
 export interface ShapeProps {
@@ -351,8 +423,28 @@ export interface PageElement {
   shape?: Partial<ShapeProps>;
   icon?: string;
   divider?: { style: 'solid' | 'dashed' | 'dotted' | 'double' | 'ornament'; color: string; thickness: number };
-  table?: { rows: number; cols: number; cells: string[][]; headerRow: boolean; borderColor: string };
+  table?: {
+    rows: number;
+    cols: number;
+    cells: string[][];
+    headerRow: boolean;
+    borderColor: string;
+    /** Cells merged away by the cell-merge tool, as "r,c" keys. */
+    merged?: string[];
+    /** Per-cell text alignment, keyed "r,c". */
+    align?: Record<string, 'left' | 'center' | 'right'>;
+    /** Caption rendered under the table (book standard). */
+    caption?: string;
+  };
   z?: number;
+  /** Text-flow behaviour; only meaningful for image-like elements on flow pages. */
+  wrap?: ElementWrap;
+  /** Footnote linked to this element (e.g. an inline note marker). */
+  noteId?: ID;
+  /** Keep this element with the next block when paginating. */
+  keepWithNext?: boolean;
+  /** Locked objects can still be unlocked from the layers panel or properties. */
+  lockNote?: string;
 }
 
 export type PageLayout = 'flow' | 'canvas' | 'title' | 'blank';
@@ -375,6 +467,14 @@ export interface BookPage {
    * Flow pages are split by the export engine; design pages are atomic.
    */
   atomic: boolean;
+  /** Force a page break before this page (typesetting control). */
+  breakBefore?: boolean;
+  /** Chapter openers traditionally start on a right-hand (recto) page. */
+  startOnRecto?: boolean;
+  /** Keep all flow content on one page; do not auto-continue. */
+  keepTogether?: boolean;
+  /** True when this page was created by auto-flow from the previous page. */
+  continuationOf?: ID;
 }
 
 export interface BookSection {
@@ -428,6 +528,8 @@ export interface CoverDesign {
   showBarcode: boolean;
   barcodeIsbn: string;
   tagline: string;
+  /** Manual spine width in inches; empty means "calculate from page count and paper". */
+  spineWidthOverride?: number;
   elements: PageElement[];
 }
 
@@ -499,6 +601,28 @@ export interface Book {
   trashedAt?: ISODate;
   paperStock: 'white' | 'cream' | 'color';
   starred: boolean;
+  /** Reusable typography presets editable in the editor's Style panel. */
+  textStyles: BookTextStyle[];
+  /** Footnotes and endnotes; numbering is recomputed on write. */
+  footnotes: Footnote[];
+  /** Margin/guide snapping preferences for the canvas. */
+  canvas: BookCanvasPrefs;
+}
+
+export interface BookCanvasPrefs {
+  snapToGrid: boolean;
+  gridSize: number;
+  snapToObjects: boolean;
+  showGuides: boolean;
+  showRulers: boolean;
+  showSafeArea: boolean;
+  showBleed: boolean;
+  showCentreGuide: boolean;
+  showBaselineGrid: boolean;
+  /** Page thumbnails are virtualised past this many pages. */
+  virtualizeAfter: number;
+  /** Chapter sections collapsed in the chapter panel. */
+  collapsedSections?: ID[];
 }
 
 /* -------------------------------------------------------------- editor ops */

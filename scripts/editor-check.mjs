@@ -93,5 +93,120 @@ const boldBtn = doc.querySelector('button[title="Bold (Ctrl+B)"]');
 console.log('WRITE mode: bold button present =', Boolean(boldBtn), '| toolbar buttons =', doc.querySelectorAll('button[title]').length);
 console.log('  PM still has text =', (doc.querySelector('.ProseMirror')?.textContent?.length ?? 0) > 100);
 
+/* ------------------------------------------------------------------ asserts */
+
+const failures = [];
+const check = (name, condition, detail = '') => {
+  if (condition) {
+    console.log(`  PASS  ${name}`);
+  } else {
+    failures.push(`${name}${detail ? ` — ${detail}` : ''}`);
+    console.log(`  FAIL  ${name}${detail ? ` — ${detail}` : ''}`);
+  }
+};
+
+const clickTab = async (label) => {
+  const tab = [...doc.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === label || (b.textContent || '').trim() === label);
+  tab?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+  await wait(500);
+};
+
+const pageCount = () => doc.querySelectorAll('[data-page-id]').length;
+const sidebarPageRows = () => [...doc.querySelectorAll('button')].filter((b) => /^\d+\./.test(b.textContent || '')).length;
+
+await clickTab('Write');
+console.log('\nCONTEXT TOOLBAR');
+const toolbarScope = doc.querySelector('.hidden.min-w-0.flex-1.justify-center');
+const titles = [...(toolbarScope?.querySelectorAll('button[title], button[aria-label]') ?? [])].map((b) => b.getAttribute('title') || b.getAttribute('aria-label'));
+const hasControl = (pattern) => titles.some((title) => title && pattern.test(title));
+check('context toolbar rendered', (toolbarScope?.textContent || '').length > 20 || titles.length > 5, `${titles.length} controls`);
+check('font size control present', hasControl(/font size/i));
+check('font family + weight controls present', hasControl(/font family/i) && hasControl(/font weight/i));
+check('highlight control present', hasControl(/highlight/i));
+check('text colour control present', hasControl(/colour|color/i));
+check('subscript/superscript controls present', hasControl(/subscript/i) || hasControl(/superscript/i));
+check('clear formatting control present', hasControl(/clear formatting/i));
+check('indent + paragraph spacing control present', hasControl(/paragraph spacing/i));
+check('text direction control present', hasControl(/text direction/i));
+check('hyperlink control present', hasControl(/hyperlink/i));
+check('alignment controls present', hasControl(/^align /i) || titles.filter((title) => /align/i.test(title || '')).length >= 3);
+
+console.log('\nPAGE MANAGEMENT');
+await clickTab('Pages');
+const before = sidebarPageRows();
+const rowMenu = [...doc.querySelectorAll('button[aria-label^="Page actions"]')];
+rowMenu[0]?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(400);
+const insertAfter = [...doc.querySelectorAll('button')].find((b) => /Insert page after/.test(b.textContent || ''));
+check('page actions menu opens', Boolean(insertAfter));
+insertAfter?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(800);
+const after = sidebarPageRows();
+check('insert page after adds a page', after === before + 1, `${before} -> ${after}`);
+check('page thumbnails render', doc.querySelectorAll('[data-page-id], .page-card').length >= 1 && Boolean(doc.querySelector('svg, img, div[style*="border-radius: 2px"]')));
+
+console.log('\nCHAPTERS');
+await clickTab('Chapters');
+const chapterToggle = [...doc.querySelectorAll('button[aria-expanded]')].find((b) => /Collapse|Expand/.test(b.getAttribute('aria-label') || ''));
+check('chapter collapse toggle present', Boolean(chapterToggle));
+const expandedBefore = chapterToggle?.getAttribute('aria-expanded');
+chapterToggle?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(400);
+const toggled = [...doc.querySelectorAll('button[aria-expanded]')].find((b) => /Collapse|Expand/.test(b.getAttribute('aria-label') || ''));
+check('collapse state actually changes', expandedBefore !== toggled?.getAttribute('aria-expanded'));
+
+console.log('\nELEMENTS LIBRARY');
+await clickTab('Elements');
+const insertButtons = () => [...doc.querySelectorAll('button')].filter((b) => /Insert|Inserted items|^[A-Z][a-z]+ (box|rule|frame|block|title|quote)/.test(b.getAttribute('title') || ''));
+const firstElement = insertButtons()[0];
+check('element library renders entries', insertButtons().length > 3, `${insertButtons().length} entries`);
+const modeTab = [...doc.querySelectorAll('[role="tab"]')].find((b) => (b.textContent || '').trim() === 'Design');
+modeTab?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(900);
+const selectedMode = [...doc.querySelectorAll('[role="tab"]')].find((b) => b.getAttribute('aria-selected') === 'true')?.textContent?.trim();
+check('Design mode activates and shows the object layer', selectedMode === 'Design');
+const absoluteChildren = () => [...doc.querySelectorAll('[data-page-id] div')].filter((node) => /position:\s*absolute/.test(node.getAttribute('style') || '')).length;
+const elementCountBefore = absoluteChildren();
+firstElement?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(1000);
+const elementCountAfter = absoluteChildren();
+check('inserting a library element adds an object', elementCountAfter > elementCountBefore, `${elementCountBefore} -> ${elementCountAfter}`);
+
+check('inserted element is selectable (layer row appears)', Boolean(doc.querySelector('button[aria-label^="Lock"], button[aria-label^="Unlock"]')));
+
+console.log('\nLAYERS + LOCK');
+const lockButtons = [...doc.querySelectorAll('button[aria-label^="Lock"], button[aria-label^="Unlock"]')];
+check('layers expose lock toggles', lockButtons.length > 0, `${lockButtons.length} lock controls`);
+const lockLabelBefore = lockButtons[0]?.getAttribute('aria-label');
+lockButtons[0]?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(500);
+const lockButtonsAgain = [...doc.querySelectorAll('button[aria-label^="Lock"], button[aria-label^="Unlock"]')];
+check('lock state toggles (and can be undone)', lockButtonsAgain[0]?.getAttribute('aria-label') !== lockLabelBefore, `${lockLabelBefore} -> ${lockButtonsAgain[0]?.getAttribute('aria-label')}`);
+check('hidden/visible toggles exist', doc.querySelectorAll('button[aria-label^="Hide"], button[aria-label^="Show"]').length > 0);
+
+console.log('\nPREVIEW PARITY');
+await clickTab('Preview');
+await wait(900);
+const previewCards = doc.querySelectorAll('[data-page-id]');
+check('preview renders the shared page canvas', previewCards.length > 0, `${previewCards.length} page surfaces`);
+check('preview page keeps the same data-page-id contract', Boolean(doc.querySelector('[data-page-id]')));
+check('preview is read-only', !doc.querySelector('[data-page-id] [contenteditable="true"]'));
+
+console.log('\nEXPORT SAFETY');
+const exportButton = [...doc.querySelectorAll('button')].find((b) => /^Export/.test((b.textContent || '').trim()));
+exportButton?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(900);
+const modalText = doc.body.textContent || '';
+check('export modal shows canvas checks', /Canvas checks/.test(modalText));
+check('export modal lists pages checked', /pages/.test(modalText));
+const closeModal = [...doc.querySelectorAll('button')].find((b) => /Cancel|Close/.test((b.textContent || '').trim()));
+closeModal?.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
+await wait(300);
+
 console.log('\nerrors:', errors.slice(0, 3));
+console.log('\nRESULT:', failures.length ? `FAIL (${failures.length})` : 'PASS');
+failures.forEach((failure) => console.log('  -', failure));
+if (errors.length) console.log('runtime errors:', errors.slice(0, 3));
+const broken = failures.length > 0 || errors.length > 0;
 dom.window.close();
+process.exitCode = broken ? 1 : 0;

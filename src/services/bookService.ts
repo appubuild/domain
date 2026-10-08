@@ -398,10 +398,13 @@ export const bookService = {
   },
   spineWidth(bookId: ID) {
     const book = bookRepo.find(bookId);
-    if (!book) return { widthIn: 0, pages: 0, paper: 'cream' as const };
+    if (!book) return { widthIn: 0, pages: 0, paper: 'cream' as const, manual: false };
     const thickness = PAPER_THICKNESS[book.paperStock] ?? PAPER_THICKNESS.cream;
     const pages = book.pageCount;
-    return { widthIn: Number((pages * thickness).toFixed(3)), pages, paper: book.paperStock };
+    const calculated = Number((pages * thickness).toFixed(3));
+    const override = book.cover?.spineWidthOverride;
+    const manual = typeof override === 'number' && override > 0;
+    return { widthIn: manual ? Number(override.toFixed(3)) : calculated, calculated, pages, paper: book.paperStock, manual };
   },
   pageLabel(bookId: ID, index: number) {
     const book = bookRepo.find(bookId);

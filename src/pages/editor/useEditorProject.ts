@@ -4,7 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { bookService } from '@/services';
 import { countWords, uid } from '@/lib/utils';
 import { flowPage, titlePage } from '@/data/bookFactory';
-import type { Book, BookPage, BookSection, ID, PageElement, SectionKind, VersionEntry } from '@/types/domain';
+import { flowContextFor, pageTextColumn, planSpill, splitAtBlock } from './flow';
+import type { Book, BookPage, BookSection, Footnote, ID, PageElement, SectionKind, VersionEntry } from '@/types/domain';
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'error';
 export type EditorMode = 'write' | 'design' | 'preview' | 'cover';
@@ -32,16 +33,33 @@ export interface EditorProject {
   duplicateElement: (pageId: ID, elementId: ID) => void;
   reorderElement: (pageId: ID, elementId: ID, direction: 'up' | 'down' | 'front' | 'back') => void;
   addPage: (sectionId: ID, layout?: BookPage['layout']) => BookPage | undefined;
+  /** Insert a page directly before / after another page, in the same section. */
+  insertPage: (pageId: ID, position: 'before' | 'after', layout?: BookPage['layout']) => BookPage | undefined;
   duplicatePage: (pageId: ID) => void;
   removePage: (pageId: ID) => void;
   reorderPages: (orderedIds: ID[]) => void;
+  movePage: (pageId: ID, direction: 'up' | 'down') => void;
   movePageToSection: (pageId: ID, sectionId: ID) => void;
+  /** Split a flow page in two at a content block index (page-break control + auto flow). */
+  splitPageContent: (pageId: ID, blockIndex: number, options?: { keepTogether?: boolean }) => void;
+  /** Paginate the page's own content with the flow engine and spill the remainder on. */
+  autoFlowPage: (pageId: ID) => void;
   addSection: (title: string, kind?: SectionKind) => BookSection | undefined;
   patchSection: (sectionId: ID, patch: Partial<BookSection>) => void;
+  duplicateSection: (sectionId: ID) => void;
+  moveSection: (sectionId: ID, direction: 'up' | 'down') => void;
+  /** Section whose pages are currently collapsed in the chapter panel. */
+  collapsedSections: ID[];
+  toggleSectionCollapsed: (sectionId: ID) => void;
   removeSection: (sectionId: ID) => void;
   reorderSections: (orderedIds: ID[]) => void;
   splitSection: (pageId: ID) => void;
   generateToc: () => { title: string; page: number }[];
+  /** Footnotes/endnotes, numbered sequentially on every mutation. */
+  addFootnote: (pageId: ID, text: string, kind?: 'footnote' | 'endnote') => ID | undefined;
+  patchFootnote: (footnoteId: ID, patch: Partial<Footnote>) => void;
+  removeFootnote: (footnoteId: ID) => void;
+  footnotesForPage: (pageId: ID) => Footnote[];
   applyThemeToAllPages: (paletteId: string) => Promise<void>;
   undo: () => void;
   redo: () => void;
@@ -350,6 +368,112 @@ export function useEditorProject(bookId: string | undefined): EditorProject {
       setActivePageIdState(copy.id);
     };
 
+    const insertPage = (pageId: ID, position: 'before' | 'after', layout: BookPage['layout'] = 'flow') => {
+      const book = projectRef.current;
+      const anchor = book?.pages.find((page) => page.id === pageId);
+      if (!book || !anchor) return undefined;
+      const page: BookPage = layout === 'title'
+        ? titlePage(anchor.sectionId, anchor.title || 'Untitled section', 'Untitled section', book.theme.palette)
+        : flowPage(anchor.sectionId, anchor.title ?? 'Untitled section', '');
+      page.title = anchor.title ?? page.title;
+      commit((current) => {
+        const pages = [...current.pages];
+        const at = pages.findIndex((entry) => entry.id === pageId);
+        pages.splice(position === 'before' ? at : at + 1, 0, page);
+        return {
+          ...current,
+          pages,
+          sections: current.sections.map((section) => {
+            if (section.id !== anchor.sectionId) return section;
+            const pageIds = [...section.pageIds];
+            const index = pageIds.indexOf(pageId);
+            pageIds.splice(position === 'before' ? index : index + 1, 0, page.id);
+            return { ...section, pageIds };
+          }),
+        };
+      });
+      setActivePageIdState(page.id);
+      return page;
+    };
+
+    const movePage = (pageId: ID, direction: 'up' | 'down') => {
+      commit((book) => {
+        const pages = [...book.pages];
+        const index = pages.findIndex((page) => page.id === pageId);
+        const target = direction === 'up' ? index - 1 : index + 1;
+        if (index < 0 || target < 0 || target >= pages.length) return book;
+        [pages[index], pages[target]] = [pages[target], pages[index]];
+        return { ...book, pages, sections: book.sections.map((section) => ({ ...section, pageIds: section.pageIds.slice().sort((a, b) => pages.findIndex((p) => p.id === a) - pages.findIndex((p) => p.id === b)) })) };
+      });
+    };
+
+    const splitPageContent = (pageId: ID, blockIndex: number, options?: { keepTogether?: boolean }) => {
+      const page = pageById(pageId);
+      if (!page) return;
+      const { head, tail } = splitAtBlock(page.content ?? '', blockIndex);
+      if (!tail.trim()) return;
+      const anchorTitle = page.title;
+      const nextPage: BookPage = {
+        ...flowPage(page.sectionId, anchorTitle, tail),
+        breakBefore: false,
+        continuationOf: options?.keepTogether ? page.id : (page.continuationOf ?? page.id),
+        keepTogether: options?.keepTogether,
+      };
+      commit((book) => {
+        const pages = [...book.pages];
+        const at = pages.findIndex((entry) => entry.id === pageId);
+        const updated: BookPage = {
+          ...pages[at],
+          content: head,
+          wordCount: countWords(head),
+          updatedAt: new Date().toISOString(),
+          keepTogether: options?.keepTogether ?? pages[at].keepTogether,
+        };
+        pages[at] = updated;
+        pages.splice(at + 1, 0, nextPage);
+        return {
+          ...book,
+          pages,
+          sections: book.sections.map((section) => {
+            if (section.id !== page.sectionId) return section;
+            const pageIds = [...section.pageIds];
+            pageIds.splice(pageIds.indexOf(pageId) + 1, 0, nextPage.id);
+            return { ...section, pageIds };
+          }),
+        };
+      });
+      setActivePageIdState(nextPage.id);
+    };
+
+    const autoFlowPage = (pageId: ID) => {
+      const book = projectRef.current;
+      const page = pageById(pageId);
+      if (!book || !page) return;
+      const column = pageTextColumn(book);
+      const spill = planSpill(page.content ?? '', { availableHeight: column.heightPx, context: flowContextFor(book, page) });
+      // No layout engine (tests / SSR) or nothing overflows: never invent a split.
+      if (spill.unmeasurable || !spill.tail.trim()) return;
+      const { head, tail } = spill;
+      const nextPage: BookPage = { ...flowPage(page.sectionId, page.title, tail), continuationOf: page.continuationOf ?? page.id };
+      commit((current) => {
+        const pages = [...current.pages];
+        const at = pages.findIndex((entry) => entry.id === pageId);
+        pages[at] = { ...pages[at], content: head, wordCount: countWords(head), updatedAt: new Date().toISOString() };
+        pages.splice(at + 1, 0, nextPage);
+        return {
+          ...current,
+          pages,
+          sections: current.sections.map((section) => {
+            if (section.id !== page.sectionId) return section;
+            const pageIds = [...section.pageIds];
+            pageIds.splice(pageIds.indexOf(pageId) + 1, 0, nextPage.id);
+            return { ...section, pageIds };
+          }),
+        };
+      });
+      setActivePageIdState(nextPage.id);
+    };
+
     const removePage = (pageId: ID) => {
       commit((book) => ({
         ...book,
@@ -412,6 +536,47 @@ export function useEditorProject(bookId: string | undefined): EditorProject {
     const patchSection = (sectionId: ID, patch: Partial<BookSection>) =>
       commit((book) => ({ ...book, sections: book.sections.map((section) => (section.id === sectionId ? { ...section, ...patch } : section)) }));
 
+    const duplicateSection = (sectionId: ID) => {
+      const book = projectRef.current;
+      const section = book?.sections.find((entry) => entry.id === sectionId);
+      if (!book || !section) return;
+      const copyId = uid('sec');
+      const pages = book.pages.filter((page) => page.sectionId === sectionId);
+      const cloned: BookPage[] = pages.map((page) => ({ ...page, id: uid('page'), sectionId: copyId, elements: page.elements.map((element) => ({ ...element, id: uid('el') })) }));
+      const copy: BookSection = { ...section, id: copyId, title: `${section.title} copy`, pageIds: cloned.map((page) => page.id), wordCount: cloned.reduce((total, page) => total + page.wordCount, 0) };
+      commit((current) => {
+        const sections = [...current.sections];
+        const at = sections.findIndex((entry) => entry.id === sectionId);
+        sections.splice(at + 1, 0, copy);
+        const allPages = [...current.pages];
+        const lastPageIndex = allPages.map((page) => page.sectionId).lastIndexOf(sectionId);
+        allPages.splice(lastPageIndex + 1, 0, ...cloned);
+        return { ...current, sections: sections.map((entry, index) => ({ ...entry, order: index })), pages: allPages };
+      });
+      if (cloned[0]) setActivePageIdState(cloned[0].id);
+    };
+
+    const moveSection = (sectionId: ID, direction: 'up' | 'down') => {
+      commit((book) => {
+        const sections = [...book.sections].sort((a, b) => a.order - b.order);
+        const index = sections.findIndex((entry) => entry.id === sectionId);
+        const target = direction === 'up' ? index - 1 : index + 1;
+        if (index < 0 || target < 0 || target >= sections.length) return book;
+        [sections[index], sections[target]] = [sections[target], sections[index]];
+        const ordered = sections.map((entry, order) => ({ ...entry, order }));
+        const pageOrder = ordered.flatMap((entry) => entry.pageIds);
+        const pages = [...book.pages].sort((a, b) => pageOrder.indexOf(a.id) - pageOrder.indexOf(b.id));
+        return { ...book, sections: ordered, pages };
+      });
+    };
+
+    const toggleSectionCollapsed = (sectionId: ID) => {
+      const canvas = projectRef.current?.canvas;
+      if (!canvas) return;
+      const current = canvas.collapsedSections ?? [];
+      patchBook({ canvas: { ...canvas, collapsedSections: current.includes(sectionId) ? current.filter((id) => id !== sectionId) : [...current, sectionId] } });
+    };
+
     const removeSection = (sectionId: ID) => {
       const section = projectRef.current?.sections.find((entry) => entry.id === sectionId);
       if (!section) return;
@@ -461,6 +626,29 @@ export function useEditorProject(bookId: string | undefined): EditorProject {
         pages: current.pages.map((entry) => (tail.includes(entry.id) ? { ...entry, sectionId: created.id } : entry)),
       }));
     };
+
+    const renumberFootnotes = (footnotes: Footnote[], pages: BookPage[]): Footnote[] => {
+      const pageOrder = new Map(pages.map((page, index) => [page.id, index]));
+      return [...footnotes]
+        .sort((a, b) => (pageOrder.get(a.pageId) ?? 0) - (pageOrder.get(b.pageId) ?? 0) || a.number - b.number)
+        .map((footnote, index) => ({ ...footnote, number: index + 1 }));
+    };
+
+    const addFootnote = (pageId: ID, text: string, kind: 'footnote' | 'endnote' = 'footnote') => {
+      const book = projectRef.current;
+      if (!book) return undefined;
+      const footnote: Footnote = { id: uid('note'), bookId: book.id, pageId, number: (book.footnotes?.length ?? 0) + 1, text, kind, createdAt: new Date().toISOString() };
+      commit((current) => ({ ...current, footnotes: renumberFootnotes([...(current.footnotes ?? []), footnote], current.pages) }));
+      return footnote.id;
+    };
+
+    const patchFootnote = (footnoteId: ID, patch: Partial<Footnote>) =>
+      commit((book) => ({ ...book, footnotes: (book.footnotes ?? []).map((footnote) => (footnote.id === footnoteId ? { ...footnote, ...patch } : footnote)) }));
+
+    const removeFootnote = (footnoteId: ID) =>
+      commit((book) => ({ ...book, footnotes: renumberFootnotes((book.footnotes ?? []).filter((footnote) => footnote.id !== footnoteId), book.pages) }));
+
+    const footnotesForPage = (pageId: ID) => (projectRef.current?.footnotes ?? []).filter((footnote) => footnote.pageId === pageId).sort((a, b) => a.number - b.number);
 
     const generateToc = () => {
       const book = projectRef.current;
@@ -582,16 +770,28 @@ export function useEditorProject(bookId: string | undefined): EditorProject {
       duplicateElement,
       reorderElement,
       addPage,
+      insertPage,
       duplicatePage,
       removePage,
       reorderPages,
+      movePage,
       movePageToSection,
+      splitPageContent,
+      autoFlowPage,
       addSection,
       patchSection,
+      duplicateSection,
+      moveSection,
+      collapsedSections: project?.canvas.collapsedSections ?? [],
+      toggleSectionCollapsed,
       removeSection,
       reorderSections,
       splitSection,
       generateToc,
+      addFootnote,
+      patchFootnote,
+      removeFootnote,
+      footnotesForPage,
       applyThemeToAllPages,
       undo,
       redo,

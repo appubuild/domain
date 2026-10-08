@@ -9,12 +9,16 @@ import { EmptyState } from '@/components/ui/data';
 import { useToast } from '@/components/ui/toast';
 import { useConfirm } from '@/components/ui/overlays';
 import { useAssets, useTemplates } from '@/hooks/queries';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/providers/AuthProvider';
-import { aiService, bookService } from '@/services';
+import { aiService, assetService, bookService, storageService } from '@/services';
 import { PAGE_PALETTES } from '@/data/constants';
 import { formatNumber } from '@/lib/format';
 import { cn, formatBytes, uid } from '@/lib/utils';
 import { AiPanel } from './AiPanel';
+import { ASSET_CATEGORIES, ELEMENT_LIBRARY, assetKindsFor, type AssetCategoryId, type LibraryEntry } from './libraries';
+import { freeImageService, type FreeImageProviderId, type FreeImageResult } from '@/services/freeImageService';
+import { PageThumbnail } from './PageThumbnail';
 import type { Book, BookPage, BookSection, ElementType, PageElement, SectionKind, Template } from '@/types/domain';
 
 export type SidebarTab = 'pages' | 'chapters' | 'elements' | 'templates' | 'assets' | 'ai' | 'structure';
@@ -33,8 +37,14 @@ interface Props {
   onPatchPage: (pageId: string, patch: Partial<BookPage>) => void;
   onPatchSection: (sectionId: string, patch: Partial<BookSection>) => void;
   onAddPage: (sectionId: string, layout?: BookPage['layout']) => void;
+  onInsertPage: (pageId: string, position: 'before' | 'after', layout?: BookPage['layout']) => void;
+  onMovePage: (pageId: string, direction: 'up' | 'down') => void;
   onAddSection: (title: string, kind: SectionKind) => BookSection | undefined;
   onDuplicatePage: (pageId: string) => void;
+  onDuplicateSection: (sectionId: string) => void;
+  onMoveSection: (sectionId: string, direction: 'up' | 'down') => void;
+  collapsedSections: string[];
+  onToggleSectionCollapsed: (sectionId: string) => void;
   onRemovePage: (pageId: string) => void;
   onRemoveSection: (sectionId: string) => void;
   onReorderPages: (orderedIds: string[]) => void;
@@ -113,15 +123,27 @@ export function EditorSidebar(props: Props) {
 
 /* ------------------------------------------------------------------ pages */
 
-function PagesPanel({ book, activePage, onSelectPage, onPatchPage, onAddPage, onDuplicatePage, onRemovePage, onReorderPages, onMovePageToSection }: Props) {
+function PagesPanel({
+  book, activePage, onSelectPage, onPatchPage, onAddPage, onInsertPage, onDuplicatePage, onRemovePage,
+  onReorderPages, onMovePage, onMovePageToSection,
+}: Props) {
   const { success } = useToast();
   const confirm = useConfirm();
   const [query, setQuery] = React.useState('');
   const [dragId, setDragId] = React.useState<string | null>(null);
   const [overId, setOverId] = React.useState<string | null>(null);
+  const [renameId, setRenameId] = React.useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = React.useState('');
+  const [showAll, setShowAll] = React.useState(false);
 
-  const filtered = book.pages.filter((page) => !query || page.title.toLowerCase().includes(query.toLowerCase()));
+  const filtered = book.pages.filter((page) => !query || (page.title || '').toLowerCase().includes(query.toLowerCase()));
   const sectionTitle = (sectionId: string) => book.sections.find((section) => section.id === sectionId)?.title ?? 'Section';
+  // Long books: only the window around the active page renders until the author asks for all.
+  const virtualise = !showAll && !query && book.pages.length > (book.canvas.virtualizeAfter || 40);
+  const activeIndex = book.pages.findIndex((page) => page.id === activePage?.id);
+  const windowStart = virtualise ? Math.max(0, Math.min(activeIndex - 12, book.pages.length - 40)) : 0;
+  const visible = virtualise ? filtered.slice(windowStart, windowStart + 40) : filtered;
+  const items = visible.map((page) => ({ page, index: book.pages.findIndex((entry) => entry.id === page.id) }));
 
   const handleDrop = (targetId: string) => {
     if (!dragId || dragId === targetId) return;
@@ -135,6 +157,12 @@ function PagesPanel({ book, activePage, onSelectPage, onPatchPage, onAddPage, on
     setOverId(null);
   };
 
+  const commitRename = (pageId: string) => {
+    const title = renameDraft.trim();
+    if (title) onPatchPage(pageId, { title });
+    setRenameId(null);
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -145,17 +173,25 @@ function PagesPanel({ book, activePage, onSelectPage, onPatchPage, onAddPage, on
         <DropdownMenu
           trigger={<Button size="xs" variant="outline"><Plus className="h-3 w-3" /> Add</Button>}
           items={[
-            { id: 'flow', label: 'Text page', onSelect: () => onAddPage(activePage?.sectionId ?? book.sections[0]?.id ?? '', 'flow') },
+            { id: 'flow', label: 'Text page (end of chapter)', onSelect: () => onAddPage(activePage?.sectionId ?? book.sections[0]?.id ?? '', 'flow') },
             { id: 'canvas', label: 'Design page', onSelect: () => onAddPage(activePage?.sectionId ?? book.sections[0]?.id ?? '', 'canvas') },
             { id: 'title', label: 'Title page', onSelect: () => onAddPage(activePage?.sectionId ?? book.sections[0]?.id ?? '', 'title') },
             { id: 'blank', label: 'Blank page', onSelect: () => onAddPage(activePage?.sectionId ?? book.sections[0]?.id ?? '', 'blank') },
+            { id: 'blank-insert', label: 'Blank page after this one', onSelect: () => activePage && onInsertPage(activePage.id, 'after', 'blank') },
           ] as MenuItemDef[]}
         />
       </div>
-      <p className="text-2xs text-muted-foreground">Drag to reorder · click to open · {formatNumber(book.wordCount)} words total</p>
+      <p className="text-2xs text-muted-foreground">
+        Drag to reorder · click to open · {formatNumber(book.wordCount)} words · {book.pages.length} pages
+      </p>
+      {virtualise && (
+        <p className="rounded bg-muted px-2 py-1 text-2xs text-muted-foreground">
+          Showing pages {windowStart + 1}–{Math.min(book.pages.length, windowStart + 40)} of {book.pages.length} for speed.{' '}
+          <button type="button" className="underline" onClick={() => setShowAll(true)}>Render all</button>
+        </p>
+      )}
       <div className="space-y-1.5">
-        {filtered.map((page) => {
-          const index = book.pages.findIndex((entry) => entry.id === page.id);
+        {items.map(({ page, index }) => {
           const active = page.id === activePage?.id;
           return (
             <div
@@ -172,25 +208,53 @@ function PagesPanel({ book, activePage, onSelectPage, onPatchPage, onAddPage, on
               )}
             >
               <div className="flex items-start gap-2">
-                <GripVertical className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
-                <button type="button" onClick={() => onSelectPage(page.id)} className="min-w-0 flex-1 text-left">
-                  <p className="flex items-center gap-1.5 truncate text-xs font-medium">
-                    <span className="text-muted-foreground">{index + 1}.</span> {page.title || 'Untitled page'}
-                    {page.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                  </p>
-                  <p className="truncate text-2xs text-muted-foreground">
-                    {page.layout} · {page.wordCount ? `${formatNumber(page.wordCount)} words` : 'empty'} · {sectionTitle(page.sectionId)}
-                  </p>
-                </button>
+                <div className="flex flex-col items-center gap-0.5">
+                  <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
+                  <PageThumbnail book={book} page={page} width={40} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  {renameId === page.id ? (
+                    <Input
+                      autoFocus
+                      value={renameDraft}
+                      onChange={(event) => setRenameDraft(event.target.value)}
+                      onBlur={() => commitRename(page.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') commitRename(page.id);
+                        if (event.key === 'Escape') setRenameId(null);
+                      }}
+                      className="h-6 text-xs"
+                      aria-label={`Rename page ${index + 1}`}
+                    />
+                  ) : (
+                    <button type="button" onClick={() => onSelectPage(page.id)} onDoubleClick={() => { setRenameId(page.id); setRenameDraft(page.title); }} className="w-full text-left">
+                      <p className="flex items-center gap-1.5 truncate text-xs font-medium">
+                        <span className="text-muted-foreground">{index + 1}.</span> {page.title || 'Untitled page'}
+                        {page.locked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      </p>
+                      <p className="truncate text-2xs text-muted-foreground">
+                        {page.layout} · {page.wordCount ? `${formatNumber(page.wordCount)} words` : 'empty'} · {sectionTitle(page.sectionId)}
+                        {page.startOnRecto ? ' · recto' : ''}
+                      </p>
+                    </button>
+                  )}
+                </div>
                 <Popover
                   align="end"
                   trigger={<Button variant="ghost" size="xs" aria-label={`Page actions for ${page.title}`}><ChevronDown className="h-3 w-3" /></Button>}
-                  className="w-52 p-1"
+                  className="w-56 p-1"
                 >
                   <div className="space-y-0.5">
+                    <MenuButton label="Rename" onClick={() => { setRenameId(page.id); setRenameDraft(page.title); }} />
+                    <MenuButton label="Insert page before" onClick={() => onInsertPage(page.id, 'before', 'flow')} />
+                    <MenuButton label="Insert page after" onClick={() => onInsertPage(page.id, 'after', 'flow')} />
+                    <MenuButton label="Insert blank page after" onClick={() => onInsertPage(page.id, 'after', 'blank')} />
                     <MenuButton label="Duplicate page" onClick={() => onDuplicatePage(page.id)} />
-                    <MenuButton label="Insert page after" onClick={() => onAddPage(page.sectionId)} />
+                    <MenuButton label="Move page up" onClick={() => onMovePage(page.id, 'up')} />
+                    <MenuButton label="Move page down" onClick={() => onMovePage(page.id, 'down')} />
                     <MenuButton label={page.locked ? 'Unlock page' : 'Lock page'} onClick={() => onPatchPage(page.id, { locked: !page.locked })} />
+                    <MenuButton label={page.startOnRecto ? 'Allow left-hand start' : 'Start on right (recto)'} onClick={() => onPatchPage(page.id, { startOnRecto: !page.startOnRecto })} />
+                    <MenuButton label={page.keepTogether ? 'Allow breaking' : 'Keep paragraphs together'} onClick={() => onPatchPage(page.id, { keepTogether: !page.keepTogether })} />
                     <MenuButton
                       label="Move to section…"
                       onClick={() => {
@@ -207,7 +271,7 @@ function PagesPanel({ book, activePage, onSelectPage, onPatchPage, onAddPage, on
                         if (next) onPatchPage(page.id, { numbering: next as BookPage['numbering'] });
                       }}
                     />
-                    <MenuButton label="Delete page" destructive onClick={async () => { const ok = await confirm({ title: `Delete “${page.title}”?`, description: 'The page is removed from the book immediately.', destructive: true, confirmLabel: 'Delete page' }); if (ok) onRemovePage(page.id); }} />
+                    <MenuButton label="Delete page" destructive onClick={async () => { const ok = await confirm({ title: `Delete “${page.title || 'this page'}”?`, description: 'The page is removed from the book immediately.', destructive: true, confirmLabel: 'Delete page' }); if (ok) onRemovePage(page.id); }} />
                   </div>
                 </Popover>
               </div>
@@ -223,13 +287,17 @@ function PagesPanel({ book, activePage, onSelectPage, onPatchPage, onAddPage, on
 
 /* --------------------------------------------------------------- chapters */
 
-function ChaptersPanel({ book, activePage, onPatchSection, onAddSection, onRemoveSection, onReorderSections, onSplitSection, onSelectPage }: Props) {
+function ChaptersPanel({
+  book, activePage, onPatchSection, onAddSection, onAddPage, onRemoveSection, onReorderSections, onSplitSection, onSelectPage,
+  onDuplicateSection, onMoveSection, collapsedSections, onToggleSectionCollapsed,
+}: Props) {
   const { success } = useToast();
   const confirm = useConfirm();
-  const [expanded, setExpanded] = React.useState<string[]>(book.sections.map((section) => section.id));
   const [dragId, setDragId] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState('');
 
-  const toggle = (id: string) => setExpanded((current) => (current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id]));
+  const collapsed = new Set(collapsedSections);
+  const toggle = (id: string) => onToggleSectionCollapsed(id);
 
   const handleDrop = (targetId: string) => {
     if (!dragId || dragId === targetId) return;
@@ -242,8 +310,16 @@ function ChaptersPanel({ book, activePage, onPatchSection, onAddSection, onRemov
     setDragId(null);
   };
 
+  const sections = [...book.sections]
+    .sort((a, b) => a.order - b.order)
+    .filter((section) => !query || section.title.toLowerCase().includes(query.toLowerCase()));
+
   return (
     <div className="space-y-3">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a chapter" className="h-8 pl-7 text-xs" aria-label="Find a chapter" />
+      </div>
       <div className="flex items-center justify-between gap-2">
         <p className="text-2xs text-muted-foreground">{book.sections.length} sections · drag to reorder</p>
         <DropdownMenu
@@ -253,14 +329,15 @@ function ChaptersPanel({ book, activePage, onPatchSection, onAddSection, onRemov
             label: kind.replace('-', ' ').replace(/^\w/, (letter) => letter.toUpperCase()),
             onSelect: () => {
               const section = onAddSection(kind === 'chapter' ? 'Untitled chapter' : kind.replace('-', ' ').replace(/^\w/, (letter) => letter.toUpperCase()), kind);
-              if (section) setExpanded((current) => [...current, section.id]);
+              if (section && collapsed.has(section.id)) onToggleSectionCollapsed(section.id);
             },
           })) as MenuItemDef[]}
         />
       </div>
       <div className="space-y-2">
-        {book.sections.map((section) => {
-          const open = expanded.includes(section.id);
+        {sections.map((section, order) => {
+          const open = !collapsed.has(section.id);
+          const pages = section.pageIds.map((pageId) => book.pages.find((entry) => entry.id === pageId)).filter(Boolean) as BookPage[];
           return (
             <div
               key={section.id}
@@ -272,13 +349,39 @@ function ChaptersPanel({ book, activePage, onPatchSection, onAddSection, onRemov
             >
               <div className="flex items-center gap-1 p-2">
                 <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground" />
-                <button type="button" onClick={() => toggle(section.id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left" aria-expanded={open}>
+                <button type="button" onClick={() => toggle(section.id)} className="flex min-w-0 flex-1 items-center gap-1.5 text-left" aria-expanded={open} aria-label={`${open ? 'Collapse' : 'Expand'} ${section.title}`}>
                   {open ? <ChevronDown className="h-3.5 w-3.5 shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
                   <span className="min-w-0">
                     <span className="block truncate text-xs font-medium">{section.title}</span>
                     <span className="block truncate text-2xs text-muted-foreground">{section.kind.replace('-', ' ')} · {section.pageIds.length} pages · {formatNumber(section.wordCount)} words</span>
                   </span>
                 </button>
+                <Popover
+                  align="end"
+                  trigger={<Button variant="ghost" size="xs" aria-label={`Chapter actions for ${section.title}`}><ChevronDown className="h-3 w-3" /></Button>}
+                  className="w-52 p-1"
+                >
+                  <div className="space-y-0.5">
+                    <MenuButton label="Show pages" onClick={() => { if (collapsed.has(section.id)) toggle(section.id); }} />
+                    <MenuButton label="Hide pages" onClick={() => { if (!collapsed.has(section.id)) toggle(section.id); }} />
+                    <MenuButton label="Duplicate chapter" onClick={() => onDuplicateSection(section.id)} />
+                    <MenuButton label="Move chapter up" onClick={() => onMoveSection(section.id, 'up')} />
+                    <MenuButton label="Move chapter down" onClick={() => onMoveSection(section.id, 'down')} />
+                    <MenuButton label="Add page to chapter" onClick={() => onAddPage(section.id, 'flow')} />
+                    <MenuButton
+                      label={section.kind === 'chapter' ? 'Make a part' : 'Make a chapter'}
+                      onClick={() => onPatchSection(section.id, { kind: section.kind === 'chapter' ? 'part' : 'chapter' })}
+                    />
+                    <MenuButton
+                      label="Delete chapter"
+                      destructive
+                      onClick={async () => {
+                        const ok = await confirm({ title: `Delete “${section.title}”?`, description: `${section.pageIds.length} pages will be removed with it.`, destructive: true, confirmLabel: 'Delete section' });
+                        if (ok) onRemoveSection(section.id);
+                      }}
+                    />
+                  </div>
+                </Popover>
                 <Badge variant={section.status === 'complete' ? 'success' : section.status === 'drafting' ? 'warning' : 'outline'} className="text-2xs">{section.status}</Badge>
               </div>
               {open && (
@@ -289,36 +392,35 @@ function ChaptersPanel({ book, activePage, onPatchSection, onAddSection, onRemov
                     className="h-7 text-xs"
                     aria-label={`Rename ${section.title}`}
                   />
-                  {section.pageIds.map((pageId) => {
-                    const page = book.pages.find((entry) => entry.id === pageId);
-                    if (!page) return null;
-                    return (
+                  <div className="flex gap-1">
+                    <Button size="xs" variant="outline" onClick={() => onAddSection(`${section.title} continued`, section.kind)}>
+                      <Plus className="h-3 w-3" /> Sub-chapter
+                    </Button>
+                    <Button size="xs" variant="ghost" onClick={() => onMoveSection(section.id, 'up')} disabled={order === 0} aria-label="Move up">↑</Button>
+                    <Button size="xs" variant="ghost" onClick={() => onMoveSection(section.id, 'down')} disabled={order === book.sections.length - 1} aria-label="Move down">↓</Button>
+                  </div>
+                  <div className="space-y-0.5 pt-1">
+                    {pages.map((page) => (
                       <button
-                        key={pageId}
+                        key={page.id}
                         type="button"
-                        onClick={() => onSelectPage(pageId)}
-                        className={cn('w-full truncate rounded px-1.5 py-1 text-left text-2xs hover:bg-muted', page.id === activePage?.id && 'bg-primary/10 text-primary')}
+                        draggable
+                        onDragStart={() => setDragId(page.id)}
+                        onClick={() => onSelectPage(page.id)}
+                        className={cn('flex w-full items-center gap-1.5 truncate rounded px-1.5 py-1 text-left text-2xs hover:bg-muted', page.id === activePage?.id && 'bg-primary/10 text-primary')}
                       >
-                        {page.title || 'Untitled'}
+                        <FileText className="h-3 w-3 shrink-0 opacity-60" />
+                        <span className="truncate">{page.title || 'Untitled'}</span>
                       </button>
-                    );
-                  })}
+                    ))}
+                    {pages.length === 0 && <p className="px-1 text-2xs text-muted-foreground">No pages — add one from the Pages panel.</p>}
+                  </div>
                   <div className="flex flex-wrap gap-1 pt-1">
                     <Button size="xs" variant="ghost" onClick={() => onPatchSection(section.id, { status: section.status === 'complete' ? 'drafting' : 'complete' })}>
                       {section.status === 'complete' ? 'Reopen' : 'Mark complete'}
                     </Button>
                     <Button size="xs" variant="ghost" onClick={() => { if (activePage) onSplitSection(activePage.id); }} disabled={!section.pageIds.includes(activePage?.id ?? '')}>
                       Split at current page
-                    </Button>
-                    <Button
-                      size="xs"
-                      variant="ghost"
-                      onClick={async () => {
-                        const ok = await confirm({ title: `Delete “${section.title}”?`, description: `${section.pageIds.length} pages will be removed with it.`, destructive: true, confirmLabel: 'Delete section' });
-                        if (ok) onRemoveSection(section.id);
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
@@ -335,101 +437,113 @@ function ChaptersPanel({ book, activePage, onPatchSection, onAddSection, onRemov
 
 function ElementsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequestUpgrade }: Props) {
   const { success } = useToast();
+  const [query, setQuery] = React.useState('');
+  const [groupId, setGroupId] = React.useState(ELEMENT_LIBRARY[0].id);
+
   if (!activePage) {
     return <EmptyState icon={<Square className="h-5 w-5" />} title="No page selected" description="Pick a page in the Pages panel to add elements." />;
   }
-  const isDesign = activePage.layout === 'canvas' || activePage.layout === 'blank';
 
-  const elements: { type: ElementType; label: string; icon: React.ReactNode; hint: string; design?: boolean }[] = [
-    { type: 'text', label: 'Text block', icon: <Type className="h-4 w-4" />, hint: 'Headings, body copy, captions' },
-    { type: 'image', label: 'Image', icon: <ImageIcon className="h-4 w-4" />, hint: 'From your asset library', design: true },
-    { type: 'shape', label: 'Shape', icon: <Square className="h-4 w-4" />, hint: 'Rectangles, ellipses, stars', design: true },
-    { type: 'divider', label: 'Divider', icon: <Minus className="h-4 w-4" />, hint: 'Rules and ornaments', design: true },
-    { type: 'quote', label: 'Pull quote', icon: <Quote className="h-4 w-4" />, hint: 'Emphasised quotation', design: true },
-    { type: 'table', label: 'Table', icon: <TableIcon className="h-4 w-4" />, hint: '3×3 grid, fully editable', design: true },
-    { type: 'icon', label: 'Icon', icon: <Star className="h-4 w-4" />, hint: 'Decorative glyph', design: true },
-    { type: 'decoration', label: 'Decoration', icon: <Sparkles className="h-4 w-4" />, hint: 'Placeholder accent', design: true },
-    { type: 'pageNumber', label: 'Page number', icon: <Hash className="h-4 w-4" />, hint: 'Auto-updating folio', design: true },
-    { type: 'barcode', label: 'Barcode', icon: <FileImage className="h-4 w-4" />, hint: 'ISBN barcode block', design: true },
-  ];
+  const searching = query.trim().length > 0;
+  const matches = searching
+    ? ELEMENT_LIBRARY.flatMap((group) => group.entries.filter((entry) => entry.label.toLowerCase().includes(query.trim().toLowerCase())).map((entry) => ({ group, entry })))
+    : [];
+  const group = ELEMENT_LIBRARY.find((entry) => entry.id === groupId) ?? ELEMENT_LIBRARY[0];
 
-  const add = (type: ElementType) => {
-    if (!isDesign) {
-      success('Switch to Design mode', 'Canvas elements live on design pages — text pages use the rich-text editor.');
-      return;
-    }
+  const insert = (entry: LibraryEntry) => {
     if (!canUseAdvancedEditor) {
       onRequestUpgrade('advanced');
       return;
     }
-    onAddElement(createElement(type, activePage));
-    success(`${type} element added`);
+    onAddElement(entry.build(activePage));
+    success(`${entry.label} added`, 'Switch to Design mode to move, resize and style it.');
   };
 
   return (
     <div className="space-y-3">
-      <p className="text-2xs text-muted-foreground">
-        {isDesign ? 'Elements are positioned freely on design pages.' : 'This is a text page — switch the page layout to Design to place free elements.'}
-      </p>
-      <div className="space-y-1.5">
-        {elements.map((entry) => (
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search elements" className="h-8 pl-7 text-xs" aria-label="Search elements" />
+      </div>
+      {!searching && (
+        <div className="flex flex-wrap gap-1">
+          {ELEMENT_LIBRARY.map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setGroupId(entry.id)}
+              className={cn('rounded-full border px-2 py-0.5 text-2xs transition-colors', entry.id === group.id ? 'border-primary bg-primary/10 text-primary' : 'hover:border-primary/40')}
+            >
+              {entry.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!searching && <p className="text-2xs text-muted-foreground">{group.description}</p>}
+      <div className="grid grid-cols-2 gap-1.5">
+        {(searching ? matches.map((hit) => hit.entry) : group.entries).map((entry) => (
           <button
-            key={entry.type}
+            key={entry.id}
             type="button"
-            onClick={() => add(entry.type)}
-            className="flex w-full items-center gap-2.5 rounded-lg border p-2 text-left transition-colors hover:border-primary/40"
+            onClick={() => insert(entry)}
+            title={entry.hint ?? `Insert ${entry.label}`}
+            className="flex flex-col items-start gap-1 rounded border p-2 text-left text-2xs transition-colors hover:border-primary hover:bg-primary/5"
           >
-            <span className="rounded-md bg-muted p-1.5 text-muted-foreground">{entry.icon}</span>
-            <span className="min-w-0">
-              <span className="block text-xs font-medium">{entry.label}</span>
-              <span className="block truncate text-2xs text-muted-foreground">{entry.hint}</span>
+            <span className="flex h-8 w-full items-center justify-center rounded bg-muted">
+              {entry.type === 'shape' ? <Square className="h-4 w-4" /> : entry.type === 'line' || entry.type === 'divider' ? <Minus className="h-4 w-4" /> : entry.type === 'pageNumber' ? <Hash className="h-4 w-4" /> : entry.type === 'quote' ? <Quote className="h-4 w-4" /> : entry.type === 'image' ? <ImageIcon className="h-4 w-4" /> : <Type className="h-4 w-4" />}
             </span>
+            <span className="line-clamp-2">{entry.label}</span>
           </button>
         ))}
       </div>
+      {searching && matches.length === 0 && <p className="text-xs text-muted-foreground">Nothing matches “{query}”.</p>}
+      <p className="text-2xs text-muted-foreground">Inserted items are real objects: select them on the page to move, resize, restyle or lock them.</p>
     </div>
   );
 }
+
+/* --------------------------------------------------------- element factory */
 
 function createElement(type: ElementType, page: BookPage): PageElement {
   const base: PageElement = {
     id: uid('el'),
     type,
-    name: `${type} element`,
-    x: 12,
-    y: 12,
-    w: type === 'divider' ? 40 : type === 'text' || type === 'quote' ? 60 : 30,
-    h: type === 'divider' ? 2 : type === 'text' || type === 'quote' ? 14 : 30,
+    name: type === 'pageNumber' ? 'Page number' : `New ${type}`,
+    x: 18,
+    y: 22,
+    w: 32,
+    h: 20,
     rotation: 0,
     visible: true,
     locked: false,
-    z: page.elements.length,
+    z: 5,
   };
-  switch (type) {
-    case 'text':
-      return { ...base, text: '<p>New text block</p>', style: { fontFamily: 'Inter', fontSize: 14, color: '#111827', align: 'left', lineHeight: 1.5 } };
-    case 'quote':
-      return { ...base, text: '<p>“A line worth pulling out.”</p>', style: { fontFamily: 'Playfair Display', fontSize: 20, italic: true, color: '#111827', align: 'center', lineHeight: 1.4 } };
-    case 'image':
-      return { ...base, image: { src: '', fit: 'cover', radius: 4, opacity: 1, filters: { grayscale: 0, sepia: 0, blur: 0, brightness: 100, contrast: 100 } } };
-    case 'shape':
-      return { ...base, shape: { kind: 'rect', fill: 'hsl(var(--primary))', stroke: 'transparent', strokeWidth: 0, radius: 8 } };
-    case 'divider':
-      return { ...base, divider: { style: 'ornament', color: '#111827', thickness: 1 } };
-    case 'table':
-      return { ...base, w: 70, h: 30, table: { rows: 3, cols: 3, cells: [['Header', 'Header', 'Header'], ['', '', ''], ['', '', '']], headerRow: true, borderColor: '#d4d4d8' }, style: { fontSize: 11, color: '#111827' } };
-    case 'icon':
-      return { ...base, w: 12, h: 12, icon: '❖', style: { color: 'hsl(var(--primary))', fontSize: 42 } };
-    case 'pageNumber':
-      return { ...base, w: 10, h: 4, y: 92, x: 45, text: '#', style: { fontSize: 11, align: 'center', color: '#111827' } };
-    case 'barcode':
-      return { ...base, w: 24, h: 12, text: '978-1-2345-678-9' };
-    default:
-      return { ...base, w: 16, h: 16 };
+  if (type === 'shape') return { ...base, shape: { kind: 'rect', fill: '#e2e8f0', stroke: 'transparent', strokeWidth: 0, radius: 8 } };
+  if (type === 'line' || type === 'divider') return { ...base, w: 44, h: 3, divider: { style: 'solid', color: '#111827', thickness: 1 } };
+  if (type === 'table') {
+    return {
+      ...base,
+      w: 60,
+      h: 30,
+      table: {
+        rows: 3,
+        cols: 3,
+        cells: [
+          ['Header', 'Header', 'Header'],
+          ['', '', ''],
+          ['', '', ''],
+        ],
+        headerRow: true,
+        borderColor: '#cbd5e1',
+      },
+    };
   }
+  if (type === 'image') {
+    return { ...base, w: 40, h: 30, image: { src: '', fit: 'cover', radius: 4, opacity: 1, filters: { grayscale: 0, sepia: 0, blur: 0, brightness: 100, contrast: 100 } } };
+  }
+  if (type === 'pageNumber') return { ...base, x: 44, y: 92, w: 12, h: 4 };
+  return { ...base, text: `<p>${page.title || 'New text block'}</p>`, style: { fontSize: 16, lineHeight: 1.5 } };
 }
-
-/* -------------------------------------------------------------- templates */
 
 function TemplatesPanel({ book, onApplyTemplate }: Props) {
   const navigate = useNavigate();
@@ -490,27 +604,70 @@ function TemplatesPanel({ book, onApplyTemplate }: Props) {
 function AssetsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequestUpgrade }: Props) {
   const { user, entitlements } = useAuth();
   const { data: assets, isLoading } = useAssets(user?.id);
-  const { success, warning } = useToast();
+  const qc = useQueryClient();
+  const { success, warning, info } = useToast();
+  const [category, setCategory] = React.useState<AssetCategoryId>('uploads');
   const [query, setQuery] = React.useState('');
   const [aiOpen, setAiOpen] = React.useState(false);
   const [prompt, setPrompt] = React.useState('A lantern-lit doorway, muted palette, textured gouache');
   const [busy, setBusy] = React.useState(false);
+  const confirm = useConfirm();
+  const [providers, setProviders] = React.useState<FreeImageProviderId[]>(['unsplash', 'pexels', 'pixabay']);
+  const [orientation, setOrientation] = React.useState<'any' | 'portrait' | 'landscape' | 'square'>('any');
+  const [freeQuery, setFreeQuery] = React.useState('harbour');
+  const [freeResults, setFreeResults] = React.useState<FreeImageResult[] | null>(null);
+  const [freeNotice, setFreeNotice] = React.useState('');
+  const [freeBusy, setFreeBusy] = React.useState(false);
+  const fileRef = React.useRef<HTMLInputElement>(null);
 
-  const filtered = (assets ?? []).filter((asset) => !query || asset.name.toLowerCase().includes(query.toLowerCase()));
+  const kinds = assetKindsFor(category);
+  const filtered = (assets ?? [])
+    .filter((asset) => (category === 'free' ? false : kinds.length ? kinds.includes(asset.kind) : true))
+    .filter((asset) => !query || asset.name.toLowerCase().includes(query.toLowerCase()) || asset.tags.some((tag) => tag.includes(query.toLowerCase())));
 
-  const insert = (url: string, name: string) => {
+  const insert = (url: string, name: string, credit?: { provider: string; author?: string }) => {
     if (!activePage) return;
     if (!canUseAdvancedEditor) {
       onRequestUpgrade('advanced');
       return;
     }
+    const element = createElement('image', activePage);
     onAddElement({
-      ...createElement('image', activePage),
+      ...element,
       name,
-      image: { src: url, fit: 'cover', radius: 4, opacity: 1, filters: { grayscale: 0, sepia: 0, blur: 0, brightness: 100, contrast: 100 } },
+      image: { ...element.image!, src: url, credit, fit: 'cover', radius: 4, opacity: 1, filters: { grayscale: 0, sepia: 0, blur: 0, brightness: 100, contrast: 100 } },
+      wrap: 'square',
     });
-    success('Image placed on the page');
+    success('Image placed on the page', 'Set its text wrap in the image toolbar.');
   };
+
+  const upload = async (file: File) => {
+    if (!user) return;
+    setBusy(true);
+    try {
+      const asset = await storageService.uploadFile(user.id, file, 'Editor uploads', file.type.startsWith('image/') ? 'image' : 'upload');
+      await qc.invalidateQueries({ queryKey: ['assets'] });
+      insert(asset.url, asset.name);
+      success('Uploaded and placed', `${asset.name} · ${formatBytes(asset.sizeBytes)}`);
+    } catch (error) {
+      warning('Upload failed', error instanceof Error ? error.message : 'The file could not be stored.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runFreeSearch = async () => {
+    setFreeBusy(true);
+    try {
+      const result = await freeImageService.search({ query: freeQuery, provider: providers.length === 1 ? providers[0] : 'all', orientation });
+      setFreeResults(result.results);
+      setFreeNotice(result.notice);
+    } finally {
+      setFreeBusy(false);
+    }
+  };
+
+  const current = ASSET_CATEGORIES.find((entry) => entry.id === category)!;
 
   return (
     <div className="space-y-3">
@@ -518,25 +675,155 @@ function AssetsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequest
         <Search className="pointer-events-none absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
         <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search assets" className="h-8 pl-7 text-xs" aria-label="Search assets" />
       </div>
-      <Button size="xs" variant="outline" className="w-full" onClick={() => setAiOpen(true)}>
-        <Wand2 className="h-3 w-3" /> Generate an illustration
-      </Button>
-      {isLoading && <div className="grid grid-cols-3 gap-1.5">{Array.from({ length: 9 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded bg-muted" />)}</div>}
-      <div className="grid grid-cols-3 gap-1.5">
-        {filtered.slice(0, 24).map((asset) => (
+      <div className="flex flex-wrap gap-1">
+        {ASSET_CATEGORIES.map((entry) => (
           <button
-            key={asset.id}
+            key={entry.id}
             type="button"
-            onClick={() => insert(asset.url, asset.name)}
-            title={`${asset.name} · ${formatBytes(asset.sizeBytes)}`}
-            className="group relative aspect-square overflow-hidden rounded border transition-colors hover:border-primary"
+            onClick={() => setCategory(entry.id)}
+            className={cn('rounded-full border px-2 py-0.5 text-2xs transition-colors', entry.id === category ? 'border-primary bg-primary/10 text-primary' : 'hover:border-primary/40')}
           >
-            <img src={asset.url} alt={asset.name} className="h-full w-full object-cover" />
-            {asset.kind === 'ai-image' && <span className="absolute right-0.5 top-0.5 rounded bg-primary px-1 text-[8px] text-primary-foreground">AI</span>}
+            {entry.label}
           </button>
         ))}
       </div>
-      {!isLoading && filtered.length === 0 && <p className="text-xs text-muted-foreground">No assets yet — upload in the asset library or generate one.</p>}
+      <p className="text-2xs text-muted-foreground">{current.description}</p>
+
+      {(category === 'uploads' || category === 'images' || category === 'illustrations' || category === 'icons' || category === 'shapes' || category === 'backgrounds' || category === 'frames' || category === 'stickers' || category === 'logos') && (
+        <>
+          <div className="flex gap-1">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*,image/svg+xml,video/*,audio/*,.pdf,.doc,.docx,.epub"
+              className="hidden"
+              onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); event.target.value = ''; }}
+            />
+            <Button size="xs" variant="outline" className="flex-1" disabled={busy} onClick={() => fileRef.current?.click()}>
+              <Plus className="h-3 w-3" /> {busy ? 'Uploading…' : 'Upload'}
+            </Button>
+            <Button size="xs" variant="ghost" onClick={() => setAiOpen(true)}><Wand2 className="h-3 w-3" /> AI</Button>
+          </div>
+          {isLoading && <div className="grid grid-cols-3 gap-1.5">{Array.from({ length: 9 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded bg-muted" />)}</div>}
+          <div className="grid grid-cols-3 gap-1.5">
+            {filtered.slice(0, 30).map((asset) => (
+              <div key={asset.id} className="group relative aspect-square overflow-hidden rounded border">
+                <button type="button" onClick={() => insert(asset.url, asset.name)} title={`${asset.name} · ${asset.mimeType} · ${formatBytes(asset.sizeBytes)}`} className="h-full w-full">
+                  {asset.mimeType.startsWith('video') || asset.mimeType.startsWith('audio') || asset.kind === 'upload' && !asset.mimeType.startsWith('image') ? (
+                    <span className="flex h-full w-full items-center justify-center bg-muted text-[8px] uppercase text-muted-foreground">
+                      {asset.mimeType.split('/')[1]?.slice(0, 4) ?? 'file'}
+                    </span>
+                  ) : (
+                    <img src={asset.url} alt={asset.name} className="h-full w-full object-cover" loading="lazy" />
+                  )}
+                </button>
+                {asset.kind === 'ai-image' && <span className="absolute right-0.5 top-0.5 rounded bg-primary px-1 text-[8px] text-primary-foreground">AI</span>}
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-black/60 px-1 py-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="truncate text-[8px] text-white">{asset.name}</span>
+                  <button
+                    type="button"
+                    aria-label={`Delete ${asset.name}`}
+                    className="rounded p-0.5 text-white hover:bg-white/20"
+                    onClick={async () => {
+                      const ok = await confirm({ title: `Delete “${asset.name}”?`, description: 'The file is removed from your library. Pages that already use it keep the image.', destructive: true, confirmLabel: 'Delete asset' });
+                      if (!ok) return;
+                      await assetService.remove(asset.id);
+                      await qc.invalidateQueries({ queryKey: ['assets'] });
+                      info('Asset deleted');
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {!isLoading && filtered.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              {category === 'uploads' ? 'No uploads yet — drop in an image, SVG, illustration, video, audio or document. Uploads stay in your gallery for every book.' : 'Nothing in this category yet.'}
+            </p>
+          )}
+          {filtered.length > 0 && (
+            <p className="text-2xs text-muted-foreground">
+              {filtered.length} file{filtered.length === 1 ? '' : 's'} · {formatBytes(filtered.reduce((total, asset) => total + asset.sizeBytes, 0), 1)} · uploads are kept after insertion
+            </p>
+          )}
+        </>
+      )}
+
+      {category === 'ai' && (
+        <>
+          <Button size="xs" variant="outline" className="w-full" onClick={() => setAiOpen(true)}><Wand2 className="h-3 w-3" /> Generate an illustration</Button>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(assets ?? []).filter((asset) => asset.kind === 'ai-image').map((asset) => (
+              <button key={asset.id} type="button" onClick={() => insert(asset.url, asset.name)} className="aspect-square overflow-hidden rounded border hover:border-primary">
+                <img src={asset.url} alt={asset.name} className="h-full w-full object-cover" loading="lazy" />
+              </button>
+            ))}
+          </div>
+          <p className="text-2xs text-muted-foreground">{entitlements.usage.aiImages.used} of {entitlements.usage.aiImages.limit} image credits used this month.</p>
+        </>
+      )}
+
+      {category === 'covers' && (
+        <div className="grid grid-cols-2 gap-1.5">
+          {(assets ?? []).filter((asset) => asset.kind === 'cover').map((asset) => (
+            <button key={asset.id} type="button" onClick={() => insert(asset.url, asset.name)} className="aspect-[2/3] overflow-hidden rounded border hover:border-primary">
+              <img src={asset.url} alt={asset.name} className="h-full w-full object-cover" loading="lazy" />
+            </button>
+          ))}
+          {(assets ?? []).filter((asset) => asset.kind === 'cover').length === 0 && <p className="text-xs text-muted-foreground">No covers stored yet — design one in the Cover tab.</p>}
+        </div>
+      )}
+
+      {category === 'free' && (
+        <>
+          <div className="space-y-1.5">
+            <Input value={freeQuery} onChange={(event) => setFreeQuery(event.target.value)} placeholder="Search free images (e.g. harbour)" className="h-8 text-xs" aria-label="Search free images" />
+            <div className="flex flex-wrap gap-1">
+              {freeImageService.providers().map((provider) => (
+                <button
+                  key={provider.id}
+                  type="button"
+                  title={`${provider.licence}${provider.enabled ? '' : ' — not enabled yet'}`}
+                  aria-pressed={providers.includes(provider.id)}
+                  onClick={() => setProviders((current) => (current.includes(provider.id) ? current.filter((id) => id !== provider.id) : [...current, provider.id]))}
+                  className={cn('rounded-full border px-2 py-0.5 text-2xs', providers.includes(provider.id) ? 'border-primary bg-primary/10 text-primary' : 'hover:border-primary/40', !provider.enabled && 'opacity-50')}
+                >
+                  {provider.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <select value={orientation} onChange={(event) => setOrientation(event.target.value as typeof orientation)} className="h-8 flex-1 rounded-md border border-input bg-background px-2 text-xs" aria-label="Image orientation">
+                <option value="any">Any shape</option>
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+                <option value="square">Square</option>
+              </select>
+              <Button size="xs" onClick={runFreeSearch} disabled={freeBusy || providers.length === 0}>{freeBusy ? 'Searching…' : 'Search'}</Button>
+            </div>
+          </div>
+          {freeNotice && <p className="rounded bg-muted px-2 py-1 text-2xs text-muted-foreground">{freeNotice}</p>}
+          <div className="grid grid-cols-3 gap-1.5">
+            {(freeResults ?? []).slice(0, 24).map((result) => (
+              <div key={result.id} className="group relative aspect-square overflow-hidden rounded border">
+                <img src={result.thumbnailUrl} alt={result.title} className="h-full w-full object-cover" loading="lazy" />
+                <button
+                  type="button"
+                  onClick={() => insert(result.url, result.title, { provider: result.provider, author: result.author })}
+                  className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5 text-[8px] text-white opacity-0 transition-opacity group-hover:opacity-100"
+                >
+                  Add to Book
+                </button>
+                <span className="absolute left-0.5 top-0.5 rounded bg-black/60 px-1 text-[8px] uppercase text-white">{result.provider}</span>
+              </div>
+            ))}
+          </div>
+          {freeResults && freeResults.length === 0 && <p className="text-xs text-muted-foreground">No results on the enabled sources. Try another word or enable more providers.</p>}
+          <p className="text-2xs text-muted-foreground">Approved sources only. Keys live on the server proxy; attribution is stored with each image for exports.</p>
+        </>
+      )}
 
       <Modal
         open={aiOpen}
@@ -558,6 +845,7 @@ function AssetsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequest
                 try {
                   const result = await aiService.generateImage({ prompt, style: 'Editorial illustration', userId: user.id, aspect: 'portrait' });
                   insert(result.url, prompt.slice(0, 32));
+                  await qc.invalidateQueries({ queryKey: ['assets'] });
                   setAiOpen(false);
                   success('Illustration generated', `${result.credits} credits used`);
                 } finally {
@@ -576,8 +864,6 @@ function AssetsPanel({ activePage, onAddElement, canUseAdvancedEditor, onRequest
     </div>
   );
 }
-
-/* -------------------------------------------------------------- structure */
 
 function StructurePanel({ book, onGenerateToc, onToggleToc, onTocTitle, onRequestUpgrade }: Props & { onToggleToc: () => void; onTocTitle: (title: string) => void }) {
   const { success } = useToast();

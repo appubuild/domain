@@ -10,11 +10,22 @@ import TextStyle from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import Placeholder from '@tiptap/extension-placeholder';
 import CharacterCount from '@tiptap/extension-character-count';
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Bookmark, GripVertical, Heading1, Heading2, Highlighter, Image as ImageIcon, Italic, Link2, List, ListOrdered, Lock, Minus, Quote, Redo2, RotateCw, Sparkles, Strikethrough, Trash2, Type, Underline as UnderlineIcon, Undo2, Unlock } from 'lucide-react';
+import { AlertTriangle, AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Bookmark, GripVertical, Heading1, Heading2, Highlighter, Image as ImageIcon, Italic, Link2, List, ListOrdered, Lock, Minus, Quote, Redo2, RotateCw, Sparkles, Strikethrough, Trash2, Type, Underline as UnderlineIcon, Undo2, Unlock } from 'lucide-react';
 import { Badge, Button, Separator } from '@/components/ui/primitives';
 import { DropdownMenu, type MenuItemDef } from '@/components/ui/overlays';
 import { cn } from '@/lib/utils';
-import type { Book, BookPage, PageElement, TrimSize } from '@/types/domain';
+import {
+  Subscript,
+  Superscript,
+  Table,
+  TableCell,
+  TableHeader,
+  TableRow,
+  TaskItem,
+  TaskList,
+  bookTypographyExtensions,
+} from './extensions';
+import type { Book, BookPage, ElementWrap, PageElement, TrimSize } from '@/types/domain';
 
 /* ------------------------------------------------------------------ shared */
 
@@ -47,7 +58,62 @@ export function elementStyle(element: PageElement): React.CSSProperties {
     columnCount: style.columns && style.columns > 1 ? style.columns : undefined,
     columnGap: style.columns && style.columns > 1 ? '1.5em' : undefined,
     textShadow: style.shadow,
+    background: style.background,
+    border: style.borderWidth ? `${style.borderWidth}px solid ${style.borderColor ?? '#d4d4d8'}` : undefined,
+    borderRadius: style.borderRadius ? `${style.borderRadius}px` : undefined,
+    padding: style.padding ? `${style.padding}em` : undefined,
+    direction: style.direction,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: style.verticalAlign === 'middle' ? 'center' : style.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start',
   };
+}
+
+/** CSS filter string for an image element, including flip transforms. */
+export function imageFilterStyle(image: NonNullable<PageElement['image']>): React.CSSProperties {
+  const filters = image.filters ?? { grayscale: 0, sepia: 0, blur: 0, brightness: 100, contrast: 100 };
+  const parts = [
+    filters.grayscale ? `grayscale(${filters.grayscale}%)` : '',
+    filters.sepia ? `sepia(${filters.sepia}%)` : '',
+    filters.blur ? `blur(${filters.blur}px)` : '',
+    filters.brightness !== 100 ? `brightness(${filters.brightness}%)` : '',
+    filters.contrast !== 100 ? `contrast(${filters.contrast}%)` : '',
+    image.saturation && image.saturation !== 100 ? `saturate(${image.saturation}%)` : '',
+  ].filter(Boolean);
+  const transforms = [
+    image.flipH ? 'scaleX(-1)' : '',
+    image.flipV ? 'scaleY(-1)' : '',
+    image.crop?.scale && image.crop.scale !== 1 ? `scale(${image.crop.scale})` : '',
+  ].filter(Boolean);
+  return {
+    filter: parts.length ? parts.join(' ') : undefined,
+    transform: transforms.length ? transforms.join(' ') : undefined,
+    objectPosition: image.crop ? `${50 + (image.crop.x ?? 0)}% ${50 + (image.crop.y ?? 0)}%` : undefined,
+  };
+}
+
+/** Elements that take part in text flow on a flow page. */
+export function wrappingElements(page: BookPage): PageElement[] {
+  return page.elements.filter(
+    (element) => element.visible && (element.type === 'image' || element.type === 'shape' || element.type === 'decoration') && (element.wrap ?? 'square') !== 'none',
+  );
+}
+
+export function floatSide(element: PageElement): 'left' | 'right' {
+  return element.x + element.w / 2 < 50 ? 'left' : 'right';
+}
+
+export function isFloating(element: PageElement) {
+  const wrap = element.wrap ?? 'square';
+  return wrap === 'around' || wrap === 'square' || wrap === 'tight';
+}
+
+export function isStacked(element: PageElement) {
+  return (element.wrap ?? 'square') === 'top-bottom';
+}
+
+export function isBehindText(element: PageElement) {
+  return (element.wrap ?? 'square') === 'behind';
 }
 
 export function ElementRenderer({ element }: { element: PageElement }) {
@@ -78,13 +144,10 @@ export function ElementRenderer({ element }: { element: PageElement }) {
                 border: element.image.borderWidth ? `${element.image.borderWidth}px solid ${element.image.borderColor ?? '#111'}` : undefined,
                 boxShadow: element.image.shadow ? '0 12px 30px -12px rgb(15 23 42 / 0.45)' : undefined,
                 opacity: element.image.opacity ?? 1,
-                filter: [
-                  element.image.filters?.grayscale ? `grayscale(${element.image.filters.grayscale}%)` : '',
-                  element.image.filters?.sepia ? `sepia(${element.image.filters.sepia}%)` : '',
-                  element.image.filters?.blur ? `blur(${element.image.filters.blur}px)` : '',
-                  element.image.filters?.brightness && element.image.filters.brightness !== 100 ? `brightness(${element.image.filters.brightness}%)` : '',
-                  element.image.filters?.contrast && element.image.filters.contrast !== 100 ? `contrast(${element.image.filters.contrast}%)` : '',
-                ].filter(Boolean).join(' ') || undefined,
+                clipPath: element.image.crop
+                  ? `inset(${Math.max(0, element.image.crop.y ?? 0)}% ${Math.max(0, 50 - (element.image.crop.x ?? 0))}% ${Math.max(0, 50 - (element.image.crop.y ?? 0))}% ${Math.max(0, element.image.crop.x ?? 0)}%)`
+                  : undefined,
+                ...imageFilterStyle(element.image),
               }}
             />
           ) : (
@@ -227,6 +290,15 @@ function FlowEditor({
         Highlight.configure({ multicolor: true }),
         TextStyle,
         Color,
+        Subscript,
+        Superscript,
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        ...bookTypographyExtensions,
         Placeholder.configure({ placeholder: 'Start writing…' }),
         CharacterCount,
       ],
@@ -358,7 +430,7 @@ interface CanvasProps {
   showGuides: boolean;
   editable: boolean;
   selectedElementId: string | null;
-  onSelectElement: (id: string | null) => void;
+  onSelectElement: (id: string | null, additive?: boolean) => void;
   onPatchElement: (elementId: string, patch: Partial<PageElement>, options?: { transient?: boolean }) => void;
   onContentChange: (html: string) => void;
   registerEditor: (editor: Editor | null) => void;
@@ -366,6 +438,12 @@ interface CanvasProps {
   onDuplicateElement: (elementId: string) => void;
   onRequirePremium: () => void;
   canUseAdvancedEditor: boolean;
+  /** Live overflow measurement for this page (from the flow engine). */
+  overflow?: { overflow: boolean; overflowRatio: number; unmeasurable: boolean };
+  onAutoFlow: () => void;
+  canAutoFlow?: boolean;
+  /** True while the editor is in Design mode (objects become manipulable on any page). */
+  designMode?: boolean;
 }
 
 export function PageCanvas({
@@ -385,6 +463,10 @@ export function PageCanvas({
   onDuplicateElement,
   onRequirePremium,
   canUseAdvancedEditor,
+  overflow,
+  onAutoFlow,
+  canAutoFlow = false,
+  designMode = false,
 }: CanvasProps) {
   const surfaceRef = React.useRef<HTMLDivElement>(null);
   const flowEditorRef = React.useRef<Editor | null>(null);
@@ -417,9 +499,16 @@ export function PageCanvas({
   // instead of the page shrinking to a few pixels (which made the canvas look empty).
   const natural = pagePixelSize(book.trimSize, book.orientation, 1);
   const size = pagePixelSize(book.trimSize, book.orientation, zoom);
+  const prefs = book.canvas;
+  const pageWidthIn = book.orientation === 'landscape' ? book.trimSize.heightIn : book.trimSize.widthIn;
+  const pageHeightIn = book.orientation === 'landscape' ? book.trimSize.widthIn : book.trimSize.heightIn;
   const palette = book.theme.palette;
   const margin = book.margins;
-  const isDesign = page.layout === 'canvas' || page.layout === 'blank';
+  const isCanvasLayout = page.layout === 'canvas' || page.layout === 'blank';
+  // The interactive object layer is on for canvas pages and for every page while the
+  // author is in Design mode, so objects on flow pages can be selected and moved too.
+  const isDesign = isCanvasLayout || designMode;
+  const showCanvasChrome = isCanvasLayout;
   const numbering = page.numbering === 'inherit' ? book.numbering.style : page.numbering;
   const pageNumberLabel = numbering === 'none' ? '' : numbering === 'roman-lower' || numbering === 'roman-upper'
     ? toRoman(pageIndex + 1, numbering === 'roman-upper')
@@ -445,6 +534,10 @@ export function PageCanvas({
     event.stopPropagation();
     event.preventDefault();
     onSelectElement(element.id);
+    if (element.groupId) {
+      // Selecting any member of a group selects the group, so move/align act on all of it.
+      page.elements.filter((entry) => entry.groupId === element.groupId && entry.id !== element.id).forEach((sibling) => onSelectElement(sibling.id, true));
+    }
     (event.target as HTMLElement).setPointerCapture?.(event.pointerId);
     setDrag({
       id: element.id,
@@ -478,8 +571,34 @@ export function PageCanvas({
           if (Math.abs(x - 6) < 1) { x = 6; nextGuides.x = 6; }
           if (Math.abs(x - (94 - drag.origin.w)) < 1) { x = 94 - drag.origin.w; nextGuides.x = 94; }
         }
+        // Snap to the grid (page-relative percentages) — the value the toggle promises.
+        if (prefs.snapToGrid) {
+          const step = Math.max(0.5, prefs.gridSize);
+          x = Math.round(x / step) * step;
+          y = Math.round(y / step) * step;
+        }
+        // Snap to other objects: match edges and centres within a small tolerance.
+        if (prefs.snapToObjects) {
+          const others = page.elements.filter((entry) => entry.id !== element.id).filter((entry) => entry.type !== 'pageNumber');
+          others.forEach((other) => {
+            const pairsX: [number, number][] = [[x, other.x], [x + drag.origin.w, other.x + other.w], [x + drag.origin.w / 2, other.x + other.w / 2]];
+            pairsX.forEach(([a, b]) => { if (Math.abs(a - b) < 1) { x = Math.round((x + (b - a)) * 10) / 10; nextGuides.x = b; } });
+            const pairsY: [number, number][] = [[y, other.y], [y + drag.origin.h, other.y + other.h], [y + drag.origin.h / 2, other.y + other.h / 2]];
+            pairsY.forEach(([a, b]) => { if (Math.abs(a - b) < 1) { y = Math.round((y + (b - a)) * 10) / 10; nextGuides.y = b; } });
+          });
+        }
         setGuides(nextGuides);
-        onPatchElement(element.id, { x: clamp(x, -20, 110), y: clamp(y, -20, 110) }, { transient: true });
+        const clampedX = clamp(x, -20, 110);
+        const clampedY = clamp(y, -20, 110);
+        onPatchElement(element.id, { x: clampedX, y: clampedY }, { transient: true });
+        // Objects sharing a group travel together, exactly like a design tool.
+        if (element.groupId) {
+          const dx = clampedX - drag.origin.x;
+          const dy = clampedY - drag.origin.y;
+          page.elements.filter((entry) => entry.groupId === element.groupId && entry.id !== element.id).forEach((sibling) => {
+            onPatchElement(sibling.id, { x: round(sibling.x + dx), y: round(sibling.y + dy) }, { transient: true });
+          });
+        }
       } else if (drag.mode === 'resize' && drag.handle) {
         const min = 3;
         let w = drag.origin.w;
@@ -510,6 +629,9 @@ export function PageCanvas({
       // A final non-transient write closes the history entry for the gesture.
       const latest = page.elements.find((entry) => entry.id === drag.id);
       if (latest) onPatchElement(latest.id, {}, { transient: false });
+      if (latest?.groupId) {
+        page.elements.filter((entry) => entry.groupId === latest.groupId && entry.id !== latest.id).forEach((sibling) => onPatchElement(sibling.id, {}, { transient: false }));
+      }
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -554,17 +676,62 @@ export function PageCanvas({
           role="region"
           aria-label={`Page ${pageIndex + 1}`}
         >
-          {/* margins guide */}
-          {editable && showGuides && (
+          {/* guide stack: bleed, margins, safe area, centre */}
+          {prefs.showBleed && (
+            <div
+              className="pointer-events-none absolute border border-dashed border-rose-400/60"
+              style={{
+                inset: `${-(book.bleed / pageHeightIn) * 100}%`,
+              }}
+              aria-hidden
+            />
+          )}
+          {(editable || prefs.showGuides) && (showGuides || prefs.showGuides) && (
             <div
               className="pointer-events-none absolute border border-dashed border-primary/30"
               style={{
-                top: `${(margin.top / (book.orientation === 'landscape' ? book.trimSize.widthIn : book.trimSize.heightIn)) * 100}%`,
-                bottom: `${(margin.bottom / (book.orientation === 'landscape' ? book.trimSize.widthIn : book.trimSize.heightIn)) * 100}%`,
-                left: `${(margin.left / (book.orientation === 'landscape' ? book.trimSize.heightIn : book.trimSize.widthIn)) * 100}%`,
-                right: `${(margin.right / (book.orientation === 'landscape' ? book.trimSize.heightIn : book.trimSize.widthIn)) * 100}%`,
+                top: `${(margin.top / pageHeightIn) * 100}%`,
+                bottom: `${(margin.bottom / pageHeightIn) * 100}%`,
+                left: `${(margin.left / pageWidthIn) * 100}%`,
+                right: `${(margin.right / pageWidthIn) * 100}%`,
               }}
+              aria-label="Margin guide"
             />
+          )}
+          {prefs.showSafeArea && (
+            <div
+              className="pointer-events-none absolute border border-dotted border-emerald-500/50"
+              style={{
+                top: `${((margin.top + book.safeArea) / pageHeightIn) * 100}%`,
+                bottom: `${((margin.bottom + book.safeArea) / pageHeightIn) * 100}%`,
+                left: `${((margin.left + book.safeArea) / pageWidthIn) * 100}%`,
+                right: `${((margin.right + book.safeArea) / pageWidthIn) * 100}%`,
+              }}
+              aria-label="Safe area guide"
+            />
+          )}
+          {prefs.showCentreGuide && (
+            <div className="pointer-events-none absolute left-1/2 top-0 h-full w-px bg-sky-400/40" aria-hidden />
+          )}
+          {prefs.showBaselineGrid && (
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                backgroundImage: `repeating-linear-gradient(to bottom, hsl(var(--primary) / 0.12) 0 1px, transparent 1px ${Math.round(pageHeightIn * 96 * (book.theme.lineHeight / book.fonts.baseSize) * 0.24)}px)`,
+              }}
+              aria-hidden
+            />
+          )}
+          {overflow?.overflow && (
+            <div className="absolute inset-x-0 top-0 z-30 flex items-center justify-left gap-1 bg-amber-500/95 px-2 py-0.5 text-2xs font-medium text-amber-950">
+              <AlertTriangle className="h-3 w-3" />
+              Text overflows this page by {Math.round(overflow.overflowRatio * 100)}%
+              {canAutoFlow && (
+                <Button size="xs" variant="outline" className="ml-1 h-5 border-amber-900/40 px-1.5 text-2xs" onClick={(event) => { event.stopPropagation(); onAutoFlow(); }}>
+                  Continue on a new page
+                </Button>
+              )}
+            </div>
           )}
           {guides.x !== undefined && <div className="pointer-events-none absolute top-0 h-full w-px bg-primary" style={{ left: `${guides.x}%` }} />}
           {guides.y !== undefined && <div className="pointer-events-none absolute left-0 h-px w-full bg-primary" style={{ top: `${guides.y}%` }} />}
@@ -583,15 +750,39 @@ export function PageCanvas({
                 color: '#111827',
               }}
             >
-              <div className="h-full w-full">
-                {editable ? (
+              {/* Images that wrap: real floats inside the text column, so the browser
+                  reflows the prose around them and the pagination engine measures the
+                  same layout the reader will see. */}
+              {wrappingElements(page).filter((element) => !isStacked(element)).map((element) => {
+                const side = floatSide(element);
+                const floatStyle: React.CSSProperties & Record<string, string | number> = {
+                  float: side,
+                  width: `${element.w}%`,
+                  height: `${Math.round((element.h / 100) * pageHeightIn * 96)}px`,
+                  margin: side === 'left' ? '0 0.75em 0.75em 0' : '0 0 0.75em 0.75em',
+                  marginTop: `${Math.max(0, element.y - 6)}%`,
+                  opacity: editable ? 0 : Number(element.image?.opacity ?? 1),
+                };
+                if ((element.wrap ?? 'square') === 'tight') {
+                  floatStyle.shapeOutside = 'inset(0 round 8px)';
+                  floatStyle.shapeMargin = '0.35em';
+                }
+                return (
+                  <div key={`float-${element.id}`} data-float-anchor={element.id} className="pointer-events-none" style={floatStyle} aria-hidden={editable}>
+                    {!editable && <ElementRenderer element={{ ...element, x: 0, y: 0, w: 100, h: 100, rotation: 0 }} />}
+                  </div>
+                );
+              })}
+              <div className="relative z-10 h-full w-full" style={editable ? undefined : { position: 'relative' }}>
+                {editable && !designMode ? (
                   <FlowEditor page={page} onContentChange={onContentChange} registerEditor={handleRegisterEditor} />
                 ) : (
                   <div className="ProseMirror" dangerouslySetInnerHTML={{ __html: page.content || '<p class="text-muted-foreground italic">This page is empty.</p>' }} />
                 )}
               </div>
-              {page.elements.filter((element) => element.visible).map((element) => (
-                <ElementRenderer key={element.id} element={element} />
+              {/* Absolutely placed art that does not float: behind or in front of the text. */}
+              {page.elements.filter((element) => element.visible && !wrappingElements(page).some((wrapEl) => wrapEl.id === element.id) && element.type !== 'pageNumber').map((element) => (
+                <ElementRenderer key={element.id} element={{ ...element, z: isBehindText(element) || (element.wrap ?? 'square') === 'none' ? -1 : 5 }} />
               ))}
             </div>
           ) : null}
@@ -631,7 +822,9 @@ export function PageCanvas({
                         pointerEvents: editable ? 'auto' : 'none',
                       }}
                     >
-                      <ElementRenderer element={element} />
+                      {!(designMode && page.layout !== 'canvas' && page.layout !== 'blank' && wrappingElements(page).some((entry) => entry.id === element.id && !isStacked(entry))) && (
+                        <ElementRenderer element={element} />
+                      )}
                       {selected && editable && canUseAdvancedEditor && (
                         <>
                           {(['nw', 'ne', 'sw', 'se'] as const).map((handle) => (
@@ -669,7 +862,7 @@ export function PageCanvas({
               {page.elements.length === 0 && editable && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <div className="rounded-lg border border-dashed bg-background/70 px-4 py-2 text-center text-xs text-muted-foreground">
-                    Design page — add text, images and shapes from the Elements panel
+                    {isCanvasLayout ? 'Design page — add text, images and shapes from the Elements panel' : 'No objects yet — add one from the Elements panel, then drag it anywhere on the page.'}
                   </div>
                 </div>
               )}

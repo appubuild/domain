@@ -1,11 +1,14 @@
 import type {
   Book,
+  BookCanvasPrefs,
   BookKind,
   BookPage,
   BookSection,
   BookStatus,
   BookVisibility,
+  BookTextStyle,
   CoverDesign,
+  Footnote,
   ID,
   PageElement,
   TrimSize,
@@ -247,7 +250,10 @@ export interface BookBlueprint {
   freePreviewPages?: number;
   paperStock?: 'white' | 'cream' | 'color';
   templateId?: string;
-  themeId?: string;
+  themeId?: string;  textStyles?: BookTextStyle[];
+  footnotes?: Footnote[];
+  canvas?: Partial<BookCanvasPrefs>;
+
 }
 
 export function buildBook(blueprint: BookBlueprint): Book {
@@ -434,6 +440,8 @@ export function buildBook(blueprint: BookBlueprint): Book {
       paragraphIndent: 0.25,
       paragraphSpacing: 0,
       lineHeight: 1.55,
+      widowControl: true,
+      orphanControl: true,
     },
     fonts: { heading: blueprint.headingFont, body: blueprint.bodyFont, mono: 'JetBrains Mono', baseSize: 11.5 },
     numbering: {
@@ -505,6 +513,22 @@ export function buildBook(blueprint: BookBlueprint): Book {
     templateId: blueprint.templateId,
     paperStock: blueprint.paperStock ?? 'cream',
     starred: false,
+    // Merge any legacy payloads (a book loaded from an older snapshot) onto the new fields.
+    textStyles: blueprint.textStyles ?? [],
+    footnotes: blueprint.footnotes ?? [],
+    canvas: {
+      snapToGrid: false,
+      gridSize: 1,
+      snapToObjects: true,
+      showGuides: true,
+      showRulers: true,
+      showSafeArea: false,
+      showBleed: false,
+      showCentreGuide: true,
+      showBaselineGrid: false,
+      virtualizeAfter: 40,
+      ...(blueprint.canvas ?? {}),
+    },
   };
 
   if (blueprint.status === 'published') {

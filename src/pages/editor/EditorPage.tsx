@@ -3,13 +3,17 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Editor } from '@tiptap/react';
 import {
-  AlertTriangle, ArrowLeft, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Cloud, CloudOff, Command, Eye, Filter, Grid2X2, History, Keyboard, Layers, Loader2, Maximize2, MessageSquare, Minus, PanelLeftClose, PanelRightClose, Plus, Printer, Redo2, Replace, Ruler, Save, Search, Send, Share2, Sparkles, Trash2, Undo2, Upload, Users, X, ZoomIn, ZoomOut,
+  AlertTriangle, ArrowLeft, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, Cloud, CloudOff, Command, Eye, Filter, Grid2X2, History, Keyboard, Layers, Loader2, Maximize2, MessageSquare, Minus, PanelLeftClose, PanelRightClose, Plus, Printer, Redo2, Replace, Ruler, Save, Search, Send, Share2, ShieldCheck, Sparkles, Trash2, Undo2, Upload, Users, X, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import { Badge, Button, Checkbox, Input, Label, Separator, Switch, Textarea } from '@/components/ui/primitives';
 import { DropdownMenu, Modal, Popover, Tabs, useConfirm, type MenuItemDef } from '@/components/ui/overlays';
 import { EmptyState, ErrorState, ProgressList } from '@/components/ui/data';
 import { useToast } from '@/components/ui/toast';
 import { FlowToolbar, PageCanvas, pagePixelSize } from './PageCanvas';
+import { ContextToolbar } from './ContextToolbar';
+import { inspectPage } from './flow';
+import { auditBook } from './exportSafety';
+import { applyStyleToContent } from './textStyles';
 import { EditorSidebar, type SidebarTab } from './EditorSidebar';
 import { PropertiesPanel } from './PropertiesPanel';
 import { CoverDesigner } from './CoverDesigner';
@@ -19,7 +23,7 @@ import { bookService, exportService, preflightService, publishingService, storag
 import { EXPORT_FORMAT_INFO, PUBLISHING_PROFILES } from '@/data/constants';
 import { formatNumber, timeAgo } from '@/lib/format';
 import { cn, countWords } from '@/lib/utils';
-import type { Book, BookPage, ElementType, ExportFormat, PageElement, PublishingProfileId, VersionEntry } from '@/types/domain';
+import type { Book, BookPage, BookTextStyle, ElementType, ExportFormat, PageElement, PublishingProfileId, VersionEntry } from '@/types/domain';
 import type { FeatureKey } from '@/services/entitlements';
 
 const MODES: { value: 'write' | 'design' | 'preview' | 'cover'; label: string }[] = [
@@ -41,7 +45,9 @@ function EditorPage() {
   const {
     book, loading, error: loadError, status, lastSavedAt, mode, setMode, activePageId, setActivePageId,
     selectedElementId, selectElement, patchBook, patchPage, patchPages, patchElement, addElement, removeElement,
-    duplicateElement, reorderElement, addPage, duplicatePage, removePage, reorderPages, movePageToSection,
+    duplicateElement, reorderElement, addPage, insertPage, duplicatePage, removePage, reorderPages, movePage, movePageToSection,
+    addSection: addSectionApi, duplicateSection, moveSection, collapsedSections, toggleSectionCollapsed,
+    splitPageContent, autoFlowPage, addFootnote, patchFootnote, removeFootnote, footnotesForPage,
     addSection, patchSection, removeSection, reorderSections, splitSection, generateToc, undo, redo, canUndo, canRedo,
     saveNow, versions, createCheckpoint, restoreVersion,
   } = project;
@@ -70,6 +76,9 @@ function EditorPage() {
   const [focusMode, setFocusMode] = React.useState(false);
   const [modal, setModal] = React.useState<null | 'share' | 'versions' | 'comments' | 'export' | 'find' | 'help' | 'publish'>(null);
   const [summaryOpen, setSummaryOpen] = React.useState(false);
+  const [elementClipboard, setElementClipboard] = React.useState<PageElement[]>([]);
+  const [recentColors, setRecentColors] = React.useState<string[]>([]);
+  const [extraSelection, setExtraSelection] = React.useState<string[]>([]);
   const [lastSaved, setLastSaved] = React.useState<string | null>(lastSavedAt);
   const [titleDraft, setTitleDraft] = React.useState('');
 
@@ -79,6 +88,114 @@ function EditorPage() {
   const activePage = book?.pages.find((page) => page.id === activePageId);
   const activePageIndex = book ? book.pages.findIndex((page) => page.id === activePageId) : -1;
   const selectedElement = activePage?.elements.find((element) => element.id === selectedElementId);
+  const selectedElements = activePage
+    ? activePage.elements.filter((element) => element.id === selectedElementId || extraSelection.includes(element.id))
+    : [];
+
+  /* ------------------------------------------------------- overflow + flow */
+
+  // The page the reader will see is the page the editor measures: same model, same column.
+  const overflow = React.useMemo(() => {
+    if (!book || !activePage || (mode !== 'write' && mode !== 'design')) return undefined;
+    const metrics = inspectPage(book, activePage);
+    return { overflow: metrics.overflow, overflowRatio: metrics.overflowRatio, unmeasurable: metrics.unmeasurable };
+  }, [book, activePage, mode, activePage?.content, activePage?.elements]);
+
+  const pushRecentColor = React.useCallback((color: string) => {
+    setRecentColors((current) => [color, ...current.filter((entry) => entry !== color)].slice(0, 8));
+  }, []);
+
+  const patchPageForActive = React.useCallback((patch: Partial<BookPage>) => {
+    if (activePage) patchPage(activePage.id, patch);
+  }, [activePage, patchPage]);
+
+  const patchElementForActive = React.useCallback((elementId: string, patch: Partial<PageElement>, options?: { transient?: boolean }) => {
+    if (activePage) patchElement(activePage.id, elementId, patch, options);
+  }, [activePage, patchElement]);
+
+  const alignSelection = React.useCallback((alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (!activePage || !selectedElements.length) return;
+    const minX = Math.min(...selectedElements.map((element) => element.x));
+    const maxX = Math.max(...selectedElements.map((element) => element.x + element.w));
+    const minY = Math.min(...selectedElements.map((element) => element.y));
+    const maxY = Math.max(...selectedElements.map((element) => element.y + element.h));
+    selectedElements.forEach((element) => {
+      const patch: Partial<PageElement> = {};
+      if (alignment === 'left') patch.x = minX;
+      if (alignment === 'center') patch.x = Math.round(((minX + maxX) / 2 - element.w / 2) * 10) / 10;
+      if (alignment === 'right') patch.x = maxX - element.w;
+      if (alignment === 'top') patch.y = minY;
+      if (alignment === 'middle') patch.y = Math.round(((minY + maxY) / 2 - element.h / 2) * 10) / 10;
+      if (alignment === 'bottom') patch.y = maxY - element.h;
+      patchElement(activePage.id, element.id, patch);
+    });
+  }, [activePage, patchElement, selectedElements]);
+
+  const distributeSelection = React.useCallback((axis: 'horizontal' | 'vertical') => {
+    if (!activePage || selectedElements.length < 3) return;
+    const sorted = [...selectedElements].sort((a, b) => (axis === 'horizontal' ? a.x - b.x : a.y - b.y));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const span = axis === 'horizontal' ? (last.x + last.w) - first.x : (last.y + last.h) - first.y;
+    const used = sorted.reduce((total, element) => total + (axis === 'horizontal' ? element.w : element.h), 0);
+    const gap = (span - used) / (sorted.length - 1);
+    let cursor = axis === 'horizontal' ? first.x : first.y;
+    sorted.forEach((element) => {
+      patchElement(activePage.id, element.id, axis === 'horizontal' ? { x: Math.round(cursor * 10) / 10 } : { y: Math.round(cursor * 10) / 10 });
+      cursor += (axis === 'horizontal' ? element.w : element.h) + gap;
+    });
+  }, [activePage, patchElement, selectedElements]);
+
+  const insertPageBreakAtCursor = React.useCallback(() => {
+    if (!activePage) return;
+    if (!editor) { info('Click into the text first'); return; }
+    const pos = editor.state.selection.from;
+    const doc = editor.state.doc;
+    let blockIndex = 0;
+    try {
+      const resolved = doc.resolve(Math.min(pos, doc.content.size));
+      blockIndex = resolved.index(0);
+    } catch {
+      blockIndex = 0;
+    }
+    // Nothing after the cursor: tell the author instead of doing nothing silently.
+    const blocksAfter = doc.childCount - blockIndex;
+    if (blocksAfter <= 0) { warning('Nothing to move', 'Put the cursor before the text that should move to the next page.'); return; }
+    splitPageContent(activePage.id, blockIndex);
+    success('Page break inserted', 'The rest flows onto a new page and stays connected on the next page.');
+  }, [activePage, editor, info, splitPageContent, success, warning]);
+
+  const applyTextStyle = React.useCallback((style: BookTextStyle) => {
+    if (!book) return;
+    const result = applyStyleToContent(book, style);
+    patchPages(() => result.pages);
+    success('Style applied', result.changed === 0 ? `No content uses “${style.label}” yet.` : `${result.changed} block${result.changed === 1 ? '' : 's'} updated across the book.`);
+  }, [book, patchPages, success]);
+
+  const groupSelection = React.useCallback((elementIds: string[]) => {
+    if (!activePage || elementIds.length < 2) return;
+    const groupId = `grp_${Math.random().toString(36).slice(2, 9)}`;
+    elementIds.forEach((elementId) => patchElement(activePage.id, elementId, { groupId }));
+    setExtraSelection(elementIds.filter((id) => id !== selectedElementId));
+    success('Grouped', `${elementIds.length} objects grouped`);
+  }, [activePage, patchElement, selectedElementId, success]);
+
+  const ungroupSelection = React.useCallback((groupId: string) => {
+    if (!activePage) return;
+    activePage.elements.filter((element) => element.groupId === groupId).forEach((element) => patchElement(activePage.id, element.id, { groupId: undefined }));
+    setExtraSelection([]);
+    info('Group released');
+  }, [activePage, info, patchElement]);
+
+  const copySelection = React.useCallback(() => {
+    if (selectedElements.length) setElementClipboard(selectedElements.map((element) => ({ ...element })));
+  }, [selectedElements]);
+
+  const pasteClipboard = React.useCallback(() => {
+    if (!activePage || !elementClipboard.length) return;
+    elementClipboard.forEach((element) => addElement(activePage.id, { ...element, id: `el_${Math.random().toString(36).slice(2, 9)}`, x: Math.min(90, element.x + 3), y: Math.min(90, element.y + 3) }));
+    success('Pasted', elementClipboard.length === 1 ? '1 object pasted' : `${elementClipboard.length} objects pasted`);
+  }, [activePage, addElement, elementClipboard, success]);
 
   /* ------------------------------------------------------------ shortcuts */
 
@@ -88,6 +205,17 @@ function EditorPage() {
       const target = event.target as HTMLElement | null;
       const typing = target ? ['INPUT', 'TEXTAREA'].includes(target.tagName) || target.isContentEditable : false;
       if (meta && event.key.toLowerCase() === 's') { event.preventDefault(); void saveNow().then(() => success('Saved')); return; }
+      // Object clipboard — only when a canvas object (not prose) is in play.
+      if (meta && event.key.toLowerCase() === 'c' && !typing && selectedElements.length) { event.preventDefault(); copySelection(); info('Copied to the object clipboard'); return; }
+      if (meta && event.key.toLowerCase() === 'x' && !typing && selectedElements.length && activePage) {
+        event.preventDefault();
+        setElementClipboard(selectedElements.map((element) => ({ ...element })));
+        selectedElements.forEach((element) => removeElement(activePage.id, element.id));
+        selectElement(null);
+        info('Cut');
+        return;
+      }
+      if (meta && event.key.toLowerCase() === 'v' && !typing && elementClipboard.length) { event.preventDefault(); pasteClipboard(); return; }
       if (meta && event.key.toLowerCase() === 'z' && !event.shiftKey) { if (!typing) { event.preventDefault(); undo(); } return; }
       if (meta && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey))) { if (!typing) { event.preventDefault(); redo(); } return; }
       if (meta && event.key.toLowerCase() === 'f') { event.preventDefault(); setModal('find'); return; }
@@ -103,7 +231,7 @@ function EditorPage() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [activePage, removeElement, redo, saveNow, selectElement, selectedElement, setMode, success, undo]);
+  }, [activePage, copySelection, elementClipboard.length, info, pasteClipboard, removeElement, redo, saveNow, selectElement, selectedElement, selectedElements, setMode, success, undo]);
 
   /* --------------------------------------------------------------- guards */
 
@@ -129,11 +257,6 @@ function EditorPage() {
   const positionPage = (delta: number) => {
     const next = book.pages[activePageIndex + delta];
     if (next) setActivePageId(next.id);
-  };
-
-  const patchElementForActive = (elementId: string, patch: Partial<PageElement>, options?: { transient?: boolean }) => {
-    if (!activePage) return;
-    patchElement(activePage.id, elementId, patch, options);
   };
 
   const insertIntoDocument = (html: string) => {
@@ -223,7 +346,13 @@ function EditorPage() {
               onPatchPage={(pageId, patch) => patchPage(pageId, patch)}
               onPatchSection={patchSection}
               onAddPage={(sectionId, layout) => { const created = addPage(sectionId, layout); if (created) setActivePageId(created.id); }}
-              onAddSection={(title, kind) => addSection(title, kind)}
+              onAddSection={(title, kind) => addSectionApi(title, kind)}
+              onInsertPage={(pageId, position, layout) => insertPage(pageId, position, layout)}
+              onMovePage={movePage}
+              onDuplicateSection={duplicateSection}
+              onMoveSection={moveSection}
+              collapsedSections={collapsedSections}
+              onToggleSectionCollapsed={toggleSectionCollapsed}
               onDuplicatePage={duplicatePage}
               onRemovePage={removePage}
               onRemoveSection={removeSection}
@@ -273,10 +402,56 @@ function EditorPage() {
               <Button size="xs" variant="ghost" onClick={() => setZoom((value) => Math.min(2, Number((value + 0.1).toFixed(2))))} aria-label="Zoom in"><ZoomIn className="h-3.5 w-3.5" /></Button>
               <Button size="xs" variant="ghost" onClick={() => setZoom(1)} aria-label="Reset zoom"><Maximize2 className="h-3.5 w-3.5" /></Button>
               <Separator orientation="vertical" className="h-4" />
-              <Button size="xs" variant={showRulers ? 'secondary' : 'ghost'} onClick={() => setShowRulers((value) => !value)}><Ruler className="h-3.5 w-3.5" /> Rulers</Button>
-              <Button size="xs" variant={showGuides ? 'secondary' : 'ghost'} onClick={() => setShowGuides((value) => !value)}><Grid2X2 className="h-3.5 w-3.5" /> Guides</Button>
+              <Button
+                size="xs"
+                variant={showRulers ? 'secondary' : 'ghost'}
+                onClick={() => { const next = !showRulers; setShowRulers(next); patchBook({ canvas: { ...book.canvas, showRulers: next } }); }}
+              >
+                <Ruler className="h-3.5 w-3.5" /> Rulers
+              </Button>
+              <Button
+                size="xs"
+                variant={showGuides ? 'secondary' : 'ghost'}
+                onClick={() => { const next = !showGuides; setShowGuides(next); patchBook({ canvas: { ...book.canvas, showGuides: next } }); }}
+              >
+                <Grid2X2 className="h-3.5 w-3.5" /> Guides
+              </Button>
+              <CanvasSettings
+                book={book}
+                onPatch={patchBook}
+                showRulers={showRulers}
+                showGuides={showGuides}
+                onToggleRulers={() => { const next = !showRulers; setShowRulers(next); patchBook({ canvas: { ...book.canvas, showRulers: next } }); }}
+                onToggleGuides={() => { const next = !showGuides; setShowGuides(next); patchBook({ canvas: { ...book.canvas, showGuides: next } }); }}
+              />
               <Button size="xs" variant={focusMode ? 'secondary' : 'ghost'} onClick={() => setFocusMode((value) => !value)}><Eye className="h-3.5 w-3.5" /> Focus</Button>
-              {mode === 'write' && <div className="hidden lg:block"><FlowToolbar editor={editor} /></div>}
+              {(
+                <div className="hidden min-w-0 flex-1 justify-center lg:flex">
+                  <ContextToolbar
+                    mode={mode}
+                    editor={editor}
+                    book={book}
+                    page={activePage}
+                    selectedElements={selectedElements}
+                    clipboardCount={elementClipboard.length}
+                    onPatchPage={patchPageForActive}
+                    onPatchElement={patchElementForActive}
+                    onBookChange={(next, message) => { patchBook(next); if (message) info(message); }}
+                    onPatchBook={(patch, message) => { patchBook(patch); if (message) info(message); }}
+                    onDuplicateElement={(elementId) => { if (activePage) { duplicateElement(activePage.id, elementId); success('Element duplicated'); } }}
+                    onDeleteElement={(elementId) => { if (activePage) { removeElement(activePage.id, elementId); selectElement(null); } }}
+                    onReorderElement={(elementId, direction) => activePage && reorderElement(activePage.id, elementId, direction)}
+                    onReplaceElement={() => setTab('assets')}
+                    onAlign={alignSelection}
+                    onDistribute={distributeSelection}
+                    recentColors={recentColors}
+                    pushRecentColor={pushRecentColor}
+                    onPageBreak={insertPageBreakAtCursor}
+                    onInsertBlankPage={() => activePage && insertPage(activePage.id, 'after', 'blank')}
+                  />
+                </div>
+              )}
+              {mode === 'write' && <div className="hidden xl:block"><FlowToolbar editor={editor} /></div>}
               <div className="ml-auto flex items-center gap-1">
                 <Badge variant={mode === 'write' ? 'secondary' : 'outline'} className="text-2xs">{mode}</Badge>
                 <span className="hidden text-2xs text-muted-foreground sm:inline">{countWords(activePage?.content ?? '')} words on this page</span>
@@ -302,7 +477,7 @@ function EditorPage() {
                   showGuides={showGuides}
                   editable
                   selectedElementId={selectedElementId}
-                  onSelectElement={selectElement}
+                  onSelectElement={(id, additive) => { selectElement(id); if (additive && id) setExtraSelection((current) => (current.includes(id) ? current : [...current, id])); else if (id) setExtraSelection([]); }}
                   onPatchElement={patchElementForActive}
                   onContentChange={(html) => patchPage(activePage.id, { content: html })}
                   registerEditor={(instance) => {
@@ -316,6 +491,10 @@ function EditorPage() {
                   onDuplicateElement={(elementId) => { duplicateElement(activePage.id, elementId); success('Element duplicated'); }}
                   onRequirePremium={() => requireUpgrade('advanced_editor')}
                   canUseAdvancedEditor={entitlements.canUseAdvancedEditor()}
+                  overflow={overflow}
+                  designMode={mode === 'design'}
+                  onAutoFlow={() => { if (activePage) autoFlowPage(activePage.id); }}
+                  canAutoFlow={Boolean(overflow?.overflow && !overflow.unmeasurable)}
                 />
               </div>
             ) : (
@@ -379,6 +558,14 @@ function EditorPage() {
               onDeleteElement={(elementId) => { if (activePage) { removeElement(activePage.id, elementId); selectElement(null); } }}
               onDuplicateElement={(elementId) => activePage && duplicateElement(activePage.id, elementId)}
               onRequestUpgrade={requireUpgrade}
+              onSelectElement={selectElement}
+              onGroupElements={groupSelection}
+              onUngroupElements={ungroupSelection}
+              onApplyStyle={applyTextStyle}
+              onAddFootnote={addFootnote}
+              onPatchFootnote={patchFootnote}
+              onRemoveFootnote={removeFootnote}
+              footnotesForPage={footnotesForPage}
             />
           </aside>
         )}
@@ -401,7 +588,7 @@ function EditorPage() {
         user={{ id: user?.id ?? 'user_demo', name: user?.name ?? 'Author', avatarUrl: user?.avatarUrl ?? '' }}
         onRefresh={() => void qc.invalidateQueries({ queryKey: ['book', book.id] })}
       />
-      <ExportModal open={modal === 'export'} onClose={() => setModal(null)} book={book} userId={user?.id ?? 'user_demo'} canExport={(format) => entitlements.canExport(format)} />
+      <ExportModal open={modal === 'export'} onClose={() => setModal(null)} book={book} onOpenPage={(pageId) => { setActivePageId(pageId); setModal(null); setMode('write'); }} userId={user?.id ?? 'user_demo'} canExport={(format) => entitlements.canExport(format)} />
       <FindReplaceModal
         open={modal === 'find'}
         onClose={() => setModal(null)}
@@ -518,6 +705,74 @@ function Row({ label, value }: { label: string; value: string }) {
 
 /* ----------------------------------------------------------- preview mode */
 
+/* ------------------------------------------------------- canvas settings ui */
+
+function CanvasSettings({
+  book,
+  onPatch,
+  showRulers,
+  showGuides,
+  onToggleRulers,
+  onToggleGuides,
+}: {
+  book: Book;
+  onPatch: (patch: Partial<Book>) => void;
+  showRulers: boolean;
+  showGuides: boolean;
+  onToggleRulers: () => void;
+  onToggleGuides: () => void;
+}) {
+  const canvas = book.canvas;
+  const set = (patch: Partial<Book['canvas']>) => onPatch({ canvas: { ...canvas, ...patch } });
+  const rows: { key: keyof Book['canvas']; label: string; hint: string }[] = [
+    { key: 'showSafeArea', label: 'Safe area', hint: 'Keep important art inside the trim safety zone.' },
+    { key: 'showBleed', label: 'Bleed', hint: 'Area that print trims away.' },
+    { key: 'showCentreGuide', label: 'Centre guide', hint: 'Vertical centre line for symmetry.' },
+    { key: 'showBaselineGrid', label: 'Baseline grid', hint: 'Line-height grid for consistent leading.' },
+    { key: 'snapToGrid', label: 'Snap to grid', hint: 'Round positions to the grid while dragging.' },
+    { key: 'snapToObjects', label: 'Snap to objects', hint: 'Align to edges and centres of other objects.' },
+  ];
+
+  return (
+    <Popover align="end" trigger={<Button size="xs" variant="ghost" title="Guides and snapping"><Grid2X2 className="h-3.5 w-3.5" /> Guides</Button>} className="w-72 p-3">
+      <div className="space-y-2">
+        <p className="text-2xs font-medium">Canvas guides & snapping</p>
+        <label className="flex items-center justify-between gap-2 text-2xs">
+          <span>Rulers</span>
+          <Switch checked={showRulers || canvas.showRulers} onCheckedChange={() => onToggleRulers()} />
+        </label>
+        <label className="flex items-center justify-between gap-2 text-2xs">
+          <span>Margin guides</span>
+          <Switch checked={showGuides || canvas.showGuides} onCheckedChange={() => onToggleGuides()} />
+        </label>
+        {rows.map((row) => (
+          <label key={row.key} className="flex items-start justify-between gap-2 text-2xs">
+            <span className="min-w-0">
+              {row.label}
+              <span className="block text-[10px] text-muted-foreground">{row.hint}</span>
+            </span>
+            <Switch checked={Boolean(canvas[row.key])} onCheckedChange={(checked) => set({ [row.key]: checked } as Partial<Book['canvas']>)} />
+          </label>
+        ))}
+        <label className="flex items-center justify-between gap-2 text-2xs">
+          <span>Grid size (%)</span>
+          <Input
+            type="number"
+            min={0.5}
+            max={20}
+            step={0.5}
+            value={canvas.gridSize}
+            onChange={(event) => set({ gridSize: Math.max(0.5, Number(event.target.value) || 1) })}
+            className="h-7 w-20 text-2xs"
+            aria-label="Grid size in percent"
+          />
+        </label>
+        <p className="text-[10px] text-muted-foreground">Guides are visual only — they never export.</p>
+      </div>
+    </Popover>
+  );
+}
+
 function PreviewMode({ book, activePageId, onSelectPage }: { book: Book; activePageId: string | null; onSelectPage: (id: string) => void }) {
   const [spread, setSpread] = React.useState(true);
   const [view, setView] = React.useState<'pages' | 'toc'>('pages');
@@ -560,29 +815,29 @@ function PreviewMode({ book, activePageId, onSelectPage }: { book: Book; activeP
         </div>
       ) : (
         <div className="flex flex-wrap items-start justify-center gap-4">
+          {/* Preview is the same PageCanvas the editor uses, read-only: identical
+              margins, wrap, page breaks and objects — no second layout to drift. */}
           {pages.map((page) => (
-            <div key={page.id} className="rounded shadow-page" style={{ width: size.width / 1.6, minHeight: size.height / 1.6, background: page.background.type === 'gradient' ? page.background.gradient : page.background.type === 'color' ? page.background.value : '#fff' }}>
-              <div className="h-full w-full p-6" style={{ fontFamily: book.fonts.body, fontSize: 11, lineHeight: book.theme.lineHeight, columnCount: page.layout === 'flow' ? 1 : undefined }}>
-                {page.layout === 'flow' || page.layout === 'title' ? (
-                  <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: page.content || '<p class="text-muted-foreground">Empty page</p>' }} />
-                ) : (
-                  <div className="relative h-full w-full">
-                    {page.elements.filter((element) => element.visible).map((element) => (
-                      <div
-                        key={element.id}
-                        className="absolute overflow-hidden"
-                        style={{ left: `${element.x}%`, top: `${element.y}%`, width: `${element.w}%`, height: `${element.h}%`, transform: `rotate(${element.rotation}deg)` }}
-                      >
-                        {element.type === 'image' && element.image?.src && <img src={element.image.src} alt="" className="h-full w-full object-cover" style={{ opacity: element.image.opacity }} />}
-                        {element.type === 'text' && <div dangerouslySetInnerHTML={{ __html: element.text ?? '' }} />}
-                        {element.type === 'shape' && <div className="h-full w-full" style={{ background: element.shape?.fill, borderRadius: element.shape?.radius }} />}
-                        {element.type === 'pageNumber' && <span className="text-2xs">{index + 1}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
+            <PageCanvas
+              key={page.id}
+              book={book}
+              page={page}
+              pageIndex={book.pages.findIndex((entry) => entry.id === page.id)}
+              zoom={0.62}
+              showRulers={false}
+              showGuides={false}
+              editable={false}
+              selectedElementId={null}
+              onSelectElement={() => undefined}
+              onPatchElement={() => undefined}
+              onContentChange={() => undefined}
+              registerEditor={() => undefined}
+              onDeleteElement={() => undefined}
+              onDuplicateElement={() => undefined}
+              onRequirePremium={() => undefined}
+              canUseAdvancedEditor={false}
+              onAutoFlow={() => undefined}
+            />
           ))}
         </div>
       )}
@@ -852,8 +1107,8 @@ const DIGITAL: ExportFormat[] = ['pdf', 'epub', 'epub3', 'docx', 'html', 'txt'];
 const PRINT: ExportFormat[] = ['print-pdf'];
 
 function ExportModal({
-  open, onClose, book, userId, canExport,
-}: { open: boolean; onClose: () => void; book: Book; userId: string; canExport: (format: ExportFormat) => boolean }) {
+  open, onClose, book, userId, canExport, onOpenPage,
+}: { open: boolean; onClose: () => void; book: Book; userId: string; canExport: (format: ExportFormat) => boolean; onOpenPage: (pageId: string) => void }) {
   const { success, error, warning } = useToast();
   const [format, setFormat] = React.useState<ExportFormat>('pdf');
   const [profileId, setProfileId] = React.useState<PublishingProfileId>('digital-pdf');
@@ -862,6 +1117,7 @@ function ExportModal({
   type Report = Awaited<ReturnType<typeof preflightService.run>>;
   const [preflight, setPreflight] = React.useState<Report | null>(null);
   const [jobId, setJobId] = React.useState<string | null>(null);
+  const safety = React.useMemo(() => auditBook(book), [book]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -968,7 +1224,30 @@ function ExportModal({
           <p className="text-2xs text-muted-foreground">{PUBLISHING_PROFILES.find((profile) => profile.id === profileId)?.description}</p>
         </div>
         {progress && <ProgressList items={[{ label: progress.step, value: progress.progress }]} />}
-        {preflight && (
+        <div className="space-y-2 rounded-lg border p-3">
+        <p className="flex items-center gap-1.5 text-xs font-medium">
+          <ShieldCheck className="h-3.5 w-3.5" /> Canvas checks — {safety.checkedPages} pages
+        </p>
+        {safety.unmeasurable && <p className="text-2xs text-muted-foreground">Text height could not be measured in this environment; overflow is checked in the browser editor.</p>}
+        {safety.issues.length === 0 && <p className="text-2xs text-muted-foreground">No overflow, no objects outside the safe area, no missing images, no unattached notes.</p>}
+        <div className="space-y-1">
+          {safety.issues.slice(0, 12).map((issue) => (
+            <div key={issue.id} className="flex items-start gap-2 rounded border p-2 text-2xs">
+              <Badge variant={issue.level === 'error' ? 'danger' : issue.level === 'warning' ? 'warning' : 'outline'} className="text-2xs">{issue.level}</Badge>
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium">{issue.title}</span>
+                <span className="block text-muted-foreground">{issue.detail}</span>
+              </span>
+              {issue.pageId && (
+                <Button size="xs" variant="ghost" className="shrink-0" onClick={() => onOpenPage(issue.pageId!)}>Open page</Button>
+              )}
+            </div>
+          ))}
+        </div>
+        {safety.issues.length > 12 && <p className="text-2xs text-muted-foreground">+ {safety.issues.length - 12} more — fix them page by page in the editor.</p>}
+        {safety.errors > 0 && <p className="text-2xs text-destructive">Export will warn until the {safety.errors} overflow issue(s) are resolved.</p>}
+      </div>
+      {preflight && (
           <div className="space-y-1.5 rounded-lg border p-3">
             <p className="flex items-center gap-1.5 text-xs font-medium">
               {preflight.errors > 0 ? <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}

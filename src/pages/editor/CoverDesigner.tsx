@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { BookOpen, Check, Download, Eye, Image as ImageIcon, Loader2, Palette, RefreshCcw, Save, Sparkles, Wand2 } from 'lucide-react';
 import { Badge, Button, Input, Label, Select, Separator, Slider, Switch, Textarea } from '@/components/ui/primitives';
-import { Modal, Tabs } from '@/components/ui/overlays';
+import { Modal, Popover, Tabs } from '@/components/ui/overlays';
 import { useToast } from '@/components/ui/toast';
 import { aiService, bookService, storageService } from '@/services';
 import { FONTS, PAGE_PALETTES, PAPER_THICKNESS } from '@/data/constants';
@@ -87,7 +87,38 @@ export function CoverDesigner({ book, onPatchCover, onRequestUpgrade, canGenerat
             ]}
           />
           <div className="ml-auto flex items-center gap-1.5">
-            <Badge variant="outline" className="text-2xs">Spine {spine.widthIn.toFixed(3)}″ · {spine.pages} pages · {paper}″ paper</Badge>
+            <Popover
+              align="end"
+              trigger={<Button size="xs" variant="ghost" title="Spine width"><Badge variant="outline" className="text-2xs">Spine {spine.widthIn.toFixed(3)}″ · {spine.pages} pages · {paper}″ paper</Badge></Button>}
+              className="w-64 p-3"
+            >
+              <div className="space-y-2">
+                <p className="text-2xs font-medium">Spine width</p>
+                <p className="text-2xs text-muted-foreground">
+                  Calculated: {spine.calculated?.toFixed(3) ?? '—'}″ for {spine.pages} pages on {paper} paper.{' '}
+                  {spine.manual ? 'A manual override is in force.' : 'Automatic.'}
+                </p>
+                <label className="block space-y-1 text-2xs">
+                  <span>Manual override (inches, blank = automatic)</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={cover.spineWidthOverride ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      onPatchCover({ spineWidthOverride: value === '' ? undefined : Math.max(0, Number(value)) });
+                    }}
+                    className="h-8 text-xs"
+                    aria-label="Manual spine width in inches"
+                  />
+                </label>
+                <div className="flex gap-1">
+                  <Button size="xs" variant="outline" className="flex-1" onClick={() => onPatchCover({ spineWidthOverride: undefined })}>Use automatic</Button>
+                  <Button size="xs" variant="outline" className="flex-1" onClick={() => onPatchCover({ spineWidthOverride: Number(spine.calculated?.toFixed(3) ?? 0) })}>Freeze current</Button>
+                </div>
+              </div>
+            </Popover>
             <Button size="xs" variant="outline" onClick={exportCover}><Download className="h-3 w-3" /> Export cover</Button>
             <Button size="xs" variant="outline" onClick={openConcepts}><Sparkles className="h-3 w-3" /> AI concepts</Button>
             <Button size="xs" onClick={generate} disabled={busy}>{busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />} Generate art</Button>

@@ -1,14 +1,16 @@
 import * as React from 'react';
 import {
-  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowUp, Bold, Copy, Eye, EyeOff, Italic, Layers, Lock, MoveDown, MoveUp, Printer, Trash2, Type, Unlock,
+  Plus,
+  AlignCenter, AlignJustify, AlignLeft, AlignRight, ArrowDown, ArrowUp, Bold, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Italic, Layers, Lock, MoveDown, MoveUp, Printer, Trash2, Type, Unlock,
 } from 'lucide-react';
 import { Badge, Button, Checkbox, Input, Label, Select, Separator, Slider, Switch, Textarea } from '@/components/ui/primitives';
 import { Tabs } from '@/components/ui/overlays';
 import { FONTS, LANGUAGES, PAGE_PALETTES, PAPER_THICKNESS, TRIM_SIZES } from '@/data/constants';
 import { bookService } from '@/services';
+import { DEFAULT_TEXT_STYLES, initialiseTextStyles } from './textStyles';
 import { cn } from '@/lib/utils';
 import { formatNumber } from '@/lib/format';
-import type { Book, BookPage, PageElement, TrimSize } from '@/types/domain';
+import type { Book, BookPage, BookTextStyle, ElementType, Footnote, PageElement, TrimSize } from '@/types/domain';
 
 interface Props {
   book: Book;
@@ -23,6 +25,14 @@ interface Props {
   onDeleteElement: (elementId: string) => void;
   onDuplicateElement: (elementId: string) => void;
   onRequestUpgrade: (feature: string) => void;
+  onApplyStyle?: (style: BookTextStyle) => void;
+  onAddFootnote?: (pageId: string, text: string, kind?: 'footnote' | 'endnote') => void;
+  onPatchFootnote?: (footnoteId: string, patch: Partial<Footnote>) => void;
+  onRemoveFootnote?: (footnoteId: string) => void;
+  footnotesForPage?: (pageId: string) => Footnote[];
+  onSelectElement?: (elementId: string | null) => void;
+  onGroupElements?: (elementIds: string[]) => void;
+  onUngroupElements?: (groupId: string) => void;
 }
 
 export function PropertiesPanel({
@@ -38,6 +48,14 @@ export function PropertiesPanel({
   onDeleteElement,
   onDuplicateElement,
   onRequestUpgrade,
+  onApplyStyle,
+  onAddFootnote,
+  onPatchFootnote,
+  onRemoveFootnote,
+  footnotesForPage,
+  onSelectElement,
+  onGroupElements,
+  onUngroupElements,
 }: Props) {
   const [tab, setTab] = React.useState<'page' | 'element' | 'book' | 'print'>('page');
   const [customTrim, setCustomTrim] = React.useState({ widthIn: book.trimSize.widthIn, heightIn: book.trimSize.heightIn, label: 'Custom' });
@@ -48,6 +66,9 @@ export function PropertiesPanel({
   }, [selectedElement?.id]);
 
   const spine = bookService.spineWidth(book.id);
+  const groupElements = onGroupElements ?? (() => undefined);
+  const applyStyle = onApplyStyle ?? (() => undefined);
+  const ungroupElements = onUngroupElements ?? (() => undefined);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -99,7 +120,7 @@ export function PropertiesPanel({
           <p className="text-xs text-muted-foreground">No page selected.</p>
         ))}
 
-        {tab === 'book' && <BookProperties book={book} onPatchBook={onPatchBook} />}
+        {tab === 'book' && <BookProperties book={book} onPatchBook={onPatchBook} onApplyStyle={applyStyle} onPatchPage={onPatchPage} />}
 
         {tab === 'print' && (
           <PrintProperties
@@ -118,7 +139,15 @@ export function PropertiesPanel({
         {page && page.elements.length > 0 && tab !== 'element' && (
           <>
             <Separator />
-            <LayersList page={page} onReorder={onReorderElement} onSelect={() => setTab('element')} />
+            <LayersList
+              page={page}
+              selectedElementId={selectedElement?.id ?? null}
+              onReorder={onReorderElement}
+              onPatchElement={(elementId, patch) => onPatchElement(elementId, patch)}
+              onSelectElement={(elementId) => { onSelectElement?.(elementId); if (elementId) setTab('element'); }}
+              onGroup={groupElements}
+              onUngroup={ungroupElements}
+            />
           </>
         )}
       </div>
@@ -434,8 +463,21 @@ function ElementProperties({
 
 /* ---------------------------------------------------------------- page tab */
 
-function PageProperties({ book, page, onPatchBook, onPatchPage }: { book: Book; page: BookPage; onPatchBook: (patch: Partial<Book>) => void; onPatchPage: (patch: Partial<BookPage>) => void }) {
+function PageProperties({
+  book, page, onPatchBook, onPatchPage, onAddFootnote, onPatchFootnote, onRemoveFootnote, footnotesForPage,
+}: {
+  book: Book;
+  page: BookPage;
+  onPatchBook: (patch: Partial<Book>) => void;
+  onPatchPage: (patch: Partial<BookPage>) => void;
+  onAddFootnote?: (pageId: string, text: string, kind?: 'footnote' | 'endnote') => void;
+  onPatchFootnote?: (footnoteId: string, patch: Partial<Footnote>) => void;
+  onRemoveFootnote?: (footnoteId: string) => void;
+  footnotesForPage?: (pageId: string) => Footnote[];
+}) {
   const [title, setTitle] = React.useState(page.title);
+  const [noteDraft, setNoteDraft] = React.useState('');
+  const notes = footnotesForPage?.(page.id) ?? (book.footnotes ?? []).filter((footnote) => footnote.pageId === page.id).sort((a, b) => a.number - b.number);
   React.useEffect(() => setTitle(page.title), [page.id, page.title]);
 
   return (
@@ -546,6 +588,53 @@ function PageProperties({ book, page, onPatchBook, onPatchPage }: { book: Book; 
       </label>
 
       <Separator />
+      <div className="space-y-2">
+        <p className="text-2xs font-medium">Footnotes & endnotes ({notes.length})</p>
+        {notes.map((footnote) => (
+          <div key={footnote.id} className="space-y-1 rounded border p-2">
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-2xs">{footnote.number}</Badge>
+              <Select
+                value={footnote.kind}
+                onChange={(event) => onPatchFootnote?.(footnote.id, { kind: event.target.value as Footnote['kind'] })}
+                className="h-7 flex-1 text-2xs"
+                aria-label={`Note ${footnote.number} type`}
+              >
+                <option value="footnote">Footnote</option>
+                <option value="endnote">Endnote</option>
+              </Select>
+              <Button size="xs" variant="ghost" aria-label={`Delete note ${footnote.number}`} onClick={() => onRemoveFootnote?.(footnote.id)}><Trash2 className="h-3 w-3" /></Button>
+            </div>
+            <Textarea
+              rows={2}
+              value={footnote.text}
+              onChange={(event) => onPatchFootnote?.(footnote.id, { text: event.target.value })}
+              className="text-xs"
+              aria-label={`Note ${footnote.number} text`}
+            />
+          </div>
+        ))}
+        <Textarea
+          rows={2}
+          value={noteDraft}
+          onChange={(event) => setNoteDraft(event.target.value)}
+          placeholder="Add a footnote for this page…"
+          className="text-xs"
+          aria-label="New footnote text"
+        />
+        <Button
+          size="xs"
+          variant="outline"
+          className="w-full"
+          disabled={!noteDraft.trim()}
+          onClick={() => { onAddFootnote?.(page.id, noteDraft.trim(), 'footnote'); setNoteDraft(''); }}
+        >
+          <Plus className="h-3 w-3" /> Insert footnote
+        </Button>
+        <p className="text-2xs text-muted-foreground">Numbering is automatic and sequential. Print keeps notes in the footer; reflowable EPUB moves them to endnotes.</p>
+      </div>
+
+      <Separator />
       <div className="space-y-1">
         <Label htmlFor="page-notes" className="text-2xs">Notes</Label>
         <Textarea id="page-notes" rows={3} value={page.notes} onChange={(event) => onPatchPage({ notes: event.target.value })} className="text-xs" placeholder="Private notes for this page" />
@@ -554,14 +643,111 @@ function PageProperties({ book, page, onPatchBook, onPatchPage }: { book: Book; 
   );
 }
 
+/* ------------------------------------------------------------ text styles */
+
+function TextStyleEditor({
+  book,
+  onPatchBook,
+  onApplyStyle,
+}: {
+  book: Book;
+  onPatchBook: (patch: Partial<Book>) => void;
+  onApplyStyle: (style: BookTextStyle) => void;
+}) {
+  const styles = initialiseTextStyles(book);
+  const [openId, setOpenId] = React.useState<string | null>(null);
+
+  const update = (id: string, patch: Partial<BookTextStyle>) => {
+    onPatchBook({ textStyles: styles.map((style) => (style.id === id ? { ...style, ...patch } : style)) });
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="text-2xs font-medium">Typography styles</p>
+      <p className="text-2xs text-muted-foreground">Edit a style once, then push it through the manuscript with “Update all matching content”.</p>
+      {styles.map((style) => {
+        const open = openId === style.id;
+        return (
+          <div key={style.id} className="rounded border">
+            <button type="button" onClick={() => setOpenId(open ? null : style.id)} className="flex w-full items-center gap-2 px-2 py-1.5 text-left" aria-expanded={open}>
+              <span className="min-w-0 flex-1 truncate text-xs font-medium" style={{ fontFamily: style.fontFamily, fontWeight: style.fontWeight, textTransform: style.textTransform }}>
+                {style.label}
+              </span>
+              <span className="text-2xs text-muted-foreground">{style.fontSize}pt · {style.appliesTo}</span>
+              {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+            {open && (
+              <div className="space-y-2 border-t p-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor={`${style.id}-font`} className="text-2xs">Font</Label>
+                    <Select id={`${style.id}-font`} value={style.fontFamily} onChange={(event) => update(style.id, { fontFamily: event.target.value })} className="h-7 text-2xs">
+                      {Array.from(new Set([...FONTS.headings, ...FONTS.body, 'Inter', 'Source Serif 4'])).map((font) => <option key={font} value={font}>{font}</option>)}
+                    </Select>
+                  </div>
+                  <NumberField label="Size (pt)" value={style.fontSize} onChange={(value) => update(style.id, { fontSize: Number(value) })} />
+                  <NumberField label="Weight" value={style.fontWeight} onChange={(value) => update(style.id, { fontWeight: Number(value) })} />
+                  <NumberField label="Line height" value={style.lineHeight} onChange={(value) => update(style.id, { lineHeight: Number(value) })} />
+                  <NumberField label="Letter spacing (em)" value={style.letterSpacing} onChange={(value) => update(style.id, { letterSpacing: Number(value) })} />
+                  <NumberField label="Space after (em)" value={style.spaceAfter ?? 0} onChange={(value) => update(style.id, { spaceAfter: Number(value) })} />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor={`${style.id}-align`} className="text-2xs">Align</Label>
+                    <Select id={`${style.id}-align`} value={style.align} onChange={(event) => update(style.id, { align: event.target.value as BookTextStyle['align'] })} className="h-7 text-2xs">
+                      {(['left', 'center', 'right', 'justify'] as const).map((value) => <option key={value} value={value}>{value}</option>)}
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`${style.id}-case`} className="text-2xs">Text case</Label>
+                    <Select id={`${style.id}-case`} value={style.textTransform} onChange={(event) => update(style.id, { textTransform: event.target.value as BookTextStyle['textTransform'] })} className="h-7 text-2xs">
+                      {(['none', 'uppercase', 'lowercase', 'capitalize'] as const).map((value) => <option key={value} value={value}>{value}</option>)}
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`${style.id}-colour`} className="text-2xs">Colour</Label>
+                    <input id={`${style.id}-colour`} type="color" value={toHex(style.color)} onChange={(event) => update(style.id, { color: event.target.value })} className="h-7 w-full rounded border" aria-label={`${style.label} colour`} />
+                  </div>
+                  <div className="flex items-end gap-2 pb-1">
+                    <Checkbox label="Italic" checked={Boolean(style.italic)} onChange={(event) => update(style.id, { italic: (event.target as HTMLInputElement).checked })} />
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Checkbox label="Keep with next" checked={Boolean(style.keepWithNext)} onChange={(event) => update(style.id, { keepWithNext: (event.target as HTMLInputElement).checked })} />
+                  <Checkbox label="Start on new page" checked={Boolean(style.pageBreakBefore)} onChange={(event) => update(style.id, { pageBreakBefore: (event.target as HTMLInputElement).checked })} />
+                </div>
+                <div className="flex gap-1.5">
+                  <Button size="xs" variant="outline" className="flex-1" onClick={() => onApplyStyle(style)}>Update all matching content</Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() => {
+                      const fallback = DEFAULT_TEXT_STYLES.find((entry) => entry.name === style.name);
+                      if (fallback) update(style.id, { ...fallback, id: style.id });
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ---------------------------------------------------------------- book tab */
 
-function BookProperties({ book, onPatchBook }: { book: Book; onPatchBook: (patch: Partial<Book>) => void }) {
+function BookProperties({ book, onPatchBook, onApplyStyle, onPatchPage }: { book: Book; onPatchBook: (patch: Partial<Book>) => void; onApplyStyle: (style: BookTextStyle) => void; onPatchPage: (pageId: string, patch: Partial<BookPage>) => void }) {
   const [meta, setMeta] = React.useState(book.metadata);
   React.useEffect(() => setMeta(book.metadata), [book.metadata]);
 
   return (
     <div className="space-y-4">
+      <TextStyleEditor book={book} onPatchBook={onPatchBook} onApplyStyle={onApplyStyle} />
+      <Separator />
       <p className="text-2xs font-medium">Book details</p>
       <div className="space-y-1">
         <Label htmlFor="book-title" className="text-2xs">Title</Label>
@@ -898,24 +1084,150 @@ function PrintProperties({
 
 /* ------------------------------------------------------------------ layers */
 
-function LayersList({ page, onReorder, onSelect }: { page: BookPage; onReorder: (elementId: string, direction: 'up' | 'down' | 'front' | 'back') => void; onSelect: () => void }) {
+const LAYER_GROUPS: { key: string; label: string; types: ElementType[] }[] = [
+  { key: 'background', label: 'Background', types: [] },
+  { key: 'image', label: 'Image', types: ['image', 'icon'] },
+  { key: 'text', label: 'Text', types: ['text', 'quote'] },
+  { key: 'shape', label: 'Shape', types: ['shape', 'line', 'divider'] },
+  { key: 'table', label: 'Table', types: ['table'] },
+  { key: 'decoration', label: 'Decoration', types: ['decoration', 'pageNumber', 'barcode'] },
+];
+
+function layerGroupFor(type: ElementType) {
+  return LAYER_GROUPS.find((group) => group.types.includes(type))?.key ?? 'decoration';
+}
+
+function LayersList({
+  page,
+  selectedElementId,
+  onReorder,
+  onPatchElement,
+  onSelectElement,
+  onGroup,
+  onUngroup,
+}: {
+  page: BookPage;
+  selectedElementId: string | null;
+  onReorder: (elementId: string, direction: 'up' | 'down' | 'front' | 'back') => void;
+  onPatchElement: (elementId: string, patch: Partial<PageElement>) => void;
+  onSelectElement: (elementId: string | null) => void;
+  onGroup: (elementIds: string[]) => void;
+  onUngroup: (groupId: string) => void;
+}) {
+  const [renaming, setRenaming] = React.useState<string | null>(null);
+  const [draft, setDraft] = React.useState('');
+  const [checked, setChecked] = React.useState<string[]>([]);
+  const [dragId, setDragId] = React.useState<string | null>(null);
+
   const sorted = [...page.elements].sort((a, b) => (b.z ?? 0) - (a.z ?? 0));
+  const groups = LAYER_GROUPS.map((group) => ({ ...group, items: sorted.filter((element) => layerGroupFor(element.type) === group.key) }));
+
+  const commitRename = (elementId: string) => {
+    if (draft.trim()) onPatchElement(elementId, { name: draft.trim() });
+    setRenaming(null);
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (!dragId || dragId === targetId) return;
+    // Reorder by rewriting z values so the drop really changes the stacking.
+    const order = sorted.map((element) => element.id);
+    const from = order.indexOf(dragId);
+    const to = order.indexOf(targetId);
+    order.splice(to, 0, order.splice(from, 1)[0]);
+    const total = order.length;
+    order.forEach((id, index) => onPatchElement(id, { z: total - index }));
+    setDragId(null);
+  };
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="flex items-center gap-1.5 text-2xs font-medium"><Layers className="h-3 w-3" /> Layers ({sorted.length})</p>
-      {sorted.map((element) => (
-        <div key={element.id} className="flex items-center gap-1 rounded border px-1.5 py-1 text-2xs">
-          <button type="button" onClick={onSelect} className="min-w-0 flex-1 truncate text-left">
-            {element.name}
-            <span className="ml-1 text-muted-foreground">{element.type}</span>
-          </button>
-          <button type="button" onClick={() => onReorder(element.id, 'up')} aria-label="Move up" className="rounded p-0.5 hover:bg-muted"><ArrowUp className="h-3 w-3" /></button>
-          <button type="button" onClick={() => onReorder(element.id, 'down')} aria-label="Move down" className="rounded p-0.5 hover:bg-muted"><ArrowDown className="h-3 w-3" /></button>
+      <div className="flex gap-1">
+        <Button size="xs" variant="outline" className="flex-1" disabled={checked.length < 2} onClick={() => { onGroup(checked); setChecked([]); }}>
+          Group
+        </Button>
+        <Button
+          size="xs"
+          variant="outline"
+          className="flex-1"
+          disabled={!checked.some((id) => page.elements.find((element) => element.id === id)?.groupId)}
+          onClick={() => {
+            const groupId = page.elements.find((element) => element.id === checked[0])?.groupId;
+            if (groupId) onUngroup(groupId);
+            setChecked([]);
+          }}
+        >
+          Ungroup
+        </Button>
+      </div>
+      {groups.map((group) => (
+        <div key={group.key} className="space-y-1">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {group.label} {group.key === 'background' ? '(page background)' : `(${group.items.length})`}
+          </p>
+          {group.key === 'background' && (
+            <div className="rounded border px-1.5 py-1 text-2xs text-muted-foreground">
+              {page.background?.type === 'none' ? 'None' : `${page.background?.type}: ${page.background?.value ?? ''}`}
+            </div>
+          )}
+          {group.items.map((element) => {
+            const selected = element.id === selectedElementId;
+            return (
+              <div
+                key={element.id}
+                draggable
+                onDragStart={() => setDragId(element.id)}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={() => handleDrop(element.id)}
+                className={cn('flex items-center gap-1 rounded border px-1.5 py-1 text-2xs', selected ? 'border-primary bg-primary/5' : 'hover:border-primary/40')}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked.includes(element.id)}
+                  onChange={(event) => setChecked((current) => (event.target.checked ? [...current, element.id] : current.filter((id) => id !== element.id)))}
+                  aria-label={`Select ${element.name} in layers`}
+                  className="h-3 w-3"
+                />
+                {renaming === element.id ? (
+                  <Input
+                    autoFocus
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onBlur={() => commitRename(element.id)}
+                    onKeyDown={(event) => { if (event.key === 'Enter') commitRename(element.id); if (event.key === 'Escape') setRenaming(null); }}
+                    className="h-5 flex-1 text-2xs"
+                    aria-label={`Rename ${element.name}`}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSelectElement(element.id)}
+                    onDoubleClick={() => { setRenaming(element.id); setDraft(element.name); }}
+                    className="min-w-0 flex-1 truncate text-left"
+                    title={`${element.name} · ${element.type} · z ${element.z ?? 0}`}
+                  >
+                    {element.name}
+                    <span className="ml-1 text-muted-foreground">{element.type}</span>
+                    {element.groupId && <span className="ml-1 text-primary">group</span>}
+                    {element.wrap && element.wrap !== 'none' && <span className="ml-1 text-muted-foreground">{element.wrap}</span>}
+                  </button>
+                )}
+                <button type="button" onClick={() => onPatchElement(element.id, { locked: !element.locked })} aria-label={element.locked ? `Unlock ${element.name}` : `Lock ${element.name}`} className="rounded p-0.5 hover:bg-muted">
+                  {element.locked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                </button>
+                <button type="button" onClick={() => onPatchElement(element.id, { visible: !element.visible })} aria-label={element.visible ? `Hide ${element.name}` : `Show ${element.name}`} className="rounded p-0.5 hover:bg-muted">
+                  {element.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                </button>
+                <button type="button" onClick={() => onReorder(element.id, 'up')} aria-label="Bring forward" className="rounded p-0.5 hover:bg-muted"><ArrowUp className="h-3 w-3" /></button>
+                <button type="button" onClick={() => onReorder(element.id, 'down')} aria-label="Send backward" className="rounded p-0.5 hover:bg-muted"><ArrowDown className="h-3 w-3" /></button>
+              </div>
+            );
+          })}
         </div>
       ))}
       <div className="flex gap-1">
-        <Button size="xs" variant="ghost" className="flex-1" onClick={() => sorted[0] && onReorder(sorted[0].id, 'front')}><MoveUp className="h-3 w-3" /> Front</Button>
-        <Button size="xs" variant="ghost" className="flex-1" onClick={() => sorted[sorted.length - 1] && onReorder(sorted[sorted.length - 1].id, 'back')}><MoveDown className="h-3 w-3" /> Back</Button>
+        <Button size="xs" variant="ghost" className="flex-1" disabled={!selectedElementId} onClick={() => selectedElementId && onReorder(selectedElementId, 'front')}><MoveUp className="h-3 w-3" /> Bring to front</Button>
+        <Button size="xs" variant="ghost" className="flex-1" disabled={!selectedElementId} onClick={() => selectedElementId && onReorder(selectedElementId, 'back')}><MoveDown className="h-3 w-3" /> Send to back</Button>
       </div>
     </div>
   );
