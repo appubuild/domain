@@ -130,3 +130,14 @@ on empty space drops the caret into the text.
 Guard: `npm run check:editor` asserts the page box is 480x768, that the prose holds the page
 text, that clicking the page focuses the editor, that zoom-in scales to 1.1, and that Design
 and Write modes both render.
+
+## 8. Performance checks
+
+```bash
+npm run build && npm run report:size   # chunk sizes (raw + gzip) and initial download
+npm run check:theme                    # theme written to the database reaches the UI
+```
+
+See `PERFORMANCE.md` for the before/after numbers, what changed (vendor chunk splitting,
+no more 1.5 s theme polling, one `usePlans()` call instead of two) and what was deliberately
+left alone.

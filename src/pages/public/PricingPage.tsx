@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 export default function PricingPage() {
   const navigate = useNavigate();
-  const { plans, isLoading } = { plans: usePlans().data, isLoading: usePlans().isLoading };
+  const { data: plans, isLoading } = usePlans();
   const { data: faqs } = useFaqs();
   const { isAuthenticated, entitlements } = useAuth();
   const [yearly, setYearly] = React.useState(false);

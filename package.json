@@ -11,7 +11,9 @@
     "dev:auto": "bash scripts/preview.sh",
     "dev:recover": "bash scripts/restore.sh",
     "smoke": "node scripts/smoke.mjs",
-    "check:editor": "node scripts/editor-check.mjs"
+    "check:editor": "node scripts/editor-check.mjs",
+    "report:size": "node scripts/chunk-report.mjs",
+    "check:theme": "node scripts/theme-check.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.59.16",

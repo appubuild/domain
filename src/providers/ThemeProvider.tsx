@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { SiteTheme } from '@/types/domain';
 import { cmsRepo, userRepo } from '@/repositories';
+import { subscribeDatabase } from '@/store/db';
 import { useSession } from '@/store/session';
 
 type Mode = 'light' | 'dark' | 'system';
@@ -111,13 +112,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setSiteTheme({ ...next });
   }, []);
 
-  // React to admin theme changes made in the admin panel.
+  // React to admin theme changes made in the admin panel. The mock database notifies
+  // subscribers on every write, so this is push-based: no polling timer, no idle work.
   React.useEffect(() => {
-    const interval = setInterval(() => {
+    const unsubscribe = subscribeDatabase(() => {
       const current = cmsRepo.theme();
       setSiteTheme((previous) => (JSON.stringify(previous) === JSON.stringify(current) ? previous : { ...current }));
-    }, 1500);
-    return () => clearInterval(interval);
+    });
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const value = React.useMemo(
