@@ -6,10 +6,14 @@
   const status = document.querySelector('[data-blog-status]');
   const search = document.querySelector('[data-blog-search]');
   const categoryFilter = document.querySelector('[data-blog-category]');
-  const requestedCategory = new URLSearchParams(window.location?.search || '').get('category');
+  const pagination = document.querySelector('[data-blog-pagination]');
+  const params = new URLSearchParams(window.location?.search || '');
+  const requestedCategory = params.get('category');
   if (categoryFilter && requestedCategory && Array.from(categoryFilter.options || []).some((option) => option.value === requestedCategory)) {
     categoryFilter.value = requestedCategory;
   }
+  const PAGE_SIZE = 9;
+  let currentPage = 1;
   let posts = [];
 
   const setStatus = (message, isError = false) => {
@@ -90,6 +94,53 @@
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 
+  const renderPagination = (totalPages) => {
+    if (!pagination) return;
+    pagination.hidden = totalPages <= 1;
+    if (totalPages <= 1) {
+      pagination.replaceChildren();
+      return;
+    }
+
+    const makeButton = (label, targetPage, { disabled = false, current = false, ariaLabel = label } = {}) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `pagination-button${current ? ' is-current' : ''}`;
+      button.textContent = label;
+      button.setAttribute('aria-label', ariaLabel);
+      if (current) button.setAttribute('aria-current', 'page');
+      button.disabled = disabled;
+      button.addEventListener('click', () => {
+        if (disabled || targetPage === currentPage) return;
+        currentPage = targetPage;
+        render();
+        grid.scrollIntoView?.({ block: 'start' });
+      });
+      return button;
+    };
+
+    const controls = [makeButton('Previous', currentPage - 1, {
+      disabled: currentPage === 1,
+      ariaLabel: 'Go to previous page'
+    })];
+    for (let page = 1; page <= totalPages; page += 1) {
+      controls.push(makeButton(String(page), page, {
+        current: page === currentPage,
+        ariaLabel: `Page ${page}`
+      }));
+    }
+    controls.push(makeButton('Next', currentPage + 1, {
+      disabled: currentPage === totalPages,
+      ariaLabel: 'Go to next page'
+    }));
+
+    const summary = document.createElement('span');
+    summary.className = 'pagination-summary';
+    summary.setAttribute('aria-live', 'polite');
+    summary.textContent = `Page ${currentPage} of ${totalPages}`;
+    pagination.replaceChildren(...controls, summary);
+  };
+
   const render = () => {
     const query = (search?.value || '').trim().toLowerCase();
     const selectedCategory = categoryFilter?.value || '';
@@ -101,19 +152,31 @@
       return categoryMatches && searchable.includes(query);
     });
 
-    grid.replaceChildren(...filtered.map(makeCard));
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const firstIndex = (currentPage - 1) * PAGE_SIZE;
+    const visiblePosts = filtered.slice(firstIndex, firstIndex + PAGE_SIZE);
+    grid.replaceChildren(...visiblePosts.map(makeCard));
+    renderPagination(totalPages);
     window.DomainCraftReveal?.(grid);
+
     if (filtered.length === 0) {
       const hasFilter = query || selectedCategory;
       setStatus(hasFilter ? 'No articles match those filters. Try another keyword or category.' : 'No articles are listed yet. Add a post to the manifest to publish one.', false);
     } else {
-      const hasFilter = query || selectedCategory;
-      setStatus(`${filtered.length} ${filtered.length === 1 ? 'article' : 'articles'}${hasFilter ? ' found' : ' available'}.`, false);
+      const lastIndex = Math.min(firstIndex + PAGE_SIZE, filtered.length);
+      setStatus(`Showing ${firstIndex + 1}–${lastIndex} of ${filtered.length} ${filtered.length === 1 ? 'article' : 'articles'}.`, false);
     }
   };
 
-  search?.addEventListener('input', render);
-  categoryFilter?.addEventListener('change', render);
+  search?.addEventListener('input', () => {
+    currentPage = 1;
+    render();
+  });
+  categoryFilter?.addEventListener('change', () => {
+    currentPage = 1;
+    render();
+  });
   setStatus('Loading articles…');
 
   fetch('./posts-manifest.json')

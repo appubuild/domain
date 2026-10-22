@@ -10,7 +10,8 @@
     } catch (error) {
       // Storage may be blocked; the page remains usable without it.
     }
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    // New visitors start in light mode; only an explicit saved choice overrides it.
+    return 'light';
   }
 
   function setTheme(theme, persist = false) {

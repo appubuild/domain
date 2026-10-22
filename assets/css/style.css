@@ -240,6 +240,14 @@ main { display: block; }
 .blog-card .tag-list { margin-top: auto; }
 .blog-card-link { display: inline-flex; margin-top: 17px; font-size: .9rem; font-weight: 800; text-decoration: none; }
 .blog-status { padding: 18px; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); text-align: center; }
+.blog-pagination { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 30px auto 48px; }
+.blog-pagination[hidden] { display: none; }
+.pagination-button { min-width: 42px; min-height: 42px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: .88rem; font-weight: 750; cursor: pointer; transition: border-color .15s ease, background-color .15s ease, color .15s ease; }
+.pagination-button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.pagination-button:focus-visible { outline: 3px solid color-mix(in srgb, var(--primary), transparent 55%); outline-offset: 2px; }
+.pagination-button.is-current { border-color: var(--primary); background: var(--primary); color: #fff; }
+.pagination-button:disabled { cursor: not-allowed; opacity: .48; }
+.pagination-summary { flex-basis: 100%; color: var(--muted); font-size: .86rem; text-align: center; }
 
 .policy-content { max-width: 850px; }
 .policy-content h2 { margin: 34px 0 8px; font-size: 1.4rem; letter-spacing: -.025em; }
