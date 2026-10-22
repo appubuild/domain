@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples | DomainCraft</title>
+  <meta name="description" content="Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://example.com/blog/blog-11.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples">
+  <meta property="og:description" content="Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.">
+  <meta property="og:url" content="https://example.com/blog/blog-11.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-dns-records-explained.jpg"><meta property="og:image:alt" content="DNS zone illustration showing website, alias, and email record types."><meta property="og:image:type" content="image/jpeg">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Replace example.com with the production domain before publication. -->
+  <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
+  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/main.js" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples",
+  "description": "Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "mainEntityOfPage": "https://example.com/blog/blog-11.html",
+  "image": [
+    "https://example.com/assets/img/blog/feature-dns-records-explained.jpg"
+  ],
+  "wordCount": 992,
+  "keywords": "DNS records, Configuration"
+}
+  </script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://example.com/#website",
+      "url": "https://example.com/",
+      "name": "DomainCraft",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Home",
+      "url": "https://example.com/"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Domain generator",
+      "url": "https://example.com/tools/domain-generator.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Blog",
+      "url": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "About us",
+      "url": "https://example.com/pages/about.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Contact us",
+      "url": "https://example.com/pages/contact.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Privacy policy",
+      "url": "https://example.com/pages/privacy-policy.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Terms and conditions",
+      "url": "https://example.com/pages/terms-and-conditions.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Disclaimer",
+      "url": "https://example.com/pages/disclaimer.html"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://example.com/blog/blog-11.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://example.com/"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": {
+            "@id": "https://example.com/blog/index.html"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples",
+          "item": {
+            "@id": "https://example.com/blog/blog-11.html"
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <meta name="twitter:title" content="DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples | DomainCraft">
+  <meta name="twitter:description" content="Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.">
+  <meta name="twitter:url" content="https://example.com/blog/blog-11.html">
+  <meta name="twitter:image" content="https://example.com/assets/img/blog/feature-dns-records-explained.jpg"><meta name="twitter:image:alt" content="DNS zone illustration showing website, alias, and email record types.">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+    <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+  </div></header>
+  <main id="main-content" class="page-main">
+    <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</div>
+    <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Hosting, DNS &amp; Server Technology · Practical guide</p><h1>DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>5 minute read</span></div><div class="tag-list"><span class="tag">DNS records</span><span class="tag">Configuration</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-dns-records-explained.jpg" alt="DNS zone illustration showing website, alias, and email record types." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>DNS records publish information about names in a DNS zone. A website, email service, domain verification, and subdomains may all depend on different records. Editing one record can affect only one service—or, if nameservers are changed, the entire zone. The safest approach is to understand the record’s purpose, save the current zone, and follow the provider’s instructions.</p>
+<blockquote>
+<p><strong>Quick answer:</strong> A and AAAA records map names to IPv4 and IPv6 addresses; CNAME aliases one name to another; MX identifies mail exchangers; TXT publishes text data used for verification and policies; NS identifies authoritative nameservers. Exact values come from the service you are configuring.</p>
+</blockquote>
+<h2 id="a-sample-zone-fictional">A sample zone (fictional)</h2>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Example value</th>
+<th>Typical role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@</code></td>
+<td>A</td>
+<td><code>192.0.2.25</code></td>
+<td>IPv4 destination for the zone’s apex name.</td>
+</tr>
+<tr>
+<td><code>@</code></td>
+<td>AAAA</td>
+<td><code>2001:db8::25</code></td>
+<td>IPv6 destination for the apex.</td>
+</tr>
+<tr>
+<td><code>www</code></td>
+<td>CNAME</td>
+<td><code>shops.example.net.</code></td>
+<td>Alias for a provider-managed host name.</td>
+</tr>
+<tr>
+<td><code>@</code></td>
+<td>MX</td>
+<td><code>10 mail.example.net.</code></td>
+<td>Mail exchanger with a preference value.</td>
+</tr>
+<tr>
+<td><code>@</code></td>
+<td>TXT</td>
+<td><code>"v=spf1 …"</code></td>
+<td>Example placeholder for a mail or verification policy.</td>
+</tr>
+<tr>
+<td><code>@</code></td>
+<td>NS</td>
+<td><code>ns1.dns.example.</code></td>
+<td>Delegation/authoritative nameserver data, depending on zone context.</td>
+</tr>
+</tbody>
+</table>
+<p>The example uses documentation-only address ranges and placeholder names; it is not a working production zone. The <code>@</code> shorthand is used by many DNS control panels to mean the zone apex, but interfaces vary. Do not paste these sample values into a real domain.</p>
+<h2 id="a-and-aaaa-address-records">A and AAAA: address records</h2>
+<p>An A record returns an IPv4 address for a name. An AAAA record returns an IPv6 address. A domain may have several records of either type, and services may update them. If a provider gives you an address, copy it exactly and verify whether the record should be at the apex, <code>www</code>, or another subdomain.</p>
+<p>Having an AAAA record when the service is not reachable over IPv6 can create inconsistent user experiences. Conversely, omitting IPv6 may be intentional for a provider that does not support it. Use the host’s current configuration guidance and test both paths.</p>
+<h2 id="cname-an-alias">CNAME: an alias</h2>
+<p>A CNAME points one DNS name to another name. The resolver follows the alias to obtain the target’s data. Many DNS standards restrict placing other record types at the same owner name as a CNAME, so control-panel behavior at the zone apex can involve provider-specific flattening or alias features. Ask the DNS provider how its apex-alias feature works rather than assuming it is a standard CNAME.</p>
+<p>A CNAME is commonly used for <code>www</code> or a service subdomain. It does not replace MX records for the root domain, and it is not an IP address. If a provider says to create a CNAME, confirm the exact host/name field and target format in that provider’s guide.</p>
+<h2 id="mx-mail-routing">MX: mail routing</h2>
+<p>MX records identify mail exchangers for a domain. They include a preference value; lower numbers are generally tried before higher values. The mail host names must resolve as required. Mail delivery also depends on the receiving and sending services, mailbox setup, and often TXT records such as SPF, DKIM, and DMARC policies. A correct MX record alone does not prove email will send reliably or pass authentication.</p>
+<p>When moving email providers, add and verify the new provider’s records before removing old ones, if the provider’s migration process recommends overlap. Preserve mail records when changing nameservers. Test inbound and outbound messages, not only a provider’s “verified” indicator.</p>
+<h2 id="txt-verification-and-policy-text">TXT: verification and policy text</h2>
+<p>TXT records publish text strings. Services use them for domain control checks, email authentication, and other configuration. Some policies require more than one string or a specific host label. DNS control panels may split or quote values differently; follow the provider’s exact instructions.</p>
+<p>Do not overwrite an existing TXT record simply because a second service asks you to add one. A name can have multiple TXT records, subject to service and DNS constraints. Keep a list of who requested each value and when it can be removed.</p>
+<h2 id="ns-who-answers-for-the-zone">NS: who answers for the zone</h2>
+<p>Nameserver delegation determines which DNS provider is authoritative. Changing the registrar’s nameserver setting can switch the entire domain to a different DNS zone. The new provider must be ready with all needed records before delegation changes. The registrar and authoritative DNS provider can be different companies.</p>
+<h2 id="ttl-and-record-conflicts">TTL and record conflicts</h2>
+<p>The TTL affects how long a record may be cached. It is not an instruction to delete the old record globally. Multiple A or AAAA answers may be intentional, while conflicting CNAMEs or duplicate configuration can be problematic. Check the exact owner name, type, target, TTL, and provider instructions before saving.</p>
+<h2 id="safe-dns-editing-workflow">Safe DNS editing workflow</h2>
+<ol>
+<li>Export or screenshot the current zone and identify website, mail, verification, and subdomain dependencies.</li>
+<li>Confirm which provider is authoritative by checking the delegated nameservers.</li>
+<li>Read the destination service’s current setup instructions.</li>
+<li>Add or edit only the required record, preserving unrelated entries.</li>
+<li>Verify the result at the authoritative nameserver and through recursive resolvers.</li>
+<li>Test the real service: open the website, send and receive email, or complete the verification workflow.</li>
+<li>Keep a rollback copy until the change has been stable.</li>
+</ol>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Can an apex domain use a CNAME?</strong> Standard DNS has restrictions, though some providers offer flattening or alias features. Check that provider’s implementation.</p>
+<p><strong>Can I have multiple TXT records?</strong> Often yes, but values and policy syntax matter. Avoid replacing existing records without understanding them.</p>
+<p><strong>Will changing an A record affect email?</strong> Not usually by itself, but changing nameservers or a broad zone can. Review the whole zone.</p>
+<p><strong>What is a DNS host?</strong> It is the provider operating authoritative DNS for the zone. It may be separate from the registrar and web host.</p>
+<p><strong>Can I copy records from an online example?</strong> Use examples to understand record types, not as production values. Obtain exact targets from your own provider.</p>
+<p>For the DNS record model, consult <a href="https://www.rfc-editor.org/rfc/rfc1034">RFC 1034</a> and <a href="https://www.rfc-editor.org/rfc/rfc1035">RFC 1035</a>. Provider dashboards may add conveniences that are not identical across vendors.</p></div></article><aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-10.html">SSL Certificates and HTTPS Explained: Security, Validation and Common Errors</a><a href="/blog/blog-12.html">CDN, DNS and Web Hosting: What Each Service Does and How They Work Together</a><a href="/blog/blog-13.html">How to Value a Domain Name: 12 Factors That Influence Its Market Potential</a><hr><a href="/blog/index.html">All DomainCraft articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside></div>
+    <section class="container section-tight"><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+
+</html>

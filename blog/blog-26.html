@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes | DomainCraft</title>
+  <meta name="description" content="Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://example.com/blog/blog-26.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes">
+  <meta property="og:description" content="Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.">
+  <meta property="og:url" content="https://example.com/blog/blog-26.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-whois-vs-rdap.jpg"><meta property="og:image:alt" content="Structured RDAP and WHOIS record panels with status-code cues."><meta property="og:image:type" content="image/jpeg">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Replace example.com with the production domain before publication. -->
+  <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
+  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/main.js" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes",
+  "description": "Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "mainEntityOfPage": "https://example.com/blog/blog-26.html",
+  "image": [
+    "https://example.com/assets/img/blog/feature-whois-vs-rdap.jpg"
+  ],
+  "wordCount": 892,
+  "keywords": "WHOIS, RDAP"
+}
+  </script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://example.com/#website",
+      "url": "https://example.com/",
+      "name": "DomainCraft",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Home",
+      "url": "https://example.com/"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Domain generator",
+      "url": "https://example.com/tools/domain-generator.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Blog",
+      "url": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "About us",
+      "url": "https://example.com/pages/about.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Contact us",
+      "url": "https://example.com/pages/contact.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Privacy policy",
+      "url": "https://example.com/pages/privacy-policy.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Terms and conditions",
+      "url": "https://example.com/pages/terms-and-conditions.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Disclaimer",
+      "url": "https://example.com/pages/disclaimer.html"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://example.com/blog/blog-26.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://example.com/"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": {
+            "@id": "https://example.com/blog/index.html"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes",
+          "item": {
+            "@id": "https://example.com/blog/blog-26.html"
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <meta name="twitter:title" content="WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes | DomainCraft">
+  <meta name="twitter:description" content="Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.">
+  <meta name="twitter:url" content="https://example.com/blog/blog-26.html">
+  <meta name="twitter:image" content="https://example.com/assets/img/blog/feature-whois-vs-rdap.jpg"><meta name="twitter:image:alt" content="Structured RDAP and WHOIS record panels with status-code cues.">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+    <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+  </div></header>
+  <main id="main-content" class="page-main">
+    <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes</div>
+    <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Research &amp; Generator Tools · Practical guide</p><h1>WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>4 minute read</span></div><div class="tag-list"><span class="tag">WHOIS</span><span class="tag">RDAP</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-whois-vs-rdap.jpg" alt="Structured RDAP and WHOIS record panels with status-code cues." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>WHOIS and the Registration Data Access Protocol (RDAP) are tools for looking up information about registered internet resources, including many domain names. They do not prove that a domain is legally safe, show every private contact detail, or always tell you whether a name can be registered. Data access and response details vary by registry, registrar, and applicable privacy rules.</p>
+<blockquote>
+<p><strong>Quick answer:</strong> WHOIS is the older text-based query protocol and RDAP is a newer web-based, structured protocol. Both can return registration and status information, but data may be redacted, unavailable, or different across providers. Verify important facts with the relevant registrar or registry.</p>
+</blockquote>
+<h2 id="what-a-lookup-may-show">What a lookup may show</h2>
+<p>A domain registration response can include the registrar, registration and expiration dates, nameservers, domain status codes, and links to registration services. Contact information may be redacted or omitted under privacy and data-protection rules. Some details can be stale, cached, or not supplied by the server.</p>
+<p>A registration lookup is not the same as a DNS query. WHOIS/RDAP asks about registration data; DNS asks for records used to resolve a name. A domain can be registered but have no working website records, or it can resolve to a service while some registrant details are hidden.</p>
+<h2 id="whois-and-rdap-compared">WHOIS and RDAP compared</h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>WHOIS</th>
+<th>RDAP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Response format</td>
+<td>Historically plain text, with provider-specific layouts</td>
+<td>Structured JSON responses with standardized objects and links</td>
+</tr>
+<tr>
+<td>Discovery</td>
+<td>Often requires knowing the correct server or using a client directory</td>
+<td>Supports service discovery and web-based access where implemented</td>
+</tr>
+<tr>
+<td>Internationalization</td>
+<td>Varies among services</td>
+<td>Designed with internationalized data support in mind</td>
+</tr>
+<tr>
+<td>Access control</td>
+<td>Often limited or inconsistent</td>
+<td>Can support differentiated access and response policies</td>
+</tr>
+<tr>
+<td>Data availability</td>
+<td>Depends on the registry/registrar</td>
+<td>Also depends on the source and its access policy</td>
+</tr>
+</tbody>
+</table>
+<p>RDAP’s structured format can be easier for software to parse, but it does not make every record public or guarantee complete information. WHOIS may remain available in some contexts; follow current registry instructions.</p>
+<h2 id="understanding-status-codes">Understanding status codes</h2>
+<p>Status codes describe a registration’s state or restrictions. Common EPP-style examples include <code>clientTransferProhibited</code>, which may indicate a registrar-level transfer restriction, and <code>serverTransferProhibited</code>, which may indicate a registry-level restriction. Other codes can relate to renewal, update, deletion, hold, or dispute status.</p>
+<p>Interpret the exact code using the current registrar, registry, or ICANN documentation. A transfer-prohibited status may be a normal security lock, not evidence of wrongdoing. A hold status may affect DNS delegation. The meaning and available remedy depend on the code, extension, and provider. Do not advise removing a lock without verifying the account owner and purpose.</p>
+<h2 id="a-research-workflow">A research workflow</h2>
+<ol>
+<li><strong>Confirm the exact domain and TLD.</strong> Similar names can have different registries and lookup services.</li>
+<li><strong>Use a reliable lookup route.</strong> Start with the registrar or registry’s official lookup page, or an RDAP service listed by an authoritative source.</li>
+<li><strong>Record the date and source.</strong> A query result is a snapshot and can change.</li>
+<li><strong>Read status codes carefully.</strong> Follow links or search official documentation for each code.</li>
+<li><strong>Check DNS separately.</strong> Query nameservers and records if your question is about website or email resolution.</li>
+<li><strong>Contact the registrar for account or transfer issues.</strong> Public lookup data cannot unlock or change a domain.</li>
+<li><strong>Respect privacy.</strong> Do not attempt to deanonymize a redacted registrant through invasive or deceptive methods.</li>
+</ol>
+<h2 id="what-the-lookup-cannot-establish">What the lookup cannot establish</h2>
+<p>A WHOIS or RDAP result cannot confirm that a seller is the legitimate owner, that a trademark search is clear, that the domain will transfer successfully, or that a website is safe. A listed expiration date may not reflect a pending renewal or registrar grace process. Redaction does not mean a domain is unowned; missing fields do not prove a fraud.</p>
+<p>If you are buying a domain, use a trusted transaction process, verify seller control through the agreed workflow, and review legal and historical risks. If you are troubleshooting DNS, inspect the authoritative nameservers and records rather than relying only on registration data.</p>
+<h2 id="privacy-and-responsible-use">Privacy and responsible use</h2>
+<p>Registration data can include personal information. Access and disclosure are governed by service policy and law. Use the data for legitimate operational or research purposes, comply with applicable privacy rules, and do not scrape or republish personal data without a lawful basis. A public endpoint is not permission to harass a registrant or bypass privacy controls.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Is RDAP replacing WHOIS?</strong> RDAP is the newer standardized protocol and has been adopted for many registration-data services, but availability and transitional arrangements vary. Check the relevant registry’s current instructions.</p>
+<p><strong>Can I find the owner’s email?</strong> Sometimes contact data is public, but it may be redacted or replaced with a contact form. Respect privacy rules and provider terms.</p>
+<p><strong>Does an expiration date mean the domain is available then?</strong> No. Renewal, redemption, deletion, and release processes vary. Do not rely on a displayed date as a drop-time guarantee.</p>
+<p><strong>What does <code>clientTransferProhibited</code> mean?</strong> It commonly indicates a client/registrar transfer restriction in the status model. Verify its exact meaning and removal process with the registrar.</p>
+<p><strong>Can RDAP confirm a domain is available?</strong> A lookup can indicate whether a registration record was found, but final availability, eligibility, and price should be confirmed with a registrar.</p>
+<p>For protocol details, see <a href="https://www.rfc-editor.org/rfc/rfc9082">RFC 9082 (RDAP query format)</a> and <a href="https://www.rfc-editor.org/rfc/rfc9083">RFC 9083 (RDAP JSON responses)</a>. Consult the relevant registry for live data and status-code interpretation.</p></div></article><aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-25.html">How to Check Domain Availability in Bulk: Methods, Limits and Verification</a><a href="/blog/blog-27.html">A Practical Domain Research Workflow: From Idea Generation to Final Shortlist</a><a href="/blog/blog-28.html">How to Start a Domain Business: Business Models, Startup Costs and a 90-Day Plan</a><hr><a href="/blog/index.html">All DomainCraft articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside></div>
+    <section class="container section-tight"><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+
+</html>
