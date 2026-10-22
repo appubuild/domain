@@ -5,6 +5,11 @@
 
   const status = document.querySelector('[data-blog-status]');
   const search = document.querySelector('[data-blog-search]');
+  const categoryFilter = document.querySelector('[data-blog-category]');
+  const requestedCategory = new URLSearchParams(window.location?.search || '').get('category');
+  if (categoryFilter && requestedCategory && Array.from(categoryFilter.options || []).some((option) => option.value === requestedCategory)) {
+    categoryFilter.value = requestedCategory;
+  }
   let posts = [];
 
   const setStatus = (message, isError = false) => {
@@ -79,23 +84,36 @@
     return card;
   };
 
+  const categorySlug = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
   const render = () => {
     const query = (search?.value || '').trim().toLowerCase();
+    const selectedCategory = categoryFilter?.value || '';
     const filtered = posts.filter((post) => {
-      const searchable = [post.title, post.excerpt, ...(post.tags || [])].join(' ').toLowerCase();
-      return searchable.includes(query);
+      const postCategory = post.category || (Array.isArray(post.tags) ? post.tags[0] : '');
+      const categoryMatches = !selectedCategory || categorySlug(postCategory) === selectedCategory;
+      const searchable = [post.title, post.excerpt, post.category, ...(Array.isArray(post.tags) ? post.tags : [])]
+        .filter(Boolean).join(' ').toLowerCase();
+      return categoryMatches && searchable.includes(query);
     });
 
     grid.replaceChildren(...filtered.map(makeCard));
     window.DomainCraftReveal?.(grid);
     if (filtered.length === 0) {
-      setStatus(query ? 'No articles match that search. Try a different keyword.' : 'No articles are listed yet. Add a post to the manifest to publish one.', false);
+      const hasFilter = query || selectedCategory;
+      setStatus(hasFilter ? 'No articles match those filters. Try another keyword or category.' : 'No articles are listed yet. Add a post to the manifest to publish one.', false);
     } else {
-      setStatus(`${filtered.length} ${filtered.length === 1 ? 'article' : 'articles'}${query ? ' found' : ' available'}.`, false);
+      const hasFilter = query || selectedCategory;
+      setStatus(`${filtered.length} ${filtered.length === 1 ? 'article' : 'articles'}${hasFilter ? ' found' : ' available'}.`, false);
     }
   };
 
   search?.addEventListener('input', render);
+  categoryFilter?.addEventListener('change', render);
   setStatus('Loading articles…');
 
   fetch('./posts-manifest.json')

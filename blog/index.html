@@ -16,10 +16,10 @@
   <!-- Google Search Console: add the verification meta tag issued for your deployed domain here. -->
   <!-- TODO: Replace the example.com canonical and OG URLs with your production domain. -->
   <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-3">
   <script src="/assets/js/main.js" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog.js" defer></script>
+  <script src="/assets/js/blog.js?v=20261023-3" defer></script>
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -127,7 +127,18 @@
     <section class="container" aria-label="Article archive">
       <div class="blog-toolbar">
         <p>Browse 30 complete guides plus two additional naming articles. Each featured card includes a local illustration and a clear summary.</p>
-        <div class="blog-search"><label for="blogSearch">Search articles</label><input class="search-input" id="blogSearch" type="search" placeholder="Try “short names”" data-blog-search></div>
+        <div class="blog-filter-controls" aria-label="Filter articles">
+          <div class="blog-search"><label for="blogSearch">Search articles</label><input class="search-input" id="blogSearch" type="search" placeholder="Try “short names”" data-blog-search></div>
+          <div class="blog-category-filter"><label for="blogCategory">Filter by category</label><select class="search-input" id="blogCategory" data-blog-category>
+            <option value="">All categories</option>
+            <option value="domain-fundamentals">Domain Fundamentals</option>
+            <option value="hosting-dns-and-server-technology">Hosting, DNS &amp; Server Technology</option>
+            <option value="domain-investing-and-valuation">Domain Investing &amp; Valuation</option>
+            <option value="domain-reselling-and-marketplace">Domain Reselling &amp; Marketplace</option>
+            <option value="domain-research-and-generator-tools">Domain Research &amp; Generator Tools</option>
+            <option value="domain-business-and-website-operations">Domain Business &amp; Website Operations</option>
+          </select></div>
+        </div>
       </div>
       <p class="blog-status" data-blog-status role="status" hidden>Loading articles…</p>
       <div class="blog-grid" data-blog-grid aria-live="polite"></div>
@@ -135,10 +146,11 @@
     <section class="container section-tight"><div class="cta-band"><div><h2>Want a first batch of ideas?</h2><p>Start with one keyword and explore combinations in the free browser-based generator.</p></div><a class="button" href="/tools/domain-generator.html">Open the generator →</a></div></section>
   </main>
   <footer class="site-footer">
-    <div class="container footer-main">
+    <div class="container footer-main blog-footer-main">
       <div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div>
       <div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div>
       <div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div>
+      <div class="footer-links-group footer-category-group"><h2>Categories</h2><a href="/blog/index.html?category=domain-fundamentals">Domain Fundamentals</a><a href="/blog/index.html?category=hosting-dns-and-server-technology">Hosting, DNS &amp; Server Technology</a><a href="/blog/index.html?category=domain-investing-and-valuation">Domain Investing &amp; Valuation</a><a href="/blog/index.html?category=domain-reselling-and-marketplace">Domain Reselling &amp; Marketplace</a><a href="/blog/index.html?category=domain-research-and-generator-tools">Research &amp; Generator Tools</a><a href="/blog/index.html?category=domain-business-and-website-operations">Domain Business &amp; Website Operations</a></div>
     </div>
     <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
   </footer>
