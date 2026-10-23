@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SSL Certificates and HTTPS Explained: Security, Validation and Common Errors | DomainCraft</title>
+  <meta name="description" content="Learn how TLS certificates support HTTPS, what they do not prove, and how to troubleshoot expiry, hostname, chain, and mixed-content errors.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://example.com/blog/blog-10.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="SSL Certificates and HTTPS Explained: Security, Validation and Common Errors">
+  <meta property="og:description" content="Learn how TLS certificates support HTTPS, what they do not prove, and how to troubleshoot expiry, hostname, chain, and mixed-content errors.">
+  <meta property="og:url" content="https://example.com/blog/blog-10.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-ssl-certificates-https-explained.jpg"><meta property="og:image:alt" content="Secure browser-to-server connection and TLS certificate illustration."><meta property="og:image:type" content="image/jpeg">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Replace example.com with the production domain before publication. -->
+  <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
+  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "SSL Certificates and HTTPS Explained: Security, Validation and Common Errors",
+  "description": "Learn how TLS certificates support HTTPS, what they do not prove, and how to troubleshoot expiry, hostname, chain, and mixed-content errors.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "mainEntityOfPage": "https://example.com/blog/blog-10.html",
+  "image": [
+    "https://example.com/assets/img/blog/feature-ssl-certificates-https-explained.jpg"
+  ],
+  "wordCount": 1004,
+  "keywords": "TLS, HTTPS"
+}
+  </script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://example.com/#website",
+      "url": "https://example.com/",
+      "name": "DomainCraft",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Home",
+      "url": "https://example.com/"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Domain generator",
+      "url": "https://example.com/tools/domain-generator.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Blog",
+      "url": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "About us",
+      "url": "https://example.com/pages/about.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Contact us",
+      "url": "https://example.com/pages/contact.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Privacy policy",
+      "url": "https://example.com/pages/privacy-policy.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Terms and conditions",
+      "url": "https://example.com/pages/terms-and-conditions.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Disclaimer",
+      "url": "https://example.com/pages/disclaimer.html"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://example.com/blog/blog-10.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://example.com/"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": {
+            "@id": "https://example.com/blog/index.html"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "SSL Certificates and HTTPS Explained: Security, Validation and Common Errors",
+          "item": {
+            "@id": "https://example.com/blog/blog-10.html"
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <meta name="twitter:title" content="SSL Certificates and HTTPS Explained: Security, Validation and Common Errors | DomainCraft">
+  <meta name="twitter:description" content="Learn how TLS certificates support HTTPS, what they do not prove, and how to troubleshoot expiry, hostname, chain, and mixed-content errors.">
+  <meta name="twitter:url" content="https://example.com/blog/blog-10.html">
+  <meta name="twitter:image" content="https://example.com/assets/img/blog/feature-ssl-certificates-https-explained.jpg"><meta name="twitter:image:alt" content="Secure browser-to-server connection and TLS certificate illustration.">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+    <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+  </div></header>
+  <main id="main-content" class="page-main">
+    <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / SSL Certificates and HTTPS Explained: Security, Validation and Common Errors</div>
+    <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Hosting, DNS &amp; Server Technology · Practical guide</p><h1>SSL Certificates and HTTPS Explained: Security, Validation and Common Errors</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>5 minute read</span></div><div class="tag-list"><span class="tag">TLS</span><span class="tag">HTTPS</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-ssl-certificates-https-explained.jpg" alt="Secure browser-to-server connection and TLS certificate illustration." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>People still say “SSL certificate,” but modern web connections use Transport Layer Security (TLS). A TLS certificate helps a browser authenticate a server for a host name and establish an encrypted connection. HTTPS is HTTP carried over TLS.</p>
+<blockquote>
+<p><strong>Quick answer:</strong> HTTPS protects data in transit and helps verify the server identity for a domain name. A certificate does not prove the site is trustworthy, secure from malware, or legally legitimate. Keep the certificate valid, correctly configured, and matched to every hostname you serve.</p>
+</blockquote>
+<h2 id="what-a-certificate-does">What a certificate does</h2>
+<p>A website certificate binds public-key information to one or more host names under a certificate authority’s process. When a visitor opens an HTTPS URL, the browser checks whether the certificate is valid for that host, whether it is within its validity period, and whether its trust chain is acceptable. The browser and server then negotiate cryptographic settings and derive session keys for the connection.</p>
+<p>This process helps protect confidentiality and integrity while traffic travels between the browser and the TLS endpoint. It does not encrypt data after it reaches the application, hide every network fact, stop a user from entering information into a deceptive site, or ensure the server stores data safely. Applications still need authentication, authorization, secure coding, and appropriate data handling.</p>
+<h2 id="certificate-validation-types">Certificate validation types</h2>
+<p><strong>Domain validation (DV)</strong> checks control of the domain under the certificate authority’s validation method. It is commonly used for websites and does not independently verify an organization’s broader identity.</p>
+<p><strong>Organization validation (OV)</strong> may include checks about the organization requesting the certificate. <strong>Extended validation (EV)</strong> has additional process requirements defined by the relevant ecosystem. Browser UI has changed over time; do not promise that visitors will see a special “green bar” or that one validation type guarantees a safer business.</p>
+<p>A certificate may cover a single host, multiple specific host names, or a wildcard pattern within the authority’s rules. Review the exact names on the certificate. A wildcard that covers one label may not cover deeper subdomains.</p>
+<h2 id="issuing-installing-and-renewing">Issuing, installing, and renewing</h2>
+<p>A certificate must be obtained from a trusted certificate authority or managed service, then installed or activated at the TLS endpoint. That endpoint may be a web host, load balancer, reverse proxy, or CDN. A site can use different certificates at different layers.</p>
+<p>Use the provider’s current instructions. Verify the domain-control challenge, account, hostname list, private-key handling, and renewal method. Automated issuance can reduce manual work, but automation must be monitored. A failed renewal can turn a working site into a browser warning.</p>
+<p>After installation, test the exact variants users may visit: root domain, <code>www</code>, application subdomains, and any alternate hostname. Check that HTTP redirects to the chosen HTTPS URL, that internal links use HTTPS, and that any proxy-to-origin connection is configured appropriately.</p>
+<h2 id="common-https-errors">Common HTTPS errors</h2>
+<table>
+<thead>
+<tr>
+<th>Browser or monitoring symptom</th>
+<th>Likely cause to investigate</th>
+<th>Safe response</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Certificate expired</td>
+<td>Renewal failed, automation stopped, or old certificate remains installed</td>
+<td>Check the issuing account and the certificate served by the actual endpoint. Renew and verify deployment.</td>
+</tr>
+<tr>
+<td>Name mismatch</td>
+<td>Certificate does not include the requested host</td>
+<td>Issue or configure a certificate covering that exact name. Check redirects and subdomains.</td>
+</tr>
+<tr>
+<td>Untrusted or incomplete chain</td>
+<td>Missing intermediate certificate or unsupported trust path</td>
+<td>Follow the host or CA’s chain-installation guidance and test across clients.</td>
+</tr>
+<tr>
+<td>Mixed content</td>
+<td>HTTPS page requests an HTTP resource</td>
+<td>Replace insecure resource URLs and inspect third-party embeds.</td>
+</tr>
+<tr>
+<td>Too many redirects</td>
+<td>Conflicting HTTPS redirects at proxy, host, or application</td>
+<td>Map the redirect chain and choose one authoritative redirect layer.</td>
+</tr>
+<tr>
+<td>Connection fails only behind proxy</td>
+<td>TLS mode or origin certificate mismatch</td>
+<td>Confirm the CDN/proxy mode and origin certificate requirements.</td>
+</tr>
+</tbody>
+</table>
+<p>Do not tell visitors to bypass a certificate warning. For a public website, resolve the configuration issue. In a local test environment, document the exception and never enter real credentials while a connection is untrusted.</p>
+<h2 id="https-and-security-misconceptions">HTTPS and security misconceptions</h2>
+<ul>
+<li><strong>“A padlock proves a business is genuine.”</strong> It proves the connection meets browser certificate checks for the host; phishing sites can use HTTPS too.</li>
+<li><strong>“HTTPS protects data inside my database.”</strong> It protects the network connection to a TLS endpoint. Storage and access controls are separate.</li>
+<li><strong>“A certificate covers every subdomain.”</strong> Coverage depends on the names included and certificate rules.</li>
+<li><strong>“Installing a certificate fixes every warning.”</strong> Mixed content, redirects, trust-chain issues, hostname errors, and application problems can remain.</li>
+<li><strong>“TLS is a one-time task.”</strong> Renewals, configuration, endpoint changes, and security maintenance continue.</li>
+</ul>
+<h2 id="a-practical-deployment-checklist">A practical deployment checklist</h2>
+<p>Before launch, confirm that the certificate includes the public hostname, is installed at the serving endpoint, and renews automatically or has a clear manual process. Test the full chain and expiry monitoring. Redirect to one canonical HTTPS version. Update canonical tags, sitemap entries, internal links, and API endpoints. Check forms and third-party scripts for mixed content. Ensure the application handles proxy headers safely; do not trust arbitrary client-supplied forwarding headers.</p>
+<p>When changing hosts or CDNs, plan certificate issuance and DNS separately. Avoid removing the old certificate or origin configuration until the new path has been tested. Keep a documented owner for certificate renewal alerts.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Is SSL still used?</strong> “SSL certificate” remains common wording, but secure modern web connections use TLS. Follow current server and provider guidance for supported protocols.</p>
+<p><strong>Does HTTPS improve search ranking?</strong> Search systems may treat HTTPS as a positive technical signal, but it is not a ranking guarantee. Use HTTPS primarily to protect connections and meet user expectations.</p>
+<p><strong>Can I use one certificate for <code>example.com</code> and <code>www.example.com</code>?</strong> Yes, if both names are covered by the certificate and the server is configured for them.</p>
+<p><strong>What should I do when a certificate warning appears?</strong> Do not bypass it for a public site. Check hostname, validity, chain, proxy, and installation at the endpoint.</p>
+<p><strong>Is a free certificate safe?</strong> Price alone does not determine security. Check that it is issued by a trusted CA, correctly configured, and renewed reliably.</p>
+<p>For TLS protocol details, see <a href="https://www.rfc-editor.org/rfc/rfc8446">RFC 8446</a>. For deployment, use the current documentation from the web host, CDN, and certificate authority you actually use.</p></div></article><aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-09.html">How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases</a><a href="/blog/blog-11.html">DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</a><a href="/blog/blog-12.html">CDN, DNS and Web Hosting: What Each Service Does and How They Work Together</a><hr><a href="/blog/index.html">All DomainCraft articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside></div>
+    <section class="container section-tight"><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+
+</html>

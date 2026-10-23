@@ -1,0 +1,993 @@
+{
+  "schemaVersion": 1,
+  "defaultPublished": false,
+  "datePolicy": "ISO-8601 calendar date; update to the intended publication date before publishing.",
+  "posts": [
+    {
+      "id": "legacy-what-is-a-domain-name",
+      "slug": "what-is-a-domain-name",
+      "title": "What Is a Domain Name? A Complete Beginner’s Guide to How Domains Work",
+      "excerpt": "Learn how a domain differs from a URL, website, IP address, registrar, and host—and follow the DNS lookup from browser to web server.",
+      "date": "2026-10-23",
+      "readTime": 12,
+      "tags": [
+        "Domain Fundamentals",
+        "DNS",
+        "Beginner guide"
+      ],
+      "published": true,
+      "file": "blog-03.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-what-is-a-domain-name.jpg",
+      "imageAlt": "Illustrated domain name, browser, DNS, and website-host concepts.",
+      "day": 1
+    },
+    {
+      "id": "legacy-how-dns-works",
+      "slug": "how-dns-works",
+      "title": "How DNS Works: From Typing a Domain Name to Loading a Website",
+      "excerpt": "Follow a recursive DNS lookup from device cache through root, TLD, and authoritative servers, then learn about TTLs and troubleshooting.",
+      "date": "2026-10-23",
+      "readTime": 8,
+      "tags": [
+        "Domain Fundamentals",
+        "DNS",
+        "Beginner guide"
+      ],
+      "published": true,
+      "file": "blog-04.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-how-dns-works.jpg",
+      "imageAlt": "Diagrammatic route from browser and resolver through the DNS hierarchy.",
+      "day": 2
+    },
+    {
+      "id": "legacy-domain-extensions-explained",
+      "slug": "domain-extensions-explained",
+      "title": "Domain Extensions Explained: .com vs .net vs .org vs Country-Code Domains",
+      "excerpt": "Compare familiar generic extensions, country-code domains, and newer options by audience, policy, renewal cost, and practical fit.",
+      "date": "2026-10-23",
+      "readTime": 7,
+      "tags": [
+        "Domain Fundamentals",
+        "TLDs",
+        "Domain selection"
+      ],
+      "published": true,
+      "file": "blog-05.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-domain-extensions-explained.jpg",
+      "imageAlt": "Comparison of generic and country-code domain extension choices.",
+      "day": 3
+    },
+    {
+      "id": "legacy-domain-registration-renewal-expiration",
+      "slug": "domain-registration-renewal-expiration",
+      "title": "Domain Registration, Renewal, Expiration and Redemption: The Complete Lifecycle",
+      "excerpt": "Understand the registration lifecycle, renewal responsibilities, expiration risks, and why recovery rules vary by extension.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Fundamentals",
+        "Renewals",
+        "Domain lifecycle"
+      ],
+      "published": true,
+      "file": "blog-06.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-domain-registration-renewal-expiration.jpg",
+      "imageAlt": "Timeline illustration of domain registration, renewal, expiration, and recovery stages.",
+      "day": 4
+    },
+    {
+      "id": "legacy-transfer-domain-between-registrars",
+      "slug": "transfer-domain-between-registrars",
+      "title": "How to Transfer a Domain Between Registrars Without Losing Control",
+      "excerpt": "Plan a registrar transfer safely, protect the authorization code, preserve DNS, and verify services before and after the move.",
+      "date": "2026-10-23",
+      "readTime": 7,
+      "tags": [
+        "Domain Fundamentals",
+        "Transfers",
+        "DNS"
+      ],
+      "published": true,
+      "file": "blog-07.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-transfer-domain-between-registrars.jpg",
+      "imageAlt": "Transfer route between registrars with DNS and account checks.",
+      "day": 5
+    },
+    {
+      "id": "legacy-web-hosting-explained",
+      "slug": "web-hosting-explained",
+      "title": "Web Hosting Explained: Shared Hosting, VPS, Dedicated and Cloud Hosting",
+      "excerpt": "Compare shared hosting, VPS, dedicated servers, and cloud hosting by control, maintenance, resources, and project needs.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Hosting, DNS & Server Technology",
+        "Hosting",
+        "Infrastructure"
+      ],
+      "published": true,
+      "file": "blog-08.html",
+      "category": "Hosting, DNS & Server Technology",
+      "image": "/assets/img/blog/feature-web-hosting-explained.jpg",
+      "imageAlt": "Server infrastructure illustration comparing common web-hosting models.",
+      "day": 6
+    },
+    {
+      "id": "legacy-how-web-servers-work",
+      "slug": "how-web-servers-work",
+      "title": "How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases",
+      "excerpt": "Trace a web request from browser to server, understand HTTP responses and databases, and diagnose common status codes.",
+      "date": "2026-10-23",
+      "readTime": 7,
+      "tags": [
+        "Hosting, DNS & Server Technology",
+        "HTTP",
+        "Web servers"
+      ],
+      "published": true,
+      "file": "blog-09.html",
+      "category": "Hosting, DNS & Server Technology",
+      "image": "/assets/img/blog/feature-how-web-servers-work.jpg",
+      "imageAlt": "Browser request and server response path with application and database.",
+      "day": 7
+    },
+    {
+      "id": "legacy-ssl-certificates-https-explained",
+      "slug": "ssl-certificates-https-explained",
+      "title": "SSL Certificates and HTTPS Explained: Security, Validation and Common Errors",
+      "excerpt": "Learn how TLS certificates support HTTPS, what they do not prove, and how to troubleshoot expiry, hostname, chain, and mixed-content errors.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Hosting, DNS & Server Technology",
+        "TLS",
+        "HTTPS"
+      ],
+      "published": true,
+      "file": "blog-10.html",
+      "category": "Hosting, DNS & Server Technology",
+      "image": "/assets/img/blog/feature-ssl-certificates-https-explained.jpg",
+      "imageAlt": "Secure browser-to-server connection and TLS certificate illustration.",
+      "day": 8
+    },
+    {
+      "id": "legacy-dns-records-explained",
+      "slug": "dns-records-explained",
+      "title": "DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples",
+      "excerpt": "Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Hosting, DNS & Server Technology",
+        "DNS records",
+        "Configuration"
+      ],
+      "published": true,
+      "file": "blog-11.html",
+      "category": "Hosting, DNS & Server Technology",
+      "image": "/assets/img/blog/feature-dns-records-explained.jpg",
+      "imageAlt": "DNS zone illustration showing website, alias, and email record types.",
+      "day": 9
+    },
+    {
+      "id": "legacy-cdn-dns-web-hosting",
+      "slug": "cdn-dns-web-hosting",
+      "title": "CDN, DNS and Web Hosting: What Each Service Does and How They Work Together",
+      "excerpt": "Separate DNS, CDN, and hosting responsibilities and follow a request from browser through edge cache to origin.",
+      "date": "2026-10-23",
+      "readTime": 7,
+      "tags": [
+        "Hosting, DNS & Server Technology",
+        "CDN",
+        "Architecture"
+      ],
+      "published": true,
+      "file": "blog-12.html",
+      "category": "Hosting, DNS & Server Technology",
+      "image": "/assets/img/blog/feature-cdn-dns-web-hosting.jpg",
+      "imageAlt": "Request path from DNS to CDN edge and origin host.",
+      "day": 10
+    },
+    {
+      "id": "legacy-how-to-value-a-domain-name",
+      "slug": "how-to-value-a-domain-name",
+      "title": "How to Value a Domain Name: 12 Factors That Influence Its Market Potential",
+      "excerpt": "Assess name quality, buyer pool, comparable evidence, legal risks, liquidity, and holding costs without treating an estimate as a promise.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Investing & Valuation",
+        "Valuation",
+        "Risk"
+      ],
+      "published": true,
+      "file": "blog-13.html",
+      "category": "Domain Investing & Valuation",
+      "image": "/assets/img/blog/feature-how-to-value-a-domain-name.jpg",
+      "imageAlt": "Domain valuation worksheet illustration with evidence and risk factors.",
+      "day": 11
+    },
+    {
+      "id": "legacy-what-makes-a-domain-brandable",
+      "slug": "what-makes-a-domain-brandable",
+      "title": "What Makes a Domain Name Brandable? A Practical Naming Framework",
+      "excerpt": "Test a domain name for clarity, pronunciation, spelling, recall, distinctiveness, audience fit, and legal risk.",
+      "date": "2026-10-23",
+      "readTime": 7,
+      "tags": [
+        "Domain Investing & Valuation",
+        "Branding",
+        "Naming"
+      ],
+      "published": true,
+      "file": "blog-14.html",
+      "category": "Domain Investing & Valuation",
+      "image": "/assets/img/blog/feature-what-makes-a-domain-brandable.jpg",
+      "imageAlt": "Naming scorecard and brandability test illustration.",
+      "day": 12
+    },
+    {
+      "id": "legacy-domain-investing-for-beginners",
+      "slug": "domain-investing-for-beginners",
+      "title": "Domain Investing for Beginners: Costs, Risks, Portfolio Planning and Exit Strategies",
+      "excerpt": "Plan a domain-investing budget, weigh renewal and liquidity risks, and compare exit routes without assuming future profit.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Investing & Valuation",
+        "Investing",
+        "Portfolio"
+      ],
+      "published": true,
+      "file": "blog-15.html",
+      "category": "Domain Investing & Valuation",
+      "image": "/assets/img/blog/feature-domain-investing-for-beginners.jpg",
+      "imageAlt": "Portfolio planning illustration with renewal, risk, and exit-path cues.",
+      "day": 13
+    },
+    {
+      "id": "legacy-research-domain-sales",
+      "slug": "research-domain-sales",
+      "title": "How to Research Domain Sales: Comparable Sales, Market Evidence and Pricing Mistakes",
+      "excerpt": "Separate asking prices from completed sales, document comparables, and avoid false precision when pricing a domain.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Investing & Valuation",
+        "Comparable sales",
+        "Research"
+      ],
+      "published": true,
+      "file": "blog-16.html",
+      "category": "Domain Investing & Valuation",
+      "image": "/assets/img/blog/feature-research-domain-sales.jpg",
+      "imageAlt": "Evidence table illustration comparing domain sale reports and limitations.",
+      "day": 14
+    },
+    {
+      "id": "legacy-domain-names-trademarks",
+      "slug": "domain-names-trademarks",
+      "title": "Domain Names and Trademarks: How to Research Legal Risks Before Registering",
+      "excerpt": "Learn why domain availability is not trademark clearance and follow a cautious name-research workflow before commercial use.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Investing & Valuation",
+        "Trademark",
+        "Legal research"
+      ],
+      "published": true,
+      "file": "blog-17.html",
+      "category": "Domain Investing & Valuation",
+      "image": "/assets/img/blog/feature-domain-names-trademarks.jpg",
+      "imageAlt": "Magnifying glass and registered-name research illustration.",
+      "day": 15
+    },
+    {
+      "id": "legacy-build-focused-domain-portfolio",
+      "slug": "build-focused-domain-portfolio",
+      "title": "How to Build a Focused Domain Portfolio: Niches, Quality Filters and Renewal Discipline",
+      "excerpt": "Create a focused portfolio thesis, record renewal costs, secure accounts, and review keep, sell, develop, or drop decisions.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Investing & Valuation",
+        "Portfolio",
+        "Renewals"
+      ],
+      "published": true,
+      "file": "blog-18.html",
+      "category": "Domain Investing & Valuation",
+      "image": "/assets/img/blog/feature-build-focused-domain-portfolio.jpg",
+      "imageAlt": "Domain portfolio dashboard illustration with renewal and review controls.",
+      "day": 16
+    },
+    {
+      "id": "legacy-how-to-sell-a-domain-name",
+      "slug": "how-to-sell-a-domain-name",
+      "title": "How to Sell a Domain Name: A Complete Guide From Listing to Payment",
+      "excerpt": "Prepare a listing, handle buyer inquiries, compare sales routes, and complete payment and transfer through a safer workflow.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Reselling & Marketplace",
+        "Selling",
+        "Transactions"
+      ],
+      "published": true,
+      "file": "blog-19.html",
+      "category": "Domain Reselling & Marketplace",
+      "image": "/assets/img/blog/feature-how-to-sell-a-domain-name.jpg",
+      "imageAlt": "Domain sale steps from listing and negotiation to verified transfer.",
+      "day": 17
+    },
+    {
+      "id": "legacy-domain-marketplaces-explained",
+      "slug": "domain-marketplaces-explained",
+      "title": "Domain Marketplaces Explained: How to Compare Listing Options and Fees",
+      "excerpt": "Compare domain marketplace models, fees, eligibility, exclusivity, payout rules, transfer workflows, and account security.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Reselling & Marketplace",
+        "Marketplaces",
+        "Fees"
+      ],
+      "published": true,
+      "file": "blog-20.html",
+      "category": "Domain Reselling & Marketplace",
+      "image": "/assets/img/blog/feature-domain-marketplaces-explained.jpg",
+      "imageAlt": "Marketplace comparison cards with fee and transfer checklist.",
+      "day": 18
+    },
+    {
+      "id": "legacy-price-negotiate-domain-name",
+      "slug": "price-negotiate-domain-name",
+      "title": "How to Price and Negotiate a Domain Name Without Undervaluing It",
+      "excerpt": "Set a price range and minimum net amount, use comparable evidence carefully, and negotiate without false urgency or promises.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Reselling & Marketplace",
+        "Pricing",
+        "Negotiation"
+      ],
+      "published": true,
+      "file": "blog-21.html",
+      "category": "Domain Reselling & Marketplace",
+      "image": "/assets/img/blog/feature-price-negotiate-domain-name.jpg",
+      "imageAlt": "Negotiation illustration with offer, counteroffer, and cost notes.",
+      "day": 19
+    },
+    {
+      "id": "legacy-domain-escrow-transfer",
+      "slug": "domain-escrow-transfer",
+      "title": "How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers",
+      "excerpt": "Follow the payment and transfer sequence, distinguish account push from registrar transfer, and recognize common transaction scams.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Reselling & Marketplace",
+        "Escrow",
+        "Security"
+      ],
+      "published": true,
+      "file": "blog-22.html",
+      "category": "Domain Reselling & Marketplace",
+      "image": "/assets/img/blog/feature-domain-escrow-transfer.jpg",
+      "imageAlt": "Escrow workflow connecting buyer payment, domain transfer, and release.",
+      "day": 20
+    },
+    {
+      "id": "legacy-domain-for-sale-landing-page",
+      "slug": "domain-for-sale-landing-page",
+      "title": "How to Create a Domain for Sale Landing Page That Helps Buyers Make Decisions",
+      "excerpt": "Design a clear domain-sale page with transparent pricing, secure inquiry or checkout, useful FAQs, and privacy-conscious forms.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Reselling & Marketplace",
+        "Landing page",
+        "UX"
+      ],
+      "published": true,
+      "file": "blog-23.html",
+      "category": "Domain Reselling & Marketplace",
+      "image": "/assets/img/blog/feature-domain-for-sale-landing-page.jpg",
+      "imageAlt": "Domain-sale landing page wireframe with a clear action and trust details.",
+      "day": 21
+    },
+    {
+      "id": "legacy-generate-better-domain-names",
+      "slug": "generate-better-domain-names",
+      "title": "How to Generate Better Domain Names Using Keywords, Naming Patterns and Brand Tests",
+      "excerpt": "Use a naming brief, word patterns, pronunciation tests, and a shortlist scorecard to generate better domain ideas.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Research & Generator Tools",
+        "Name generation",
+        "Branding"
+      ],
+      "published": true,
+      "file": "blog-24.html",
+      "category": "Domain Research & Generator Tools",
+      "image": "/assets/img/blog/feature-generate-better-domain-names.jpg",
+      "imageAlt": "Keyword-to-name brainstorming board and shortlist illustration.",
+      "day": 22
+    },
+    {
+      "id": "legacy-check-domain-availability-in-bulk",
+      "slug": "check-domain-availability-in-bulk",
+      "title": "How to Check Domain Availability in Bulk: Methods, Limits and Verification",
+      "excerpt": "Compare bulk lookup methods, understand “unknown” results and data limits, then verify finalists with a registrar.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Research & Generator Tools",
+        "Availability",
+        "Bulk lookup"
+      ],
+      "published": true,
+      "file": "blog-25.html",
+      "category": "Domain Research & Generator Tools",
+      "image": "/assets/img/blog/feature-check-domain-availability-in-bulk.jpg",
+      "imageAlt": "Batch domain lookup list with available, registered, and unknown states.",
+      "day": 23
+    },
+    {
+      "id": "legacy-whois-vs-rdap",
+      "slug": "whois-vs-rdap",
+      "title": "WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes",
+      "excerpt": "Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Research & Generator Tools",
+        "WHOIS",
+        "RDAP"
+      ],
+      "published": true,
+      "file": "blog-26.html",
+      "category": "Domain Research & Generator Tools",
+      "image": "/assets/img/blog/feature-whois-vs-rdap.jpg",
+      "imageAlt": "Structured RDAP and WHOIS record panels with status-code cues.",
+      "day": 24
+    },
+    {
+      "id": "legacy-domain-research-workflow",
+      "slug": "domain-research-workflow",
+      "title": "A Practical Domain Research Workflow: From Idea Generation to Final Shortlist",
+      "excerpt": "Use a repeatable process to generate names, check registration and costs, research legal risks, and approve a final shortlist.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Research & Generator Tools",
+        "Research",
+        "Shortlist"
+      ],
+      "published": true,
+      "file": "blog-27.html",
+      "category": "Domain Research & Generator Tools",
+      "image": "/assets/img/blog/feature-domain-research-workflow.jpg",
+      "imageAlt": "Step-by-step domain research funnel from idea to approved shortlist.",
+      "day": 25
+    },
+    {
+      "id": "legacy-start-a-domain-business",
+      "slug": "start-a-domain-business",
+      "title": "How to Start a Domain Business: Business Models, Startup Costs and a 90-Day Plan",
+      "excerpt": "Compare domain business models, estimate costs with local quotes, validate customer needs, and follow a risk-aware 90-day plan.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Business & Website Operations",
+        "Business plan",
+        "90-day plan"
+      ],
+      "published": true,
+      "file": "blog-28.html",
+      "category": "Domain Business & Website Operations",
+      "image": "/assets/img/blog/feature-start-a-domain-business.jpg",
+      "imageAlt": "Domain-business roadmap from model choice through a 90-day review.",
+      "day": 26
+    },
+    {
+      "id": "legacy-real-cost-of-owning-domains",
+      "slug": "real-cost-of-owning-domains",
+      "title": "The Real Cost of Owning Domains: Registration, Renewals, Marketplace Fees and Taxes",
+      "excerpt": "Calculate registration, renewal, marketplace, transaction, and local tax costs without relying on outdated generic prices.",
+      "date": "2026-10-23",
+      "readTime": 5,
+      "tags": [
+        "Domain Business & Website Operations",
+        "Costs",
+        "Renewals"
+      ],
+      "published": true,
+      "file": "blog-29.html",
+      "category": "Domain Business & Website Operations",
+      "image": "/assets/img/blog/feature-real-cost-of-owning-domains.jpg",
+      "imageAlt": "Domain ownership cost worksheet with renewals and transaction fees.",
+      "day": 27
+    },
+    {
+      "id": "legacy-domain-to-live-website",
+      "slug": "domain-to-live-website",
+      "title": "From Domain to Live Website: A Step-by-Step Deployment and Maintenance Guide",
+      "excerpt": "Connect registration, DNS, hosting, HTTPS, launch testing, backups, and maintenance in a practical website checklist.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Business & Website Operations",
+        "Deployment",
+        "Maintenance"
+      ],
+      "published": true,
+      "file": "blog-30.html",
+      "category": "Domain Business & Website Operations",
+      "image": "/assets/img/blog/feature-domain-to-live-website.jpg",
+      "imageAlt": "Domain, DNS, hosting, HTTPS, and website deployment path.",
+      "day": 28
+    },
+    {
+      "id": "legacy-trust-domain-tools-website",
+      "slug": "trust-domain-tools-website",
+      "title": "Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience",
+      "excerpt": "Make domain tools more trustworthy through clear limitations, data minimization, security, accessibility, and transparent result language.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Business & Website Operations",
+        "Privacy",
+        "Trust"
+      ],
+      "published": true,
+      "file": "blog-31.html",
+      "category": "Domain Business & Website Operations",
+      "image": "/assets/img/blog/feature-trust-domain-tools-website.jpg",
+      "imageAlt": "Trust framework illustration with privacy, security, and transparent results.",
+      "day": 29
+    },
+    {
+      "id": "legacy-build-domain-knowledge-website",
+      "slug": "build-domain-knowledge-website",
+      "title": "How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement",
+      "excerpt": "Build a useful knowledge site with topic clusters, transparent tools, regular reviews, and outcome-focused measurement.",
+      "date": "2026-10-23",
+      "readTime": 6,
+      "tags": [
+        "Domain Business & Website Operations",
+        "Content strategy",
+        "Measurement"
+      ],
+      "published": true,
+      "file": "blog-32.html",
+      "category": "Domain Business & Website Operations",
+      "image": "/assets/img/blog/feature-build-domain-knowledge-website.jpg",
+      "imageAlt": "Editorial content map connecting guides, tools, review, and useful metrics.",
+      "day": 30
+    },
+    {
+      "id": "legacy-choose-a-domain-name",
+      "slug": "choose-a-domain-name",
+      "title": "How to Choose a Domain Name: 10 Practical Tests Before You Register",
+      "excerpt": "Use ten simple tests to judge clarity, pronunciation, spelling, flexibility, distinctiveness, availability, and trademark risk before you commit to a domain name.",
+      "date": "2026-10-20",
+      "readTime": 5,
+      "tags": [
+        "Domain naming",
+        "Brand strategy",
+        "Checklist"
+      ],
+      "published": true,
+      "file": "blog-01.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-choose-a-domain-name.jpg",
+      "imageAlt": "Illustration of a shortlist of domain names being checked for spelling and brand fit."
+    },
+    {
+      "id": "legacy-choose-a-domain-extension",
+      "slug": "choose-a-domain-extension",
+      "title": "How to Choose a Domain Extension for Your Website",
+      "excerpt": "Compare familiar generic extensions, country-code domains, and newer options by audience, trust, cost, registration rules, and long-term fit.",
+      "date": "2026-10-18",
+      "readTime": 5,
+      "tags": [
+        "Domain extensions",
+        "TLDs",
+        "Website planning"
+      ],
+      "published": true,
+      "file": "blog-02.html",
+      "category": "Domain Fundamentals",
+      "image": "/assets/img/blog/feature-choose-a-domain-extension.jpg",
+      "imageAlt": "Illustration comparing generic and country-code domain extension choices."
+    },
+    {
+      "id": "day-31",
+      "slug": "agentic-web-explained",
+      "title": "The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites",
+      "excerpt": "Understand how AI agents find pages, call APIs and tools, and why machine-readable content, permissions, and security boundaries matter.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "AI agents",
+        "Web architecture",
+        "Security"
+      ],
+      "published": false,
+      "file": "blog-33.html",
+      "category": "AI & Emerging Web",
+      "image": "/assets/img/blog/feature-agentic-web-explained.svg",
+      "imageAlt": "Conceptual flow from a person and a browser to an AI agent, website pages, APIs, and guarded tools.",
+      "day": 31
+    },
+    {
+      "id": "day-32",
+      "slug": "ai-search-vs-traditional-search",
+      "title": "AI Search vs Traditional Search: How Websites Can Improve Their Discoverability",
+      "excerpt": "Compare traditional search with AI-generated answers and audit crawlability, accessible content, citations, structured data, and measurement limits.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "AI search",
+        "SEO",
+        "Discoverability"
+      ],
+      "published": false,
+      "file": "blog-34.html",
+      "category": "AI & Emerging Web",
+      "image": "/assets/img/blog/feature-ai-search-vs-traditional-search.svg",
+      "imageAlt": "Comparison of a conventional search index and an AI retrieval-and-answer workflow.",
+      "day": 32
+    },
+    {
+      "id": "day-33",
+      "slug": "model-context-protocol-mcp",
+      "title": "What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data",
+      "excerpt": "Learn the roles of MCP hosts, clients, and servers, how tools connect to APIs, and how to manage authentication and untrusted output.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "MCP",
+        "AI tools",
+        "APIs"
+      ],
+      "published": false,
+      "file": "blog-35.html",
+      "category": "AI & Emerging Web",
+      "image": "/assets/img/blog/feature-model-context-protocol-mcp.svg",
+      "imageAlt": "MCP host, client, server, and an example tool connected to an external data source.",
+      "day": 33
+    },
+    {
+      "id": "day-34",
+      "slug": "ai-crawlers-robots-txt-access",
+      "title": "AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners",
+      "excerpt": "Separate crawler access, indexing, and content reuse; learn what robots.txt can signal and how to review crawler traffic safely.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "AI crawlers",
+        "robots.txt",
+        "Web standards"
+      ],
+      "published": false,
+      "file": "blog-36.html",
+      "category": "AI & Emerging Web",
+      "image": "/assets/img/blog/feature-ai-crawlers-robots-txt-access.svg",
+      "imageAlt": "Illustration of crawler requests, robots.txt guidance, page indexing, and server-side access controls.",
+      "day": 34
+    },
+    {
+      "id": "day-35",
+      "slug": "ai-coding-agents-web-development",
+      "title": "AI Coding Agents and Modern Web Development: From Prompt to Tested Application",
+      "excerpt": "Follow an AI-assisted development workflow from requirements and planning to code review, tests, secret handling, and deployment.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "AI coding agents",
+        "Web development",
+        "Testing"
+      ],
+      "published": false,
+      "file": "blog-37.html",
+      "category": "AI & Emerging Web",
+      "image": "/assets/img/blog/feature-ai-coding-agents-web-development.svg",
+      "imageAlt": "Prompt-to-production workflow with planning, code changes, automated tests, and human review.",
+      "day": 35
+    },
+    {
+      "id": "day-36",
+      "slug": "serverless-computing-explained",
+      "title": "Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs",
+      "excerpt": "Explore serverless functions, event triggers, cold starts, execution limits, pricing inputs, and an illustrative domain lookup architecture.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Serverless",
+        "Cloud computing",
+        "Functions"
+      ],
+      "published": false,
+      "file": "blog-38.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-serverless-computing-explained.svg",
+      "imageAlt": "A request moving through an HTTPS gateway to a function, provider API, and response.",
+      "day": 36
+    },
+    {
+      "id": "day-37",
+      "slug": "edge-computing-web-applications",
+      "title": "Edge Computing Explained: How Running Code Closer to Users Changes Web Applications",
+      "excerpt": "Compare centralized origins with edge networks, CDN caching, edge functions, latency, data handling, and runtime limits.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Edge computing",
+        "CDN",
+        "Web performance"
+      ],
+      "published": false,
+      "file": "blog-39.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-edge-computing-web-applications.svg",
+      "imageAlt": "Comparison of a distant origin request and a nearby edge cache or function.",
+      "day": 37
+    },
+    {
+      "id": "day-38",
+      "slug": "docker-containers-web-applications",
+      "title": "Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed",
+      "excerpt": "Understand container images, registries, volumes, environment configuration, deployment, logs, backups, and container security.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Docker",
+        "Containers",
+        "Deployment"
+      ],
+      "published": false,
+      "file": "blog-40.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-docker-containers-web-applications.svg",
+      "imageAlt": "Development source built into an image, stored in a registry, and run as a configured container.",
+      "day": 38
+    },
+    {
+      "id": "day-39",
+      "slug": "api-gateways-reverse-proxies-load-balancers",
+      "title": "API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App",
+      "excerpt": "Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "API gateway",
+        "Reverse proxy",
+        "Load balancing"
+      ],
+      "published": false,
+      "file": "blog-41.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-api-gateways-reverse-proxies-load-balancers.svg",
+      "imageAlt": "Browser request routed through a reverse proxy and API gateway to healthy backend services.",
+      "day": 39
+    },
+    {
+      "id": "day-40",
+      "slug": "website-observability-logs-metrics-traces",
+      "title": "Website Observability Explained: Logs, Metrics, Traces and Error Monitoring",
+      "excerpt": "Use logs, metrics, traces, request IDs, and error monitoring to investigate latency and failures in a web application.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Observability",
+        "Monitoring",
+        "Web operations"
+      ],
+      "published": false,
+      "file": "blog-42.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-website-observability-logs-metrics-traces.svg",
+      "imageAlt": "A request ID connects a dashboard metric, structured logs, and spans across a service path.",
+      "day": 40
+    },
+    {
+      "id": "day-41",
+      "slug": "rest-apis-http-methods-status-codes",
+      "title": "REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design",
+      "excerpt": "Learn REST and HTTP fundamentals, JSON contracts, status codes, pagination, filtering, validation, and example domain API endpoints.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "REST API",
+        "HTTP",
+        "API design"
+      ],
+      "published": false,
+      "file": "blog-43.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-rest-apis-http-methods-status-codes.svg",
+      "imageAlt": "Client request and JSON response passing through a versioned API endpoint.",
+      "day": 41
+    },
+    {
+      "id": "day-42",
+      "slug": "api-rate-limiting-caching-retries",
+      "title": "API Rate Limiting, Caching and Retries: Building Reliable Search Tools",
+      "excerpt": "Understand rate limits, quotas, cache keys, TTLs, timeouts, exponential backoff, and safe handling of uncertain lookup results.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Rate limiting",
+        "Caching",
+        "Reliability"
+      ],
+      "published": false,
+      "file": "blog-44.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-api-rate-limiting-caching-retries.svg",
+      "imageAlt": "Request flow showing a cache hit, a rate-limit check, and a bounded provider retry.",
+      "day": 42
+    },
+    {
+      "id": "day-43",
+      "slug": "sql-vs-nosql-databases-web-tools",
+      "title": "SQL vs NoSQL Databases: How to Choose the Right Database for a Web Tool",
+      "excerpt": "Compare relational and document data models, query patterns, consistency, indexing, backups, and operational complexity.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "SQL",
+        "NoSQL",
+        "Database design"
+      ],
+      "published": false,
+      "file": "blog-45.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-sql-vs-nosql-databases-web-tools.svg",
+      "imageAlt": "Relational tables and document records connected to a web application’s data flow.",
+      "day": 43
+    },
+    {
+      "id": "day-44",
+      "slug": "object-block-file-storage-architecture",
+      "title": "Object Storage vs Block Storage vs File Storage: Choosing the Right Storage Architecture",
+      "excerpt": "Compare object, block, and file storage for media, databases, shared files, CDN delivery, lifecycle policies, and recovery.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Object storage",
+        "File storage",
+        "Cloud infrastructure"
+      ],
+      "published": false,
+      "file": "blog-46.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-object-block-file-storage-architecture.svg",
+      "imageAlt": "Three storage models connected to an application upload and delivery path.",
+      "day": 44
+    },
+    {
+      "id": "day-45",
+      "slug": "webhooks-vs-apis-automation",
+      "title": "Webhooks vs APIs: How Websites Communicate and Automate Tasks",
+      "excerpt": "Compare API polling and webhook events, then learn signature verification, retries, deduplication, delivery logs, and recovery.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Webhooks",
+        "APIs",
+        "Automation"
+      ],
+      "published": false,
+      "file": "blog-47.html",
+      "category": "Web Infrastructure & APIs",
+      "image": "/assets/img/blog/feature-webhooks-vs-apis-automation.svg",
+      "imageAlt": "Polling requests compared with a signed event delivered to an application webhook endpoint.",
+      "day": 45
+    },
+    {
+      "id": "day-46",
+      "slug": "passkeys-passwordless-authentication",
+      "title": "Passkeys Explained: How Passwordless Authentication Works for Modern Websites",
+      "excerpt": "Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Passkeys",
+        "Authentication",
+        "Web security"
+      ],
+      "published": false,
+      "file": "blog-48.html",
+      "category": "Security & Reliability",
+      "image": "/assets/img/blog/feature-passkeys-passwordless-authentication.svg",
+      "imageAlt": "Passkey registration and sign-in using a device-held private key and a server public key.",
+      "day": 46
+    },
+    {
+      "id": "day-47",
+      "slug": "spf-dkim-dmarc-email-authentication",
+      "title": "SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing",
+      "excerpt": "Understand email authentication, DNS records, alignment, aggregate reports, staged policies, and a domain-owner audit checklist.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "SPF",
+        "DKIM",
+        "DMARC"
+      ],
+      "published": false,
+      "file": "blog-49.html",
+      "category": "Security & Reliability",
+      "image": "/assets/img/blog/feature-spf-dkim-dmarc-email-authentication.svg",
+      "imageAlt": "Email authentication flow checking SPF, DKIM signatures, and DMARC alignment against DNS.",
+      "day": 47
+    },
+    {
+      "id": "day-48",
+      "slug": "ipv4-vs-ipv6-website-readiness",
+      "title": "IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness",
+      "excerpt": "Compare IPv4 and IPv6, A and AAAA records, dual-stack routing, compatibility, and a practical readiness checklist.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "IPv4",
+        "IPv6",
+        "DNS"
+      ],
+      "published": false,
+      "file": "blog-50.html",
+      "category": "Security & Reliability",
+      "image": "/assets/img/blog/feature-ipv4-vs-ipv6-website-readiness.svg",
+      "imageAlt": "Dual-stack request path showing IPv4 and IPv6 DNS records leading to one web service.",
+      "day": 48
+    },
+    {
+      "id": "day-49",
+      "slug": "web-application-threat-modeling",
+      "title": "Web Application Threat Modeling: How to Identify Risks Before They Become Incidents",
+      "excerpt": "Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Threat modeling",
+        "Application security",
+        "STRIDE"
+      ],
+      "published": false,
+      "file": "blog-51.html",
+      "category": "Security & Reliability",
+      "image": "/assets/img/blog/feature-web-application-threat-modeling.svg",
+      "imageAlt": "Trust-boundary diagram with browser, application, database, external provider, and defensive checkpoints.",
+      "day": 49
+    },
+    {
+      "id": "day-50",
+      "slug": "website-disaster-recovery-backups-rto-rpo",
+      "title": "Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing",
+      "excerpt": "Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.",
+      "date": "2026-10-23",
+      "readTime": 11,
+      "tags": [
+        "Disaster recovery",
+        "Backups",
+        "RTO and RPO"
+      ],
+      "published": false,
+      "file": "blog-52.html",
+      "category": "Security & Reliability",
+      "image": "/assets/img/blog/feature-website-disaster-recovery-backups-rto-rpo.svg",
+      "imageAlt": "Primary and backup services connected by a recovery timeline and restore-test checkpoints.",
+      "day": 50
+    }
+  ]
+}

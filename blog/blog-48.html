@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Passkeys Explained: How Passwordless Authentication Works for Modern Websites | DomainCraft</title>
+  <meta name="description" content="Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://example.com/blog/blog-48.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="Passkeys Explained: How Passwordless Authentication Works for Modern Websites"><meta property="og:description" content="Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.">
+  <meta property="og:url" content="https://example.com/blog/blog-48.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-passkeys-passwordless-authentication.svg"><meta property="og:image:alt" content="Passkey registration and sign-in using a device-held private key and a server public key.">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Passkeys Explained: How Passwordless Authentication Works for Modern Websites"><meta name="twitter:description" content="Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.">
+  <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Passkeys Explained: How Passwordless Authentication Works for Modern Websites",
+  "description": "Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "image": [
+    "https://example.com/assets/img/blog/feature-passkeys-passwordless-authentication.svg"
+  ],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://example.com/blog/blog-48.html"
+  },
+  "articleSection": "Security & Reliability",
+  "keywords": [
+    "Passkeys",
+    "Authentication",
+    "Web security"
+  ],
+  "inLanguage": "en"
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://example.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Passkeys Explained: How Passwordless Authentication Works for Modern Websites",
+      "item": "https://example.com/blog/blog-48.html"
+    }
+  ]
+}</script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+      <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+    </div>
+  </header>
+  <main id="main-content" class="page-main">
+    <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
+    <div class="container article-layout" data-publish-guard data-post-slug="passkeys-passwordless-authentication" hidden>
+      <article>
+        <div class="breadcrumbs article-breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / Passkeys Explained: How Passwordless Authentication Works for Modern Websites</div>
+        <header class="article-header">
+          <p class="eyebrow">Security &amp; Reliability · Practical guide</p>
+          <h1>Passkeys Explained: How Passwordless Authentication Works for Modern Websites</h1>
+          <div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>11 minute read</span></div>
+          <div class="tag-list"><span class="tag">Passkeys</span><span class="tag">Authentication</span><span class="tag">Web security</span></div>
+        </header>
+        <figure class="article-figure article-featured"><img src="/assets/img/blog/feature-passkeys-passwordless-authentication.svg" alt="Passkey registration and sign-in using a device-held private key and a server public key." width="1200" height="675" fetchpriority="high"><figcaption>Original local vector schematic. It is explanatory artwork, not measured performance or market data.</figcaption></figure>
+        <div class="article-body"><p>Passwords are shared secrets: a person creates or receives a string, remembers or stores it, and presents it to a website. A passkey uses a public-key credential instead. The website stores a public key, while the corresponding private key is protected by the user’s device or credential provider. During sign-in, the site sends a challenge and the device proves possession of the private key without sending that key to the site.</p>
+<blockquote><p><strong>Quick answer:</strong> Passkeys are credentials based on public-key cryptography and the Web Authentication (WebAuthn) / FIDO ecosystem. They can be phishing-resistant when implemented with correct origin checks and user verification. They reduce password reuse and phishing risk, but account recovery, device loss, synchronization, accessibility, and fallback methods still need careful design.</p></blockquote>
+<h2 id="passwords-mfa-and-passkeys">Passwords, MFA, and passkeys</h2>
+<p>A password is something a user knows. Multi-factor authentication (MFA) adds another kind of proof, such as a device or biometric unlock. A one-time code sent by text can help against some password attacks, but it can be vulnerable to phishing or phone-number takeover. Security keys and passkeys can provide stronger origin-bound authentication when implemented correctly.</p>
+<p>A passkey is not simply a fingerprint stored on a website. A fingerprint or face unlock may be used locally to authorize the device to use a credential. The site receives a cryptographic assertion, not the biometric template. The exact device and synchronization behavior depends on the operating system, credential manager, browser, and configuration.</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">Sign-in method</th><th scope="col">What the site receives</th><th scope="col">Common concern</th></tr></thead><tbody><tr><td>Password</td><td>Shared secret or verifier-derived proof</td><td>Reuse, phishing, credential stuffing</td></tr><tr><td>SMS code</td><td>One-time code delivered to a phone number</td><td>SIM swap, interception, phishing</td></tr><tr><td>Authenticator code</td><td>Time-based or generated one-time code</td><td>Phishing proxy, recovery and device loss</td></tr><tr><td>Passkey</td><td>Signed challenge using a private key</td><td>Rollout compatibility and recovery design</td></tr></tbody></table></div>
+<p>No single method solves every account risk. A passkey can improve sign-in security, while an attacker who compromises the account recovery process may still take over the account.</p>
+<h2 id="public-key-cryptography-in-plain-language">Public-key cryptography in plain language</h2>
+<p>When a user registers a passkey, the authenticator creates a key pair for the site. The public key is registered with the website; the private key remains protected by the authenticator. The server stores a credential identifier and public key, not the user’s private key. When the user later signs in, the server sends a fresh challenge. The authenticator signs that challenge, and the server verifies the signature with the public key.</p>
+<p>The challenge should be unpredictable, single-use, and bound to the right session and relying party. The browser and authenticator also enforce origin and site identity rules. These checks are why a properly implemented passkey can resist a lookalike phishing page: a credential registered for one site should not simply authenticate an unrelated origin.</p>
+<p>This explanation omits implementation details such as attestation, user verification flags, discoverable credentials, and authenticator policy. Website developers should use a maintained WebAuthn library and follow current standards and browser guidance rather than implementing the cryptography themselves.</p>
+<h2 id="registration-and-login-flow">Registration and login flow</h2>
+<p>A simplified registration flow is:</p>
+<ol>
+<li>The user signs in through an existing verified method or completes account creation.</li>
+<li>The server creates a registration challenge and sends options to the browser.</li>
+<li>The browser asks the platform authenticator or security key to create a credential.</li>
+<li>The authenticator protects the private key and returns a credential response.</li>
+<li>The server verifies the challenge, origin, relying-party identifier, and response fields.</li>
+<li>The server stores the public key and credential metadata for that account.</li>
+</ol>
+<p>A login flow is similar. The server issues a fresh challenge; the authenticator signs it after local user verification; and the server verifies it against the stored public key. Challenges must expire and must not be reused. Handle cancellation, unsupported devices, and interrupted flows without creating duplicate or orphaned credentials.</p>
+<h2 id="device-bound-and-synchronized-passkeys">Device-bound and synchronized passkeys</h2>
+<p>Some passkeys are tied closely to one device or hardware security key. Others can be synchronized among a user’s devices by a credential provider. Sync can make account access more convenient when a person replaces a phone or uses multiple devices, but the security and recovery model depends on that provider. A website does not necessarily know which underlying storage choice was used unless the protocol and platform expose relevant information.</p>
+<p>Offer a clear way for users to manage registered passkeys: list a recognizable device label or creation date, revoke a lost credential, and add another credential before removing the only one. Do not display sensitive device details that are not needed. For enterprise or high-assurance environments, evaluate policy requirements for managed devices, security keys, account synchronization, and user verification.</p>
+<h2 id="account-recovery-is-part-of-authentication">Account recovery is part of authentication</h2>
+<p>Passkeys do not eliminate the need for account recovery. A user might lose a device, forget access to a synchronized credential manager, or be locked out after a security incident. Recovery options can become the weakest link if they allow an attacker to bypass the stronger credential with a predictable email link or support request.</p>
+<p>Design recovery around risk. Verify control of an established email or other recovery channel, use appropriate delays or additional checks for sensitive changes, notify the user when credentials are added or removed, and provide a way to revoke compromised sessions. Avoid asking support staff to override account controls without a documented process. For financial, administrative, or domain-management accounts, consider stronger identity verification and a recovery policy reviewed for the relevant threat model.</p>
+<p>Do not require users to keep an insecure password as an invisible fallback if the goal is passwordless authentication. If a password remains available, protect it with appropriate hashing, rate limits, monitoring, and recovery controls. Be transparent about which methods can be used to sign in and how a lost credential can be recovered.</p>
+<h2 id="rollout-checklist-for-website-owners">Rollout checklist for website owners</h2>
+<ul>
+<li>Choose a maintained WebAuthn implementation and follow current standards.</li>
+<li>Verify challenge freshness, origin, relying-party ID, and credential ownership on the server.</li>
+<li>Support accessible flows, keyboard navigation, and clear cancellation and error states.</li>
+<li>Explain whether passkeys may sync through a third-party credential provider.</li>
+<li>Let users add more than one credential and revoke a lost device.</li>
+<li>Secure account recovery to a level consistent with the account’s risk.</li>
+<li>Notify users about important credential and recovery changes.</li>
+<li>Keep sessions, authorization, and sensitive actions protected after authentication.</li>
+<li>Test across supported browsers, operating systems, security keys, and assistive technologies.</li>
+<li>Monitor failures without logging credential secrets or unnecessary personal data.</li>
+</ul>
+<h2 id="account-recovery-support-and-user-privacy">Account recovery, support, and user privacy</h2>
+<p>Recovery should be designed as a separate security flow rather than a help-desk exception. Decide what evidence is required to regain access, which changes need a delay, how a user can cancel a recovery request, and how the existing owner is notified. If an account controls a domain, organization, or payment method, recovery may be more consequential than an ordinary content account. The support team needs a documented policy and training, not an informal rule to trust whoever can answer a few profile questions.</p>
+<p>Minimize the credential information stored by the website. Store the public key and required credential metadata, not a copy of the user’s private key. Protect credential IDs and account mappings as sensitive authentication data. Logs should record outcomes such as “verification failed” without exposing the full challenge, response blob, or tokens. Explain which identity provider synchronizes credentials if that information is known, and disclose any third-party service that receives account data.</p>
+<h2 id="roll-out-gradually-and-measure-failures">Roll out gradually and measure failures</h2>
+<p>A passkey rollout can begin as an optional sign-in method for a small group or an account-settings feature for existing users. Provide clear instructions and a fallback while adoption is measured. Track registration completion, login success, cancellation, unsupported-device errors, and recovery requests in aggregate. Avoid collecting biometric information or device details that are not needed. Offer an accessible alternative for users whose hardware or assistive technology does not support the flow.</p>
+<p>Test the system across supported browsers and authenticators, including a platform credential, a roaming security key, a synchronized credential, and a device that cancels or times out. Test account migration from password-based sign-in, session invalidation after a credential is revoked, and sign-in from a second device. A security feature that works only in a developer’s latest laptop browser is not a finished account system.</p>
+<h2 id="session-and-authorization-remain-important">Session and authorization remain important</h2>
+<p>Authentication proves that a user can sign in; it does not decide what they may do afterward. Keep session expiration, reauthentication for sensitive actions, role checks, and per-resource authorization. If a passkey is added to an account, do not automatically elevate the account’s privileges. Notify users before changing recovery contacts or removing all existing credentials, and provide a way to revoke active sessions after suspected compromise.</p>
+<h2 id="accessibility-and-enrollment-support">Accessibility and enrollment support</h2>
+<p>Passkey enrollment should be understandable without assuming that every user can scan a QR code, use touch, see a particular screen prompt, or access a second device. Provide instructions in plain language, visible focus, screen-reader labels, and a way to cancel without losing the current session. Explain the next step if a device does not support the requested authenticator. Offer an alternative sign-in route that does not create a weaker hidden exception.</p>
+<p>Support staff should be able to distinguish a user who has lost a credential from an attacker asking to remove one. Give them a standard verification procedure, an escalation path for high-risk accounts, and clear language for explaining the recovery wait. Do not ask users to send private keys, recovery codes, or screenshots that reveal account secrets. If the user must register a replacement credential, direct them to the official account settings rather than a link supplied in an unsolicited message.</p>
+<h2 id="privacy-and-device-change-expectations">Privacy and device-change expectations</h2>
+<p>Tell users what credential information the service stores and what the operating system or credential provider may synchronize. Do not promise that a passkey is “stored only on this device” unless the chosen platform guarantees that behavior and the site can verify it. Provide a credential-management page that shows enough detail to identify a lost key without exposing unnecessary device telemetry. Make deletion and revocation behavior clear, and consider whether deleting the last credential should require an additional recovery method.</p>
+<p>A migration from passwords should be staged. Let users add a passkey, test it, and keep an approved fallback while support volume and failure patterns are reviewed. Only change the policy after the team can recover a locked-out account safely. Track aggregate outcomes, not the biometric or private-key material.</p>
+<h2 id="keep-recovery-proportionate-to-account-risk">Keep recovery proportionate to account risk</h2>
+<p>A consumer account that stores a public reading list may use a different recovery flow from an administrator account that can change DNS or billing. Classify actions by their impact and require reauthentication or a second confirmation for the most sensitive changes. If a user asks support to remove every passkey, make sure the identity check is stronger than simply knowing public profile information. Keep an audit record of the approval and notify the account owner through an established channel.</p>
+<p>Recovery should also have a way to end. Set a clear expiry for a pending recovery request, tell users how to cancel it, and make sure an old link cannot be reused after completion. Rate-limit recovery attempts and watch for repeated requests that target many accounts. Provide an appeal path for a legitimate user who fails a check, but do not let urgent wording override the documented procedure.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Are passkeys the same as biometrics?</strong> No. Biometrics may locally unlock a credential, but the passkey is a cryptographic credential and the site should not receive the biometric itself.</p>
+<p><strong>Can a passkey be phished?</strong> Properly implemented passkeys are designed to bind authentication to the website origin, which mitigates common phishing. Misconfiguration, compromised devices, social engineering, and weak recovery remain risks.</p>
+<p><strong>Can I use the same passkey on multiple devices?</strong> Some credential providers synchronize passkeys; hardware security keys and device-bound credentials behave differently. Check the provider and platform behavior.</p>
+<p><strong>Do passkeys remove the need for MFA?</strong> They can provide a strong authentication factor and local user verification, but policy depends on the threat model and assurance requirements.</p>
+<p><strong>What happens if a user loses every device?</strong> The recovery procedure determines the outcome. Design a secure, tested recovery path before making passkeys the only sign-in method.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Passkeys replace a shared password with a public-key challenge response that can make phishing and credential reuse less effective. The cryptography is only part of the system. Secure the server-side verification, support multiple credentials, plan account recovery, and test real device flows. A passwordless sign-in is trustworthy only when the account can also be recovered safely.</p></div>
+      </article>
+      <aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-31.html">Building Trust on a Domain Tools Website</a><a href="/blog/blog-32.html">How to Build a Long-Term Domain Knowledge Website</a><hr><a href="/blog/index.html">All published articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside>
+    </div>
+    <section class="container section-tight" data-publish-guard-cta hidden><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+</html>

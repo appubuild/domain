@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How DNS Works: From Typing a Domain Name to Loading a Website | DomainCraft</title>
+  <meta name="description" content="Follow a recursive DNS lookup from device cache through root, TLD, and authoritative servers, then learn about TTLs and troubleshooting.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://example.com/blog/blog-04.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="How DNS Works: From Typing a Domain Name to Loading a Website">
+  <meta property="og:description" content="Follow a recursive DNS lookup from device cache through root, TLD, and authoritative servers, then learn about TTLs and troubleshooting.">
+  <meta property="og:url" content="https://example.com/blog/blog-04.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-how-dns-works.jpg"><meta property="og:image:alt" content="Diagrammatic route from browser and resolver through the DNS hierarchy."><meta property="og:image:type" content="image/jpeg">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Replace example.com with the production domain before publication. -->
+  <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
+  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "How DNS Works: From Typing a Domain Name to Loading a Website",
+  "description": "Follow a recursive DNS lookup from device cache through root, TLD, and authoritative servers, then learn about TTLs and troubleshooting.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "mainEntityOfPage": "https://example.com/blog/blog-04.html",
+  "image": [
+    "https://example.com/assets/img/blog/feature-how-dns-works.jpg"
+  ],
+  "wordCount": 1316,
+  "keywords": "DNS, Beginner guide"
+}
+  </script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://example.com/#website",
+      "url": "https://example.com/",
+      "name": "DomainCraft",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Home",
+      "url": "https://example.com/"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Domain generator",
+      "url": "https://example.com/tools/domain-generator.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Blog",
+      "url": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "About us",
+      "url": "https://example.com/pages/about.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Contact us",
+      "url": "https://example.com/pages/contact.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Privacy policy",
+      "url": "https://example.com/pages/privacy-policy.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Terms and conditions",
+      "url": "https://example.com/pages/terms-and-conditions.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Disclaimer",
+      "url": "https://example.com/pages/disclaimer.html"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://example.com/blog/blog-04.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://example.com/"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": {
+            "@id": "https://example.com/blog/index.html"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "How DNS Works: From Typing a Domain Name to Loading a Website",
+          "item": {
+            "@id": "https://example.com/blog/blog-04.html"
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <meta name="twitter:title" content="How DNS Works: From Typing a Domain Name to Loading a Website | DomainCraft">
+  <meta name="twitter:description" content="Follow a recursive DNS lookup from device cache through root, TLD, and authoritative servers, then learn about TTLs and troubleshooting.">
+  <meta name="twitter:url" content="https://example.com/blog/blog-04.html">
+  <meta name="twitter:image" content="https://example.com/assets/img/blog/feature-how-dns-works.jpg"><meta name="twitter:image:alt" content="Diagrammatic route from browser and resolver through the DNS hierarchy.">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+    <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+  </div></header>
+  <main id="main-content" class="page-main">
+    <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / How DNS Works: From Typing a Domain Name to Loading a Website</div>
+    <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Fundamentals · Practical guide</p><h1>How DNS Works: From Typing a Domain Name to Loading a Website</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>6 minute read</span></div><div class="tag-list"><span class="tag">DNS</span><span class="tag">Beginner guide</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-how-dns-works.jpg" alt="Diagrammatic route from browser and resolver through the DNS hierarchy." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>Typing <code>shop.example.com</code> into a browser starts two jobs that are easy to confuse: DNS finds the service associated with the name, and the browser then makes a web request to that service. DNS does not download the page, decide whether the page is safe, or guarantee that a website is available. It supplies naming information that other systems use.</p>
+<blockquote>
+<p><strong>Quick answer:</strong> A recursive resolver checks its cache and, when needed, follows DNS referrals from the root to a top-level-domain server and then to the domain’s authoritative nameserver. It returns the relevant answer to the client. The browser uses that answer to connect to the web service.</p>
+</blockquote>
+<h2 id="the-people-and-servers-in-a-lookup">The people and servers in a lookup</h2>
+<p>A DNS lookup involves a <strong>stub resolver</strong> on the user’s device and a <strong>recursive resolver</strong> that does the wider lookup on the client’s behalf. The recursive resolver may be operated by an internet provider, employer, university, or public DNS service. A browser may also use an encrypted DNS transport, but the basic naming hierarchy still matters.</p>
+<p>DNS information is distributed. Root servers direct resolvers toward the servers responsible for a top-level domain (TLD), such as <code>.com</code>. A TLD nameserver directs the resolver toward the authoritative nameservers for a particular registered domain. The authoritative nameserver holds the zone’s current records. A root server does not contain a list of every website’s address.</p>
+<h2 id="a-lookup-step-by-step">A lookup, step by step</h2>
+<p>Imagine a visitor enters <code>shop.lumenbikes.example</code>. The name is fictional; <code>.example</code> is intended for examples.</p>
+<ol>
+<li><strong>The client checks available caches.</strong> The browser, operating system, local network, or recursive resolver may already hold a usable answer. If the answer is fresh, the lookup can stop there.</li>
+<li><strong>The stub asks a recursive resolver.</strong> The client normally asks one resolver to find the answer. It does not usually contact the root, TLD, and authoritative servers itself.</li>
+<li><strong>The recursive resolver checks its cache.</strong> A cached record can satisfy the request until its time to live (TTL) expires. If there is no suitable answer, the resolver begins following referrals.</li>
+<li><strong>The resolver asks the DNS hierarchy.</strong> It can ask a root server where to find the TLD, the TLD server where to find the domain’s authoritative nameservers, and an authoritative server for the requested record.</li>
+<li><strong>The authoritative server answers.</strong> Depending on the configuration and query, the answer may be an A or AAAA record, an alias, a negative answer, or another response. The resolver may follow a CNAME to learn the target’s address.</li>
+<li><strong>The resolver returns and caches the result.</strong> It sends the answer back to the client and may cache it according to the record’s TTL and other rules.</li>
+<li><strong>The browser makes a web request.</strong> DNS lookup is only one step. The browser still needs to establish a connection, negotiate TLS for HTTPS, send an HTTP request, and receive a response.</li>
+</ol>
+<p>This description is simplified. Real resolver behavior includes retries, delegation checks, multiple records, DNSSEC validation where enabled, and different caching rules.</p>
+<h2 id="which-records-can-appear">Which records can appear?</h2>
+<table>
+<thead>
+<tr>
+<th>Record</th>
+<th>Typical purpose</th>
+<th>What to remember</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>Maps a name to an IPv4 address</td>
+<td>It is not the only way a website can be routed.</td>
+</tr>
+<tr>
+<td>AAAA</td>
+<td>Maps a name to an IPv6 address</td>
+<td>IPv6 support and routing must also be configured.</td>
+</tr>
+<tr>
+<td>CNAME</td>
+<td>Makes one name an alias of another</td>
+<td>It does not itself contain the final address; the resolver follows the target.</td>
+</tr>
+<tr>
+<td>MX</td>
+<td>Identifies mail exchangers for a domain</td>
+<td>Mail delivery also depends on the mail service’s other requirements.</td>
+</tr>
+<tr>
+<td>TXT</td>
+<td>Publishes text data, often for verification or policy</td>
+<td>A TXT record is not automatically a security guarantee.</td>
+</tr>
+<tr>
+<td>NS</td>
+<td>Identifies authoritative nameservers for a zone</td>
+<td>Changing delegation can change which DNS zone answers.</td>
+</tr>
+</tbody>
+</table>
+<p>Use the service provider’s current instructions rather than copying a record from a different product or account. A DNS zone can serve a website, mail, verification, and other services at the same time.</p>
+<h2 id="ttl-caching-and-propagation">TTL, caching, and “propagation”</h2>
+<p>A TTL tells caches how long a particular DNS answer may be retained. When an operator edits the authoritative record, an existing cached answer may still be used until it expires. That is why a change can appear at different times to different users. “DNS propagation” is common shorthand for the combined effect of caches and resolver behavior; there is no single global button that refreshes every cache.</p>
+<p>If you are planning a migration, inspect existing records and lower a TTL ahead of the change only if you understand the current zone and the provider supports that plan. A lower TTL can increase query volume. It also does not force a cache to discard an answer it already obtained under an earlier TTL.</p>
+<h2 id="dnssec-what-it-adds">DNSSEC: what it adds</h2>
+<p>DNS Security Extensions (DNSSEC) let validating resolvers check that signed DNS data is authentic and has not been altered in transit. DNSSEC does not encrypt DNS queries, hide a domain name, or protect a website from every attack. A broken chain of signatures or incorrect key rollover can make a validating resolver reject data, so enable it only when the registrar, DNS provider, and parent delegation are configured consistently.</p>
+<h2 id="how-to-investigate-a-lookup-problem">How to investigate a lookup problem</h2>
+<p>Start by writing down the exact name, record type, resolver, and time of the test. Then:</p>
+<ul>
+<li>Check the record at the authoritative nameserver, not only in a browser.</li>
+<li>Compare with a second recursive resolver; note that the two may have different caches.</li>
+<li>Inspect TTLs and look for stale or duplicated records.</li>
+<li>Confirm the domain is delegated to the nameservers that contain the intended zone.</li>
+<li>Check the web host separately: a correct DNS answer does not prove the server is responding.</li>
+<li>For email, check MX and any provider-required TXT records as well as the mail service itself.</li>
+</ul>
+<p>Command-line tools such as <code>dig</code> and <code>nslookup</code> can expose responses, but flags and availability vary by operating system. Treat a command result as evidence from that particular resolver, not as universal visibility.</p>
+<h2 id="common-misconceptions">Common misconceptions</h2>
+<p><strong>“The root server returns my website’s IP.”</strong> Usually it returns a referral toward the TLD. The authoritative zone supplies the domain’s record.</p>
+<p><strong>“A domain has one permanent address.”</strong> A name can have multiple records, aliases, changing addresses, or answers served through a CDN.</p>
+<p><strong>“If one device sees the new value, everyone does.”</strong> Different caches and network paths can produce different results for a while.</p>
+<p><strong>“DNS changes the website files.”</strong> DNS directs names to services; it does not edit the content on a server.</p>
+<h2 id="a-safe-dns-change-checklist">A safe DNS-change checklist</h2>
+<p>Before changing records, export or record the current zone. Identify every service using the domain, especially email and subdomains. Add the new records at the provider that will be authoritative, confirm nameserver delegation, and test from more than one resolver. Keep the old setup available until the new website and mail services work. If you do not know what a record supports, ask the provider before deleting it.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Does DNS choose which web page opens?</strong> DNS helps locate the service. The web server and application decide what page or response to return for a path such as <code>/products</code>.</p>
+<p><strong>Why does a website fail when email still works?</strong> Website and mail use different records and services. A broken A/AAAA or web alias can coexist with working MX records.</p>
+<p><strong>Can I use a domain before buying hosting?</strong> Yes. You can register a name and configure it later, use it for email, or point it to another service. Registration alone does not create a website.</p>
+<p><strong>How long do DNS changes take?</strong> There is no universal duration. It depends on TTLs, caches, delegation, provider behavior, and the records changed. Check the actual responses instead of promising a fixed wait.</p>
+<p>For foundational concepts, see the DNS standards <a href="https://www.rfc-editor.org/rfc/rfc1034">RFC 1034</a> and <a href="https://www.rfc-editor.org/rfc/rfc1035">RFC 1035</a>, and the IETF’s <a href="https://www.rfc-editor.org/rfc/rfc4033">DNSSEC introduction</a>. Those references are further reading; current provider behavior should be checked with the provider.</p></div></article><aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-03.html">What Is a Domain Name? A Complete Beginner’s Guide to How Domains Work</a><a href="/blog/blog-05.html">Domain Extensions Explained: .com vs .net vs .org vs Country-Code Domains</a><a href="/blog/blog-06.html">Domain Registration, Renewal, Expiration and Redemption: The Complete Lifecycle</a><hr><a href="/blog/index.html">All DomainCraft articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside></div>
+    <section class="container section-tight"><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+
+</html>

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing | DomainCraft</title>
+  <meta name="description" content="Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://example.com/blog/blog-52.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing"><meta property="og:description" content="Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.">
+  <meta property="og:url" content="https://example.com/blog/blog-52.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-website-disaster-recovery-backups-rto-rpo.svg"><meta property="og:image:alt" content="Primary and backup services connected by a recovery timeline and restore-test checkpoints.">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing"><meta name="twitter:description" content="Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.">
+  <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing",
+  "description": "Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "image": [
+    "https://example.com/assets/img/blog/feature-website-disaster-recovery-backups-rto-rpo.svg"
+  ],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://example.com/blog/blog-52.html"
+  },
+  "articleSection": "Security & Reliability",
+  "keywords": [
+    "Disaster recovery",
+    "Backups",
+    "RTO and RPO"
+  ],
+  "inLanguage": "en"
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://example.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing",
+      "item": "https://example.com/blog/blog-52.html"
+    }
+  ]
+}</script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+      <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+    </div>
+  </header>
+  <main id="main-content" class="page-main">
+    <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
+    <div class="container article-layout" data-publish-guard data-post-slug="website-disaster-recovery-backups-rto-rpo" hidden>
+      <article>
+        <div class="breadcrumbs article-breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing</div>
+        <header class="article-header">
+          <p class="eyebrow">Security &amp; Reliability · Practical guide</p>
+          <h1>Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing</h1>
+          <div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>11 minute read</span></div>
+          <div class="tag-list"><span class="tag">Disaster recovery</span><span class="tag">Backups</span><span class="tag">RTO and RPO</span></div>
+        </header>
+        <figure class="article-figure article-featured"><img src="/assets/img/blog/feature-website-disaster-recovery-backups-rto-rpo.svg" alt="Primary and backup services connected by a recovery timeline and restore-test checkpoints." width="1200" height="675" fetchpriority="high"><figcaption>Original local vector schematic. It is explanatory artwork, not measured performance or market data.</figcaption></figure>
+        <div class="article-body"><p>A website disaster is not limited to a data center outage. A failed deployment, accidental deletion, compromised credential, broken DNS change, lost encryption key, or unavailable third-party provider can also interrupt service. A disaster recovery plan describes how the team will restore critical functions and data after a serious disruption. It should be small enough to use during pressure and specific enough that someone can follow it without relying on one person’s memory.</p>
+<blockquote><p><strong>Quick answer:</strong> Backups are recoverable copies, replication keeps another system up to date, and failover directs service to a standby component. Recovery Time Objective (RTO) is the target time to restore a service; Recovery Point Objective (RPO) is the maximum acceptable data loss measured in time. Define these targets for real user needs, back up data and configuration, and test restoration—not just backup creation.</p></blockquote>
+<h2 id="backup-replication-and-failover-are-not-the-same">Backup, replication, and failover are not the same</h2>
+<p>A <strong>backup</strong> is a retained copy that can be used to restore data or configuration. It may be a database snapshot, export, object version, or encrypted archive. A backup should be protected from the same credentials and failure modes that could damage production. If a compromised administrator can delete both the live database and every backup, the backup strategy has a gap.</p>
+<p><strong>Replication</strong> copies changes from a primary system to another system. It can support availability or read capacity, but it may copy an accidental deletion, corrupted record, or malicious update. Replication is not automatically a historical backup. A system may need both replication for continuity and versioned backups for recovery.</p>
+<p><strong>Failover</strong> switches traffic or work to a standby service when the primary is unavailable. It can be automatic or manual. Failover is only useful when the standby has the necessary data, credentials, configuration, capacity, and network path. A planned failover should include how to return to the primary and avoid split-brain writes, where two systems accept conflicting changes.</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">Mechanism</th><th scope="col">Main purpose</th><th scope="col">Important limitation</th></tr></thead><tbody><tr><td>Backup</td><td>Restore an earlier data or configuration state</td><td>Must be retained, protected, and tested</td></tr><tr><td>Replication</td><td>Keep another copy current for availability or reads</td><td>May copy corruption or deletion</td></tr><tr><td>Failover</td><td>Route service to a standby component</td><td>Standby may be stale, under-sized, or misconfigured</td></tr></tbody></table></div>
+<h2 id="set-rto-and-rpo-from-business-needs">Set RTO and RPO from business needs</h2>
+<p><strong>RTO</strong> is the target maximum time to restore a service after an outage. <strong>RPO</strong> is the target maximum amount of recent data the organization can afford to lose, expressed as a time interval. A tool that publishes static educational pages may tolerate a longer restore than a service handling time-sensitive account changes. A saved-search database may need a different RPO from a user-uploaded export.</p>
+<p>These targets are decisions, not promises created by a dashboard. A five-minute RTO may require a tested standby, automation, staffed response, and extra cost. A near-zero RPO may require synchronous replication or frequent backups with trade-offs in latency and availability. Choose targets based on the consequences of downtime and data loss, and write down the assumptions.</p>
+<p>For each critical service, record:</p>
+<ul>
+<li>The service owner and recovery contact.</li>
+<li>The RTO and RPO, and who approved them.</li>
+<li>Which data and configuration must be restored together.</li>
+<li>Where backups are stored and which identity can access them.</li>
+<li>The exact restore procedure and required keys or credentials.</li>
+<li>How users will be informed during an incident.</li>
+<li>How success will be checked before reopening the service.</li>
+</ul>
+<h2 id="back-up-more-than-the-database">Back up more than the database</h2>
+<p>A recovery plan can fail even when the database backup is intact. A website may also need source code, build artifacts, DNS zone settings, environment configuration, feature flags, encryption keys, uploaded files, email templates, identity-provider configuration, and a list of external providers. Some items should be reconstructed from version control; others need protected exports.</p>
+<p>Separate data by recovery need. For example, public static pages can often be rebuilt from source, while user account records and saved searches may need frequent backups. Uploaded files need a copy independent of the production storage account. Configuration should be versioned where safe, but secrets should remain in a protected store with a documented re-creation or rotation process.</p>
+<p>Use encryption in transit and at rest where appropriate. Restrict backup access, audit restores, set retention, and avoid placing raw customer exports in a developer’s personal folder. A backup’s encryption key must be recoverable by an authorized person; a perfectly encrypted archive with a lost key is not a usable backup.</p>
+<h2 id="a-practical-recovery-sequence">A practical recovery sequence</h2>
+<p>A small web tool might use static hosting, a database for accounts and saved searches, object storage for exports, and an external domain-data provider. A recovery runbook can start with these steps:</p>
+<ol>
+<li><strong>Declare the incident.</strong> Identify the affected service, start time, suspected cause, and incident lead.</li>
+<li><strong>Protect users and evidence.</strong> Disable a compromised function or credential, preserve relevant logs, and avoid destructive cleanup.</li>
+<li><strong>Choose the recovery path.</strong> Repair the primary, restore a backup, or activate a tested standby based on impact and RTO.</li>
+<li><strong>Restore in dependency order.</strong> Re-establish identity and secrets, network and DNS, database, object storage, and application deployment as needed.</li>
+<li><strong>Validate data and behavior.</strong> Check record counts or known samples, permissions, critical workflows, error rates, and dependencies.</li>
+<li><strong>Reopen gradually.</strong> Route a limited amount of traffic where possible, watch alerts, and confirm users can complete essential tasks.</li>
+<li><strong>Communicate.</strong> Provide an accurate status and next update time without speculating about the cause.</li>
+<li><strong>Review and improve.</strong> Record what worked, what failed, and which control or runbook needs an owner.</li>
+</ol>
+<p>These are planning steps, not a universal order. The incident lead should adapt them to the actual dependencies and security requirements. If data may have been exposed, follow the organization’s legal, contractual, and regulatory notification process with qualified advice.</p>
+<h2 id="test-recovery-not-just-backup-jobs">Test recovery, not just backup jobs</h2>
+<p>A successful backup job proves that a process wrote data somewhere. It does not prove that the data is complete, decryptable, compatible with the application, or restorable within the RTO. Schedule restore tests into an isolated environment. Verify representative records, ownership relationships, files, configuration, and application behavior. Record duration and problems, then update the plan.</p>
+<p>Test different failure modes: a deleted record, a lost environment, a corrupted deployment, a revoked credential, an unavailable provider, and a DNS mistake. A tabletop exercise can test communication and decision-making without disrupting production. A technical failover exercise should have a safe scope, observers, a stop condition, and a tested rollback.</p>
+<p>A backup monitoring checklist should verify:</p>
+<ul>
+<li>The expected job completed and its output is readable.</li>
+<li>The copy exists in a separate failure domain or account where practical.</li>
+<li>Retention and deletion policies match the recovery plan.</li>
+<li>Encryption keys and restore credentials are accessible to authorized responders.</li>
+<li>Restore time and recovered data point meet the approved objectives.</li>
+<li>Alerts reach a monitored owner when a backup or restore fails.</li>
+</ul>
+<h2 id="communicate-during-recovery">Communicate during recovery</h2>
+<p>Users need to know what is unavailable, whether their data may be affected, what action they should take, and when the next update will arrive. Do not state that no data was lost or exposed until the investigation supports that conclusion. If a third-party provider is the cause, distinguish confirmed information from assumptions and link to the provider’s official status updates where appropriate.</p>
+<p>Keep a contact tree that does not depend entirely on the production email system. Identify the incident lead, technical owner, customer-support contact, hosting provider, domain registrar, and legal or privacy adviser as relevant. Review access to emergency credentials periodically and record who can approve a failover or restore.</p>
+<h2 id="a-realistic-plan-for-a-small-website">A realistic plan for a small website</h2>
+<p>A small static site might store source in version control, publish immutable build artifacts, maintain an external copy of DNS and hosting configuration, and test a redeploy to a clean environment. If it adds accounts, it should create encrypted database backups and test restoring them. If it accepts uploads, it needs a separate backup and access policy for those files. The service may not need an expensive multi-region standby, but it still needs an owner, a recovery path, and a tested copy of important data.</p>
+<p>For a domain lookup product, the third-party data provider may be outside the site owner’s recovery control. The interface should degrade safely: show that results are unavailable, preserve user data if appropriate, and avoid returning stale records as fresh. Maintain an alternative communication path and know how provider credentials can be rotated if compromised.</p>
+<h2 id="separate-backups-from-the-failure-they-are-meant-to-survive">Separate backups from the failure they are meant to survive</h2>
+<p>A backup stored in the same cloud account with the same administrator credentials as production may be vulnerable to the same compromise. Where practical, use a separate account or role with restricted deletion rights, multi-factor authentication, and an independent audit trail. Keep at least one recovery copy that cannot be modified by the application’s normal runtime identity. For offline or immutable storage, verify the product’s retention and restoration behavior rather than relying on a marketing label.</p>
+<p>Back up configuration as well as content. DNS records, identity-provider settings, firewall rules, deployment manifests, environment variable names, and build instructions may be needed to recreate a service. Do not store raw secrets in an unprotected backup. Record how an authorized responder can retrieve or rotate them, and keep that procedure available outside the production system.</p>
+<h2 id="define-service-tiers-and-recovery-dependencies">Define service tiers and recovery dependencies</h2>
+<p>Not every page needs the same recovery target. A public static archive may be restored by redeploying a verified build. Account login, saved searches, payment state, and uploaded files may need separate RTO and RPO targets. Map the order in which dependencies must return: identity, network, data, application, DNS, then external integrations may be one path, but another system may require a different sequence.</p>
+<p>A provider outage might not be recoverable by the site owner. Identify which features can operate without the provider, what message users will see, and whether a manual alternative exists. Do not claim that an alternate source is equivalent until it has been validated. A clear degraded mode can be safer than returning stale or unverified information.</p>
+<h2 id="exercise-decisions-as-well-as-commands">Exercise decisions as well as commands</h2>
+<p>A recovery test should include the human decisions that precede technical work: who declares an incident, who approves a failover, which user groups need an update, and who can authorize a restore that may overwrite newer data. Keep a simple decision log during the exercise. Afterward, compare actual restore time and recovered data with the approved RTO and RPO, and revise the target or investment if the plan cannot meet it.</p>
+<p>Test one scenario at a time before running a complex multi-region failover. Use a non-production environment and define a stop condition. A successful exercise ends with proof that the application can serve a critical task, not merely that a backup file exists. Record follow-up tasks with owners and dates so the next test can verify that the gaps were closed.</p>
+<h2 id="keep-a-recovery-contact-outside-the-main-system">Keep a recovery contact outside the main system</h2>
+<p>Store runbooks, emergency contacts, and recovery credentials in a protected location that remains available if the main website, email provider, or identity system is unavailable. Limit access, require strong authentication, and review the list after staff changes. A paper or offline copy may be appropriate for a critical recovery key, but it needs secure physical storage and a process for updates.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Does replication replace backups?</strong> No. Replication can reproduce unwanted changes. Keep recoverable historical copies and test them.</p>
+<p><strong>What is a good RTO or RPO?</strong> It depends on the service’s impact and resources. Set a justified target and verify that the technical design can meet it.</p>
+<p><strong>How often should I test a restore?</strong> Often enough to maintain confidence and meet policy or legal obligations. The schedule should reflect how quickly data and dependencies change.</p>
+<p><strong>Is a cloud provider’s durability guarantee a recovery plan?</strong> No. Durability, regional availability, accidental deletion, account compromise, and application recovery are different concerns.</p>
+<p><strong>What if a provider is down?</strong> Communicate the affected feature, stop unsafe retries, use a tested alternative if one exists, and do not claim that an unverified result is current.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Disaster recovery combines protected copies, tested restoration, safe failover, and clear communication. Define RTO and RPO according to user impact, inventory data and configuration, isolate backup credentials, and practice restoring to a clean environment. A small team does not need a complex plan, but it does need to know what it will do when the normal path stops working.</p></div>
+      </article>
+      <aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-31.html">Building Trust on a Domain Tools Website</a><a href="/blog/blog-32.html">How to Build a Long-Term Domain Knowledge Website</a><hr><a href="/blog/index.html">All published articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside>
+    </div>
+    <section class="container section-tight" data-publish-guard-cta hidden><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+</html>

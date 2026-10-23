@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CDN, DNS and Web Hosting: What Each Service Does and How They Work Together | DomainCraft</title>
+  <meta name="description" content="Separate DNS, CDN, and hosting responsibilities and follow a request from browser through edge cache to origin.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://example.com/blog/blog-12.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="CDN, DNS and Web Hosting: What Each Service Does and How They Work Together">
+  <meta property="og:description" content="Separate DNS, CDN, and hosting responsibilities and follow a request from browser through edge cache to origin.">
+  <meta property="og:url" content="https://example.com/blog/blog-12.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-cdn-dns-web-hosting.jpg"><meta property="og:image:alt" content="Request path from DNS to CDN edge and origin host."><meta property="og:image:type" content="image/jpeg">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Replace example.com with the production domain before publication. -->
+  <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
+  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "CDN, DNS and Web Hosting: What Each Service Does and How They Work Together",
+  "description": "Separate DNS, CDN, and hosting responsibilities and follow a request from browser through edge cache to origin.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "mainEntityOfPage": "https://example.com/blog/blog-12.html",
+  "image": [
+    "https://example.com/assets/img/blog/feature-cdn-dns-web-hosting.jpg"
+  ],
+  "wordCount": 1027,
+  "keywords": "CDN, Architecture"
+}
+  </script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://example.com/#website",
+      "url": "https://example.com/",
+      "name": "DomainCraft",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Home",
+      "url": "https://example.com/"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Domain generator",
+      "url": "https://example.com/tools/domain-generator.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Blog",
+      "url": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "About us",
+      "url": "https://example.com/pages/about.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Contact us",
+      "url": "https://example.com/pages/contact.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Privacy policy",
+      "url": "https://example.com/pages/privacy-policy.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Terms and conditions",
+      "url": "https://example.com/pages/terms-and-conditions.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Disclaimer",
+      "url": "https://example.com/pages/disclaimer.html"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://example.com/blog/blog-12.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://example.com/"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": {
+            "@id": "https://example.com/blog/index.html"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "CDN, DNS and Web Hosting: What Each Service Does and How They Work Together",
+          "item": {
+            "@id": "https://example.com/blog/blog-12.html"
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <meta name="twitter:title" content="CDN, DNS and Web Hosting: What Each Service Does and How They Work Together | DomainCraft">
+  <meta name="twitter:description" content="Separate DNS, CDN, and hosting responsibilities and follow a request from browser through edge cache to origin.">
+  <meta name="twitter:url" content="https://example.com/blog/blog-12.html">
+  <meta name="twitter:image" content="https://example.com/assets/img/blog/feature-cdn-dns-web-hosting.jpg"><meta name="twitter:image:alt" content="Request path from DNS to CDN edge and origin host.">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+    <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+  </div></header>
+  <main id="main-content" class="page-main">
+    <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / CDN, DNS and Web Hosting: What Each Service Does and How They Work Together</div>
+    <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Hosting, DNS &amp; Server Technology · Practical guide</p><h1>CDN, DNS and Web Hosting: What Each Service Does and How They Work Together</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>5 minute read</span></div><div class="tag-list"><span class="tag">CDN</span><span class="tag">Architecture</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-cdn-dns-web-hosting.jpg" alt="Request path from DNS to CDN edge and origin host." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>A domain name, DNS provider, content delivery network (CDN), and web host are related but not interchangeable. DNS helps a client locate a service. A CDN can cache or deliver content from distributed points of presence. The origin host runs the website or application. One company may sell several of these services, but the configuration responsibilities still need to be clear.</p>
+<blockquote>
+<p><strong>Quick answer:</strong> the browser asks DNS where to connect; the DNS answer may lead to a CDN or directly to the origin host. The CDN may return a cached response or forward the request to the origin. The host runs or stores the application. Each layer has separate settings, logs, and failure modes.</p>
+</blockquote>
+<h2 id="the-roles">The roles</h2>
+<p><strong>DNS</strong> publishes records and delegations for domain names. A recursive resolver obtains answers, while authoritative nameservers serve the zone. DNS does not store the site’s HTML files and does not, by itself, cache every page.</p>
+<p><strong>A CDN</strong> is a network of edge locations and services that can cache content, terminate TLS, filter traffic, compress responses, or route requests. The exact features depend on the provider and plan. A CDN is not always a simple image cache; it can become a reverse proxy in front of the origin.</p>
+<p><strong>The origin host</strong> is the server or platform that stores static files or runs the website application. It may be a traditional host, cloud platform, static hosting provider, or a managed service.</p>
+<h2 id="a-typical-request-path">A typical request path</h2>
+<p>A simple architecture can look like this:</p>
+<ol>
+<li>A visitor requests <code>www.example.com</code>.</li>
+<li>DNS resolves the name to the CDN or service endpoint configured for the domain.</li>
+<li>The browser connects to the CDN over HTTPS.</li>
+<li>The CDN checks whether it has a valid cached response for the request.</li>
+<li>If the response is not cached—or must be revalidated—the CDN contacts the origin host.</li>
+<li>The origin returns content or an error; the CDN may cache or transform the response under its rules.</li>
+<li>The CDN returns a response to the browser.</li>
+</ol>
+<p>Some architectures send traffic directly to the host, use multiple CDNs, or route APIs separately. The diagram is conceptual; follow the actual provider’s architecture and DNS instructions.</p>
+<h2 id="why-put-a-cdn-in-front">Why put a CDN in front?</h2>
+<p>A CDN can serve cacheable content closer to users, reduce repeated origin requests, and provide security or traffic-management features. Whether it improves a particular site depends on where users are, what content can be cached, configuration, and the provider’s network. Dynamic, personalized, or frequently changing content may not benefit from ordinary caching.</p>
+<p>A CDN can also introduce additional complexity. There may be separate browser-to-CDN and CDN-to-origin TLS settings, cache keys, redirects, access rules, origin IP controls, and logs. Misconfiguration can expose an origin that was intended to be private or cause the CDN to cache content that should remain user-specific.</p>
+<h2 id="cache-behavior-in-practice">Cache behavior in practice</h2>
+<p>A cacheable response usually depends on HTTP cache directives, provider configuration, URL, headers, and the CDN’s rules. Do not assume that every response is cached or that a “purge” clears every intermediate cache immediately. A stale page may come from the browser, a recursive DNS cache, the CDN, a proxy, or the origin itself; these are different caches.</p>
+<p>Before enabling caching, identify public and private routes. Product images and static CSS may be good candidates, while account pages and personalized responses need careful controls. Test the cache status and response headers for both anonymous and logged-in sessions. Never use a broad cache rule on sensitive content without understanding the consequences.</p>
+<h2 id="choosing-the-dns-and-hosting-arrangement">Choosing the DNS and hosting arrangement</h2>
+<p>You can keep DNS at the registrar, use a separate DNS provider, and host the site elsewhere. The registrar controls registration; the authoritative DNS provider answers DNS queries; the CDN may receive website traffic; the host serves origin content. Make a small service map with account owners and recovery contacts for each provider.</p>
+<p>When enabling a CDN, follow its current instructions for the apex and <code>www</code> names. Some providers use CNAME records, some offer apex aliasing or flattening, and some request nameserver delegation. Record existing email and verification entries before changing nameservers. Do not assume that changing the CDN setting also migrates your mail or website files.</p>
+<h2 id="common-setup-mistakes">Common setup mistakes</h2>
+<ul>
+<li><strong>Changing nameservers before copying the zone.</strong> This can interrupt the website, mail, and verification records.</li>
+<li><strong>Leaving origin access open unintentionally.</strong> If the CDN is meant to be the only path, review firewall and origin access settings.</li>
+<li><strong>Caching personalized responses.</strong> Test cookies, authorization headers, and cache keys.</li>
+<li><strong>Misconfiguring TLS between CDN and origin.</strong> HTTPS from browser to CDN does not automatically prove the CDN-to-origin connection is secured.</li>
+<li><strong>Purging cache instead of fixing deployment.</strong> A purge cannot correct a broken origin or wrong DNS record.</li>
+<li><strong>Treating CDN as a backup.</strong> A CDN may improve delivery but does not replace application backups and recovery planning.</li>
+</ul>
+<h2 id="a-deployment-checklist">A deployment checklist</h2>
+<p>Document the path from domain to resolver to CDN to origin. Verify the correct DNS records, HTTPS certificate at every relevant endpoint, origin health, cache rules, redirect behavior, and logs. Test a normal page, a non-cacheable route, a missing page, and a deployment rollback. Include a way to bypass or disable the CDN safely during an incident if your architecture supports it.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Do I need a CDN for a small website?</strong> Not necessarily. Start with the site’s audience, performance, security, and operational needs. Use the simplest architecture that meets them.</p>
+<p><strong>Is a CDN the same as web hosting?</strong> No. A CDN can cache or proxy content, while the origin host stores or runs the application. Some products bundle both.</p>
+<p><strong>Does a CDN change my domain registration?</strong> No. It may require DNS changes, but registrar ownership remains separate unless you transfer the registration.</p>
+<p><strong>Will a CDN make every page faster?</strong> No. Results depend on cacheability, location, origin performance, and configuration. Measure real pages.</p>
+<p><strong>Can I use email with a CDN?</strong> Yes, but email uses its own DNS records and mail services. Preserve MX and relevant TXT records when changing DNS.</p>
+<p>For HTTP cache behavior, see <a href="https://www.rfc-editor.org/rfc/rfc9111">RFC 9111</a>. For exact cache, DNS, and origin settings, check the current documentation of the CDN and host you select.</p></div></article><aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-11.html">DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</a><a href="/blog/blog-13.html">How to Value a Domain Name: 12 Factors That Influence Its Market Potential</a><a href="/blog/blog-14.html">What Makes a Domain Name Brandable? A Practical Naming Framework</a><hr><a href="/blog/index.html">All DomainCraft articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside></div>
+    <section class="container section-tight"><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+
+</html>

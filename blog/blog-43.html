@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design | DomainCraft</title>
+  <meta name="description" content="Learn REST and HTTP fundamentals, JSON contracts, status codes, pagination, filtering, validation, and example domain API endpoints.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://example.com/blog/blog-43.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design"><meta property="og:description" content="Learn REST and HTTP fundamentals, JSON contracts, status codes, pagination, filtering, validation, and example domain API endpoints.">
+  <meta property="og:url" content="https://example.com/blog/blog-43.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-rest-apis-http-methods-status-codes.svg"><meta property="og:image:alt" content="Client request and JSON response passing through a versioned API endpoint.">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design"><meta name="twitter:description" content="Learn REST and HTTP fundamentals, JSON contracts, status codes, pagination, filtering, validation, and example domain API endpoints.">
+  <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design",
+  "description": "Learn REST and HTTP fundamentals, JSON contracts, status codes, pagination, filtering, validation, and example domain API endpoints.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "image": [
+    "https://example.com/assets/img/blog/feature-rest-apis-http-methods-status-codes.svg"
+  ],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://example.com/blog/blog-43.html"
+  },
+  "articleSection": "Web Infrastructure & APIs",
+  "keywords": [
+    "REST API",
+    "HTTP",
+    "API design"
+  ],
+  "inLanguage": "en"
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://example.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design",
+      "item": "https://example.com/blog/blog-43.html"
+    }
+  ]
+}</script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+      <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+    </div>
+  </header>
+  <main id="main-content" class="page-main">
+    <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
+    <div class="container article-layout" data-publish-guard data-post-slug="rest-apis-http-methods-status-codes" hidden>
+      <article>
+        <div class="breadcrumbs article-breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design</div>
+        <header class="article-header">
+          <p class="eyebrow">Web Infrastructure &amp; APIs · Practical guide</p>
+          <h1>REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design</h1>
+          <div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>11 minute read</span></div>
+          <div class="tag-list"><span class="tag">REST API</span><span class="tag">HTTP</span><span class="tag">API design</span></div>
+        </header>
+        <figure class="article-figure article-featured"><img src="/assets/img/blog/feature-rest-apis-http-methods-status-codes.svg" alt="Client request and JSON response passing through a versioned API endpoint." width="1200" height="675" fetchpriority="high"><figcaption>Original local vector schematic. It is explanatory artwork, not measured performance or market data.</figcaption></figure>
+        <div class="article-body"><p>An API is a defined way for software to request information or operations from another system. REST is an architectural style for networked systems, not a synonym for every HTTP endpoint. Many APIs use HTTP and JSON while only following some REST principles. For a client developer, the practical questions are: what resource is addressed, which method applies, what data is accepted, what response means success, and how an error can be handled safely?</p>
+<blockquote><p><strong>Quick answer:</strong> A REST-oriented API typically exposes resources through URLs and uses HTTP methods such as GET, POST, PUT, PATCH, and DELETE to express operations. JSON is a common request and response format, while HTTP status codes communicate broad outcomes. Good API design also defines authentication, validation, pagination, filtering, rate limits, versioning, and error details.</p></blockquote>
+<h2 id="what-rest-means-in-practice">What REST means in practice</h2>
+<p>REST stands for Representational State Transfer. It describes constraints for networked applications, including a client-server separation, stateless requests, cacheability where appropriate, a uniform interface, and layered components. A REST-style API usually models resources such as domains, users, or saved searches and exposes representations of those resources over HTTP.</p>
+<p>A simple resource might be addressed as <code>/v1/saved-searches/abc123</code>. A client requests a representation or asks for a change using an HTTP method. The server processes the request and returns a status code, headers, and sometimes a JSON body. The client should not need to know the server’s internal database tables or file paths.</p>
+<p>Not every service that uses JSON over HTTP is RESTful. Some expose action-oriented routes such as <code>/runLookup</code> or <code>/createReport</code>. That may still be a useful API, but describing it accurately helps set expectations. A design should be judged by its clarity, consistency, security, and compatibility—not by whether every route is named after a noun.</p>
+<h2 id="http-methods-and-their-intent">HTTP methods and their intent</h2>
+<p>The method communicates what the client is asking the server to do. Method semantics matter for caching, retries, proxies, and safe client behavior.</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">Method</th><th scope="col">Common intent</th><th scope="col">Example resource operation</th></tr></thead><tbody><tr><td>GET</td><td>Retrieve a representation without intentionally changing state</td><td>Read <code>/v1/saved-searches/abc123</code></td></tr><tr><td>POST</td><td>Submit data or ask the server to process/create something</td><td>Create a saved search or run a lookup</td></tr><tr><td>PUT</td><td>Replace a resource representation at a known URL</td><td>Replace settings for a specific saved search</td></tr><tr><td>PATCH</td><td>Apply a partial update</td><td>Change one notification preference</td></tr><tr><td>DELETE</td><td>Remove a resource</td><td>Delete a saved search owned by the caller</td></tr></tbody></table></div>
+<p>The method alone does not make an operation safe. A <code>GET</code> endpoint that triggers a purchase or deletes data is surprising and can be called by crawlers, prefetchers, or retries. Use methods consistently and require authorization for state changes. <code>PUT</code> is generally designed to be idempotent: repeating the same request should produce the same intended resource state. <code>POST</code> is not automatically idempotent; use an idempotency key when a client might retry an operation that creates a charge, sends a notice, or starts a job.</p>
+<p><code>PATCH</code> formats can vary. Document whether omitted fields remain unchanged, whether <code>null</code> clears a value, and how conflicting updates are handled. For destructive operations, communicate what will be removed and whether recovery is available.</p>
+<h2 id="json-requests-and-responses">JSON requests and responses</h2>
+<p>JSON is a text format for structured data. A client might send:</p>
+<pre><code class="language-http">POST /v1/domain-searches HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer [redacted]
+
+{&quot;query&quot;:&quot;river&quot;,&quot;extensions&quot;:[&quot;com&quot;,&quot;net&quot;],&quot;limit&quot;:20}</code></pre>
+<p>A response could include a request identifier, normalized suggestions, and a clear statement about the source:</p>
+<pre><code class="language-json">{
+  &quot;requestId&quot;: &quot;req_example_123&quot;,
+  &quot;results&quot;: [{&quot;name&quot;:&quot;river-example.com&quot;,&quot;source&quot;:&quot;generator&quot;}],
+  &quot;availabilityChecked&quot;: false
+}</code></pre>
+<p>These are illustrative values, not a live service response. The field <code>availabilityChecked: false</code> is important if the endpoint only creates names. A client should not infer a stronger result than the server actually checked.</p>
+<p>Validate JSON at the server boundary. Enforce required fields, types, allowed enum values, string lengths, array sizes, and safe character rules. Reject extra or ambiguous values where they could alter behavior. Return stable errors that identify the field or condition without revealing stack traces, internal hostnames, or secrets. Document whether field names are case-sensitive and how unknown properties are treated.</p>
+<h2 id="status-codes-and-error-handling">Status codes and error handling</h2>
+<p>HTTP status codes summarize what happened, but they do not replace a useful response body. Common categories include success, redirection, client error, and server error. For example, <code>200</code> commonly means a request succeeded; <code>201</code> often indicates creation; <code>204</code> indicates success without a response body; <code>400</code> can indicate malformed input; <code>401</code> means authentication is required or failed; <code>403</code> means the request is understood but not permitted; <code>404</code> indicates that a resource was not found or is not exposed; <code>409</code> can signal a conflict; <code>429</code> indicates a rate limit; and <code>5xx</code> signals a server-side failure.</p>
+<p>The exact choice should fit the API contract. Do not use <code>200</code> for every outcome and force clients to parse a private text message. Do not return <code>404</code> for a valid lookup that produced no record if the endpoint itself succeeded; model the result separately, for example <code>200</code> with a clear <code>status: &quot;unknown&quot;</code> when that is the intended domain meaning. A provider timeout is not the same as “available.”</p>
+<p>Use a consistent error format such as:</p>
+<pre><code class="language-json">{
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;invalid_extension&quot;,
+    &quot;message&quot;: &quot;One requested extension is not supported.&quot;,
+    &quot;requestId&quot;: &quot;req_example_123&quot;
+  }
+}</code></pre>
+<p>Clients should handle status codes they do not recognize, timeouts, malformed responses, and network failures. A useful error does not disclose private implementation details; it gives the user a next step and a reference identifier.</p>
+<h2 id="pagination-and-filtering">Pagination and filtering</h2>
+<p>An endpoint that returns many resources should support pagination rather than sending an unbounded response. Offset pagination can be straightforward for a stable small collection, but results can shift while a client is paging. Cursor pagination uses a continuation token tied to a stable sort or snapshot. Document the maximum page size, sorting behavior, and whether the next cursor can expire.</p>
+<p>Filtering should use a small, documented set of parameters. For example, a saved-search endpoint might accept <code>?status=active&amp;limit=25</code>. Validate filter values and define how multiple filters combine. Never concatenate user-supplied filter text directly into a database query. Use parameterized statements or a query builder.</p>
+<p>Pagination tokens should not reveal secrets or grant access on their own. Re-check authorization on every page request. If the dataset changes between pages, make the consistency behavior explicit; a cursor is a navigation aid, not necessarily a permanent snapshot.</p>
+<h2 id="a-sample-domain-research-api">A sample domain research API</h2>
+<p>A fictional versioned API might use these routes:</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">Endpoint</th><th scope="col">Method</th><th scope="col">Purpose</th><th scope="col">Key safeguards</th></tr></thead><tbody><tr><td><code>/v1/suggestions</code></td><td>POST</td><td>Generate or retrieve naming ideas</td><td>Bound input, rate limit, state source clearly</td></tr><tr><td><code>/v1/lookup</code></td><td>POST</td><td>Query an authorized data provider</td><td>Keep credentials server-side, return checked time and <code>unknown</code> on failure</td></tr><tr><td><code>/v1/saved-searches</code></td><td>GET</td><td>List the caller’s saved searches</td><td>Authenticate and scope to current account</td></tr><tr><td><code>/v1/saved-searches</code></td><td>POST</td><td>Create a saved search</td><td>Validate, authorize, handle duplicate submissions</td></tr><tr><td><code>/v1/saved-searches/{id}</code></td><td>PATCH</td><td>Update selected settings</td><td>Check ownership and allowed fields</td></tr><tr><td><code>/v1/saved-searches/{id}</code></td><td>DELETE</td><td>Remove a saved search</td><td>Confirm semantics, check ownership, consider recovery</td></tr></tbody></table></div>
+<p>The domain lookup example does not imply that any particular provider offers a public API or that its response guarantees registrability. A production endpoint should identify its source, coverage, timestamp, and limitations. The application should also respect provider terms and data protection requirements.</p>
+<h2 id="authentication-versioning-and-documentation">Authentication, versioning, and documentation</h2>
+<p>Use an established authentication method rather than inventing a password scheme. Keep API credentials out of browser bundles and source control. Authorization must be checked against the resource on every operation; a valid token does not mean the user owns every requested ID. Use scopes, rate limits, and audit events appropriate to the operation.</p>
+<p>Versioning helps clients adapt to incompatible changes. A route prefix such as <code>/v1/</code> is one option. Document deprecation windows and avoid silently changing a field’s meaning. Provide an OpenAPI description or similarly precise contract when suitable, including examples that are explicitly fictional, schemas, authentication, status codes, and limits.</p>
+<h2 id="idempotency-concurrency-and-safe-changes">Idempotency, concurrency, and safe changes</h2>
+<p>Clients retry because a network can fail after the server has accepted a request but before the client sees the response. For operations that create a resource or trigger an external side effect, accept an idempotency key or provide a way to query the operation status. The server should scope the key to the caller and operation, store the result for an appropriate period, and reject reuse with a different request body. Do not treat an arbitrary client-supplied identifier as permission.</p>
+<p>Concurrent updates need an explicit policy. Two clients might edit the same saved search at once. The API can use an entity version, modification timestamp, or conditional request to detect that the resource changed since it was read. Return a conflict response with a clear next step instead of silently overwriting a newer update. For a destructive operation, consider whether a soft-delete or recovery period is appropriate.</p>
+<h2 id="document-and-test-the-contract">Document and test the contract</h2>
+<p>An API description should include examples for success, validation error, unauthorized access, rate limiting, and upstream failure. State which fields are required, which values are accepted, whether a result is cached, and how dates and time zones are represented. Include pagination behavior and maximum request sizes. Mark every sample as illustrative; do not present fake response data as a live check.</p>
+<p>Contract tests can verify that the server and client agree on field names and status codes. Security tests should try accessing another account’s resource, sending an oversized body, using an unsupported method, and repeating a side-effecting request. Test the deployed gateway as well as the application because proxy rules can alter paths, headers, and body limits. Publish deprecation notices before removing a route that clients depend on.</p>
+<h2 id="cors-and-browser-facing-api-clients">CORS and browser-facing API clients</h2>
+<p>Cross-Origin Resource Sharing (CORS) is a browser policy that controls whether a page from one origin can read a response from another origin. It is not API authentication. A permissive CORS response does not make an endpoint public in a safe way, and a restrictive response does not stop a script outside the browser from calling the server. Configure allowed origins deliberately and keep authorization checks on the API.</p>
+<p>Avoid reflecting any incoming <code>Origin</code> value without validation. If credentials such as cookies are used, the allowed-origin and credential settings need particular care. Test preflight requests and error responses through the actual gateway. Do not place a long-lived API secret in a JavaScript bundle to make a browser request work; a visitor can inspect it. Use a backend proxy or an appropriately designed public API key with limited scope and abuse controls.</p>
+<h2 id="versioning-and-backward-compatibility">Versioning and backward compatibility</h2>
+<p>An API contract may be used by a browser, mobile app, partner, or internal job that cannot all be updated at once. Avoid changing a field’s meaning without changing the contract. Add optional fields in a way older clients can ignore, and define how long deprecated routes remain supported. If a breaking change is necessary, publish a migration path and test both versions during the transition.</p>
+<p>A version prefix such as <code>/v1/</code> is easy to understand but can lead to long-lived versions that the team must maintain. Other approaches include compatible schema evolution or explicit media types. Choose one policy and document it. Keep release notes precise: tell client developers what changed, when it takes effect, and how to test the new behavior. Never imply that an endpoint is stable if it is still experimental.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Is every JSON API a REST API?</strong> No. JSON describes a data format; REST describes architectural constraints. A JSON-over-HTTP service may be useful without being strictly RESTful.</p>
+<p><strong>Should a GET request change data?</strong> Generally avoid it. GET is expected to retrieve information and can be cached or repeated by clients and intermediaries.</p>
+<p><strong>Is a `404` the right response when a domain appears unregistered?</strong> Not necessarily. The API route may have succeeded while the upstream status remains uncertain. Model lookup status separately and explain the source.</p>
+<p><strong>How should an API handle a repeated POST?</strong> Define whether duplicates are safe. For consequential actions, support an idempotency mechanism and ensure retries cannot create unintended duplicate work.</p>
+<p><strong>Do I need an API gateway?</strong> Not always. A small API may use a reverse proxy or platform routing. Add a gateway when it solves a defined policy or operations need.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>A dependable API has a clear contract: resource paths, method semantics, validation rules, status codes, pagination, authentication, and errors. Build it around the client’s task, then test both success and failure cases. Use HTTP conventions consistently and describe what a result actually means. A documented endpoint is easier to integrate, but the service still needs security, monitoring, and careful operation.</p></div>
+      </article>
+      <aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-31.html">Building Trust on a Domain Tools Website</a><a href="/blog/blog-32.html">How to Build a Long-Term Domain Knowledge Website</a><hr><a href="/blog/index.html">All published articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside>
+    </div>
+    <section class="container section-tight" data-publish-guard-cta hidden><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+</html>

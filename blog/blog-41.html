@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App | DomainCraft</title>
+  <meta name="description" content="Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://example.com/blog/blog-41.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App"><meta property="og:description" content="Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.">
+  <meta property="og:url" content="https://example.com/blog/blog-41.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-api-gateways-reverse-proxies-load-balancers.svg"><meta property="og:image:alt" content="Browser request routed through a reverse proxy and API gateway to healthy backend services.">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App"><meta name="twitter:description" content="Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.">
+  <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App",
+  "description": "Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "image": [
+    "https://example.com/assets/img/blog/feature-api-gateways-reverse-proxies-load-balancers.svg"
+  ],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://example.com/blog/blog-41.html"
+  },
+  "articleSection": "Web Infrastructure & APIs",
+  "keywords": [
+    "API gateway",
+    "Reverse proxy",
+    "Load balancing"
+  ],
+  "inLanguage": "en"
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://example.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App",
+      "item": "https://example.com/blog/blog-41.html"
+    }
+  ]
+}</script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+      <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+    </div>
+  </header>
+  <main id="main-content" class="page-main">
+    <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
+    <div class="container article-layout" data-publish-guard data-post-slug="api-gateways-reverse-proxies-load-balancers" hidden>
+      <article>
+        <div class="breadcrumbs article-breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App</div>
+        <header class="article-header">
+          <p class="eyebrow">Web Infrastructure &amp; APIs · Practical guide</p>
+          <h1>API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App</h1>
+          <div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>11 minute read</span></div>
+          <div class="tag-list"><span class="tag">API gateway</span><span class="tag">Reverse proxy</span><span class="tag">Load balancing</span></div>
+        </header>
+        <figure class="article-figure article-featured"><img src="/assets/img/blog/feature-api-gateways-reverse-proxies-load-balancers.svg" alt="Browser request routed through a reverse proxy and API gateway to healthy backend services." width="1200" height="675" fetchpriority="high"><figcaption>Original local vector schematic. It is explanatory artwork, not measured performance or market data.</figcaption></figure>
+        <div class="article-body"><p>A browser rarely talks directly to every application component. A request may pass through a reverse proxy, an API gateway, a load balancer, and one or more backend services before a response returns. Those names are sometimes used interchangeably in product marketing, but they describe different roles. Understanding the responsibilities helps a team avoid placing authentication in the wrong layer or retrying a request that may already have changed data.</p>
+<blockquote><p><strong>Quick answer:</strong> A reverse proxy accepts requests on behalf of backend servers and forwards them. A load balancer distributes requests across healthy backends. An API gateway commonly adds API-focused policies such as authentication, quotas, request validation, and route management. One product can perform several roles, but the architecture should make each responsibility and failure mode clear.</p></blockquote>
+<h2 id="what-each-component-does">What each component does</h2>
+<p>A <strong>reverse proxy</strong> sits between a client and one or more servers. It can route requests by hostname or path, terminate TLS, forward selected headers, compress responses, and hide backend addresses. The proxy must handle forwarded identity and client IP headers carefully; a backend should trust those headers only when they came from a known proxy that overwrites untrusted values.</p>
+<p>A <strong>load balancer</strong> distributes traffic across a pool of backends. It can use health checks and routing policies to avoid sending new requests to an unhealthy instance. Some load balancers operate at the transport layer, while others understand HTTP paths and headers. The correct choice depends on protocols, availability needs, and the provider’s features.</p>
+<p>An <strong>API gateway</strong> manages API entry points and policies. It may validate authentication, apply per-client quotas, normalize requests, enforce size limits, select versions, or aggregate endpoints. A gateway does not replace authorization in the application. The backend should still verify that the authenticated user can access the specific account, domain, or record in the request.</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">Component</th><th scope="col">Main question it answers</th><th scope="col">Typical responsibilities</th></tr></thead><tbody><tr><td>Reverse proxy</td><td>Where should this request go?</td><td>TLS termination, host/path routing, header forwarding</td></tr><tr><td>Load balancer</td><td>Which healthy instance should receive it?</td><td>Distribution, health checks, connection handling</td></tr><tr><td>API gateway</td><td>Which API policy applies?</td><td>Authentication, quotas, validation, version routing</td></tr><tr><td>Application service</td><td>Is this operation allowed and correct?</td><td>Business rules, resource authorization, data access</td></tr></tbody></table></div>
+<p>A vendor’s “gateway” may also be a reverse proxy or load balancer. Read the product’s actual behavior, not only the label, and avoid duplicating controls without knowing which layer is authoritative.</p>
+<h2 id="a-request-path-for-a-domain-search-api">A request path for a domain-search API</h2>
+<p>Consider a fictional service with endpoints for suggestions, public registration lookups, and saved user lists. A simplified architecture is:</p>
+<pre><code class="language-text">Browser
+  │ HTTPS
+  ▼
+Edge / reverse proxy ── TLS, host routing, request size limits
+  │
+  ▼
+API gateway ─────────── authentication, quota, API version
+  │
+  ├── /v1/suggestions → generator service
+  ├── /v1/lookup      → lookup service → authorized data provider
+  └── /v1/saved       → account service → database</code></pre>
+<p>The route map does not imply that all endpoints have the same risk. A public suggestions endpoint may be anonymous but rate-limited. A saved-list endpoint requires authentication and per-user authorization. A lookup endpoint may require a provider credential kept server-side and could have usage limits. The gateway can reject a missing token, but the account service must check that the requested saved list belongs to that identity.</p>
+<p>TLS termination at the edge protects a browser-to-proxy connection. The proxy-to-backend link also needs a defined security model. Depending on the network and threat model, use encrypted service-to-service connections, identity verification, and restricted network access. Do not assume that a private subnet alone makes every internal request trustworthy.</p>
+<h2 id="routing-tls-and-rate-limiting">Routing, TLS, and rate limiting</h2>
+<p>Routing rules map a hostname, path, method, or header to a backend. Keep rules explicit and test overlapping paths, encoded characters, trailing slashes, and version prefixes. A path-based rule should not accidentally send an administrative endpoint to a public service. Define which component owns redirects and canonical host behavior so a request does not loop between layers.</p>
+<p>TLS termination simplifies certificate management at a proxy or gateway, but it also makes that component a security boundary. Restrict access to private keys, renew certificates, disable obsolete protocol configurations according to current policy, and verify the identity of upstream services where needed. Use current security guidance rather than copying a cipher list from an old example.</p>
+<p>Rate limiting can protect an API from accidental bursts or abuse. A gateway can count requests by key, account, IP, or another identifier, but the choice affects fairness and privacy. Behind a proxy, client IP is useful only when the forwarding chain is configured correctly. For distributed systems, a per-instance counter may not enforce a global quota unless the implementation shares state. Document whether a quota is approximate, local, or centrally enforced.</p>
+<p>Return an appropriate response when a limit is reached, include a retry hint when supported, and do not expose private quota details. Rate limiting is not a substitute for authorization or fraud detection. A user may have permission to call an endpoint but still exceed a safe usage policy.</p>
+<h2 id="health-checks-and-failure-handling">Health checks and failure handling</h2>
+<p>A load balancer’s health check should tell whether an instance can safely receive traffic. It may use a simple process-level endpoint or a deeper readiness check. If the check depends on every downstream service, a brief database issue could mark all instances unhealthy at once. Define liveness and readiness separately when the platform supports them, and avoid making a check itself expensive.</p>
+<p>Timeouts should be set at each layer with a clear budget. If the gateway waits longer than the browser, a user may retry while the original operation continues. Retries can improve resilience for transient failures, but they can also multiply load or repeat a side effect. Retry only operations that are safe to repeat, use idempotency keys for state-changing actions, and cap the number of attempts.</p>
+<p>When a backend fails, the gateway should return a clear error and a request identifier. It should not expose stack traces, internal hostnames, tokens, or customer data. Logs across proxy, gateway, and service should carry a consistent correlation or trace identifier so an operator can follow one request without logging the complete payload.</p>
+<h2 id="versioning-and-endpoint-ownership">Versioning and endpoint ownership</h2>
+<p>A gateway can route <code>/v1/</code> and <code>/v2/</code> to different services during a migration, but versioning is a product decision. Define how long clients are supported, how deprecation is announced, and how old requests fail. Do not route based on an undocumented header that clients cannot discover. Maintain an API contract and test it at the edge and backend.</p>
+<p>Choose one source of truth for each policy. For example, the gateway may enforce a coarse request quota, while the application enforces a per-account business limit. Document that split so an incident is not investigated in the wrong service. Duplicate policy implementations can drift: one may reject traffic while another allows it, or the displayed quota may not match the enforced one.</p>
+<h2 id="a-practical-architecture-checklist">A practical architecture checklist</h2>
+<ul>
+<li>Draw the path from client to public endpoint to backend and data store.</li>
+<li>Name the component responsible for each hostname and path route.</li>
+<li>Decide where TLS terminates and how internal connections are protected.</li>
+<li>Verify forwarded headers are overwritten or trusted only from known proxies.</li>
+<li>Keep authentication and resource authorization distinct.</li>
+<li>Add request-size limits, quotas, timeouts, and safe error responses.</li>
+<li>Define health checks, readiness, and safe failover behavior.</li>
+<li>Make retries bounded and safe for the method and operation.</li>
+<li>Add a request ID or trace context across layers without logging secrets.</li>
+<li>Test unavailable backends, malformed requests, and configuration rollback.</li>
+</ul>
+<h2 id="forwarded-headers-and-client-identity">Forwarded headers and client identity</h2>
+<p>A proxy often adds headers describing the original protocol, hostname, and client address. Those values can be useful for redirects, secure-cookie behavior, audit logs, and rate limiting. They are also easy to misuse. If a public client can send a header such as <code>X-Forwarded-For</code> and the proxy simply appends or forwards it, the backend may mistake attacker-controlled text for the real client address.</p>
+<p>Configure a trusted proxy chain. At the first boundary, remove untrusted forwarded headers and write the values the proxy has actually observed. Each downstream service should trust only the known proxy addresses or service identities. Test the behavior with a forged header and confirm that authorization and rate limits do not rely on it as a secret or identity credential. For IPv6, ensure parsing and storage can handle the full address format.</p>
+<h2 id="avoid-retry-and-timeout-conflicts">Avoid retry and timeout conflicts</h2>
+<p>Choose a total request deadline and allocate it across layers. If the browser abandons a request quickly while a gateway continues waiting, work may continue after the user retries. If the gateway retries an upstream call and the application also retries, attempts can multiply. Write a timeout table for client, gateway, service, database, and external provider; make each inner timeout fit within the outer budget.</p>
+<p>For read-only operations, a limited retry may be reasonable after a transient network failure. For an update, payment, or notification, retry only when the operation is idempotent or uses a deduplication mechanism. When the result is uncertain because a connection ended after submission, check the operation status before sending it again. Return a request ID so support can follow the path without asking the user to disclose private input.</p>
+<h2 id="configuration-and-failure-tests">Configuration and failure tests</h2>
+<p>Test route changes in a staging environment with the same proxy and TLS rules as production. Exercise an unknown path, a malformed method, a large body, an expired credential, a slow backend, and a backend that returns an invalid response. Check that health checks remove only the intended instance, that error pages do not expose internal names, and that a rollback restores the previous route map. Keep gateway configuration versioned and review it like application code.</p>
+<h2 id="tls-and-proxy-trust-are-security-boundaries">TLS and proxy trust are security boundaries</h2>
+<p>At the public edge, TLS settings determine how browsers authenticate the site and protect traffic in transit. Certificate renewal should be monitored, and the application should not accept an untrusted certificate from an upstream service merely to avoid a deployment problem. If TLS terminates at a proxy, define how the backend knows the original request was secure. Set secure-cookie behavior from trusted proxy information, not from a client-controlled header.</p>
+<p>The proxy should remove or replace hop-by-hop headers and avoid forwarding credentials to a backend that does not need them. Restrict management interfaces and configuration APIs to authorized operators. Keep a record of certificate ownership and emergency renewal contacts. If several proxies are chained, document which one is allowed to assert client identity and how the next one verifies that assertion.</p>
+<p>A staging environment should reproduce these trust boundaries. Testing only the backend directly can miss an edge rule that strips an authentication header, changes the path, or forwards a spoofed client address. Test both the public route and the service-to-service route, while keeping test credentials separate from production.</p>
+<h2 id="match-the-load-balancing-strategy-to-the-state">Match the load-balancing strategy to the state</h2>
+<p>If a service stores session state only in process memory, sending the next request to another instance may appear as a logout. Prefer stateless sessions or a shared session store with an explicit security and availability design. Database writes should not depend on a specific backend instance unless the architecture intentionally uses sticky sessions and the failure implications are understood.</p>
+<p>For long-running requests, streaming, or websocket connections, verify that the proxy and load balancer support the required connection lifetime and protocol. A health check can stop new requests from reaching an instance, but it may not immediately terminate existing connections. Make deployments graceful and define how unfinished work is resumed.</p>
+<h2 id="frequently-asked-questions">Frequently asked questions</h2>
+<p><strong>Is an API gateway a reverse proxy?</strong> Many gateways act as reverse proxies, but they may add API-specific policies. Product roles overlap; verify the features and boundaries in the actual architecture.</p>
+<p><strong>Does TLS at the gateway secure the backend?</strong> It secures the client connection to that gateway. The gateway-to-backend connection has its own security requirements.</p>
+<p><strong>Should a gateway perform all authorization?</strong> It can check identity and coarse policy, but the application should verify access to the specific resource and enforce business rules.</p>
+<p><strong>Can a load balancer retry a failed request?</strong> Some can, but retrying a state-changing request may duplicate work. Configure retries based on method semantics and idempotency.</p>
+<p><strong>Do small websites need all these layers?</strong> No. A static site or small application may need only a hosting platform or one proxy. Add layers when they solve a defined routing, availability, or policy problem.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Reverse proxies, gateways, and load balancers can make a web system easier to route, protect, and scale, but they do not remove the need for correct application logic. Draw the request path, assign policy ownership, protect headers and credentials, and test what happens when a backend fails. Add only the layers your service needs, and make their behavior observable enough to diagnose a real request.</p></div>
+      </article>
+      <aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-31.html">Building Trust on a Domain Tools Website</a><a href="/blog/blog-32.html">How to Build a Long-Term Domain Knowledge Website</a><hr><a href="/blog/index.html">All published articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside>
+    </div>
+    <section class="container section-tight" data-publish-guard-cta hidden><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+</html>

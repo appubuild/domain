@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases | DomainCraft</title>
+  <meta name="description" content="Trace a web request from browser to server, understand HTTP responses and databases, and diagnose common status codes.">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="canonical" href="https://example.com/blog/blog-09.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases">
+  <meta property="og:description" content="Trace a web request from browser to server, understand HTTP responses and databases, and diagnose common status codes.">
+  <meta property="og:url" content="https://example.com/blog/blog-09.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-how-web-servers-work.jpg"><meta property="og:image:alt" content="Browser request and server response path with application and database."><meta property="og:image:type" content="image/jpeg">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image">
+  <!-- Replace example.com with the production domain before publication. -->
+  <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
+  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases",
+  "description": "Trace a web request from browser to server, understand HTTP responses and databases, and diagnose common status codes.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "mainEntityOfPage": "https://example.com/blog/blog-09.html",
+  "image": [
+    "https://example.com/assets/img/blog/feature-how-web-servers-work.jpg"
+  ],
+  "wordCount": 1068,
+  "keywords": "HTTP, Web servers"
+}
+  </script>
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://example.com/#website",
+      "url": "https://example.com/",
+      "name": "DomainCraft",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Home",
+      "url": "https://example.com/"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Domain generator",
+      "url": "https://example.com/tools/domain-generator.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Blog",
+      "url": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "About us",
+      "url": "https://example.com/pages/about.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Contact us",
+      "url": "https://example.com/pages/contact.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Privacy policy",
+      "url": "https://example.com/pages/privacy-policy.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Terms and conditions",
+      "url": "https://example.com/pages/terms-and-conditions.html"
+    },
+    {
+      "@type": "SiteNavigationElement",
+      "name": "Disclaimer",
+      "url": "https://example.com/pages/disclaimer.html"
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": "https://example.com/blog/blog-09.html#breadcrumb",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Home",
+          "item": {
+            "@id": "https://example.com/"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": {
+            "@id": "https://example.com/blog/index.html"
+          }
+        },
+        {
+          "@type": "ListItem",
+          "position": 3,
+          "name": "How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases",
+          "item": {
+            "@id": "https://example.com/blog/blog-09.html"
+          }
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <meta name="twitter:title" content="How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases | DomainCraft">
+  <meta name="twitter:description" content="Trace a web request from browser to server, understand HTTP responses and databases, and diagnose common status codes.">
+  <meta name="twitter:url" content="https://example.com/blog/blog-09.html">
+  <meta name="twitter:image" content="https://example.com/assets/img/blog/feature-how-web-servers-work.jpg"><meta name="twitter:image:alt" content="Browser request and server response path with application and database.">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header"><div class="container header-inner">
+    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+    <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+    <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+  </div></header>
+  <main id="main-content" class="page-main">
+    <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases</div>
+    <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Hosting, DNS &amp; Server Technology · Practical guide</p><h1>How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>5 minute read</span></div><div class="tag-list"><span class="tag">HTTP</span><span class="tag">Web servers</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-how-web-servers-work.jpg" alt="Browser request and server response path with application and database." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>A website visit is a conversation between a client and a service. The browser sends a request; a web server or application processes it; and the server returns a response. DNS may help the browser find the service, but DNS does not generate the page. Understanding this separation makes common errors easier to diagnose.</p>
+<blockquote>
+<p><strong>Quick answer:</strong> the browser constructs an HTTP request for a URL, sends it over a network connection, and receives an HTTP response. The response can be a page, data, a redirect, or an error. A dynamic application may call a database or other services before replying.</p>
+</blockquote>
+<h2 id="the-request-path">The request path</h2>
+<p>A simplified page load can involve several systems:</p>
+<ol>
+<li><strong>Name resolution:</strong> DNS helps the client locate a destination for the host name.</li>
+<li><strong>Connection:</strong> the client establishes a network connection to the service. The exact transport depends on the protocol and environment.</li>
+<li><strong>TLS for HTTPS:</strong> the client and server negotiate encryption and check the certificate for the requested host.</li>
+<li><strong>HTTP request:</strong> the client sends a method, path, headers, and sometimes a body.</li>
+<li><strong>Server or application work:</strong> the web server may serve a file, route the request to application code, check authentication, or query a database.</li>
+<li><strong>HTTP response:</strong> the service returns a status, headers, and possibly a body.</li>
+<li><strong>Browser rendering:</strong> the browser interprets HTML, downloads referenced assets, and runs permitted scripts.</li>
+</ol>
+<p>One visible page can require many additional requests for images, stylesheets, scripts, fonts, and API data. A successful first response does not guarantee every asset loaded.</p>
+<h2 id="what-is-inside-an-http-exchange">What is inside an HTTP exchange?</h2>
+<p>A request includes a method such as <code>GET</code> or <code>POST</code>, a path such as <code>/account</code>, headers, and sometimes a body. <code>GET</code> commonly retrieves a representation; <code>POST</code> commonly submits data. Applications must still enforce authorization and validation; a method name alone is not a security boundary.</p>
+<p>A response includes a status code, headers, and optionally content. Common groups include:</p>
+<ul>
+<li><strong>2xx:</strong> the request was handled successfully; <code>200</code> is a common success response.</li>
+<li><strong>3xx:</strong> the client is directed elsewhere or can use a cached representation.</li>
+<li><strong>4xx:</strong> the request or access was not accepted; <code>404</code> means the requested resource was not found, while <code>403</code> commonly indicates access is forbidden.</li>
+<li><strong>5xx:</strong> the server or an upstream service encountered a problem; <code>502</code> and <code>503</code> often point to gateway or availability issues.</li>
+</ul>
+<p>Status codes are clues, not complete diagnoses. An application can customize error pages, and a proxy can return a status before a request reaches the origin server.</p>
+<h2 id="static-pages-dynamic-applications-and-databases">Static pages, dynamic applications, and databases</h2>
+<p>A <strong>static site</strong> can serve files that were prepared before a visitor arrived. It still may use scripts in the browser, but it does not need to generate every page from a database request.</p>
+<p>A <strong>dynamic site</strong> runs application code to build a response. It may read a product, user account, or article from a database; apply permissions; and return HTML or structured data. The database is not normally contacted directly by a browser. Application code mediates access so it can validate input and enforce rules.</p>
+<p>A site can combine these approaches. It may serve static assets through a CDN while sending account requests to an application server. This architecture can reduce work on the origin, but it also creates more components to monitor.</p>
+<h2 id="https-the-secure-connection-layer">HTTPS: the secure connection layer</h2>
+<p>HTTPS is HTTP carried over TLS. It protects data in transit between the client and the endpoint and helps the client verify that it is communicating with a server presenting a certificate for the requested host. It does not prove that the website’s business claims are true, prevent every phishing attempt, or secure a compromised device or server.</p>
+<p>The browser may show a warning if a certificate is expired, mismatched to the host, untrusted, or otherwise invalid. The certificate must cover the exact host being visited. <code>example.com</code> and <code>www.example.com</code> may need both names covered, depending on the certificate and configuration.</p>
+<h2 id="how-to-troubleshoot-common-responses">How to troubleshoot common responses</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Possible area to inspect</th>
+<th>First useful check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Domain does not resolve</td>
+<td>DNS records, nameservers, delegation</td>
+<td>Query the authoritative zone and compare resolver responses.</td>
+</tr>
+<tr>
+<td>404</td>
+<td>URL path, deployment, application route</td>
+<td>Confirm the exact path and that the resource or route exists.</td>
+</tr>
+<tr>
+<td>403</td>
+<td>Permissions, authentication, server rules</td>
+<td>Review access policy and server logs for the request.</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Application error or configuration</td>
+<td>Inspect application logs and the most recent deploy/config change.</td>
+</tr>
+<tr>
+<td>502/503</td>
+<td>Upstream unavailable, proxy, overload</td>
+<td>Check origin health, service dependencies, and gateway logs.</td>
+</tr>
+<tr>
+<td>HTTPS warning</td>
+<td>Certificate, hostname, clock, chain</td>
+<td>Check the exact hostname and certificate validity/chain.</td>
+</tr>
+<tr>
+<td>Page partly unstyled</td>
+<td>Asset paths, blocked requests, cache</td>
+<td>Inspect browser network errors for CSS/JS and mixed content.</td>
+</tr>
+</tbody>
+</table>
+<p>Start at the layer that produced the failure. Check whether DNS resolves, then whether the server responds, then whether the application route works, and finally whether the browser can load all assets. Use timestamps and request IDs where available. Do not repeatedly change DNS when the server is returning an application error.</p>
+<h2 id="operational-basics">Operational basics</h2>
+<p>Keep software patched, restrict administrative access, use least-privilege credentials, and store secrets outside public source files. Back up both data and configuration. Test restore procedures. Use logs that help investigate incidents while limiting personal information to what the service actually needs. Monitor a real user journey, not only whether a process is running.</p>
+<p>A deployment checklist should include the production URL, certificate coverage, redirects, response status for important routes, form behavior, database migration, backups, rollback, and cache invalidation. A change is not complete until the service is tested from the user’s perspective.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Is a web server the same as a host?</strong> A web server is software or infrastructure that responds to web requests. A host is the provider or environment that runs it.</p>
+<p><strong>Does HTTP mean the website is unsafe?</strong> HTTP does not encrypt the connection like HTTPS. Do not submit sensitive information over an unencrypted connection. HTTPS still cannot guarantee that a site is honest.</p>
+<p><strong>Does a database store every website page?</strong> No. Static pages may be files, while dynamic applications may store content or account data in a database.</p>
+<p><strong>Why does the homepage work but a page return 404?</strong> The homepage route may exist while a specific file or application route does not. Check the path and deployment configuration.</p>
+<p>For protocol details, see the IETF specifications <a href="https://www.rfc-editor.org/rfc/rfc9110">HTTP Semantics, RFC 9110</a> and <a href="https://www.rfc-editor.org/rfc/rfc9112">HTTP/1.1, RFC 9112</a>.</p></div></article><aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-08.html">Web Hosting Explained: Shared Hosting, VPS, Dedicated and Cloud Hosting</a><a href="/blog/blog-10.html">SSL Certificates and HTTPS Explained: Security, Validation and Common Errors</a><a href="/blog/blog-11.html">DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</a><hr><a href="/blog/index.html">All DomainCraft articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside></div>
+    <section class="container section-tight"><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+
+</html>

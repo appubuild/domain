@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Application Threat Modeling: How to Identify Risks Before They Become Incidents | DomainCraft</title>
+  <meta name="description" content="Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.">
+  <meta name="robots" content="noindex,nofollow">
+  <link rel="canonical" href="https://example.com/blog/blog-51.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:title" content="Web Application Threat Modeling: How to Identify Risks Before They Become Incidents"><meta property="og:description" content="Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.">
+  <meta property="og:url" content="https://example.com/blog/blog-51.html">
+  <meta property="og:image" content="https://example.com/assets/img/blog/feature-web-application-threat-modeling.svg"><meta property="og:image:alt" content="Trust-boundary diagram with browser, application, database, external provider, and defensive checkpoints.">
+  <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Web Application Threat Modeling: How to Identify Risks Before They Become Incidents"><meta name="twitter:description" content="Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.">
+  <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/reveal.js" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Web Application Threat Modeling: How to Identify Risks Before They Become Incidents",
+  "description": "Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.",
+  "datePublished": "2026-10-23",
+  "dateModified": "2026-10-23",
+  "author": {
+    "@type": "Organization",
+    "name": "DomainCraft Editorial"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "DomainCraft"
+  },
+  "image": [
+    "https://example.com/assets/img/blog/feature-web-application-threat-modeling.svg"
+  ],
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": "https://example.com/blog/blog-51.html"
+  },
+  "articleSection": "Security & Reliability",
+  "keywords": [
+    "Threat modeling",
+    "Application security",
+    "STRIDE"
+  ],
+  "inLanguage": "en"
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://example.com/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://example.com/blog/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Web Application Threat Modeling: How to Identify Risks Before They Become Incidents",
+      "item": "https://example.com/blog/blog-51.html"
+    }
+  ]
+}</script>
+</head>
+<body id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+      <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
+      <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
+      <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
+    </div>
+  </header>
+  <main id="main-content" class="page-main">
+    <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
+    <div class="container article-layout" data-publish-guard data-post-slug="web-application-threat-modeling" hidden>
+      <article>
+        <div class="breadcrumbs article-breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / Web Application Threat Modeling: How to Identify Risks Before They Become Incidents</div>
+        <header class="article-header">
+          <p class="eyebrow">Security &amp; Reliability · Practical guide</p>
+          <h1>Web Application Threat Modeling: How to Identify Risks Before They Become Incidents</h1>
+          <div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainCraft Editorial</span><span>11 minute read</span></div>
+          <div class="tag-list"><span class="tag">Threat modeling</span><span class="tag">Application security</span><span class="tag">STRIDE</span></div>
+        </header>
+        <figure class="article-figure article-featured"><img src="/assets/img/blog/feature-web-application-threat-modeling.svg" alt="Trust-boundary diagram with browser, application, database, external provider, and defensive checkpoints." width="1200" height="675" fetchpriority="high"><figcaption>Original local vector schematic. It is explanatory artwork, not measured performance or market data.</figcaption></figure>
+        <div class="article-body"><p>Threat modeling is a structured way to ask how an application could be misused or fail before an incident forces the question. It is not a one-time compliance form and does not require a large security team. A small product team can make a useful model by listing important assets, drawing how data moves, identifying trust boundaries, and deciding which threats deserve controls first.</p>
+<blockquote><p><strong>Quick answer:</strong> Start with the system’s purpose and assets, sketch the components and data flows, mark where trust changes, and examine each flow for threats to confidentiality, integrity, availability, and accountability. Frameworks such as STRIDE provide prompts, not a complete risk score. Prioritize mitigations by likelihood, impact, and feasibility, then revisit the model when the product or infrastructure changes.</p></blockquote>
+<h2 id="what-belongs-in-a-threat-model">What belongs in a threat model</h2>
+<p>A <strong>threat</strong> is a potential event that could cause harm, such as an unauthorized account change or an outage. A <strong>vulnerability</strong> is a weakness that could help an event occur. <strong>Risk</strong> combines a plausible threat with the potential impact and likelihood in the specific context. The labels are sometimes used differently, so a team should agree on its definitions and record assumptions.</p>
+<p>Begin by defining scope. A model for a static blog is different from one for a registrar account system. Write down what the product does, who uses it, what it connects to, and what is out of scope. Include an environment and data classification: public article content, private account records, credentials, payment state, and operational logs do not have the same sensitivity.</p>
+<p>A simple data-flow diagram is often enough for the first review:</p>
+<pre><code class="language-text">Visitor → browser → public site / API gateway → application service
+                                  │                 ├── database
+                                  │                 └── lookup provider
+                                  └── analytics or error reporting service</code></pre>
+<p>Add where users authenticate, where data is stored, where secrets are kept, and where external providers receive information. Use arrows to represent requests and responses. Mark boundaries such as browser-to-server, public-to-private network, tenant-to-tenant, and organization-to-third-party.</p>
+<h2 id="identify-assets-and-trust-boundaries">Identify assets and trust boundaries</h2>
+<p>An <strong>asset</strong> is something worth protecting or keeping available. It can be data, a credential, a business process, service reputation, or an operational capability. For a domain research tool, assets might include account sessions, saved candidate lists, provider API keys, lookup quotas, email addresses, and DNS-management permissions.</p>
+<p>A <strong>trust boundary</strong> is a point where data or authority crosses between actors or components with different trust levels. Examples include a public form sending input to a server, a gateway forwarding a user identity to an application, or an API response arriving from a third party. Every boundary deserves a question: who can send data here, how is it authenticated, and which system validates it?</p>
+<p>The browser is under the visitor’s control. Client-side validation improves usability but cannot enforce access control. A request can be modified before it reaches the server. Similarly, a field named <code>userId</code> in a JSON body does not prove that the caller owns that account. Enforce resource authorization on the server for each operation.</p>
+<h2 id="use-stride-as-a-prompt-list">Use STRIDE as a prompt list</h2>
+<p>STRIDE groups threat prompts into six categories: spoofing, tampering, repudiation, information disclosure, denial of service, and elevation of privilege. It is a brainstorming aid, not a substitute for domain expertise or a prediction that every category applies equally.</p>
+<div class="table-scroll"><table><thead><tr><th scope="col">STRIDE category</th><th scope="col">Question to ask</th><th scope="col">Example area to review</th></tr></thead><tbody><tr><td>Spoofing</td><td>Can an attacker impersonate a user, service, or provider?</td><td>Login, webhook, service identity</td></tr><tr><td>Tampering</td><td>Can data or a request be changed without authorization?</td><td>DNS settings, saved lists, API parameters</td></tr><tr><td>Repudiation</td><td>Can an important action lack a trustworthy record?</td><td>Account changes and approvals</td></tr><tr><td>Information disclosure</td><td>Can private data reach an unintended person or system?</td><td>Shared cache, logs, exports, API response</td></tr><tr><td>Denial of service</td><td>Can a request exhaust service or provider capacity?</td><td>Search endpoint, expensive lookup, file upload</td></tr><tr><td>Elevation of privilege</td><td>Can a user gain more access than intended?</td><td>Role checks, tenant boundaries, admin actions</td></tr></tbody></table></div>
+<p>For every relevant threat, note an existing control, evidence that it works, and a follow-up owner. If the control is only “the client hides the button,” it is not a server-side access-control measure.</p>
+<h2 id="example-a-domain-generator-and-lookup-service">Example: a domain generator and lookup service</h2>
+<p>Imagine a site that has a browser-based idea generator and an optional API that queries an external registration-data provider. The generator may not store input at all. The lookup service receives a domain, calls a provider, and returns a status. Each component creates different risks.</p>
+<ul>
+<li><strong>Confidentiality:</strong> Candidate names may be sensitive. Do not log or transmit them to analytics unless the purpose is necessary, disclosed, and appropriately controlled.</li>
+<li><strong>Integrity:</strong> A user may try to retrieve another account’s saved list by changing an identifier. Check ownership on every request.</li>
+<li><strong>Availability:</strong> A script could request lookups in a tight loop. Apply quotas, timeouts, batch limits, and provider-aware rate controls.</li>
+<li><strong>Accuracy:</strong> A provider timeout or empty response might be misread as “available.” Return <code>unknown</code> with source and time instead of guessing.</li>
+<li><strong>Secrets:</strong> The upstream credential must remain server-side, scoped to the lookup function, and rotated if exposed.</li>
+<li><strong>Third parties:</strong> Search inputs or logs sent to analytics, hosting, or monitoring providers create additional data flows that should be reviewed.</li>
+</ul>
+<p>A simple risk matrix can help prioritize, but avoid a false sense of mathematical precision. Label impact and likelihood qualitatively, explain why, and decide who will reduce the risk. A low-likelihood, high-impact account takeover may still deserve attention before a frequent but harmless UI bug.</p>
+<h2 id="choose-mitigations-that-address-the-threat">Choose mitigations that address the threat</h2>
+<p>Mitigation should sit at the layer that has the necessary authority. Input validation can reduce malformed requests; parameterized queries prevent a class of database injection; authentication identifies a caller; authorization limits the caller to permitted resources; rate limits bound work; backups support recovery. No single control covers all threats.</p>
+<p>For web applications, review:</p>
+<ul>
+<li>Secure authentication, session expiration, and account recovery.</li>
+<li>Server-side authorization on every protected record and action.</li>
+<li>Input validation, output encoding, and safe file handling.</li>
+<li>Secret storage, key rotation, and least-privilege service identities.</li>
+<li>HTTPS and secure configuration for every public and internal connection.</li>
+<li>Rate limits and abuse monitoring for expensive operations.</li>
+<li>Safe cache keys and explicit behavior for personalized responses.</li>
+<li>Dependency updates, build integrity, and deployment permissions.</li>
+<li>Logging that supports investigation without exposing credentials or private searches.</li>
+<li>Tested backup, incident response, and rollback procedures.</li>
+</ul>
+<p>Controls should be testable. A review can ask for an automated test that proves one account cannot read another account’s record, a configuration check that catches a public secret, or a restoration exercise that confirms the backup can be used. A written policy without evidence may not reduce the underlying risk.</p>
+<h2 id="keep-the-model-current">Keep the model current</h2>
+<p>Threat models go stale when architecture changes. Revisit them when a site adds accounts, payment, a new API provider, file uploads, a browser extension, AI tools, or a new data-retention practice. Also revisit after incidents, major dependency changes, a shift to multi-tenant hosting, or a new type of user.</p>
+<p>A lightweight review can take place in a normal planning meeting. Ask what new data enters the system, who can access it, what happens if a dependency is unavailable, and which action could cause irreversible harm. Record decisions and accepted risks with an owner and review date. If a risk requires legal, privacy, or specialist security advice, escalate it rather than pretending a checklist settles the question.</p>
+<h2 id="a-one-page-review-worksheet">A one-page review worksheet</h2>
+<ol>
+<li><strong>System:</strong> What user task does this feature support?</li>
+<li><strong>Assets:</strong> What data, credentials, money, or availability must be protected?</li>
+<li><strong>Actors:</strong> Which users, services, administrators, and third parties interact with it?</li>
+<li><strong>Flow:</strong> Where does data enter, move, get stored, and leave?</li>
+<li><strong>Boundaries:</strong> Where does trust or privilege change?</li>
+<li><strong>Threats:</strong> What could be spoofed, changed, denied, exposed, disrupted, or over-privileged?</li>
+<li><strong>Controls:</strong> Which preventive, detective, and recovery controls exist?</li>
+<li><strong>Evidence:</strong> What test, log, review, or exercise demonstrates the control works?</li>
+<li><strong>Priorities:</strong> Which issue has the highest plausible impact, and who owns it?</li>
+<li><strong>Review date:</strong> What change should trigger the next update?</li>
+</ol>
+<h2 id="walk-one-feature-through-stride">Walk one feature through STRIDE</h2>
+<p>Take a saved-domain endpoint as a concrete example. For <strong>spoofing</strong>, ask whether a stolen session can impersonate an account. For <strong>tampering</strong>, ask whether an attacker can alter a saved list or submit a different account identifier. For <strong>repudiation</strong>, ask whether an administrator can reconstruct who changed a record. For <strong>information disclosure</strong>, check whether an API response or shared cache reveals another user’s candidates. For <strong>denial of service</strong>, consider oversized batches and repeated provider lookups. For <strong>elevation of privilege</strong>, test whether a standard account can reach an administrative operation.</p>
+<p>The review should identify evidence, not just ideas. Authentication tests can prove a missing session is rejected. Authorization tests can try a second account’s record ID. Rate-limit tests can show that a batch is bounded. A logging review can verify that tokens and private names are redacted. A tabletop exercise can show whether the incident contact is known. If the team cannot demonstrate a control, record it as an assumption and decide whether it needs verification.</p>
+<h2 id="prioritize-and-assign-risk-owners">Prioritize and assign risk owners</h2>
+<p>A simple matrix can categorize impact and likelihood as low, medium, or high, but the labels need definitions. “High likelihood” might mean a public endpoint is routinely exposed to untrusted input, not a claim that a specific attack will happen. “High impact” should describe the actual consequence, such as loss of account access or exposure of private data. Include uncertainty and dependencies in the note.</p>
+<p>Prioritize risks that combine broad exposure with a serious consequence, especially when a simple control is available. A missing server-side ownership check is usually more urgent than a small visual defect. Some risks require a design decision rather than a code patch: for example, whether to store a naming query at all. Assign one person to each follow-up and a date to review accepted risks. A risk without an owner tends to remain a sentence in a document.</p>
+<h2 id="defensive-review-worksheet-for-a-domain-tool">Defensive review worksheet for a domain tool</h2>
+<ul>
+<li>List every public route, API, upload, admin action, and third-party integration.</li>
+<li>Identify which routes use account credentials and which are anonymous.</li>
+<li>Check that provider keys never enter the browser bundle or logs.</li>
+<li>Test cross-account access, invalid input, oversized requests, and repeated submissions.</li>
+<li>Confirm that provider outages return an explicit unknown state.</li>
+<li>Review analytics, error reports, and backups for candidate-domain data.</li>
+<li>Verify who can change DNS, billing, and recovery settings.</li>
+<li>Confirm there is a way to disable a compromised key and restore service.</li>
+</ul>
+<h2 id="distinguish-prevention-detection-and-recovery">Distinguish prevention, detection, and recovery</h2>
+<p>A threat model should include all three control types. Prevention may block a user from reading another account’s saved list. Detection may alert on repeated access denials or an unusual number of lookups. Recovery may revoke a credential, restore a backup, or provide a user notification. Prevention can fail; detection without an owner may be ignored; recovery without tested backups may take too long. Map each high-impact threat to at least one control that can be demonstrated.</p>
+<p>Prioritize security work alongside product changes rather than postponing it until the end. A new file-upload feature changes the attack surface; a new analytics integration changes the data flow; a new admin role changes privilege boundaries. Review those changes in the design stage when they are still inexpensive to adjust, and update the diagram after implementation to reflect what was actually built.</p>
+<h3 id="frequently-asked-questions">Frequently asked questions</h3>
+<p><strong>Do small projects need threat modeling?</strong> Yes, at an appropriate scale. A short diagram and risk discussion can catch exposed secrets or missing authorization before launch.</p>
+<p><strong>Is STRIDE a risk score?</strong> No. It provides categories for considering threats. Teams still need to assess context, impact, likelihood, and available evidence.</p>
+<p><strong>Does HTTPS prevent all web attacks?</strong> No. It protects a network connection against some threats, but it does not fix authorization, unsafe code, compromised accounts, or malicious content.</p>
+<p><strong>Should every risk be eliminated?</strong> Not always possible. Prioritize, mitigate, transfer, or formally accept risks based on impact, obligations, and resources, then review the decision.</p>
+<p><strong>When should I revisit the model?</strong> When data flows, user roles, integrations, deployment, or business consequences change—and after a security incident.</p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Threat modeling makes security questions concrete before code is released. Map assets and data flows, mark trust boundaries, use STRIDE or another framework to prompt discussion, and assign controls that can be tested. Keep the model proportional and current. A brief, honest review that leads to a specific fix is more valuable than a large checklist that nobody owns.</p></div>
+      </article>
+      <aside class="article-sidebar" aria-label="Related guides"><h2>Related guides</h2><a href="/blog/blog-31.html">Building Trust on a Domain Tools Website</a><a href="/blog/blog-32.html">How to Build a Long-Term Domain Knowledge Website</a><hr><a href="/blog/index.html">All published articles</a><a href="/tools/domain-generator.html">Domain name generator</a><a href="/pages/disclaimer.html">Editorial disclaimer</a></aside>
+    </div>
+    <section class="container section-tight" data-publish-guard-cta hidden><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+  </footer>
+</body>
+</html>
