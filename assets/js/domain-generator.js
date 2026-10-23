@@ -3,7 +3,7 @@
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const LENGTHS = [2, 3, 4, 5, 6];
+  const LENGTHS = [2, 3, 4, 5, 6, 7];
   const MAX_RESULTS = 2000;
   let allGeneratedDomains = [];
   let displayedDomains = [];
@@ -82,6 +82,24 @@
     return null;
   }
 
+  function synthesizeLongPartnerWord(targetLength, seenWords) {
+    for (let attempts = 0; attempts < 500; attempts += 1) {
+      let candidate = '';
+      while (candidate.length < targetLength) {
+        const onset = ONSETS[Math.floor(Math.random() * ONSETS.length)];
+        const vowel = NUCLEI[Math.floor(Math.random() * NUCLEI.length)];
+        const coda = CODAS[Math.floor(Math.random() * CODAS.length)];
+        candidate += `${onset}${vowel}${coda}`;
+      }
+      candidate = candidate.slice(0, targetLength);
+      if (candidate.length === targetLength && !seenWords.has(candidate)) {
+        seenWords.add(candidate);
+        return candidate;
+      }
+    }
+    return null;
+  }
+
   function selectedLengths() {
     return Array.from(document.querySelectorAll('.len-checkbox:checked'), (checkbox) => Number(checkbox.value));
   }
@@ -135,37 +153,44 @@
       badge.querySelector('.icon-box').textContent = checkbox.checked ? '✓' : '□';
     });
 
+    const describeLength = (length) => length === 7 ? '7+ letters' : `${length} letters`;
     const description = allSelected
-      ? 'Filter: all lengths (2–6 letters)'
-      : `Filter: ${selected.slice().sort((a, b) => a - b).map((length) => `${length} letters`).join(', ')}`;
+      ? 'Filter: all partner word lengths (2+ letters)'
+      : `Filter: ${selected.slice().sort((a, b) => a - b).map(describeLength).join(', ')}`;
     $('activeLengthDesc').textContent = description;
+  }
+
+  function candidatesForLength(source, length) {
+    if (length !== 7) return source[length] || [];
+    return [...Object.values(source).flat(), ...LONG_PARTNER_WORDS];
+  }
+
+  function matchesSelectedLength(word, length) {
+    return length === 7 ? word.length >= 7 : word.length === length;
   }
 
   function buildWordPool(lengths, neededWords, isStrict) {
     const pool = [];
     const seen = new Set();
-    lengths.forEach((length) => {
-      (VERIFIED_DICTIONARY[length] || []).forEach((word) => {
-        if (word.length === length && !seen.has(word)) {
+    const addCandidates = (source, length) => {
+      candidatesForLength(source, length).forEach((word) => {
+        if (matchesSelectedLength(word, length) && !seen.has(word)) {
           seen.add(word);
           pool.push(word);
         }
       });
-    });
+    };
+
+    lengths.forEach((length) => addCandidates(VERIFIED_DICTIONARY, length));
 
     if (!isStrict) {
-      lengths.forEach((length) => {
-        (CREATIVE_BRANDABLES[length] || []).forEach((word) => {
-          if (word.length === length && !seen.has(word)) {
-            seen.add(word);
-            pool.push(word);
-          }
-        });
-      });
+      lengths.forEach((length) => addCandidates(CREATIVE_BRANDABLES, length));
       let misses = 0;
       while (pool.length < neededWords && misses < 100) {
         const length = lengths[Math.floor(Math.random() * lengths.length)];
-        const word = synthesizeBrandableWord(length, seen);
+        const word = length === 7
+          ? synthesizeLongPartnerWord(7 + Math.floor(Math.random() * 4), seen)
+          : synthesizeBrandableWord(length, seen);
         if (word) pool.push(word);
         else misses += 1;
       }
@@ -304,18 +329,19 @@
       name.textContent = `${index + 1}. ${item.domain}`;
       const meta = document.createElement('span');
       meta.className = 'domain-card-meta';
-      const partnerLength = Math.max(2, Math.floor(Number(item.length) || 2));
+      const partnerLength = Math.max(2, Math.floor(Number(item.length) || String(item.partnerPart || '').length || 2));
       const labelLength = String(item.rawCombo || item.domain.split('.')[0] || '').length;
-      const lengthTier = labelLength >= 6 ? 6 : Math.max(2, labelLength);
-      card.title = `Copy ${item.domain}; domain label: ${labelLength} characters excluding the extension; matching partner word: ${partnerLength} letters.`;
-      card.setAttribute('aria-label', `Copy ${item.domain}; domain label has ${labelLength} characters before the extension; matching partner word has ${partnerLength} letters`);
-      const lengthLabel = lengthTier === 6 ? '6L+' : `${lengthTier}L`;
+      const rootLength = String(item.rootPart || '').length;
+      const lengthTier = partnerLength >= 6 ? 6 : partnerLength;
+      card.title = `Copy ${item.domain}. Partner word: ${partnerLength} letters. Total domain label: ${labelLength} characters (root keyword ${rootLength} + partner word ${partnerLength}); extension excluded.`;
+      card.setAttribute('aria-label', `Copy ${item.domain}; partner word has ${partnerLength} letters; total domain label has ${labelLength} characters, excluding the extension`);
+      const lengthLabel = lengthTier === 6 ? '6L+' : `${partnerLength}L`;
       const length = document.createElement('span');
       length.className = `length-pill length-pill--${lengthTier}`;
       length.dataset.labelLength = String(labelLength);
       length.dataset.partnerLength = String(partnerLength);
-      length.title = `${labelLength} characters in the domain label, excluding the extension; matching partner word: ${partnerLength} letters.`;
-      length.setAttribute('aria-label', `${lengthLabel} domain label; ${labelLength} characters before the extension; matching partner word has ${partnerLength} letters`);
+      length.title = `Partner word: ${partnerLength} letters. Total domain label: ${labelLength} characters (root keyword ${rootLength} + partner word ${partnerLength}); extension excluded.`;
+      length.setAttribute('aria-label', `${lengthLabel} partner word; ${partnerLength} letters. Total domain label: ${labelLength} characters, excluding the extension`);
       const lengthIcon = document.createElement('span');
       lengthIcon.className = 'length-pill-icon';
       lengthIcon.setAttribute('aria-hidden', 'true');

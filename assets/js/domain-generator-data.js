@@ -133,6 +133,22 @@ const CREATIVE_BRANDABLES = {
   6: ['nexora', 'veltra', 'zylent', 'fluxis', 'kivora', 'dynexi', 'voltra', 'quante']
 };
 
+/* Supplemental 7+ partner words; the existing 2–6 letter lists above stay unchanged. */
+const LONG_PARTNER_WORDS = [
+  'account', 'advance', 'advisor', 'airflow', 'amplify', 'archive', 'artisan', 'awesome', 'balance', 'banking',
+  'benefit', 'blossom', 'booking', 'branding', 'builder', 'business', 'catalyst', 'central', 'channel', 'clarity',
+  'climate', 'compass', 'connect', 'creator', 'culture', 'current', 'digital', 'discover', 'durable', 'dynamic',
+  'elegant', 'elevate', 'empower', 'enhance', 'explore', 'factory', 'feature', 'finance', 'fitness', 'flourish',
+  'focused', 'forward', 'founder', 'freedom', 'frontier', 'gateway', 'genesis', 'harmony', 'harvest', 'healthy',
+  'helpful', 'horizon', 'imagine', 'improve', 'insight', 'journey', 'lantern', 'launchpad', 'leading', 'luminous',
+  'message', 'mindful', 'mission', 'monitor', 'morning', 'network', 'optimize', 'organic', 'outline', 'partner',
+  'payment', 'pioneer', 'platform', 'premium', 'progress', 'project', 'quantum', 'quality', 'radiant', 'reliable',
+  'resolve', 'resource', 'revenue', 'service', 'sparkle', 'special', 'storage', 'strategy', 'success', 'support',
+  'synergy', 'tailored', 'thriving', 'together', 'toolbox', 'transit', 'trusted', 'venture', 'vibrant', 'victory',
+  'village', 'wellness', 'workflow', 'blueprint', 'creative', 'evergreen', 'framework', 'greenfield', 'northstar',
+  'marketplace', 'lighthouse', 'wildflower', 'resilient', 'engineering', 'possibility', 'imagination', 'technology'
+];
+
 const CATEGORY_KEYWORDS = {
   fintech: ['pay', 'cash', 'coin', 'money', 'bank', 'fund', 'wallet', 'crypto', 'lend', 'loan', 'card', 'save', 'vest', 'earn', 'bill', 'tax', 'cost', 'trade', 'settle', 'wealth'],
   tech_ai: ['ai', 'data', 'cloud', 'code', 'dev', 'doc', 'host', 'server', 'byte', 'bot', 'deep', 'intel', 'algo', 'net', 'stack', 'mesh', 'sys', 'query', 'model', 'agent'],

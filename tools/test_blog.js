@@ -8,6 +8,12 @@ const vm = require('node:vm');
 const ROOT = path.resolve(__dirname, '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/js/blog.js'), 'utf8');
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'blog/blog-config.json'), 'utf8'));
+const generatorSource = fs.readFileSync(path.join(ROOT, 'assets/js/domain-generator.js'), 'utf8');
+const generatorHtml = fs.readFileSync(path.join(ROOT, 'tools/domain-generator.html'), 'utf8');
+const domainDataSource = fs.readFileSync(path.join(ROOT, 'assets/js/domain-generator-data.js'), 'utf8');
+const domainDataContext = {};
+vm.runInNewContext(`${domainDataSource}\nglobalThis.__longPartnerWords = LONG_PARTNER_WORDS;`, domainDataContext);
+const longPartnerWords = domainDataContext.__longPartnerWords;
 
 class FakeElement {
   constructor(tagName = 'div') {
@@ -105,6 +111,15 @@ async function runPublishGuard(configData, post) {
 }
 
 (async () => {
+  assert.match(generatorHtml, /id="len7" value="7"[^>]*><span[^>]*>.*?7\+ letters/s);
+  assert.match(generatorSource, /const LENGTHS = \[2, 3, 4, 5, 6, 7\]/);
+  assert.match(generatorSource, /length === 7 \? word\.length >= 7 : word\.length === length/);
+  assert.match(generatorSource, /const lengthTier = partnerLength >= 6 \? 6 : partnerLength/);
+  assert.match(generatorSource, /Partner word: \$\{partnerLength\} letters\. Total domain label: \$\{labelLength\} characters/);
+  assert.ok(longPartnerWords.length >= 80, 'the 7+ filter should have a useful supplemental partner-word pool');
+  assert.ok(longPartnerWords.every((word) => word.length >= 7), 'every supplemental partner word must be at least seven letters');
+  assert.equal(new Set(longPartnerWords).size, longPartnerWords.length, 'supplemental partner words should not be duplicated');
+
   const normal = JSON.parse(JSON.stringify(config));
   const base = await render(normal);
   assert.equal(base.grid.children.length, 9, 'default archive page should contain nine live posts');
@@ -147,7 +162,7 @@ async function runPublishGuard(configData, post) {
   assert.equal(livePage.notice.hidden, true);
   assert.equal(livePage.cta.hidden, false);
   assert.equal(livePage.robots.content, 'index,follow,max-image-preview:large');
-  console.log('PASS: published-only rendering, 9-card pagination, category visibility, article gate, SEO state, and strict booleans.');
+  console.log('PASS: 7+ partner-word filter and vocabulary, partner-length badges, total-label tooltip, published-only rendering, pagination, categories, and article gates.');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

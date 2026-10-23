@@ -39,7 +39,7 @@ The header and footer are embedded in each static page so navigation works witho
 
 ## Length badges
 
-Generated result cards show a colored badge for the complete domain label length, excluding its extension: **2L amber/gold**, **3L violet**, **4L emerald/cyan**, **5L slate**, and **6L+ indigo**. A small decorative icon and accessible label accompany each badge; its tooltip also distinguishes the matching-word length used by the generator filter. The badge is a character-count label only; it does not assess rarity, market value, availability, or trademark status.
+Generated result cards show a colored badge for the **partner word length only**, excluding the user-entered root keyword: **2L amber/gold**, **3L violet**, **4L emerald/cyan**, **5L slate**, and **6L+ indigo**. The partner-word filter includes a **7+ letters** option (seven or more); the original 2–6 length lists and exact-match filters are unchanged. Each badge has an accessible label and tooltip that identify the partner-word length and the total domain-label character count, including the root keyword but excluding the extension. These counts do not assess rarity, market value, availability, or trademark status.
 
 ## Blog publishing controller
 

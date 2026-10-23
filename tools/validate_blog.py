@@ -165,23 +165,31 @@ def main() -> int:
     if "fetch('./blog-config.json'" not in blog_js or "post.published === true" not in blog_js:
         fail("blog.js must fetch blog-config.json and strictly filter published === true")
     generator_js = (ROOT / "assets/js/domain-generator.js").read_text(encoding="utf-8")
+    generator_html = (ROOT / "tools/domain-generator.html").read_text(encoding="utf-8")
+    generator_data = (ROOT / "assets/js/domain-generator-data.js").read_text(encoding="utf-8")
+    css = (ROOT / "assets/css/style.css").read_text(encoding="utf-8")
     for tier in (2, 3, 4, 5, 6):
-        css = (ROOT / "assets/css/style.css").read_text(encoding="utf-8")
         if f".length-pill--{tier}" not in css:
-            fail(f"missing visual style for length badge tier {tier}")
+            fail(f"missing visual style for partner-word length tier {tier}")
     if "length-pill length-pill--${lengthTier}" not in generator_js or "6L+'" not in generator_js:
-        fail("generator does not render dynamic length-tier badges")
-    if "domain label has ${labelLength} characters before the extension; matching partner word has ${partnerLength} letters" not in generator_js:
-        fail("generator result accessible name must announce label and matching-word lengths")
-    if "matching partner word: ${partnerLength} letters." not in generator_js:
-        fail("generator result tooltip must explain the matching-word length")
+        fail("generator does not render dynamic partner-word length badges")
+    if "const lengthTier = partnerLength >= 6 ? 6 : partnerLength;" not in generator_js:
+        fail("badge color tier must use partner-word length, not total domain-label length")
+    if "Total domain label: ${labelLength} characters" not in generator_js:
+        fail("generator tooltip must show the total domain-label character count")
+    if "id=\"len7\" value=\"7\"" not in generator_html or "7+ letters" not in generator_html:
+        fail("generator is missing the 7+ partner-word length filter")
+    if "const LENGTHS = [2, 3, 4, 5, 6, 7];" not in generator_js or "word.length >= 7" not in generator_js:
+        fail("generator must support filtering partner words with seven or more letters")
+    if "const LONG_PARTNER_WORDS = [" not in generator_data:
+        fail("7+ partner-word filter needs a supplemental word pool")
     archive = (ROOT / "blog/index.html").read_text(encoding="utf-8")
     if 'data-blog-pagination' not in archive or 'data-blog-category' not in archive:
         fail("blog archive is missing pagination or category filter")
 
     print(f"PASS: {len(posts)} config records ({sum(bool(p['published']) for p in posts)} published), {len(drafts)} complete Day 31–50 drafts.")
     print("PASS: article word counts, publication gates, JSON-LD, local links, images, categories, and sitemap status.")
-    print("PASS: strict published-only archive loading and all five colored domain-length tiers.")
+    print("PASS: strict published-only archive loading, partner-word length badges, total-label tooltips, and the 7+ filter.")
     return 0
 
 
