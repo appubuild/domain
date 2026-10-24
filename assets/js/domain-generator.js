@@ -6,6 +6,7 @@
   const LENGTHS = [2, 3, 4, 5, 6, 7];
   const MAX_RESULTS = 2000;
   const controlsMode = window.DOMAINFITS_SITE_CONFIG?.generatorControlsMode === 'accordion' ? 'accordion' : 'drawer';
+  let drawerViewportMode = null;
   let allGeneratedDomains = [];
   let displayedDomains = [];
   let toastTimer;
@@ -214,6 +215,7 @@
   }
 
   function openSettingsDrawer() {
+    if (drawerViewportMode !== true) return;
     const panel = $('generator');
     panel.classList.add('is-open');
     panel.setAttribute('aria-hidden', 'false');
@@ -246,6 +248,48 @@
     if (restoreFocus) $('generatorSettingsFab').focus();
   }
 
+  function isNarrowViewport() {
+    if (typeof window.matchMedia === 'function') {
+      return window.matchMedia('(max-width: 740px)').matches;
+    }
+    const width = Number(window.innerWidth);
+    return Number.isFinite(width) ? width <= 740 : true;
+  }
+
+  function syncDrawerViewport() {
+    if (controlsMode !== 'drawer') return;
+    const panel = $('generator');
+    const useMobileDrawer = isNarrowViewport();
+    if (drawerViewportMode === useMobileDrawer) return;
+
+    const fab = $('generatorSettingsFab');
+    const focusWasOnFab = document.activeElement === fab;
+    const focusWasInPanel = typeof panel.contains === 'function' && panel.contains(document.activeElement);
+    if (panel.classList.contains('is-open')) closeSettingsDrawer({ restoreFocus: false });
+    drawerViewportMode = useMobileDrawer;
+    const accordionToggle = $('generatorSettingsAccordionToggle');
+    accordionToggle.hidden = true;
+    if (useMobileDrawer) {
+      fab.hidden = false;
+      closeSettingsDrawer({ restoreFocus: false });
+      if (focusWasInPanel) fab.focus();
+      return;
+    }
+
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden', 'false');
+    panel.removeAttribute('aria-modal');
+    panel.removeAttribute('role');
+    panel.removeAttribute('aria-labelledby');
+    setPanelInert(panel, false);
+    $('settingsBackdrop').hidden = true;
+    fab.hidden = true;
+    fab.setAttribute('aria-expanded', 'false');
+    fab.setAttribute('aria-label', 'Open generation settings');
+    document.body?.classList.remove('generator-drawer-open');
+    if (focusWasInPanel || focusWasOnFab) $('rootInput').focus();
+  }
+
   function setupControlsExperience() {
     const main = $('main-content');
     const panel = $('generator');
@@ -259,12 +303,16 @@
       setPanelInert(panel, false);
       $('settingsBackdrop').hidden = true;
       $('generatorSettingsFab').hidden = true;
+      $('generatorSettingsAccordionToggle').hidden = false;
       setAccordionExpanded(true);
+      drawerViewportMode = false;
       return;
     }
 
     $('generatorSettingsAccordionToggle').hidden = true;
-    closeSettingsDrawer({ restoreFocus: false });
+    syncDrawerViewport();
+    window.addEventListener('resize', syncDrawerViewport, { passive: true });
+    window.addEventListener('orientationchange', syncDrawerViewport, { passive: true });
   }
 
   function updateExportCount() {
@@ -284,10 +332,11 @@
   }
 
   function generateFromSettings() {
-    if (controlsMode === 'drawer') closeSettingsDrawer({ restoreFocus: false });
+    const generatedFromDrawer = controlsMode === 'drawer' && drawerViewportMode === true;
+    if (generatedFromDrawer) closeSettingsDrawer({ restoreFocus: false });
     closeExportMenu();
     runGeneration(true);
-    if (controlsMode === 'drawer') {
+    if (generatedFromDrawer) {
       const results = $('generatedResults');
       results.focus({ preventScroll: true });
       results.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -754,7 +803,7 @@
     $('exportCsvBtn').addEventListener('click', exportCsv);
     $('exportCsvMobileBtn').addEventListener('click', () => { closeExportMenu(); exportCsv(); });
     window.addEventListener('keydown', (event) => {
-      const drawerOpen = controlsMode === 'drawer' && $('generator').classList.contains('is-open');
+      const drawerOpen = drawerViewportMode === true && $('generator').classList.contains('is-open');
       if (event.key === 'Escape') {
         if (drawerOpen) closeSettingsDrawer();
         closeExportMenu();

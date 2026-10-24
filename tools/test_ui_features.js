@@ -152,6 +152,7 @@ function runAdManager({ native = false, config, gated = false } = {}) {
   assert.match(generatorSource, /results\.scrollIntoView/);
   assert.match(generatorSource, /mobileBtnCountBadge/);
   assert.match(styleSource, /\.generator-main\[data-controls-mode="drawer"\] \.generator-panel\.is-open/);
+  assert.match(styleSource, /@media \(max-width: 740px\)[\s\S]*?\.generator-main\[data-controls-mode="drawer"\] \.generator-panel \{ position: fixed/);
   assert.match(styleSource, /@media \(max-width: 740px\)[\s\S]*?\.export-speed-dial/);
   assert.match(styleSource, /@media \(max-width: 520px\)[\s\S]*?\.domain-grid \{ grid-template-columns: repeat\(2/);
 

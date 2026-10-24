@@ -27,7 +27,7 @@ window.DOMAINFITS_SITE_CONFIG = Object.freeze({
 });
 ```
 
-- `drawer` (বর্তমান ডিফল্ট): নিচের বাম পাশের Settings FAB থেকে সেটিংস Drawer/Bottom Sheet খোলে। Drawer-এর ভেতরে রুট keyword, niche, result count, extension, Curated/Brandable toggle, partner-length filter, placement এবং capitalization সেট করা যায়। **Generate ideas** চাপলে Drawer বন্ধ হয় এবং ফলাফল অংশে স্ক্রল করে।
+- `drawer` (বর্তমান ডিফল্ট): মোবাইলে নিচের বাম পাশের Settings FAB থেকে Drawer/Bottom Sheet খোলে। এতে রুট keyword, niche, result count, extension, Curated/Brandable toggle, partner-length filter, placement এবং capitalization সেট করা যায়। **Generate ideas** চাপলে Drawer বন্ধ হয় এবং ফলাফল অংশে স্ক্রল করে। ডেস্কটপে আগের inline controls panel দেখানো হয়—সেখানে FAB বা modal drawer থাকে না।
 - `accordion`: সেটিংস প্যানেল পেজের ওপরের দিকে থাকে; “Generation settings” বোতামে ট্যাপ করে মসৃণভাবে খুলুন/বন্ধ করুন।
 
 মোড বদলাতে শুধু `assets/js/site-config.js`-এর মান বদলে সাইট পুনরায় deploy করুন। Generator-এর বর্তমান word list, filters এবং Brandable Mode-এর default-off আচরণ অপরিবর্তিত থাকে।

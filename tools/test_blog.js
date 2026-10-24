@@ -153,7 +153,7 @@ function listFiles(directory) {
   });
 }
 
-function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', placement = 'both', strict = true, brandable = false, controlMode = 'drawer' } = {}) {
+function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', placement = 'both', strict = true, brandable = false, controlMode = 'drawer', viewportWidth = 390 } = {}) {
   const ids = new Map();
   for (const [, id] of generatorHtml.matchAll(/\bid="([^"]+)"/g)) {
     if (!ids.has(id)) ids.set(id, new FakeElement('input'));
@@ -199,6 +199,8 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   };
   const window = {
     listeners: {},
+    innerWidth: viewportWidth,
+    matchMedia() { return { matches: this.innerWidth <= 740 }; },
     DOMAINFITS_SITE_CONFIG: { generatorControlsMode: controlMode },
     addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
     dispatch(type) { for (const callback of this.listeners[type] || []) callback({ type }); },
@@ -266,7 +268,7 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   }
   assert.match(generatorHtml, /id="brandableModeToggle"(?![^>]*checked)[^>]*>/, 'Brandable Mode must default off');
   assert.match(generatorHtml, /domain-generator-data\.js\?v=20261024-1/);
-  assert.match(generatorHtml, /domain-generator\.js\?v=20261024-2/);
+  assert.match(generatorHtml, /domain-generator\.js\?v=20261024-3/);
   assert.match(generatorHtml, /class="mode-switches"/);
   assert.match(generatorCss, /\.mode-switches \{ display: grid/);
   assert.match(generatorCss, /@media \(max-width: 520px\)[\s\S]*?\.mode-switches \{ grid-template-columns: 1fr/);
@@ -329,6 +331,24 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   assert.equal(drawerCase.elements.get('btnCountBadge').textContent, String(drawerCase.grid.children.length));
   assert.equal(drawerCase.elements.get('mobileBtnCountBadge').textContent, String(drawerCase.grid.children.length));
 
+  const desktopCase = runGenerator({ controlMode: 'drawer', viewportWidth: 1280 });
+  assert.equal(desktopCase.elements.get('generator').getAttribute('aria-hidden'), 'false', 'desktop keeps the original inline settings panel visible');
+  assert.equal(desktopCase.elements.get('generator').inert, false, 'desktop settings remain interactive');
+  assert.equal(desktopCase.elements.get('generatorSettingsFab').hidden, true, 'the mobile settings FAB is hidden on desktop');
+  assert.equal(desktopCase.elements.get('settingsBackdrop').hidden, true, 'desktop does not open a modal backdrop');
+  desktopCase.elements.get('generateBtn').click();
+  assert.equal(desktopCase.elements.get('generatedResults').scrolledIntoView, undefined, 'desktop generation keeps the original page flow');
+  desktopCase.window.innerWidth = 390;
+  desktopCase.window.dispatch('resize');
+  assert.equal(desktopCase.elements.get('generator').getAttribute('aria-hidden'), 'true', 'resizing to mobile activates the closed drawer state');
+  assert.equal(desktopCase.elements.get('generatorSettingsFab').hidden, false);
+  desktopCase.elements.get('generatorSettingsFab').click();
+  desktopCase.window.innerWidth = 1280;
+  desktopCase.window.dispatch('resize');
+  assert.equal(desktopCase.elements.get('generator').getAttribute('aria-hidden'), 'false', 'resizing back to desktop restores inline controls');
+  assert.equal(desktopCase.elements.get('generator').inert, false);
+  assert.equal(desktopCase.elements.get('generatorSettingsFab').hidden, true);
+
   const accordionCase = runGenerator({ controlMode: 'accordion' });
   assert.equal(accordionCase.elements.get('main-content').dataset.controlsMode, 'accordion');
   assert.equal(accordionCase.elements.get('generator').getAttribute('aria-hidden'), 'false');
@@ -382,7 +402,7 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   assert.equal(livePage.notice.hidden, true);
   assert.equal(livePage.cta.hidden, false);
   assert.equal(livePage.robots.content, 'index,follow,max-image-preview:large');
-  console.log('PASS: niche pools, Brandable Mode suffixes/word length/tooltips, 7+ filtering, published-only blog rendering, pagination, and article gates.');
+  console.log('PASS: niche pools, word-length filters/tooltips, published-only blog rendering, pagination, and responsive drawer/accordion controls.');
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;
