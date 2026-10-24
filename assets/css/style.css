@@ -1,4 +1,4 @@
-/* DomainCraft — small, dependency-free design system */
+/* DomainFits — small, dependency-free design system */
 :root {
   color-scheme: light;
   --bg: #f7f8fc;
@@ -303,6 +303,12 @@ main { display: block; }
 .strict-copy strong { display: block; font-size: .92rem; }
 .strict-copy p { margin: 3px 0 0; color: var(--muted); font-size: .82rem; }
 .mode-badge { display: inline-flex; margin-left: 6px; padding: 3px 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent), transparent 88%); color: var(--accent); font-size: .69rem; vertical-align: 2px; }
+.brandable-mode-panel { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 14px; margin: 18px 0; padding: 13px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); transition: border-color .18s, background .18s; }
+.brandable-mode-panel .inline-check { min-height: 30px; color: var(--text); }
+.brandable-mode-panel .inline-check strong { font-weight: 850; }
+.brandable-mode-panel > p { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .82rem; }
+.brandable-mode-panel.is-active { border-color: var(--primary); background: var(--primary-soft); }
+.brandable-mode-panel .mode-badge { margin-left: 0; }
 .switch { position: relative; display: inline-flex; width: 48px; height: 27px; flex: 0 0 auto; cursor: pointer; }
 .switch input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .switch-track { position: absolute; inset: 0; border-radius: 999px; background: #9da5b7; transition: background .2s; }

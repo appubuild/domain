@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Passkeys Explained: How Passwordless Authentication Works for Modern Websites | DomainCraft
+- **SEO title:** Passkeys Explained: How Passwordless Authentication Works for Modern Websites | DomainFits
 - **H1:** Passkeys Explained: How Passwordless Authentication Works for Modern Websites
 - **Slug:** `passkeys-passwordless-authentication`
 - **Static article file:** [`blog-48.html`](../blog-48.html) — remains hidden until `published: true`.

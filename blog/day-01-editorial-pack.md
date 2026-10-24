@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** What Is a Domain Name? A Beginner’s Guide | DomainCraft
+- **SEO title:** What Is a Domain Name? A Beginner’s Guide | DomainFits
 - **H1:** What Is a Domain Name? A Complete Beginner’s Guide to How Domains Work
 - **Suggested slug:** `what-is-a-domain-name`
 - **Published URL in this project:** `/blog/blog-03.html`
@@ -21,11 +21,11 @@
 - **Target word range:** 1,800–2,400 words
 - **Publication date:** October 23, 2026
 - **First-hand material supplied:** None
-- **Website/tool integration:** DomainCraft generator; it creates naming ideas only and is not an availability checker. The article links to `/tools/domain-generator.html` without implying that the tool checks registrations.
+- **Website/tool integration:** DomainFits generator; it creates naming ideas only and is not an availability checker. The article links to `/tools/domain-generator.html` without implying that the tool checks registrations.
 
 ## C. Complete article
 
-The complete Markdown article draft is [`day-01-article.md`](./day-01-article.md). Its static-site rendering is integrated in the archive at [`blog-03.html`](./blog-03.html), including the URL-parts comparison table, step-by-step DNS explanation, launch checklist, FAQ, original DNS SVG, and links to related DomainCraft resources. The HTML page includes BlogPosting and breadcrumb/navigation structured data. The current HTML article body is approximately 2,130 words; re-count after substantive editing.
+The complete Markdown article draft is [`day-01-article.md`](./day-01-article.md). Its static-site rendering is integrated in the archive at [`blog-03.html`](./blog-03.html), including the URL-parts comparison table, step-by-step DNS explanation, launch checklist, FAQ, original DNS SVG, and links to related DomainFits resources. The HTML page includes BlogPosting and breadcrumb/navigation structured data. The current HTML article body is approximately 2,130 words; re-count after substantive editing.
 
 ## D. Visual production plan
 

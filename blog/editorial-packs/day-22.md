@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Generate Better Domain Names Using Keywords, Naming Patterns and Brand Tests | DomainCraft
+- **SEO title:** How to Generate Better Domain Names Using Keywords, Naming Patterns and Brand Tests | DomainFits
 - **H1:** How to Generate Better Domain Names Using Keywords, Naming Patterns and Brand Tests
 - **Slug:** `generate-better-domain-names`
 - **Published URL:** `/blog/blog-24.html`
@@ -39,7 +39,7 @@
 
 - Previous series article: [`How to Create a Domain for Sale Landing Page That Helps Buyers Make Decisions`](../blog-23.html).
 - Next series article: [`How to Check Domain Availability in Bulk: Methods, Limits and Verification`](../blog-25.html).
-- Existing tool: [`DomainCraft generator`](../../tools/domain-generator.html), which does not verify availability.
+- Existing tool: [`DomainFits generator`](../../tools/domain-generator.html), which does not verify availability.
 - Link to the archive when readers need the wider series: [`All articles`](../index.html).
 
 ## F. Sources

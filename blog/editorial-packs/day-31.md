@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites | DomainCraft
+- **SEO title:** The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites | DomainFits
 - **H1:** The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites
 - **Slug:** `agentic-web-explained`
 - **Static article file:** [`blog-33.html`](../blog-33.html) — remains hidden until `published: true`.

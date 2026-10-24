@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience | DomainCraft
+- **SEO title:** Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience | DomainFits
 - **H1:** Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience
 - **Slug:** `trust-domain-tools-website`
 - **Published URL:** `/blog/blog-31.html`

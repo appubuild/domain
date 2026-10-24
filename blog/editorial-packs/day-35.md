@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** AI Coding Agents and Modern Web Development: From Prompt to Tested Application | DomainCraft
+- **SEO title:** AI Coding Agents and Modern Web Development: From Prompt to Tested Application | DomainFits
 - **H1:** AI Coding Agents and Modern Web Development: From Prompt to Tested Application
 - **Slug:** `ai-coding-agents-web-development`
 - **Static article file:** [`blog-37.html`](../blog-37.html) — remains hidden until `published: true`.

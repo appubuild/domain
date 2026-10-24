@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How DNS Works: From Typing a Domain Name to Loading a Website | DomainCraft
+- **SEO title:** How DNS Works: From Typing a Domain Name to Loading a Website | DomainFits
 - **H1:** How DNS Works: From Typing a Domain Name to Loading a Website
 - **Slug:** `how-dns-works`
 - **Published URL:** `/blog/blog-04.html`

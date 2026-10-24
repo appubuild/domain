@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** From Domain to Live Website: A Step-by-Step Deployment and Maintenance Guide | DomainCraft
+- **SEO title:** From Domain to Live Website: A Step-by-Step Deployment and Maintenance Guide | DomainFits
 - **H1:** From Domain to Live Website: A Step-by-Step Deployment and Maintenance Guide
 - **Slug:** `domain-to-live-website`
 - **Published URL:** `/blog/blog-30.html`

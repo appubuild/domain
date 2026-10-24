@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Website Observability Explained: Logs, Metrics, Traces and Error Monitoring | DomainCraft
+- **SEO title:** Website Observability Explained: Logs, Metrics, Traces and Error Monitoring | DomainFits
 - **H1:** Website Observability Explained: Logs, Metrics, Traces and Error Monitoring
 - **Slug:** `website-observability-logs-metrics-traces`
 - **Static article file:** [`blog-42.html`](../blog-42.html) — remains hidden until `published: true`.

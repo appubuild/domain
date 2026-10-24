@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed | DomainCraft
+- **SEO title:** Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed | DomainFits
 - **H1:** Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed
 - **Slug:** `docker-containers-web-applications`
 - **Static article file:** [`blog-40.html`](../blog-40.html) — remains hidden until `published: true`.

@@ -150,7 +150,11 @@ const LONG_PARTNER_WORDS = [
 ];
 
 const CATEGORY_KEYWORDS = {
-  fintech: ['pay', 'cash', 'coin', 'money', 'bank', 'fund', 'wallet', 'crypto', 'lend', 'loan', 'card', 'save', 'vest', 'earn', 'bill', 'tax', 'cost', 'trade', 'settle', 'wealth'],
-  tech_ai: ['ai', 'data', 'cloud', 'code', 'dev', 'doc', 'host', 'server', 'byte', 'bot', 'deep', 'intel', 'algo', 'net', 'stack', 'mesh', 'sys', 'query', 'model', 'agent'],
-  saas_action: ['work', 'task', 'flow', 'team', 'lead', 'run', 'grow', 'jump', 'dash', 'lift', 'sync', 'track', 'form', 'desk', 'hire', 'meet', 'crm', 'collab']
+  fintech: ['pay', 'cash', 'coin', 'money', 'bank', 'fund', 'wallet', 'crypto', 'bitcoin', 'chain', 'token', 'lend', 'loan', 'card', 'save', 'vest', 'earn', 'bill', 'tax', 'cost', 'trade', 'settle', 'wealth'],
+  ecommerce: ['shop', 'cart', 'retail', 'store', 'sell', 'market', 'order', 'checkout', 'merchant', 'catalog', 'commerce', 'delivery'],
+  health_bio: ['health', 'bio', 'medical', 'medicine', 'clinic', 'care', 'wellness', 'gene', 'genetic', 'cell', 'therapy', 'fitness', 'vitality'],
+  creative_media: ['creative', 'media', 'design', 'art', 'film', 'music', 'story', 'photo', 'video', 'studio', 'canvas', 'motion'],
+  tech_ai: ['ai', 'tech', 'data', 'cloud', 'code', 'dev', 'doc', 'host', 'server', 'byte', 'bot', 'deep', 'intel', 'algo', 'net', 'stack', 'mesh', 'sys', 'query', 'model', 'agent', 'robot', 'software'],
+  saas_action: ['work', 'task', 'flow', 'team', 'lead', 'run', 'grow', 'jump', 'dash', 'lift', 'sync', 'track', 'form', 'desk', 'hire', 'meet', 'crm', 'collab', 'productivity'],
+  minimal_short: ['mini', 'short', 'tiny', 'micro', 'nano', 'compact']
 };

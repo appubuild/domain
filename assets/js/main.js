@@ -1,7 +1,7 @@
 /* Shared interactions: accessible navigation, theme preference, contact form. */
 (() => {
   const root = document.documentElement;
-  const themeStorageKey = 'domaincraft-theme';
+  const themeStorageKey = 'domainfits-theme';
 
   function readSavedTheme() {
     try {
@@ -30,6 +30,7 @@
         // Do not block theme switching when storage is unavailable.
       }
     }
+    window.dispatchEvent(new CustomEvent('domainfits:themechange', { detail: { theme } }));
   }
 
   setTheme(readSavedTheme());

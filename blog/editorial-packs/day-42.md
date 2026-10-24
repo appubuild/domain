@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** API Rate Limiting, Caching and Retries: Building Reliable Search Tools | DomainCraft
+- **SEO title:** API Rate Limiting, Caching and Retries: Building Reliable Search Tools | DomainFits
 - **H1:** API Rate Limiting, Caching and Retries: Building Reliable Search Tools
 - **Slug:** `api-rate-limiting-caching-retries`
 - **Static article file:** [`blog-44.html`](../blog-44.html) — remains hidden until `published: true`.

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs | DomainCraft
+- **SEO title:** Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs | DomainFits
 - **H1:** Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs
 - **Slug:** `serverless-computing-explained`
 - **Static article file:** [`blog-38.html`](../blog-38.html) — remains hidden until `published: true`.

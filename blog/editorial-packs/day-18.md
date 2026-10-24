@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Domain Marketplaces Explained: How to Compare Listing Options and Fees | DomainCraft
+- **SEO title:** Domain Marketplaces Explained: How to Compare Listing Options and Fees | DomainFits
 - **H1:** Domain Marketplaces Explained: How to Compare Listing Options and Fees
 - **Slug:** `domain-marketplaces-explained`
 - **Published URL:** `/blog/blog-20.html`

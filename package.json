@@ -1,0 +1,25 @@
+{
+  "name": "domainfits-capacitor-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-first Capacitor Android wrapper for the DomainFits static website.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node tools/build-app.mjs",
+    "cap:sync": "npm run build && cap sync android",
+    "cap:open": "cap open android",
+    "test": "npm run build && node tools/test_blog.js && python3 tools/validate_blog.py"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/status-bar": "^8.0.4",
+    "@capawesome/capacitor-navigation-bar": "^8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
+    "esbuild": "^0.28.2"
+  }
+}

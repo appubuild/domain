@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Domain Investing for Beginners: Costs, Risks, Portfolio Planning and Exit Strategies | DomainCraft
+- **SEO title:** Domain Investing for Beginners: Costs, Risks, Portfolio Planning and Exit Strategies | DomainFits
 - **H1:** Domain Investing for Beginners: Costs, Risks, Portfolio Planning and Exit Strategies
 - **Slug:** `domain-investing-for-beginners`
 - **Published URL:** `/blog/blog-15.html`

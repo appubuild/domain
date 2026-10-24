@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing | DomainCraft
+- **SEO title:** Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing | DomainFits
 - **H1:** Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing
 - **Slug:** `website-disaster-recovery-backups-rto-rpo`
 - **Static article file:** [`blog-52.html`](../blog-52.html) — remains hidden until `published: true`.

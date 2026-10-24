@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Edge Computing Explained: How Running Code Closer to Users Changes Web Applications | DomainCraft
+- **SEO title:** Edge Computing Explained: How Running Code Closer to Users Changes Web Applications | DomainFits
 - **H1:** Edge Computing Explained: How Running Code Closer to Users Changes Web Applications
 - **Slug:** `edge-computing-web-applications`
 - **Static article file:** [`blog-39.html`](../blog-39.html) — remains hidden until `published: true`.

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing | DomainCraft
+- **SEO title:** SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing | DomainFits
 - **H1:** SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing
 - **Slug:** `spf-dkim-dmarc-email-authentication`
 - **Static article file:** [`blog-49.html`](../blog-49.html) — remains hidden until `published: true`.

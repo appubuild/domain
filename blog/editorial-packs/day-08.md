@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** SSL Certificates and HTTPS Explained: Security, Validation and Common Errors | DomainCraft
+- **SEO title:** SSL Certificates and HTTPS Explained: Security, Validation and Common Errors | DomainFits
 - **H1:** SSL Certificates and HTTPS Explained: Security, Validation and Common Errors
 - **Slug:** `ssl-certificates-https-explained`
 - **Published URL:** `/blog/blog-10.html`

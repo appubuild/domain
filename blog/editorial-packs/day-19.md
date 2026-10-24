@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Price and Negotiate a Domain Name Without Undervaluing It | DomainCraft
+- **SEO title:** How to Price and Negotiate a Domain Name Without Undervaluing It | DomainFits
 - **H1:** How to Price and Negotiate a Domain Name Without Undervaluing It
 - **Slug:** `price-negotiate-domain-name`
 - **Published URL:** `/blog/blog-21.html`

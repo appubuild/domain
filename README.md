@@ -1,6 +1,6 @@
-# DomainCraft static website
+# DomainFits static website
 
-A dependency-free static-site project built around the supplied **Smart AI Domain Generator** HTML (the generator is rules-based and does not call an AI model). It includes the landing page, generator, a config-driven blog archive, 30 existing series articles plus two naming guides, 20 additional long-form technical drafts, local featured illustrations, editorial packs, publisher-information pages, SEO metadata, structured data, a sitemap, `robots.txt`, and inactive AdSense/analytics setup notes.
+A static-site project with a dependency-free browser runtime, built around the supplied **Smart AI Domain Generator** HTML (the generator is rules-based and does not call an AI model). It includes the landing page, generator, a config-driven blog archive, 30 existing series articles plus two naming guides, 20 additional long-form technical drafts, local featured illustrations, editorial packs, publisher-information pages, SEO metadata, structured data, a sitemap, `robots.txt`, and inactive AdSense/analytics setup notes.
 
 ## Architecture
 
@@ -17,19 +17,24 @@ A dependency-free static-site project built around the supplied **Smart AI Domai
 │   ├── editorial-packs/day-02.md … day-50.md Editorial briefs, SEO, sources and audits
 │   └── editorial-calendar.md          Editorial plan and status for Days 1–50
 ├── tools/
-│   ├── domain-generator.html          (see /tools) — integrated generator page
-│   └── build_draft_blog.py            Standard-library renderer / pack / sitemap helper
+│   ├── domain-generator.html          Integrated generator page
+│   ├── build_draft_blog.py            Static article / pack / sitemap helper
+│   └── build-app.mjs                  Local www/ build and native theme-bundle injection
 ├── assets/
 │   ├── css/style.css                  Responsive pure CSS; no framework CDN
 │   ├── js/blog.js                     Renders only entries with published === true
 │   ├── js/blog-publish-guard.js       Reveals a new article only when its flag is true
-│   ├── js/domain-generator.js         Generator behavior and colored length badges
-│   ├── js/domain-generator-data.js    Curated and creative word lists
-│   ├── js/main.js                     Navigation, theme, contact form
+│   ├── js/domain-generator.js         Industry pools, standard and brandable generation
+│   ├── js/domain-generator-data.js    Original 2–6 lists plus supplemental 7+ pool
+│   ├── js/capacitor-theme-sync.js     Android system-bar theme bridge (bundled for app)
+│   ├── js/main.js                     Navigation, theme event, and contact form
 │   ├── js/reveal.js                   IntersectionObserver scroll reveals
 │   └── img/                           Local logo, favicon, diagrams, blog covers
 ├── pages/                             About, contact, privacy, terms, disclaimer
 ├── includes/                          Shared reference fragments and inactive snippets
+├── package.json                       Capacitor / esbuild dependencies and scripts
+├── capacitor.config.json             Local webDir; no remote server.url
+├── android/                           Android Studio Gradle project and DomainFits icons
 ├── ads.txt
 ├── robots.txt
 └── sitemap.xml
@@ -86,14 +91,53 @@ Open `http://localhost:8000/`. The site has no package installation or runtime f
 ```sh
 python3 tools/build_draft_blog.py
 python3 tools/validate_blog.py
-node tools/test_blog.js
+npm install
+npm test
 ```
 
-The build helper uses only Python’s standard library and intentionally preserves manually edited publication flags. The validator checks config schema, article lengths, local assets and links, JSON-LD, publication gates, category setup, and sitemap consistency.
+The article build helper uses only Python’s standard library and intentionally preserves manually edited publication flags. `npm test` builds the offline `www/` bundle, checks generator and Android theme-bar behavior/configuration, and runs the blog validator. The validator checks config schema, article lengths, local assets and links, JSON-LD, publication gates, category setup, and sitemap consistency.
+
+## Capacitor Android app (offline-first)
+
+`capacitor.config.json` points at the generated local `www/` directory and intentionally has **no `server.url`**. The app does not load the website from a hosted URL. `npm run build` copies the local runtime pages/assets, excludes editorial Markdown and build tooling, bundles `assets/js/capacitor-theme-sync.js`, and adds that local bundle to the HTML pages. Blog config and other app resources are read from the app package, so the core experience works without a network connection after installation. Links to external references still need internet access; the first Android/Gradle build also needs network access to download build dependencies.
+
+The npm registry does not publish a package named `@capacitor/navigation-bar`. This project uses the Capacitor-8-compatible `@capawesome/capacitor-navigation-bar` for Android navigation-bar color and button-style control, alongside the official `@capacitor/status-bar` plugin.
+
+### Build and run
+
+From the repository root (Node.js 22 or newer):
+
+```sh
+# Install the versions already declared in package.json
+npm install
+
+# Build the local web bundle into www/
+npm run build
+
+# This repository already includes android/. Run only if generating the native project from scratch:
+# npx cap add android
+
+# Copy www/ and synchronize Capacitor plugins with Android
+npx cap sync android
+
+# Open the native project in Android Studio
+npx cap open android
+```
+
+If creating a Capacitor setup manually, the equivalent dependency commands are:
+
+```sh
+npm install @capacitor/core@^8 @capacitor/android@^8 @capacitor/status-bar@^8 @capawesome/capacitor-navigation-bar@^8
+npm install --save-dev @capacitor/cli@^8 esbuild@^0.28
+```
+
+After changing web files or plugins, run `npm run cap:sync` (it runs the local build and then `cap sync android`). Install **JDK 21** and **Android SDK Platform/Build Tools 36** in Android Studio’s SDK Manager; the generated Gradle project targets SDK 36 and supports Android API 24+. In Android Studio, select an emulator or USB-connected device and press **Run**. To make an APK, use **Build → Build Bundle(s) / APK(s) → Build APK(s)**. For release distribution, use **Build → Generate Signed Bundle / APK → Android App Bundle** and configure a signing key. The generated `www/` and APK/AAB outputs are build artifacts; the Android project itself is source and can be committed.
+
+`main.js` emits a `domainfits:themechange` event whenever the saved/app theme is applied or toggled. The bundled native bridge listens for that event and updates both Android system bars: light theme uses `#f7f8fc` backgrounds with dark icons; dark theme uses `#10121b` backgrounds with light icons. On web browsers it is a no-op. Native status-bar overlays are disabled so the webpage does not render beneath the bar.
 
 ## Required before production
 
-1. **Choose the real site name and publisher.** Replace starter publisher notes and bracketed identity/jurisdiction fields in About, Privacy, Terms, and Disclaimer. Supply truthful publisher and editorial information.
+1. **Complete publisher details.** DomainFits branding is applied, but starter publisher notes and bracketed identity/jurisdiction fields in About, Privacy, Terms, and Disclaimer still need real, truthful publisher and editorial information.
 2. **Replace `https://example.com`.** Set the production origin in canonical and Open Graph URLs, structured data, `sitemap.xml`, and `robots.txt`; update generated article pages by rerunning the helper after source/template changes.
 3. **Configure the contact form.** Replace `REPLACE_WITH_YOUR_FORM_ID` in `pages/contact.html` with a real Formspree endpoint or implement a backend. The current UI intentionally does not send messages until configured.
 4. **Configure AdSense only after approval.** Replace the placeholder publisher ID in `/ads.txt` with the exact account ID. `pub-0000000000000000` is not a valid publisher ID. Use the official script and ad-unit code; approval and revenue are not guaranteed.
@@ -104,4 +148,4 @@ The build helper uses only Python’s standard library and intentionally preserv
 
 ## Generator notes
 
-The generator’s original flow and word lists are retained: root keyword combinations, curated/creative modes, word-length filters, prefix/suffix placement, camel-case display, live filtering, clipboard actions, and TXT/CSV exports. The refactor adds input sanitization, text-safe DOM rendering, clipboard fallback and CSV quoting, distinct colored length badges, and clear limits: suggestions are not availability checks, dictionary certification, trademark clearance, or valuations.
+The generator retains its original root-plus-word mode, curated/creative toggle, exact 2–6 and grouped 7+ word-length filters, prefix/suffix placement, camel-case display, live filtering, clipboard actions, and TXT/CSV exports. Added niche pools include AI & Tech, FinTech & Crypto, E-Commerce, Health & Bio, Creative & Media, SaaS & Productivity, and Minimal / Short. The separate Brandable Mode toggle adds modern suffix and word-splice candidates without replacing the standard mode. Its examples are brainstorming patterns, not availability, trademark, dictionary, or valuation checks.

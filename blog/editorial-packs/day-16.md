@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Build a Focused Domain Portfolio: Niches, Quality Filters and Renewal Discipline | DomainCraft
+- **SEO title:** How to Build a Focused Domain Portfolio: Niches, Quality Filters and Renewal Discipline | DomainFits
 - **H1:** How to Build a Focused Domain Portfolio: Niches, Quality Filters and Renewal Discipline
 - **Slug:** `build-focused-domain-portfolio`
 - **Published URL:** `/blog/blog-18.html`

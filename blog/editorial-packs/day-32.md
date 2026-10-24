@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** AI Search vs Traditional Search: How Websites Can Improve Their Discoverability | DomainCraft
+- **SEO title:** AI Search vs Traditional Search: How Websites Can Improve Their Discoverability | DomainFits
 - **H1:** AI Search vs Traditional Search: How Websites Can Improve Their Discoverability
 - **Slug:** `ai-search-vs-traditional-search`
 - **Static article file:** [`blog-34.html`](../blog-34.html) — remains hidden until `published: true`.

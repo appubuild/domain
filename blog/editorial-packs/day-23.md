@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Check Domain Availability in Bulk: Methods, Limits and Verification | DomainCraft
+- **SEO title:** How to Check Domain Availability in Bulk: Methods, Limits and Verification | DomainFits
 - **H1:** How to Check Domain Availability in Bulk: Methods, Limits and Verification
 - **Slug:** `check-domain-availability-in-bulk`
 - **Published URL:** `/blog/blog-25.html`
@@ -39,7 +39,7 @@
 
 - Previous series article: [`How to Generate Better Domain Names Using Keywords, Naming Patterns and Brand Tests`](../blog-24.html).
 - Next series article: [`WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes`](../blog-26.html).
-- Existing tool: [`DomainCraft generator`](../../tools/domain-generator.html), which does not verify availability.
+- Existing tool: [`DomainFits generator`](../../tools/domain-generator.html), which does not verify availability.
 - Link to the archive when readers need the wider series: [`All articles`](../index.html).
 
 ## F. Sources

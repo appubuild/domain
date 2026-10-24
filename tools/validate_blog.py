@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate DomainCraft's static blog config, drafts, assets, links, and sitemap."""
+"""Validate DomainFits's static blog config, drafts, assets, links, and sitemap."""
 from __future__ import annotations
 
 from datetime import date

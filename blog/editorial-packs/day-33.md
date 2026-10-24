@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data | DomainCraft
+- **SEO title:** What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data | DomainFits
 - **H1:** What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data
 - **Slug:** `model-context-protocol-mcp`
 - **Static article file:** [`blog-35.html`](../blog-35.html) — remains hidden until `published: true`.

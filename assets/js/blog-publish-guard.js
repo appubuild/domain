@@ -36,6 +36,6 @@
     })
     .catch((error) => {
       showDraftNotice('Publication status could not be verified, so this article remains hidden. Please return to the blog archive.');
-      console.error('DomainCraft publication guard:', error);
+      console.error('DomainFits publication guard:', error);
     });
 })();

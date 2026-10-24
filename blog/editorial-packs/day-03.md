@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Domain Extensions Explained: .com vs .net vs .org vs Country-Code Domains | DomainCraft
+- **SEO title:** Domain Extensions Explained: .com vs .net vs .org vs Country-Code Domains | DomainFits
 - **H1:** Domain Extensions Explained: .com vs .net vs .org vs Country-Code Domains
 - **Slug:** `domain-extensions-explained`
 - **Published URL:** `/blog/blog-05.html`

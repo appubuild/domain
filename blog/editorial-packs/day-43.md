@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** SQL vs NoSQL Databases: How to Choose the Right Database for a Web Tool | DomainCraft
+- **SEO title:** SQL vs NoSQL Databases: How to Choose the Right Database for a Web Tool | DomainFits
 - **H1:** SQL vs NoSQL Databases: How to Choose the Right Database for a Web Tool
 - **Slug:** `sql-vs-nosql-databases-web-tools`
 - **Static article file:** [`blog-45.html`](../blog-45.html) — remains hidden until `published: true`.

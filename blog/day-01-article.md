@@ -2,7 +2,7 @@
 
 - **Category:** Domain Fundamentals · Beginner
 - **Publication date:** October 23, 2026
-- **Website:** DomainCraft
+- **Website:** DomainFits
 
 When someone asks for your website address, they usually mean your domain name: a short, readable name such as `example.com`. But the domain is not the website, the web server, or the full address in the browser. It is one part of a system that helps people and software find the right online service.
 
@@ -114,7 +114,7 @@ Keep payment methods current, enable useful reminders, and ensure more than one 
 7. Test website, HTTPS, email, and important subdomains after changes.
 8. Keep access, billing, and renewal information up to date.
 
-For a domain name idea, the [DomainCraft generator](/tools/domain-generator.html) can combine a root keyword with word-list suggestions. It does not query a registrar or check availability. For name selection, see [ten practical tests before choosing a domain](/blog/blog-01.html); for extension trade-offs, read [our guide to domain extensions](/blog/blog-02.html).
+For a domain name idea, the [DomainFits generator](/tools/domain-generator.html) can combine a root keyword with word-list suggestions. It does not query a registrar or check availability. For name selection, see [ten practical tests before choosing a domain](/blog/blog-01.html); for extension trade-offs, read [our guide to domain extensions](/blog/blog-02.html).
 
 ## Frequently asked questions
 

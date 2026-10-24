@@ -1,0 +1,17 @@
+{
+  "appId": "com.domainfits.app",
+  "appName": "DomainFits",
+  "webDir": "www",
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "backgroundColor": "#f7f8fc",
+      "style": "LIGHT"
+    },
+    "NavigationBar": {
+      "color": "#f7f8fc",
+      "dividerColor": "#e3e7f0",
+      "style": "LIGHT"
+    }
+  }
+}

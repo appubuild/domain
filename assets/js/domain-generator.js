@@ -15,16 +15,25 @@
   const CODAS = ['b', 'd', 'g', 'k', 'l', 'm', 'n', 'p', 'r', 's', 't', 'x'];
 
   const CATEGORY_LABELS = {
-    fintech: 'Fintech / payments',
-    tech_ai: 'Technology / AI',
-    saas_action: 'SaaS / productivity',
+    fintech: 'FinTech & Crypto',
+    tech_ai: 'AI & Tech',
+    ecommerce: 'E-Commerce',
+    health_bio: 'Health & Bio',
+    creative_media: 'Creative & Media',
+    minimal_short: 'Minimal / Short',
+    saas_action: 'SaaS & Productivity',
     smart: 'General brand'
   };
   const CATEGORY_PREFERRED_WORDS = {
-    fintech: ['cash', 'bank', 'coin', 'fund', 'pay', 'card', 'safe', 'mint', 'wallet', 'vault', 'credit', 'trust', 'market', 'payout', 'loan', 'earn', 'flow', 'save', 'wealth', 'money'],
-    tech_ai: ['byte', 'code', 'data', 'node', 'mesh', 'grid', 'core', 'tech', 'cloud', 'script', 'vector', 'neural', 'server', 'signal', 'matrix', 'engine', 'model', 'robot', 'logic', 'pixel'],
-    saas_action: ['work', 'task', 'flow', 'team', 'lead', 'run', 'grow', 'jump', 'dash', 'lift', 'sync', 'track', 'form', 'desk', 'hire', 'meet', 'boost', 'focus', 'build', 'sprint']
+    fintech: ['cash', 'bank', 'coin', 'fund', 'pay', 'card', 'safe', 'mint', 'wallet', 'vault', 'credit', 'trust', 'market', 'payout', 'loan', 'earn', 'flow', 'save', 'wealth', 'money', 'crypto', 'quantum', 'venture'],
+    tech_ai: ['byte', 'code', 'data', 'node', 'mesh', 'grid', 'core', 'tech', 'cloud', 'script', 'vector', 'neural', 'server', 'signal', 'matrix', 'engine', 'model', 'robot', 'logic', 'pixel', 'quantum', 'network', 'digital'],
+    ecommerce: ['shop', 'cart', 'sell', 'store', 'deal', 'sale', 'market', 'retail', 'order', 'brand', 'buy', 'commerce', 'catalog', 'checkout', 'merchant', 'marketplace'],
+    health_bio: ['care', 'health', 'well', 'bio', 'med', 'gene', 'cell', 'vita', 'heal', 'pulse', 'flora', 'renew', 'nature', 'clinic', 'patient', 'vital', 'wellness', 'therapy', 'medical'],
+    creative_media: ['art', 'draw', 'film', 'tune', 'song', 'story', 'pixel', 'design', 'craft', 'media', 'canvas', 'studio', 'visual', 'motion', 'create', 'express', 'creative'],
+    minimal_short: ['go', 'up', 'on', 'to', 'ox', 'ai', 'io', 'id', 'net', 'key', 'hub', 'pay', 'bit', 'bio', 'zen', 'lux', 'vex', 'orb', 'ion', 'arc'],
+    saas_action: ['work', 'task', 'flow', 'team', 'lead', 'run', 'grow', 'jump', 'dash', 'lift', 'sync', 'track', 'form', 'desk', 'hire', 'meet', 'boost', 'focus', 'build', 'sprint', 'workflow', 'platform']
   };
+  const BRANDABLE_MORPHEMES = ['ly', 'io', 'ify', 'eer', 'via', 'nest', 'tify', 'ora', 'nova', 'able', 'wise', 'ster', 'flow', 'labs', 'works', 'verse', 'scape', 'pilot', 'mint', 'forge', 'hub', 'base', 'mode', 'sync', 'mesh', 'mate', 'craft', 'tech', 'zone', 'loop'];
 
   function sanitizeRoot(value) {
     const normalized = String(value || '')
@@ -135,6 +144,13 @@
       : 'Adds invented and synthetic brandable syllables to the built-in list. Review every suggestion for pronunciation, meaning, and existing use.';
   }
 
+  function updateBrandableUI() {
+    const enabled = $('brandableModeToggle').checked;
+    $('brandableModePanel').classList.toggle('is-active', enabled);
+    $('brandableModeBadge').textContent = enabled ? 'Active' : 'Off';
+    $('brandableModeBadge').setAttribute('aria-label', `Brandable Mode ${enabled ? 'active' : 'off'}`);
+  }
+
   function updateCheckboxUI() {
     let selected = selectedLengths();
     if (selected.length === 0) {
@@ -243,6 +259,75 @@
     return shuffle(domains).slice(0, targetCount).map((item, index) => ({ ...item, id: index + 1 }));
   }
 
+  function generateBrandableDomains(root, extension, placement, lengths, targetCount, camelCase, isStrict, category) {
+    const cleanRoot = sanitizeRoot(root);
+    const rootLower = cleanRoot.toLowerCase();
+    const cleanExtension = normalizeExtension(extension);
+    const sourceWords = buildWordPool(lengths, targetCount, isStrict);
+    const morphs = BRANDABLE_MORPHEMES.filter((word) => lengths.some((length) => matchesSelectedLength(word, length)));
+    const preferredWords = prioritizeCandidates(sourceWords, category);
+    const morphSet = new Set(morphs);
+    const partners = [...morphs, ...preferredWords.filter((word) => !morphSet.has(word))];
+    const rootFirst = placement === 'prefix' || placement === 'both';
+    const rootLast = placement === 'suffix' || placement === 'both';
+    const domains = [];
+    const seen = new Set();
+
+    const addLabel = (rawLabel, partner, isPrefix) => {
+      const label = String(rawLabel).toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+      if (!label || label === rootLower || label.length > 63 || seen.has(label)) return;
+      seen.add(label);
+      domains.push({
+        id: domains.length + 1,
+        domain: `${formatWord(label, camelCase)}${cleanExtension}`,
+        rawCombo: label,
+        tld: cleanExtension,
+        rootPart: cleanRoot,
+        partnerPart: partner,
+        length: partner.length,
+        isPrefix,
+        isBrandable: true,
+        brandableLabel: label
+      });
+    };
+
+    const makeRootFirstBlend = (partner) => {
+      const overlapLimit = Math.min(4, rootLower.length - 1, partner.length - 1);
+      for (let overlap = overlapLimit; overlap >= 2; overlap -= 1) {
+        if (rootLower.endsWith(partner.slice(0, overlap))) {
+          addLabel(`${rootLower}${partner.slice(overlap)}`, partner, true);
+          return;
+        }
+      }
+      if (rootLower.length >= 4 && partner.length >= 4) {
+        const rootKeep = Math.max(2, Math.ceil(rootLower.length * 0.72));
+        const partnerStart = Math.max(1, Math.floor(partner.length * 0.42));
+        addLabel(`${rootLower.slice(0, rootKeep)}${partner.slice(partnerStart)}`, partner, true);
+      }
+    };
+
+    const makeRootLastBlend = (partner) => {
+      if (partner.length >= 4 && rootLower.length >= 4) {
+        const partnerKeep = Math.max(2, Math.ceil(partner.length * 0.72));
+        const rootStart = Math.max(1, Math.floor(rootLower.length * 0.28));
+        addLabel(`${partner.slice(0, partnerKeep)}${rootLower.slice(rootStart)}`, partner, false);
+      }
+    };
+
+    for (const partnerValue of partners) {
+      const partner = String(partnerValue).toLowerCase();
+      if (rootFirst) {
+        addLabel(`${rootLower}${partner}`, partner, true);
+        makeRootFirstBlend(partner);
+      }
+      if (rootLast) {
+        addLabel(`${partner}${rootLower}`, partner, false);
+        makeRootLastBlend(partner);
+      }
+    }
+    return domains.slice(0, targetCount).map((item, index) => ({ ...item, id: index + 1 }));
+  }
+
   function updateResultNote(targetCount) {
     const generated = allGeneratedDomains.length;
     const isStrict = $('strictDictToggle').checked;
@@ -268,7 +353,11 @@
     $('extInput').value = extension;
     const category = activeCategory(root);
 
-    allGeneratedDomains = generateDomains(root, extension, placement, lengths.length ? lengths : [3], requested, camelCase, isStrict, category);
+    const selectedLengthsForRun = lengths.length ? lengths : [3];
+    const brandableMode = $('brandableModeToggle').checked;
+    allGeneratedDomains = brandableMode
+      ? generateBrandableDomains(root, extension, placement, selectedLengthsForRun, requested, camelCase, isStrict, category)
+      : generateDomains(root, extension, placement, selectedLengthsForRun, requested, camelCase, isStrict, category);
     $('btnCountBadge').textContent = String(allGeneratedDomains.length);
     updateResultNote(requested);
     applyInstantSearch();
@@ -284,6 +373,10 @@
   function updateNamingStyle() {
     const camelCase = $('camelCaseToggle').checked;
     allGeneratedDomains.forEach((domain) => {
+      if (domain.isBrandable) {
+        domain.domain = `${formatWord(domain.brandableLabel, camelCase)}${domain.tld}`;
+        return;
+      }
       const root = formatWord(domain.rootPart, camelCase);
       const partner = formatWord(domain.partnerPart, camelCase);
       domain.domain = `${domain.isPrefix ? root + partner : partner + root}${domain.tld}`;
@@ -331,17 +424,17 @@
       meta.className = 'domain-card-meta';
       const partnerLength = Math.max(2, Math.floor(Number(item.length) || String(item.partnerPart || '').length || 2));
       const labelLength = String(item.rawCombo || item.domain.split('.')[0] || '').length;
-      const rootLength = String(item.rootPart || '').length;
+      const partnerKind = item.isBrandable ? 'partner component' : 'partner word';
       const lengthTier = partnerLength >= 6 ? 6 : partnerLength;
-      card.title = `Copy ${item.domain}. Partner word: ${partnerLength} letters. Total domain label: ${labelLength} characters (root keyword ${rootLength} + partner word ${partnerLength}); extension excluded.`;
-      card.setAttribute('aria-label', `Copy ${item.domain}; partner word has ${partnerLength} letters; total domain label has ${labelLength} characters, excluding the extension`);
+      card.title = `Copy ${item.domain}. ${partnerKind}: ${partnerLength} letters. Total domain label: ${labelLength} characters (root keyword included; extension excluded).`;
+      card.setAttribute('aria-label', `Copy ${item.domain}; ${partnerKind} has ${partnerLength} letters; total domain label has ${labelLength} characters, excluding the extension`);
       const lengthLabel = lengthTier === 6 ? '6L+' : `${partnerLength}L`;
       const length = document.createElement('span');
       length.className = `length-pill length-pill--${lengthTier}`;
       length.dataset.labelLength = String(labelLength);
       length.dataset.partnerLength = String(partnerLength);
-      length.title = `Partner word: ${partnerLength} letters. Total domain label: ${labelLength} characters (root keyword ${rootLength} + partner word ${partnerLength}); extension excluded.`;
-      length.setAttribute('aria-label', `${lengthLabel} partner word; ${partnerLength} letters. Total domain label: ${labelLength} characters, excluding the extension`);
+      length.title = `${partnerKind}: ${partnerLength} letters. Total domain label: ${labelLength} characters (root keyword included; extension excluded).`;
+      length.setAttribute('aria-label', `${lengthLabel} ${partnerKind}; ${partnerLength} letters. Total domain label: ${labelLength} characters, excluding the extension`);
       const lengthIcon = document.createElement('span');
       lengthIcon.className = 'length-pill-icon';
       lengthIcon.setAttribute('aria-hidden', 'true');
@@ -435,7 +528,7 @@
       showToast('Generate a batch before exporting.');
       return;
     }
-    const rows = [['ID', 'Domain', 'Root keyword', 'Matching word', 'Word length', 'Placement', 'Extension']];
+    const rows = [['ID', 'Domain', 'Root keyword', 'Partner word / component', 'Partner length', 'Placement', 'Extension']];
     allGeneratedDomains.forEach((item, index) => rows.push([
       String(index + 1), item.domain, item.rootPart, item.partnerPart, String(item.length), item.isPrefix ? 'Root first' : 'Root last', item.tld
     ]));
@@ -482,6 +575,10 @@
       updateStrictUI();
       runGeneration();
     });
+    $('brandableModeToggle').addEventListener('change', () => {
+      updateBrandableUI();
+      runGeneration();
+    });
     $('lenAll').addEventListener('change', () => {
       LENGTHS.forEach((length) => { $(`len${length}`).checked = $('lenAll').checked; });
       updateCheckboxUI();
@@ -510,6 +607,7 @@
     bindEvents();
     updateCheckboxUI();
     updateStrictUI();
+    updateBrandableUI();
     updateCategoryBadge();
     runGeneration();
   }

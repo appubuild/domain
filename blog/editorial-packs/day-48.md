@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness | DomainCraft
+- **SEO title:** IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness | DomainFits
 - **H1:** IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness
 - **Slug:** `ipv4-vs-ipv6-website-readiness`
 - **Static article file:** [`blog-50.html`](../blog-50.html) — remains hidden until `published: true`.

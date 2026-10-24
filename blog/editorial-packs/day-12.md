@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** What Makes a Domain Name Brandable? A Practical Naming Framework | DomainCraft
+- **SEO title:** What Makes a Domain Name Brandable? A Practical Naming Framework | DomainFits
 - **H1:** What Makes a Domain Name Brandable? A Practical Naming Framework
 - **Slug:** `what-makes-a-domain-brandable`
 - **Published URL:** `/blog/blog-14.html`

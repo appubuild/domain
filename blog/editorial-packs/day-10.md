@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** CDN, DNS and Web Hosting: What Each Service Does and How They Work Together | DomainCraft
+- **SEO title:** CDN, DNS and Web Hosting: What Each Service Does and How They Work Together | DomainFits
 - **H1:** CDN, DNS and Web Hosting: What Each Service Does and How They Work Together
 - **Slug:** `cdn-dns-web-hosting`
 - **Published URL:** `/blog/blog-12.html`

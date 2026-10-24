@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Start a Domain Business: Business Models, Startup Costs and a 90-Day Plan | DomainCraft
+- **SEO title:** How to Start a Domain Business: Business Models, Startup Costs and a 90-Day Plan | DomainFits
 - **H1:** How to Start a Domain Business: Business Models, Startup Costs and a 90-Day Plan
 - **Slug:** `start-a-domain-business`
 - **Published URL:** `/blog/blog-28.html`

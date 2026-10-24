@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** A Practical Domain Research Workflow: From Idea Generation to Final Shortlist | DomainCraft
+- **SEO title:** A Practical Domain Research Workflow: From Idea Generation to Final Shortlist | DomainFits
 - **H1:** A Practical Domain Research Workflow: From Idea Generation to Final Shortlist
 - **Slug:** `domain-research-workflow`
 - **Published URL:** `/blog/blog-27.html`
@@ -39,7 +39,7 @@
 
 - Previous series article: [`WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes`](../blog-26.html).
 - Next series article: [`How to Start a Domain Business: Business Models, Startup Costs and a 90-Day Plan`](../blog-28.html).
-- Existing tool: [`DomainCraft generator`](../../tools/domain-generator.html), which does not verify availability.
+- Existing tool: [`DomainFits generator`](../../tools/domain-generator.html), which does not verify availability.
 - Link to the archive when readers need the wider series: [`All articles`](../index.html).
 
 ## F. Sources

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples | DomainCraft
+- **SEO title:** DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples | DomainFits
 - **H1:** DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples
 - **Slug:** `dns-records-explained`
 - **Published URL:** `/blog/blog-11.html`

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Webhooks vs APIs: How Websites Communicate and Automate Tasks | DomainCraft
+- **SEO title:** Webhooks vs APIs: How Websites Communicate and Automate Tasks | DomainFits
 - **H1:** Webhooks vs APIs: How Websites Communicate and Automate Tasks
 - **Slug:** `webhooks-vs-apis-automation`
 - **Static article file:** [`blog-47.html`](../blog-47.html) — remains hidden until `published: true`.

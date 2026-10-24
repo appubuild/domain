@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Sell a Domain Name: A Complete Guide From Listing to Payment | DomainCraft
+- **SEO title:** How to Sell a Domain Name: A Complete Guide From Listing to Payment | DomainFits
 - **H1:** How to Sell a Domain Name: A Complete Guide From Listing to Payment
 - **Slug:** `how-to-sell-a-domain-name`
 - **Published URL:** `/blog/blog-19.html`

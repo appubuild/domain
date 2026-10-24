@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement | DomainCraft
+- **SEO title:** How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement | DomainFits
 - **H1:** How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement
 - **Slug:** `build-domain-knowledge-website`
 - **Published URL:** `/blog/blog-32.html`

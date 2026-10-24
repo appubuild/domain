@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design | DomainCraft
+- **SEO title:** REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design | DomainFits
 - **H1:** REST APIs Explained: HTTP Methods, Status Codes, JSON and API Design
 - **Slug:** `rest-apis-http-methods-status-codes`
 - **Static article file:** [`blog-43.html`](../blog-43.html) — remains hidden until `published: true`.

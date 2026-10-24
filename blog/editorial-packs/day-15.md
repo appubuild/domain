@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Domain Names and Trademarks: How to Research Legal Risks Before Registering | DomainCraft
+- **SEO title:** Domain Names and Trademarks: How to Research Legal Risks Before Registering | DomainFits
 - **H1:** Domain Names and Trademarks: How to Research Legal Risks Before Registering
 - **Slug:** `domain-names-trademarks`
 - **Published URL:** `/blog/blog-17.html`

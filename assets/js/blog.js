@@ -198,7 +198,7 @@
     const visiblePosts = filtered.slice(firstIndex, firstIndex + PAGE_SIZE);
     grid.replaceChildren(...visiblePosts.map(makeCard));
     renderPagination(totalPages);
-    window.DomainCraftReveal?.(grid);
+    window.DomainFitsReveal?.(grid);
 
     if (filtered.length === 0) {
       const hasFilter = query || selectedCategory;
@@ -254,6 +254,6 @@
     .catch((error) => {
       grid.replaceChildren();
       setStatus('The published article list could not be loaded. Please refresh or use the article links in the site navigation.', true);
-      console.error('DomainCraft blog:', error);
+      console.error('DomainFits blog:', error);
     });
 })();

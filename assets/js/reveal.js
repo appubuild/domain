@@ -20,7 +20,7 @@
     });
   }
 
-  window.DomainCraftReveal = observeReveals;
+  window.DomainFitsReveal = observeReveals;
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => observeReveals(), { once: true });
   } else {

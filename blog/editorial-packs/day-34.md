@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners | DomainCraft
+- **SEO title:** AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners | DomainFits
 - **H1:** AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners
 - **Slug:** `ai-crawlers-robots-txt-access`
 - **Static article file:** [`blog-36.html`](../blog-36.html) — remains hidden until `published: true`.

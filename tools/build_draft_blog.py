@@ -259,8 +259,8 @@ def article_template(post: dict, body_html: str) -> str:
         "description": post["excerpt"],
         "datePublished": post["date"],
         "dateModified": post["date"],
-        "author": {"@type": "Organization", "name": "DomainCraft Editorial"},
-        "publisher": {"@type": "Organization", "name": "DomainCraft"},
+        "author": {"@type": "Organization", "name": "DomainFits Editorial"},
+        "publisher": {"@type": "Organization", "name": "DomainFits"},
         "image": [image_abs],
         "mainEntityOfPage": {"@type": "WebPage", "@id": f"https://example.com/blog/{post['file']}"},
         "articleSection": post["category"],
@@ -289,12 +289,12 @@ def article_template(post: dict, body_html: str) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title} | DomainCraft</title>
+  <title>{title} | DomainFits</title>
   <meta name="description" content="{excerpt}">
   <meta name="robots" content="{robots_content}">
   <link rel="canonical" href="https://example.com/blog/{file}">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
-  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainCraft">
+  <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="{title}"><meta property="og:description" content="{excerpt}">
   <meta property="og:url" content="https://example.com/blog/{file}">
   <meta property="og:image" content="{escape(image_abs, quote=True)}"><meta property="og:image:alt" content="{image_alt}">
@@ -312,7 +312,7 @@ def article_template(post: dict, body_html: str) -> str:
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+      <a class="brand" href="/index.html" aria-label="DomainFits home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainFits logo"><span>DomainFits</span></a>
       <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
       <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
@@ -326,7 +326,7 @@ def article_template(post: dict, body_html: str) -> str:
         <header class="article-header">
           <p class="eyebrow">{category} · Practical guide</p>
           <h1>{title}</h1>
-          <div class="article-meta"><time datetime="{date}">{date_label}</time><span>DomainCraft Editorial</span><span>{read_time} minute read</span></div>
+          <div class="article-meta"><time datetime="{date}">{date_label}</time><span>DomainFits Editorial</span><span>{read_time} minute read</span></div>
           <div class="tag-list">{tags}</div>
         </header>
         <figure class="article-figure article-featured"><img src="{image}" alt="{image_alt}" width="1200" height="675" fetchpriority="high"><figcaption>Original local vector schematic. It is explanatory artwork, not measured performance or market data.</figcaption></figure>
@@ -337,8 +337,8 @@ def article_template(post: dict, body_html: str) -> str:
     <section class="container section-tight" data-publish-guard-cta hidden><div class="cta-band"><div><h2>Continue your domain research.</h2><p>Explore naming ideas, then verify registration, renewal, and legal details with the appropriate providers.</p></div><a class="button" href="/tools/domain-generator.html">Try the generator →</a></div></section>
   </main>
   <footer class="site-footer">
-    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
-    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
+    <div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainFits logo"><span>DomainFits</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div>
+    <div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainFits. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div>
   </footer>
 </body>
 </html>
@@ -405,7 +405,7 @@ def article_pack(post: dict, day: int, words: int) -> str:
 
 ## B. SEO metadata
 
-- **SEO title:** {post['title']} | DomainCraft
+- **SEO title:** {post['title']} | DomainFits
 - **H1:** {post['title']}
 - **Slug:** `{post['slug']}`
 - **Static article file:** [`{post['file']}`](../{post['file']}) — remains hidden until `published: true`.

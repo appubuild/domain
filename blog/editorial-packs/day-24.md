@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes | DomainCraft
+- **SEO title:** WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes | DomainFits
 - **H1:** WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes
 - **Slug:** `whois-vs-rdap`
 - **Published URL:** `/blog/blog-26.html`

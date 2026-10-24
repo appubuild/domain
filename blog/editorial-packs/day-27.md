@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** The Real Cost of Owning Domains: Registration, Renewals, Marketplace Fees and Taxes | DomainCraft
+- **SEO title:** The Real Cost of Owning Domains: Registration, Renewals, Marketplace Fees and Taxes | DomainFits
 - **H1:** The Real Cost of Owning Domains: Registration, Renewals, Marketplace Fees and Taxes
 - **Slug:** `real-cost-of-owning-domains`
 - **Published URL:** `/blog/blog-29.html`

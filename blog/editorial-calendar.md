@@ -1,4 +1,4 @@
-# DomainCraft editorial calendar: Days 1–50
+# DomainFits editorial calendar: Days 1–50
 
 This calendar combines the supplied first-month plan with a technical series extension for Days 31–50. All 50 topics have full article drafts in the static blog archive and a separate editorial pack. The 20 new technical posts remain unpublished by default. Source status is stated honestly in the packs: no live external sources were fetched in this session, so verify current standards, product behavior, pricing, and other changing details against primary sources before publication.
 

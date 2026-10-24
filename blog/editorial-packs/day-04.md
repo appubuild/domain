@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Domain Registration, Renewal, Expiration and Redemption: The Complete Lifecycle | DomainCraft
+- **SEO title:** Domain Registration, Renewal, Expiration and Redemption: The Complete Lifecycle | DomainFits
 - **H1:** Domain Registration, Renewal, Expiration and Redemption: The Complete Lifecycle
 - **Slug:** `domain-registration-renewal-expiration`
 - **Published URL:** `/blog/blog-06.html`

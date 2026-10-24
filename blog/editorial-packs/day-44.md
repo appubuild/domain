@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Object Storage vs Block Storage vs File Storage: Choosing the Right Storage Architecture | DomainCraft
+- **SEO title:** Object Storage vs Block Storage vs File Storage: Choosing the Right Storage Architecture | DomainFits
 - **H1:** Object Storage vs Block Storage vs File Storage: Choosing the Right Storage Architecture
 - **Slug:** `object-block-file-storage-architecture`
 - **Static article file:** [`blog-46.html`](../blog-46.html) — remains hidden until `published: true`.

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Create a Domain for Sale Landing Page That Helps Buyers Make Decisions | DomainCraft
+- **SEO title:** How to Create a Domain for Sale Landing Page That Helps Buyers Make Decisions | DomainFits
 - **H1:** How to Create a Domain for Sale Landing Page That Helps Buyers Make Decisions
 - **Slug:** `domain-for-sale-landing-page`
 - **Published URL:** `/blog/blog-23.html`

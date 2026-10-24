@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Research Domain Sales: Comparable Sales, Market Evidence and Pricing Mistakes | DomainCraft
+- **SEO title:** How to Research Domain Sales: Comparable Sales, Market Evidence and Pricing Mistakes | DomainFits
 - **H1:** How to Research Domain Sales: Comparable Sales, Market Evidence and Pricing Mistakes
 - **Slug:** `research-domain-sales`
 - **Published URL:** `/blog/blog-16.html`

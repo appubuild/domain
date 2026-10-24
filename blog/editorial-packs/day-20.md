@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers | DomainCraft
+- **SEO title:** How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers | DomainFits
 - **H1:** How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers
 - **Slug:** `domain-escrow-transfer`
 - **Published URL:** `/blog/blog-22.html`

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App | DomainCraft
+- **SEO title:** API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App | DomainFits
 - **H1:** API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App
 - **Slug:** `api-gateways-reverse-proxies-load-balancers`
 - **Static article file:** [`blog-41.html`](../blog-41.html) — remains hidden until `published: true`.

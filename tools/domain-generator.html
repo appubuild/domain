@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Domain Name Generator &amp; Startup Name Finder | DomainCraft</title>
+  <title>Domain Name Generator &amp; Startup Name Finder | DomainFits</title>
   <meta name="description" content="Find brandable domain ideas for a startup or business with a keyword-based name generator. Filter results and export a shortlist; availability is not checked.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/tools/domain-generator.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
-  <meta property="og:type" content="website"><meta property="og:site_name" content="DomainCraft">
-  <meta property="og:title" content="Domain Name Generator &amp; Startup Name Finder | DomainCraft">
+  <meta property="og:type" content="website"><meta property="og:site_name" content="DomainFits">
+  <meta property="og:title" content="Domain Name Generator &amp; Startup Name Finder | DomainFits">
   <meta property="og:description" content="Find brandable domain ideas for a startup or business. Filter results and export a shortlist; availability is not checked.">
   <meta property="og:url" content="https://example.com/tools/domain-generator.html"><meta name="twitter:card" content="summary">
   <!-- Google Search Console: add the verification meta tag issued for your deployed domain here. -->
@@ -28,7 +28,7 @@
       "@type": "WebSite",
       "@id": "https://example.com/#website",
       "url": "https://example.com/",
-      "name": "DomainCraft",
+      "name": "DomainFits",
       "inLanguage": "en"
     },
     {
@@ -104,14 +104,14 @@
   ]
 }
   </script>
-  <meta name="twitter:title" content="Domain Name Generator &amp; Startup Name Finder | DomainCraft">
+  <meta name="twitter:title" content="Domain Name Generator &amp; Startup Name Finder | DomainFits">
   <meta name="twitter:description" content="Find brandable domain ideas for a startup or business with a keyword-based name generator. Filter results and export a shortlist; availability is not checked.">
   <meta name="twitter:url" content="https://example.com/tools/domain-generator.html">
 </head>
 <body id="top">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header"><div class="container header-inner">
-    <a class="brand" href="/index.html" aria-label="DomainCraft home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainCraft logo"><span>DomainCraft</span></a>
+    <a class="brand" href="/index.html" aria-label="DomainFits home"><img src="/assets/img/logo.svg" width="38" height="38" alt="DomainFits logo"><span>DomainFits</span></a>
     <button class="menu-toggle" type="button" data-menu-toggle aria-expanded="false" aria-controls="site-navigation" aria-label="Open navigation"><span></span><span></span><span></span></button>
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html" aria-current="page">Generator</a><a href="/blog/index.html">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="#generator">Start generating <span aria-hidden="true">↓</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
@@ -135,15 +135,19 @@
             <span class="control-hint">Use a short idea, product, audience, or benefit.</span>
           </div>
           <div class="field">
-            <label class="control-label" for="brainModeSelect">Word pool mode</label>
+            <label class="control-label" for="brainModeSelect">Niche / industry category</label>
             <select class="control-select" id="brainModeSelect">
               <option value="smart" selected>Auto-detect from keyword</option>
-              <option value="fintech">Fintech and payments</option>
-              <option value="tech_ai">Technology, AI and data</option>
-              <option value="saas_action">SaaS, productivity and action</option>
-              <option value="dictionary_pure">General word list</option>
+              <option value="tech_ai">AI &amp; Tech</option>
+              <option value="fintech">FinTech &amp; Crypto</option>
+              <option value="ecommerce">E-Commerce</option>
+              <option value="health_bio">Health &amp; Bio</option>
+              <option value="creative_media">Creative &amp; Media</option>
+              <option value="saas_action">SaaS &amp; Productivity</option>
+              <option value="minimal_short">Minimal / Short</option>
+              <option value="dictionary_pure">General word pool</option>
             </select>
-            <span class="control-hint">Category label helps organize a naming session.</span>
+            <span class="control-hint">Choose a niche to prioritize relevant suggestions, or let the root keyword guide the word pool.</span>
           </div>
           <div class="field">
             <label class="control-label" for="countPresetSelect">Target ideas</label>
@@ -178,6 +182,12 @@
           </label>
         </div>
         <p class="control-hint">Switch off to allow invented and synthetic brandable syllables alongside the built-in words.</p>
+
+        <div class="brandable-mode-panel" id="brandableModePanel">
+          <label class="inline-check" for="brandableModeToggle"><input type="checkbox" id="brandableModeToggle"><span><strong>Brandable Mode</strong></span></label>
+          <span class="mode-badge" id="brandableModeBadge">Off</span>
+          <p>When enabled, combine root keywords with modern suffixes and curated partner words, plus short portmanteau blends. Turn it off to keep the original root-plus-word generation mode.</p>
+        </div>
 
         <div class="filter-panel">
           <div class="filter-heading"><h2>Partner word length</h2><span id="activeLengthDesc">Filter: 3 partner letters</span></div>
@@ -227,6 +237,6 @@
       </section>
     </div>
   </main>
-  <footer class="site-footer"><div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainCraft logo"><span>DomainCraft</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div><div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainCraft. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div></footer>
+  <footer class="site-footer"><div class="container footer-main"><div class="footer-brand-block"><a class="brand brand-footer" href="/index.html"><img src="/assets/img/logo.svg" width="34" height="34" alt="DomainFits logo"><span>DomainFits</span></a><p>Practical tools and clear guidance for exploring memorable domain-name ideas.</p></div><div class="footer-links-group"><h2>Explore</h2><a href="/tools/domain-generator.html">Domain generator</a><a href="/blog/index.html">Articles</a><a href="/pages/about.html">About us</a><a href="/pages/contact.html">Contact</a></div><div class="footer-links-group"><h2>Information</h2><a href="/pages/privacy-policy.html">Privacy policy</a><a href="/pages/terms-and-conditions.html">Terms &amp; conditions</a><a href="/pages/disclaimer.html">Disclaimer</a></div></div><div class="container footer-bottom"><p>© <span data-current-year>2026</span> DomainFits. Domain ideas are not availability or trademark checks.</p><a href="#top">Back to top ↑</a></div></footer>
 </body>
 </html>

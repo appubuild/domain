@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DomainFits</string>
+    <string name="title_activity_main">DomainFits</string>
+    <string name="package_name">com.domainfits.app</string>
+    <string name="custom_url_scheme">com.domainfits.app</string>
+</resources>

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Web Hosting Explained: Shared Hosting, VPS, Dedicated and Cloud Hosting | DomainCraft
+- **SEO title:** Web Hosting Explained: Shared Hosting, VPS, Dedicated and Cloud Hosting | DomainFits
 - **H1:** Web Hosting Explained: Shared Hosting, VPS, Dedicated and Cloud Hosting
 - **Slug:** `web-hosting-explained`
 - **Published URL:** `/blog/blog-08.html`

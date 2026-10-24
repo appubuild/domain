@@ -83,4 +83,4 @@ For the final two or three names, prepare a simple brand mockup with the same ty
 
 **Should I buy every possible variation?** No. Register only names with a clear protection or operational purpose and a sustainable renewal plan.
 
-For a hands-on brainstorming pass, the [DomainCraft generator](/tools/domain-generator.html) creates suggestions from word lists. It does not check domain availability. Use its output as a shortlist starter, then do the checks described above.
+For a hands-on brainstorming pass, the [DomainFits generator](/tools/domain-generator.html) creates suggestions from word lists. It does not check domain availability. Use its output as a shortlist starter, then do the checks described above.

@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Transfer a Domain Between Registrars Without Losing Control | DomainCraft
+- **SEO title:** How to Transfer a Domain Between Registrars Without Losing Control | DomainFits
 - **H1:** How to Transfer a Domain Between Registrars Without Losing Control
 - **Slug:** `transfer-domain-between-registrars`
 - **Published URL:** `/blog/blog-07.html`

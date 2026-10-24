@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases | DomainCraft
+- **SEO title:** How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases | DomainFits
 - **H1:** How Web Servers Work: HTTP, HTTPS, Requests, Responses and Databases
 - **Slug:** `how-web-servers-work`
 - **Published URL:** `/blog/blog-09.html`

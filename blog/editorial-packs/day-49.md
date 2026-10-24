@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** Web Application Threat Modeling: How to Identify Risks Before They Become Incidents | DomainCraft
+- **SEO title:** Web Application Threat Modeling: How to Identify Risks Before They Become Incidents | DomainFits
 - **H1:** Web Application Threat Modeling: How to Identify Risks Before They Become Incidents
 - **Slug:** `web-application-threat-modeling`
 - **Static article file:** [`blog-51.html`](../blog-51.html) — remains hidden until `published: true`.

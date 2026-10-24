@@ -10,7 +10,7 @@
 
 ## B. SEO metadata
 
-- **SEO title:** How to Value a Domain Name: 12 Factors That Influence Its Market Potential | DomainCraft
+- **SEO title:** How to Value a Domain Name: 12 Factors That Influence Its Market Potential | DomainFits
 - **H1:** How to Value a Domain Name: 12 Factors That Influence Its Market Potential
 - **Slug:** `how-to-value-a-domain-name`
 - **Published URL:** `/blog/blog-13.html`
