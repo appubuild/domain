@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners | DomainFits</title>
   <meta name="description" content="Separate crawler access, indexing, and content reuse; learn what robots.txt can signal and how to review crawler traffic safely.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-36.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners"><meta property="og:description" content="Separate crawler access, indexing, and content reuse; learn what robots.txt can signal and how to review crawler traffic safely.">
   <meta property="og:url" content="https://example.com/blog/blog-36.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-ai-crawlers-robots-txt-access.svg"><meta property="og:image:alt" content="Illustration of crawler requests, robots.txt guidance, page indexing, and server-side access controls.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AI Crawlers, Robots.txt and Website Access: A Practical Guide for Site Owners"><meta name="twitter:description" content="Separate crawler access, indexing, and content reuse; learn what robots.txt can signal and how to review crawler traffic safely.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="ai-crawlers-robots-txt-access" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> <code>robots.txt</code> is a public crawler-coordination file for compliant bots. It can request that a named user agent avoid a path, but it is not authentication, copyright protection, or a guarantee that content will not be fetched or reused. Use robots rules for crawl preferences, page directives for indexing preferences, access controls for private resources, and legal or contractual policies for reuse questions.</p></blockquote>
 <h2 id="not-every-crawler-has-the-same-job">Not every crawler has the same job</h2>
 <p>A search crawler generally discovers pages to help build an index used in search results. A training crawler may collect text or other material for model development, though a user-agent label alone does not prove a particular downstream use. A retrieval crawler may fetch a page to answer an individual query or populate a search product. Some providers use the same crawler for more than one purpose; others operate separate bots with distinct names and policies.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>The labels are not universal categories. A crawler can change its user-agent string, share infrastructure with other services, or fetch through a partner. A request that claims to be a familiar bot should be treated as a clue, not verified identity. If a decision depends on who is making the request, verify the source using the provider’s current documented methods, such as published IP ranges or authenticated access where offered. Those details can change, so check them before building a policy around them.</p>
 <p>A site may choose different rules for different classes of crawler, but it should be clear about the desired outcome. Blocking a retrieval crawler may reduce a particular route to a page without affecting the conventional search index; blocking a general search crawler may affect discovery in that search product. The effect depends on the provider and its current policy.</p>
 <h2 id="what-robots-txt-can-and-cannot-do">What <code>robots.txt</code> can and cannot do</h2>

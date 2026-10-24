@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Domain Name Generator for Startups | DomainFits</title>
   <meta name="description" content="Generate brandable domain ideas with a keyword-based startup name finder. Filter combinations and export a shortlist; availability is not checked.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Domain Name Generator for Startups | DomainFits">
@@ -15,11 +22,16 @@
   <meta property="og:url" content="https://example.com/">
   <meta name="twitter:card" content="summary">
 
-<!-- Google Search Console verification: insert the meta tag issued for your verified production domain here. -->
+  <!-- Google Search Console verification: insert the meta tag issued for your verified production domain here. -->
 <!-- TODO: Replace https://example.com with your production domain in every canonical, OG and sitemap URL before launch. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -146,6 +158,8 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
 
   <main id="main-content">
     <section class="hero">

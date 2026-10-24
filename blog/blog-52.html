@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing | DomainFits</title>
   <meta name="description" content="Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-52.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing"><meta property="og:description" content="Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.">
   <meta property="og:url" content="https://example.com/blog/blog-52.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-website-disaster-recovery-backups-rto-rpo.svg"><meta property="og:image:alt" content="Primary and backup services connected by a recovery timeline and restore-test checkpoints.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Website Disaster Recovery: Backups, Failover, RTO, RPO and Recovery Testing"><meta name="twitter:description" content="Plan backups, replication, failover, RTO and RPO targets, restore tests, incident communication, and recovery for a small web tool.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="website-disaster-recovery-backups-rto-rpo" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> Backups are recoverable copies, replication keeps another system up to date, and failover directs service to a standby component. Recovery Time Objective (RTO) is the target time to restore a service; Recovery Point Objective (RPO) is the maximum acceptable data loss measured in time. Define these targets for real user needs, back up data and configuration, and test restoration—not just backup creation.</p></blockquote>
 <h2 id="backup-replication-and-failover-are-not-the-same">Backup, replication, and failover are not the same</h2>
 <p>A <strong>backup</strong> is a retained copy that can be used to restore data or configuration. It may be a database snapshot, export, object version, or encrypted archive. A backup should be protected from the same credentials and failure modes that could damage production. If a compromised administrator can delete both the live database and every backup, the backup strategy has a gap.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p><strong>Replication</strong> copies changes from a primary system to another system. It can support availability or read capacity, but it may copy an accidental deletion, corrupted record, or malicious update. Replication is not automatically a historical backup. A system may need both replication for continuity and versioned backups for recovery.</p>
 <p><strong>Failover</strong> switches traffic or work to a standby service when the primary is unavailable. It can be automatic or manual. Failover is only useful when the standby has the necessary data, credentials, configuration, capacity, and network path. A planned failover should include how to return to the primary and avoid split-brain writes, where two systems accept conflicting changes.</p>
 <div class="table-scroll"><table><thead><tr><th scope="col">Mechanism</th><th scope="col">Main purpose</th><th scope="col">Important limitation</th></tr></thead><tbody><tr><td>Backup</td><td>Restore an earlier data or configuration state</td><td>Must be retained, protected, and tested</td></tr><tr><td>Replication</td><td>Keep another copy current for availability or reads</td><td>May copy corruption or deletion</td></tr><tr><td>Failover</td><td>Route service to a standby component</td><td>Standby may be stale, under-sized, or misconfigured</td></tr></tbody></table></div>

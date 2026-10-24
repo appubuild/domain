@@ -2,6 +2,25 @@
 (() => {
   const root = document.documentElement;
   const themeStorageKey = 'domainfits-theme';
+  const browserChromeColors = Object.freeze({ light: '#f7f8fc', dark: '#10121b' });
+
+  function updateMetaContent(name, content) {
+    let meta = document.querySelector(`meta[name="${name}"]`);
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', name);
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute('content', content);
+  }
+
+  function syncBrowserChrome(theme) {
+    const color = browserChromeColors[theme === 'dark' ? 'dark' : 'light'];
+    updateMetaContent('theme-color', color);
+    updateMetaContent('msapplication-TileColor', color);
+    // iOS only supports named status-bar styles, not arbitrary hex colors.
+    updateMetaContent('apple-mobile-web-app-status-bar-style', theme === 'dark' ? 'black' : 'default');
+  }
 
   function readSavedTheme() {
     try {
@@ -15,7 +34,9 @@
   }
 
   function setTheme(theme, persist = false) {
-    root.dataset.theme = theme;
+    const normalizedTheme = theme === 'dark' ? 'dark' : 'light';
+    root.dataset.theme = normalizedTheme;
+    syncBrowserChrome(normalizedTheme);
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
       const icon = button.querySelector('[aria-hidden="true"]');
       const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -25,15 +46,21 @@
     });
     if (persist) {
       try {
-        window.localStorage.setItem(themeStorageKey, theme);
+        window.localStorage.setItem(themeStorageKey, normalizedTheme);
       } catch (error) {
         // Do not block theme switching when storage is unavailable.
       }
     }
-    window.dispatchEvent(new CustomEvent('domainfits:themechange', { detail: { theme } }));
+    window.dispatchEvent(new CustomEvent('domainfits:themechange', { detail: { theme: normalizedTheme } }));
   }
 
   setTheme(readSavedTheme());
+
+  window.addEventListener('storage', (event) => {
+    if (event.key === themeStorageKey && (event.newValue === 'light' || event.newValue === 'dark')) {
+      setTheme(event.newValue);
+    }
+  });
 
   document.addEventListener('click', (event) => {
     const themeButton = event.target.closest('[data-theme-toggle]');

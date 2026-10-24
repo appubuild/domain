@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites | DomainFits</title>
   <meta name="description" content="Understand how AI agents find pages, call APIs and tools, and why machine-readable content, permissions, and security boundaries matter.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-33.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites"><meta property="og:description" content="Understand how AI agents find pages, call APIs and tools, and why machine-readable content, permissions, and security boundaries matter.">
   <meta property="og:url" content="https://example.com/blog/blog-33.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-agentic-web-explained.svg"><meta property="og:image:alt" content="Conceptual flow from a person and a browser to an AI agent, website pages, APIs, and guarded tools.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="The Agentic Web Explained: How AI Agents Will Discover, Access and Use Websites"><meta name="twitter:description" content="Understand how AI agents find pages, call APIs and tools, and why machine-readable content, permissions, and security boundaries matter.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="agentic-web-explained" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> An AI agent can discover a website through search, a supplied URL, a browser tool, an API directory, or an integration such as Model Context Protocol (MCP). It can then read public pages, call permitted endpoints, or use a tool. Clear content, stable interfaces, explicit authentication, and narrow permissions make these interactions more reliable; none replaces privacy, security, or human review.</p></blockquote>
 <h2 id="a-chatbot-answers-an-agent-carries-out-a-task">A chatbot answers; an agent carries out a task</h2>
 <p>A conversational assistant can answer a question in one response. An agent is usually given a goal and may take several actions to reach it. For example, when asked to compare two hosting plans, a basic chatbot might explain what to compare. A tool-enabled agent could open the providers’ published plan pages, extract limits, place them in a comparison, and ask the user to confirm before taking any action. The second workflow has more steps and more opportunities for error.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>The boundary is not absolute. Products combine language generation, retrieval, and action in different ways, and vendors use the word <em>agent</em> differently. A useful technical distinction is whether the system can choose and execute tools across a sequence, not whether its interface looks like a chat window. A model that drafts a reply but cannot act is not equivalent to an agent authorized to submit a form or change an account.</p>
 <div class="table-scroll"><table><thead><tr><th scope="col">Capability</th><th scope="col">Conversational answer</th><th scope="col">Tool-using agent</th></tr></thead><tbody><tr><td>Main output</td><td>A response or explanation</td><td>A response plus one or more actions</td></tr><tr><td>Typical inputs</td><td>Prompt and available context</td><td>Goal, context, tools, and permissions</td></tr><tr><td>Control</td><td>User usually performs the next step</td><td>Software may propose or perform a step</td></tr><tr><td>Main risk</td><td>Incorrect or incomplete answer</td><td>Incorrect answer and unintended action</td></tr></tbody></table></div>
 <p>The distinction matters to a site owner because reading public information and changing a customer’s settings require very different controls.</p>

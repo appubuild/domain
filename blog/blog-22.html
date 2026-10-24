@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers | DomainFits</title>
   <meta name="description" content="Follow the payment and transfer sequence, distinguish account push from registrar transfer, and recognize common transaction scams.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/blog/blog-22.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers">
   <meta property="og:description" content="Follow the payment and transfer sequence, distinguish account push from registrar transfer, and recognize common transaction scams.">
@@ -17,9 +24,14 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Replace example.com with the production domain before publication. -->
   <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -142,6 +154,8 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
   <main id="main-content" class="page-main">
     <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers</div>
     <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Reselling &amp; Marketplace · Practical guide</p><h1>How Domain Escrow and Secure Domain Transfers Work for Buyers and Sellers</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainFits Editorial</span><span>4 minute read</span></div><div class="tag-list"><span class="tag">Escrow</span><span class="tag">Security</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-domain-escrow-transfer.jpg" alt="Escrow workflow connecting buyer payment, domain transfer, and release." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>A domain transaction has two separate things to coordinate: payment and control of the registration. Escrow or a marketplace workflow can help hold or verify funds while a transfer is completed, but the parties still need to use the correct provider, follow its instructions, and protect account credentials.</p>
@@ -150,6 +164,7 @@
 </blockquote>
 <h2 id="what-escrow-doesand-does-not-do">What escrow does—and does not do</h2>
 <p>In a typical escrow workflow, a buyer submits payment to a provider; the provider confirms the required condition; the seller transfers the domain; and the provider releases payment according to the agreement. The exact sequence, fees, service availability, and dispute process vary by provider and transaction.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Escrow does not automatically confirm that a domain is free of legal disputes, guarantee a particular transfer speed, or protect parties who ignore the instructions. Some marketplaces operate their own transaction service; others use an outside provider. Read the agreement before accepting.</p>
 <h2 id="same-registrar-push-vs-inter-registrar-transfer">Same-registrar push vs. inter-registrar transfer</h2>
 <p>A <strong>registrar account push</strong> moves a domain from one customer account to another within the same registrar. It can be convenient, but the seller must verify the recipient account and the registrar’s process.</p>

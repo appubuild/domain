@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed | DomainFits</title>
   <meta name="description" content="Understand container images, registries, volumes, environment configuration, deployment, logs, backups, and container security.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-40.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed"><meta property="og:description" content="Understand container images, registries, volumes, environment configuration, deployment, logs, backups, and container security.">
   <meta property="og:url" content="https://example.com/blog/blog-40.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-docker-containers-web-applications.svg"><meta property="og:image:alt" content="Development source built into an image, stored in a registry, and run as a configured container.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Docker and Containers Explained: How Modern Web Applications Are Packaged and Deployed"><meta name="twitter:description" content="Understand container images, registries, volumes, environment configuration, deployment, logs, backups, and container security.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="docker-containers-web-applications" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> A container image is a versioned package containing application files and the environment needed to run them. A registry stores and distributes images. A container is a running instance of an image. Volumes or external storage hold data that must survive replacement. Configuration and secrets should be supplied at runtime rather than baked into the image.</p></blockquote>
 <h2 id="image-container-registry-and-volume">Image, container, registry, and volume</h2>
 <p>An <strong>image</strong> is an immutable template assembled from layers. It includes an application, its dependencies, and instructions for starting the process. A team builds the image from a recipe such as a Dockerfile, tests it, tags it with a version, and publishes it to a registry.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>A <strong>container</strong> is a running process created from an image. It is isolated using operating-system features, but it shares the host kernel. A container can be stopped, replaced, or scaled without changing the image. That separation makes deployment more repeatable: the same image can be tested in a preview environment and later promoted to production, provided its runtime configuration and platform are compatible.</p>
 <p>A <strong>registry</strong> stores images and controls access to them. It may be public or private. Use unique version tags or immutable digests for releases; a mutable label such as <code>latest</code> can point to different content at different times. Restrict who can publish images, scan and review dependencies, and avoid placing credentials in image layers.</p>
 <p>A <strong>volume</strong> or other persistent storage mechanism keeps data outside a container’s temporary writable layer. If a database stores its only copy inside a container that is removed during an update, the data may be lost. Production data should live in a storage system with an explicit backup, durability, and recovery plan.</p>

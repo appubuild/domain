@@ -10,7 +10,7 @@
     "build": "node tools/build-app.mjs",
     "cap:sync": "npm run build && cap sync android",
     "cap:open": "cap open android",
-    "test": "npm run build && node tools/test_blog.js && python3 tools/validate_blog.py"
+    "test": "npm run build && node tools/test_blog.js && node tools/test_ui_features.js && python3 tools/validate_blog.py"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness | DomainFits</title>
   <meta name="description" content="Compare IPv4 and IPv6, A and AAAA records, dual-stack routing, compatibility, and a practical readiness checklist.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-50.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness"><meta property="og:description" content="Compare IPv4 and IPv6, A and AAAA records, dual-stack routing, compatibility, and a practical readiness checklist.">
   <meta property="og:url" content="https://example.com/blog/blog-50.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-ipv4-vs-ipv6-website-readiness.svg"><meta property="og:image:alt" content="Dual-stack request path showing IPv4 and IPv6 DNS records leading to one web service.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="IPv4 vs IPv6: Addressing, DNS Records, Compatibility and Website Readiness"><meta name="twitter:description" content="Compare IPv4 and IPv6, A and AAAA records, dual-stack routing, compatibility, and a practical readiness checklist.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="ipv4-vs-ipv6-website-readiness" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> IPv4 addresses are written as four decimal numbers separated by dots, while IPv6 addresses use hexadecimal groups separated by colons. DNS commonly uses an A record for IPv4 and an AAAA record for IPv6. Dual-stack readiness means the origin, network, TLS, firewall, application, monitoring, and dependencies work over both protocols—not merely that an AAAA record exists.</p></blockquote>
 <h2 id="address-formats-and-why-both-exist">Address formats and why both exist</h2>
 <p>An IPv4 address contains 32 bits and is often shown in dotted-decimal form, such as <code>192.0.2.10</code>. An IPv6 address contains 128 bits and is written as colon-separated hexadecimal groups, for example <code>2001:db8::10</code>. The documentation examples here use reserved example ranges and should not be used as real public server addresses.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>IPv6’s much larger address space supports a different addressing model and helps accommodate the growth of connected systems. It is not simply a longer string that automatically makes a website faster or more secure. IPv6 deployments have routing, firewall, monitoring, and operational requirements of their own. An IPv6-enabled endpoint still needs secure software, correct TLS, and access controls.</p>
 <p>IPv4 remains common, and networks do not all have the same connectivity. Some users can reach IPv6-only services through translation mechanisms; some networks prefer IPv6 when both are available; others have IPv4-only access. For broad compatibility, many websites use dual-stack service, offering both address families at the edge or origin.</p>
 <h2 id="a-and-aaaa-dns-records">A and AAAA DNS records</h2>

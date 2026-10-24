@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Webhooks vs APIs: How Websites Communicate and Automate Tasks | DomainFits</title>
   <meta name="description" content="Compare API polling and webhook events, then learn signature verification, retries, deduplication, delivery logs, and recovery.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-47.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Webhooks vs APIs: How Websites Communicate and Automate Tasks"><meta property="og:description" content="Compare API polling and webhook events, then learn signature verification, retries, deduplication, delivery logs, and recovery.">
   <meta property="og:url" content="https://example.com/blog/blog-47.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-webhooks-vs-apis-automation.svg"><meta property="og:image:alt" content="Polling requests compared with a signed event delivered to an application webhook endpoint.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Webhooks vs APIs: How Websites Communicate and Automate Tasks"><meta name="twitter:description" content="Compare API polling and webhook events, then learn signature verification, retries, deduplication, delivery logs, and recovery.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="webhooks-vs-apis-automation" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> With ordinary polling, a client calls an API on a schedule to look for updates. With a webhook, the provider sends an HTTP request to a URL you control when an event occurs. Webhooks reduce repeated checks but require a reachable endpoint, signature verification, durable event handling, retries, deduplication, and monitoring. Never treat an incoming webhook as trusted solely because it reached your server.</p></blockquote>
 <h2 id="polling-and-event-delivery">Polling and event delivery</h2>
 <p>Polling is straightforward: a service asks “has anything changed?” at regular intervals. It can be suitable when changes are infrequent, the API has a reliable <code>updated_since</code> cursor, and the required freshness is known. Too-frequent polling may waste quota and resources; too-infrequent polling can delay an update. Use conditional requests or cursors where the provider supports them, and observe its rate limits.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>A webhook is event-driven. The provider sends a request to a registered endpoint, often with an event identifier, event type, timestamp, and resource reference. The receiver verifies the sender according to the provider’s scheme, accepts the message, and processes it. The provider may retry if it does not receive the expected response. A timeout or lost response can cause the same event to arrive again even if the first attempt was processed.</p>
 <pre><code class="language-text">Polling:   Your app ── “anything new?” ──→ Provider API (repeated on a timer)
 Webhook:   Provider ── “event occurred” ─→ Your endpoint (when it happens)</code></pre>

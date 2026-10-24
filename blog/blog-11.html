@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples | DomainFits</title>
   <meta name="description" content="Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/blog/blog-11.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples">
   <meta property="og:description" content="Understand A, AAAA, CNAME, MX, TXT, and NS records with a safe example zone and a practical editing workflow.">
@@ -17,9 +24,14 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Replace example.com with the production domain before publication. -->
   <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -142,6 +154,8 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
   <main id="main-content" class="page-main">
     <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</div>
     <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Hosting, DNS &amp; Server Technology · Practical guide</p><h1>DNS Records Explained: A, AAAA, CNAME, MX, TXT and NS With Examples</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainFits Editorial</span><span>5 minute read</span></div><div class="tag-list"><span class="tag">DNS records</span><span class="tag">Configuration</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-dns-records-explained.jpg" alt="DNS zone illustration showing website, alias, and email record types." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>DNS records publish information about names in a DNS zone. A website, email service, domain verification, and subdomains may all depend on different records. Editing one record can affect only one service—or, if nameservers are changed, the entire zone. The safest approach is to understand the record’s purpose, save the current zone, and follow the provider’s instructions.</p>
@@ -198,6 +212,7 @@
 </tbody>
 </table>
 <p>The example uses documentation-only address ranges and placeholder names; it is not a working production zone. The <code>@</code> shorthand is used by many DNS control panels to mean the zone apex, but interfaces vary. Do not paste these sample values into a real domain.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <h2 id="a-and-aaaa-address-records">A and AAAA: address records</h2>
 <p>An A record returns an IPv4 address for a name. An AAAA record returns an IPv6 address. A domain may have several records of either type, and services may update them. If a provider gives you an address, copy it exactly and verify whether the record should be at the apex, <code>www</code>, or another subdomain.</p>
 <p>Having an AAAA record when the service is not reachable over IPv6 can create inconsistent user experiences. Conversely, omitting IPv6 may be intentional for a provider that does not support it. Use the host’s current configuration guidance and test both paths.</p>

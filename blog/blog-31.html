@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience | DomainFits</title>
   <meta name="description" content="Make domain tools more trustworthy through clear limitations, data minimization, security, accessibility, and transparent result language.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/blog/blog-31.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience">
   <meta property="og:description" content="Make domain tools more trustworthy through clear limitations, data minimization, security, accessibility, and transparent result language.">
@@ -17,9 +24,14 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Replace example.com with the production domain before publication. -->
   <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -142,6 +154,8 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
   <main id="main-content" class="page-main">
     <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience</div>
     <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Business &amp; Website Operations · Practical guide</p><h1>Building Trust on a Domain Tools Website: Privacy, Security, Transparency and User Experience</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainFits Editorial</span><span>4 minute read</span></div><div class="tag-list"><span class="tag">Privacy</span><span class="tag">Trust</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-trust-domain-tools-website.jpg" alt="Trust framework illustration with privacy, security, and transparent results." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>A domain tool earns trust by being clear about what it does, what data it uses, and what it cannot determine. A polished interface is not enough if results are misleading, forms fail silently, or user data is collected without a clear reason.</p>
@@ -150,6 +164,7 @@
 </blockquote>
 <h2 id="explain-the-result-not-only-the-feature">Explain the result, not only the feature</h2>
 <p>For a name generator, state whether it creates suggestions from word lists or checks live registration. For an availability checker, identify the data source, timestamp, supported TLDs, and what an inconclusive result means. For a valuation tool, explain that outputs are estimates and describe the input or methodology where possible.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Use labels such as “suggestion,” “lookup result,” or “estimate” precisely. A “not found” response from one data source is not necessarily the same as “available at checkout.” Place the limitation beside the button or result, not only in a footer users may never read.</p>
 <h2 id="privacy-by-design">Privacy by design</h2>
 <p>List the data the tool collects, why it is needed, how long it is retained, and which providers receive it. Avoid collecting a visitor’s candidate names, email, location, or account details unless necessary for the requested function. If you use analytics, logs, advertising, or a third-party API, document the relevant data flow and provide disclosures required by applicable law.</p>

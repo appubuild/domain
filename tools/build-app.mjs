@@ -6,6 +6,25 @@ import { build as bundle } from 'esbuild';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WEB_DIR = path.join(ROOT, 'www');
 const THEME_BUNDLE = '/assets/js/capacitor-theme-sync.bundle.js';
+const NATIVE_AD_CONFIG = `/* AdSense intentionally omitted from the Capacitor native bundle. */
+window.DOMAINFITS_AD_CONFIG = Object.freeze({
+  enabled: false,
+  publisherId: '',
+  slots: Object.freeze({
+    'header-banner': Object.freeze({ code: '' }),
+    'generator-inline': Object.freeze({ code: '' }),
+    'article-inline': Object.freeze({ code: '' })
+  })
+});
+`;
+const NATIVE_AD_MANAGER = `/* Native-safe stub: never executes or loads AdSense in Capacitor apps. */
+(() => {
+  document.querySelectorAll('[data-ad-slot]').forEach((slot) => {
+    slot.replaceChildren();
+    slot.hidden = true;
+  });
+})();
+`;
 
 const runtimeEntries = [
   'index.html',
@@ -15,6 +34,9 @@ const runtimeEntries = [
   'robots.txt',
   'sitemap.xml',
   'ads.txt',
+  'manifest.webmanifest',
+  'service-worker.js',
+  'offline.html',
   'tools/domain-generator.html'
 ];
 
@@ -71,6 +93,10 @@ if (capacitorConfig.server?.url) {
 }
 
 await copyRuntimeTree();
+await Promise.all([
+  writeFile(path.join(WEB_DIR, 'assets/js/ads-config.js'), NATIVE_AD_CONFIG, 'utf8'),
+  writeFile(path.join(WEB_DIR, 'assets/js/ad-manager.js'), NATIVE_AD_MANAGER, 'utf8')
+]);
 await bundle({
   entryPoints: [path.join(ROOT, 'assets/js/capacitor-theme-sync.js')],
   outfile: path.join(WEB_DIR, 'assets/js/capacitor-theme-sync.bundle.js'),

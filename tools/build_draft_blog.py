@@ -238,7 +238,26 @@ def display_date(value: str) -> str:
     return date.fromisoformat(value).strftime("%B %-d, %Y")
 
 
+ARTICLE_AD_SLOT = '<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>'
+
+
+def insert_article_ad(body_html: str) -> str:
+    """Add the shared responsive ad slot after the first complete article section."""
+    if 'data-ad-slot="article-inline"' in body_html:
+        return body_html
+    section = re.search(r"<h2\b[\s\S]*?</h2>[\s\S]*?</p>", body_html, flags=re.IGNORECASE)
+    if section:
+        position = section.end()
+    else:
+        paragraph = re.search(r"</p>", body_html, flags=re.IGNORECASE)
+        if not paragraph:
+            return body_html
+        position = paragraph.end()
+    return body_html[:position] + "\n" + ARTICLE_AD_SLOT + body_html[position:]
+
+
 def article_template(post: dict, body_html: str) -> str:
+    body_html = insert_article_ad(body_html)
     title = escape(post["title"])
     excerpt = escape(post["excerpt"], quote=True)
     slug = escape(post["slug"], quote=True)
@@ -289,22 +308,34 @@ def article_template(post: dict, body_html: str) -> str:
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>{title} | DomainFits</title>
   <meta name="description" content="{excerpt}">
   <meta name="robots" content="{robots_content}">
   <link rel="canonical" href="https://example.com/blog/{file}">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="{title}"><meta property="og:description" content="{excerpt}">
   <meta property="og:url" content="https://example.com/blog/{file}">
   <meta property="og:image" content="{escape(image_abs, quote=True)}"><meta property="og:image:alt" content="{image_alt}">
   <meta property="article:published_time" content="{date}"><meta property="article:modified_time" content="{date}">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{title}"><meta name="twitter:description" content="{excerpt}">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{schema_json}</script>
   <script type="application/ld+json">{breadcrumb_json}</script>
 </head>
@@ -318,6 +349,7 @@ def article_template(post: dict, body_html: str) -> str:
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="{slug}" hidden>

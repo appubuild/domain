@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App | DomainFits</title>
   <meta name="description" content="Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-41.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App"><meta property="og:description" content="Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.">
   <meta property="og:url" content="https://example.com/blog/blog-41.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-api-gateways-reverse-proxies-load-balancers.svg"><meta property="og:image:alt" content="Browser request routed through a reverse proxy and API gateway to healthy backend services.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="API Gateways, Reverse Proxies and Load Balancers: How Web Traffic Reaches Your App"><meta name="twitter:description" content="Learn the distinct roles of proxies, gateways, and load balancers, including TLS, routing, rate limits, health checks, and failure handling.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="api-gateways-reverse-proxies-load-balancers" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> A reverse proxy accepts requests on behalf of backend servers and forwards them. A load balancer distributes requests across healthy backends. An API gateway commonly adds API-focused policies such as authentication, quotas, request validation, and route management. One product can perform several roles, but the architecture should make each responsibility and failure mode clear.</p></blockquote>
 <h2 id="what-each-component-does">What each component does</h2>
 <p>A <strong>reverse proxy</strong> sits between a client and one or more servers. It can route requests by hostname or path, terminate TLS, forward selected headers, compress responses, and hide backend addresses. The proxy must handle forwarded identity and client IP headers carefully; a backend should trust those headers only when they came from a known proxy that overwrites untrusted values.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>A <strong>load balancer</strong> distributes traffic across a pool of backends. It can use health checks and routing policies to avoid sending new requests to an unhealthy instance. Some load balancers operate at the transport layer, while others understand HTTP paths and headers. The correct choice depends on protocols, availability needs, and the provider’s features.</p>
 <p>An <strong>API gateway</strong> manages API entry points and policies. It may validate authentication, apply per-client quotas, normalize requests, enforce size limits, select versions, or aggregate endpoints. A gateway does not replace authorization in the application. The backend should still verify that the authenticated user can access the specific account, domain, or record in the request.</p>
 <div class="table-scroll"><table><thead><tr><th scope="col">Component</th><th scope="col">Main question it answers</th><th scope="col">Typical responsibilities</th></tr></thead><tbody><tr><td>Reverse proxy</td><td>Where should this request go?</td><td>TLS termination, host/path routing, header forwarding</td></tr><tr><td>Load balancer</td><td>Which healthy instance should receive it?</td><td>Distribution, health checks, connection handling</td></tr><tr><td>API gateway</td><td>Which API policy applies?</td><td>Authentication, quotas, validation, version routing</td></tr><tr><td>Application service</td><td>Is this operation allowed and correct?</td><td>Business rules, resource authorization, data access</td></tr></tbody></table></div>

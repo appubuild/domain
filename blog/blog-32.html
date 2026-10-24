@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement | DomainFits</title>
   <meta name="description" content="Build a useful knowledge site with topic clusters, transparent tools, regular reviews, and outcome-focused measurement.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/blog/blog-32.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement">
   <meta property="og:description" content="Build a useful knowledge site with topic clusters, transparent tools, regular reviews, and outcome-focused measurement.">
@@ -17,9 +24,14 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Replace example.com with the production domain before publication. -->
   <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -142,6 +154,8 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
   <main id="main-content" class="page-main">
     <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement</div>
     <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Business &amp; Website Operations · Practical guide</p><h1>How to Build a Long-Term Domain Knowledge Website: Content Strategy, Tools and Measurement</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainFits Editorial</span><span>4 minute read</span></div><div class="tag-list"><span class="tag">Content strategy</span><span class="tag">Measurement</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-build-domain-knowledge-website.jpg" alt="Editorial content map connecting guides, tools, review, and useful metrics." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>A domain knowledge website becomes useful when its articles, tools, and maintenance practices answer real reader questions over time. Publishing a large number of pages is not the same as building trust or visibility. Start with audience needs, connect related content thoughtfully, and measure whether people can complete useful tasks.</p>
@@ -150,6 +164,7 @@
 </blockquote>
 <h2 id="begin-with-audience-and-purpose">Begin with audience and purpose</h2>
 <p>Define who the site serves: first-time domain buyers, website owners, small businesses, developers, investors, or another group. These readers have different questions and risk levels. Choose a core purpose and say what the site does not provide, such as legal advice, live availability, or guaranteed valuation.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Research questions from support messages, search queries, customer interviews, and product use. Keep personal data out of editorial notes unless it is necessary and appropriately handled. Prioritize topics by user need, factual confidence, and the site’s ability to provide a genuinely useful answer.</p>
 <h2 id="build-topic-clusters-around-tasks">Build topic clusters around tasks</h2>
 <p>A content cluster should help someone complete a journey, not merely repeat a keyword. For example, a domain fundamentals section can explain domain structure, DNS, registration, renewal, and transfer. A tool guide can link to the generator and explain what it cannot verify. An operations cluster can cover hosting, HTTPS, backups, and maintenance.</p>

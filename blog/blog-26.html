@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes | DomainFits</title>
   <meta name="description" content="Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/blog/blog-26.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes">
   <meta property="og:description" content="Compare WHOIS and RDAP, interpret common status codes carefully, and distinguish registration data from DNS and legal research.">
@@ -17,9 +24,14 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Replace example.com with the production domain before publication. -->
   <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -142,6 +154,8 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
   <main id="main-content" class="page-main">
     <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes</div>
     <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Research &amp; Generator Tools · Practical guide</p><h1>WHOIS vs RDAP: How to Research Domain Registration Data and Status Codes</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainFits Editorial</span><span>4 minute read</span></div><div class="tag-list"><span class="tag">WHOIS</span><span class="tag">RDAP</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-whois-vs-rdap.jpg" alt="Structured RDAP and WHOIS record panels with status-code cues." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>WHOIS and the Registration Data Access Protocol (RDAP) are tools for looking up information about registered internet resources, including many domain names. They do not prove that a domain is legally safe, show every private contact detail, or always tell you whether a name can be registered. Data access and response details vary by registry, registrar, and applicable privacy rules.</p>
@@ -150,6 +164,7 @@
 </blockquote>
 <h2 id="what-a-lookup-may-show">What a lookup may show</h2>
 <p>A domain registration response can include the registrar, registration and expiration dates, nameservers, domain status codes, and links to registration services. Contact information may be redacted or omitted under privacy and data-protection rules. Some details can be stale, cached, or not supplied by the server.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>A registration lookup is not the same as a DNS query. WHOIS/RDAP asks about registration data; DNS asks for records used to resolve a name. A domain can be registered but have no working website records, or it can resolve to a service while some registrant details are hidden.</p>
 <h2 id="whois-and-rdap-compared">WHOIS and RDAP compared</h2>
 <table>

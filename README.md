@@ -1,6 +1,8 @@
 # DomainFits static website
 
-A static-site project with a dependency-free browser runtime, built around the supplied **Smart AI Domain Generator** HTML (the generator is rules-based and does not call an AI model). It includes the landing page, generator, a config-driven blog archive, 30 existing series articles plus two naming guides, 20 additional long-form technical drafts, local featured illustrations, editorial packs, publisher-information pages, SEO metadata, structured data, a sitemap, `robots.txt`, and inactive AdSense/analytics setup notes.
+**বাংলা সেটআপ, PWA, বিজ্ঞাপন ও GitHub নির্দেশিকা:** [README-BN.md](README-BN.md)
+
+A static-site project with a dependency-free browser runtime, built around the supplied **Smart AI Domain Generator** HTML (the generator is rules-based and does not call an AI model). It includes the landing page, generator, a config-driven blog archive, 30 existing series articles plus two naming guides, 20 additional long-form technical drafts, local featured illustrations, editorial packs, publisher-information pages, SEO metadata, structured data, a sitemap, `robots.txt`, an installable PWA shell, configurable web-only AdSense slots, and no default analytics/ad requests.
 
 ## Architecture
 
@@ -19,19 +21,28 @@ A static-site project with a dependency-free browser runtime, built around the s
 ├── tools/
 │   ├── domain-generator.html          Integrated generator page
 │   ├── build_draft_blog.py            Static article / pack / sitemap helper
-│   └── build-app.mjs                  Local www/ build and native theme-bundle injection
+│   └── build-app.mjs                  Local www/ build, native theme bundle, AdSense stripping
+├── manifest.webmanifest               PWA install metadata and icons
+├── service-worker.js                  Same-origin offline cache; web only
+├── offline.html                       Offline navigation fallback
+├── README-BN.md                       বাংলা setup, ads, verification, GitHub guide
 ├── assets/
 │   ├── css/style.css                  Responsive pure CSS; no framework CDN
 │   ├── js/blog.js                     Renders only entries with published === true
 │   ├── js/blog-publish-guard.js       Reveals a new article only when its flag is true
-│   ├── js/domain-generator.js         Industry pools, standard and brandable generation
+│   ├── js/domain-generator.js         Industry pools, settings drawer/accordion, export UI
 │   ├── js/domain-generator-data.js    Original 2–6 lists plus supplemental 7+ pool
+│   ├── js/site-config.js              Central generator controls mode
+│   ├── js/ads-config.js               Three responsive, web-only ad slot placeholders
+│   ├── js/platform.js                 Capacitor-native / mobile-web / desktop detection
+│   ├── js/ad-manager.js               Ad slot renderer; disabled in native builds
+│   ├── js/pwa.js                      Secure-context service-worker registration
 │   ├── js/capacitor-theme-sync.js     Android system-bar theme bridge (bundled for app)
-│   ├── js/main.js                     Navigation, theme event, and contact form
+│   ├── js/main.js                     Navigation, theme-color sync, and contact form
 │   ├── js/reveal.js                   IntersectionObserver scroll reveals
 │   └── img/                           Local logo, favicon, diagrams, blog covers
 ├── pages/                             About, contact, privacy, terms, disclaimer
-├── includes/                          Shared reference fragments and inactive snippets
+├── includes/                          Shared header/footer and ad reference snippets
 ├── package.json                       Capacitor / esbuild dependencies and scripts
 ├── capacitor.config.json             Local webDir; no remote server.url
 ├── android/                           Android Studio Gradle project and DomainFits icons
@@ -140,8 +151,8 @@ After changing web files or plugins, run `npm run cap:sync` (it runs the local b
 1. **Complete publisher details.** DomainFits branding is applied, but starter publisher notes and bracketed identity/jurisdiction fields in About, Privacy, Terms, and Disclaimer still need real, truthful publisher and editorial information.
 2. **Replace `https://example.com`.** Set the production origin in canonical and Open Graph URLs, structured data, `sitemap.xml`, and `robots.txt`; update generated article pages by rerunning the helper after source/template changes.
 3. **Configure the contact form.** Replace `REPLACE_WITH_YOUR_FORM_ID` in `pages/contact.html` with a real Formspree endpoint or implement a backend. The current UI intentionally does not send messages until configured.
-4. **Configure AdSense only after approval.** Replace the placeholder publisher ID in `/ads.txt` with the exact account ID. `pub-0000000000000000` is not a valid publisher ID. Use the official script and ad-unit code; approval and revenue are not guaranteed.
-5. **Configure privacy/consent and analytics.** Analytics and ads are inactive. Follow `/includes/analytics-ads.html`, disclose actual vendors and data practices, and configure an appropriate consent platform where required.
+4. **Configure AdSense only after the account is approved and the site's privacy/consent setup is ready.** Replace the starter `/ads.txt` entry with the exact account line from AdSense, then set the real publisher ID and responsive slot markup centrally in `assets/js/ads-config.js`. Do not paste separate loader scripts into pages; the Capacitor build strips the ad manager and its configuration. Approval and revenue are not guaranteed.
+5. **Configure privacy/consent and ads.** Analytics and AdSense requests are off by default because publisher/slot values are empty. Follow `README-BN.md` and `assets/js/ads-config.js`; disclose actual vendors and data practices, and configure an appropriate consent platform where required. Capacitor builds remove the ad configuration.
 6. **Review articles and sources.** Verify primary references and changing provider behavior, update the byline/date, check accessibility and links, and obtain specialist security, legal, financial, or privacy review where appropriate. These templates do not guarantee AdSense approval or legal compliance.
 7. **Test the deployed origin.** Check navigation, saved theme, generator copy and TXT/CSV exports, blog config loading, only-published rendering, draft gating, category filters, nine-card pagination, form delivery, HTTPS, favicon, `ads.txt`, robots.txt, sitemap, and canonical URLs.
 8. **Set up Search Console.** Verify domain ownership and submit the production sitemap. Structured data and SEO code cannot guarantee indexing, rankings, AI citations, or sitelinks.

@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>AI Search vs Traditional Search: How Websites Can Improve Their Discoverability | DomainFits</title>
   <meta name="description" content="Compare traditional search with AI-generated answers and audit crawlability, accessible content, citations, structured data, and measurement limits.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-34.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="AI Search vs Traditional Search: How Websites Can Improve Their Discoverability"><meta property="og:description" content="Compare traditional search with AI-generated answers and audit crawlability, accessible content, citations, structured data, and measurement limits.">
   <meta property="og:url" content="https://example.com/blog/blog-34.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-ai-search-vs-traditional-search.svg"><meta property="og:image:alt" content="Comparison of a conventional search index and an AI retrieval-and-answer workflow.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="AI Search vs Traditional Search: How Websites Can Improve Their Discoverability"><meta name="twitter:description" content="Compare traditional search with AI-generated answers and audit crawlability, accessible content, citations, structured data, and measurement limits.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="ai-search-vs-traditional-search" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> Improve discoverability by making important pages crawlable, indexable, accessible, and clearly written. Use descriptive headings, specific factual language, working internal links, useful citations, and accurate structured data. Then measure search performance with the tools available to you, while treating AI-answer visibility as incomplete and variable rather than a precise ranking report.</p></blockquote>
 <h2 id="two-ways-of-finding-information">Two ways of finding information</h2>
 <p>A conventional search engine typically discovers URLs by following links and feeds, fetches pages according to its crawling rules, processes content, and may add eligible pages to an index. When someone searches, the engine selects and orders results using many signals that can change. The user usually chooses a result and reads the source page.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>An AI search experience can combine search with retrieval and language generation. Depending on the product, it may retrieve pages at query time, use a prebuilt index, draw on a licensed data set, or combine several sources. A model then produces a synthesized response. Some experiences show citations; others show links or source cards. “AI search” is therefore not one technical pipeline shared by every service.</p>
 <div class="table-scroll"><table><thead><tr><th scope="col">Stage</th><th scope="col">Traditional search, simplified</th><th scope="col">AI-assisted answer, simplified</th></tr></thead><tbody><tr><td>Discovery</td><td>Crawlers find URLs through links, sitemaps, or other feeds</td><td>A product may use a search index, retrieval service, or connected tool</td></tr><tr><td>Processing</td><td>Content is parsed and considered for an index</td><td>Retrieved content is selected, ranked, summarized, or passed to a model</td></tr><tr><td>User experience</td><td>Ordered result links</td><td>Generated explanation, sometimes with source links</td></tr><tr><td>Site-owner control</td><td>Crawl rules and page directives provide some signals</td><td>Product-specific controls and policies vary</td></tr></tbody></table></div>
 <p>A page that is eligible for a search index is not necessarily used in an AI answer. A page that is summarized by an AI product may not receive a visible click. Keep those outcomes separate when planning content.</p>

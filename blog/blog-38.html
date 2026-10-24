@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs | DomainFits</title>
   <meta name="description" content="Explore serverless functions, event triggers, cold starts, execution limits, pricing inputs, and an illustrative domain lookup architecture.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-38.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs"><meta property="og:description" content="Explore serverless functions, event triggers, cold starts, execution limits, pricing inputs, and an illustrative domain lookup architecture.">
   <meta property="og:url" content="https://example.com/blog/blog-38.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-serverless-computing-explained.svg"><meta property="og:image:alt" content="A request moving through an HTTPS gateway to a function, provider API, and response.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Serverless Computing Explained: Functions, Events, Cold Starts and Real Costs"><meta name="twitter:description" content="Explore serverless functions, event triggers, cold starts, execution limits, pricing inputs, and an illustrative domain lookup architecture.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="serverless-computing-explained" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> Serverless applications often use short-lived functions triggered by HTTP requests, schedules, queues, or storage events. The platform starts or reuses an execution environment, runs the code, and returns or stores a result. Compare this model with a VPS using expected traffic, execution time, runtime limits, operational responsibilities, network needs, and total service charges—not just the advertised per-request price.</p></blockquote>
 <h2 id="what-a-serverless-function-does">What a serverless function does</h2>
 <p>A function is a unit of code deployed to a managed runtime. It may be invoked by an HTTP request through a gateway, by a scheduled event, by a message arriving in a queue, or by a change in a storage service. The function receives an event, validates it, performs a bounded task, and returns a response or writes a result elsewhere.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Many function platforms create an execution environment on demand and may reuse it for later invocations. The application should not assume that process memory is permanent or that a particular instance will handle the next request. Durable state belongs in a database, object store, or another managed service with an explicit persistence model. Temporary files and in-memory caches can help within one invocation, but they should not be the only copy of important data.</p>
 <p>A typical HTTP flow is:</p>
 <pre><code class="language-text">Browser → HTTPS endpoint / gateway → function → data provider or database

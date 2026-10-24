@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Web Application Threat Modeling: How to Identify Risks Before They Become Incidents | DomainFits</title>
   <meta name="description" content="Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-51.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Web Application Threat Modeling: How to Identify Risks Before They Become Incidents"><meta property="og:description" content="Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.">
   <meta property="og:url" content="https://example.com/blog/blog-51.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-web-application-threat-modeling.svg"><meta property="og:image:alt" content="Trust-boundary diagram with browser, application, database, external provider, and defensive checkpoints.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Web Application Threat Modeling: How to Identify Risks Before They Become Incidents"><meta name="twitter:description" content="Map assets, trust boundaries, and attack surfaces with STRIDE prompts, then turn risks into testable defensive controls.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="web-application-threat-modeling" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> Start with the system’s purpose and assets, sketch the components and data flows, mark where trust changes, and examine each flow for threats to confidentiality, integrity, availability, and accountability. Frameworks such as STRIDE provide prompts, not a complete risk score. Prioritize mitigations by likelihood, impact, and feasibility, then revisit the model when the product or infrastructure changes.</p></blockquote>
 <h2 id="what-belongs-in-a-threat-model">What belongs in a threat model</h2>
 <p>A <strong>threat</strong> is a potential event that could cause harm, such as an unauthorized account change or an outage. A <strong>vulnerability</strong> is a weakness that could help an event occur. <strong>Risk</strong> combines a plausible threat with the potential impact and likelihood in the specific context. The labels are sometimes used differently, so a team should agree on its definitions and record assumptions.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Begin by defining scope. A model for a static blog is different from one for a registrar account system. Write down what the product does, who uses it, what it connects to, and what is out of scope. Include an environment and data classification: public article content, private account records, credentials, payment state, and operational logs do not have the same sensitivity.</p>
 <p>A simple data-flow diagram is often enough for the first review:</p>
 <pre><code class="language-text">Visitor → browser → public site / API gateway → application service

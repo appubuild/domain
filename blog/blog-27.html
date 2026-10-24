@@ -3,11 +3,18 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>A Practical Domain Research Workflow: From Idea Generation to Final Shortlist | DomainFits</title>
   <meta name="description" content="Use a repeatable process to generate names, check registration and costs, research legal risks, and approve a final shortlist.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/blog/blog-27.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="A Practical Domain Research Workflow: From Idea Generation to Final Shortlist">
   <meta property="og:description" content="Use a repeatable process to generate names, check registration and costs, research legal risks, and approve a final shortlist.">
@@ -17,9 +24,14 @@
   <meta name="twitter:card" content="summary_large_image">
   <!-- Replace example.com with the production domain before publication. -->
   <!-- Google Search Console verification: insert the tag issued for your verified production domain here. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script type="application/ld+json">
   {
@@ -142,6 +154,8 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html">Generator</a><a href="/blog/index.html" aria-current="page">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
+
   <main id="main-content" class="page-main">
     <div class="container breadcrumbs"><a href="/index.html">Home</a> / <a href="/blog/index.html">Blog</a> / A Practical Domain Research Workflow: From Idea Generation to Final Shortlist</div>
     <div class="container article-layout"><article><header class="article-header"><p class="eyebrow">Domain Research &amp; Generator Tools · Practical guide</p><h1>A Practical Domain Research Workflow: From Idea Generation to Final Shortlist</h1><div class="article-meta"><time datetime="2026-10-23">October 23, 2026</time><span>DomainFits Editorial</span><span>4 minute read</span></div><div class="tag-list"><span class="tag">Research</span><span class="tag">Shortlist</span></div></header><figure class="article-figure article-featured"><img src="/assets/img/blog/feature-domain-research-workflow.jpg" alt="Step-by-step domain research funnel from idea to approved shortlist." width="1200" height="675" fetchpriority="high"><figcaption>Original vector illustration for this guide; it is explanatory artwork, not market or performance data.</figcaption></figure><div class="article-body"><p>A good domain shortlist is the result of several separate checks: name quality, registration status, renewal cost, legal risk, technical fit, and account ownership. Combining them into one “available” result can hide important problems. A simple workflow makes decisions traceable and helps a team stop before committing to a risky name.</p>
@@ -150,6 +164,7 @@
 </blockquote>
 <h2 id="step-1-write-a-short-brief">Step 1: Write a short brief</h2>
 <p>Record the product or project, audience, countries and languages, desired tone, required keywords, terms to avoid, and preferred domain extensions. Ask whether the name must describe the service or can be invented. Note technical constraints, such as easy spelling for radio or phone use.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>A brief helps distinguish “interesting” from “useful.” If the project has several audiences or future products, list those explicitly rather than choosing a name based only on the first feature.</p>
 <h2 id="step-2-generate-and-normalize-candidates">Step 2: Generate and normalize candidates</h2>
 <p>Use brainstorming, word combinations, a naming tool, or a team session. Keep distinct patterns—descriptive, compound, suggestive, invented—rather than repeating one formula. Normalize spelling and create a separate row for each TLD. Remove accidental duplicates and names that are difficult to pronounce or misleading.</p>

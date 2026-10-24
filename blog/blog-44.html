@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>API Rate Limiting, Caching and Retries: Building Reliable Search Tools | DomainFits</title>
   <meta name="description" content="Understand rate limits, quotas, cache keys, TTLs, timeouts, exponential backoff, and safe handling of uncertain lookup results.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-44.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="API Rate Limiting, Caching and Retries: Building Reliable Search Tools"><meta property="og:description" content="Understand rate limits, quotas, cache keys, TTLs, timeouts, exponential backoff, and safe handling of uncertain lookup results.">
   <meta property="og:url" content="https://example.com/blog/blog-44.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-api-rate-limiting-caching-retries.svg"><meta property="og:image:alt" content="Request flow showing a cache hit, a rate-limit check, and a bounded provider retry.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="API Rate Limiting, Caching and Retries: Building Reliable Search Tools"><meta name="twitter:description" content="Understand rate limits, quotas, cache keys, TTLs, timeouts, exponential backoff, and safe handling of uncertain lookup results.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="api-rate-limiting-caching-retries" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> A rate limit bounds request volume, a quota caps usage over a period or plan, and a burst allowance controls short spikes. A cache stores a reusable response for a defined key and lifetime. Retries should be bounded, use timeouts and backoff, and apply only when an operation is safe to repeat. For a domain lookup, return “unknown” on an upstream failure rather than mislabeling it as available.</p></blockquote>
 <h2 id="rate-limits-quotas-and-bursts">Rate limits, quotas, and bursts</h2>
 <p>A <strong>rate limit</strong> controls how many operations a client can make in a period. A <strong>quota</strong> often describes a total allowance over a billing or usage interval. A <strong>burst</strong> is a short increase above the sustained rate that a service may temporarily accept. Product documentation sometimes uses these terms differently, so describe the actual policy rather than assuming a universal definition.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Limits can be applied per account, API key, user, source IP, endpoint, or a combination. Each choice has trade-offs. IP-based limits can affect many people behind one office or mobile carrier. Account-based limits are more precise but depend on authenticated identity. A public endpoint may need multiple signals and a safe fallback. Never treat a user-agent string as a reliable identity.</p>
 <p>A limit should protect service capacity and provider agreements without blocking normal use unfairly. Set different budgets for inexpensive cached reads and expensive upstream lookups. Return a clear <code>429</code> response when appropriate, document how the client can retry, and avoid revealing internal thresholds that make abuse easier. Monitor false positives and legitimate traffic patterns.</p>
 <h2 id="three-common-limit-algorithms">Three common limit algorithms</h2>

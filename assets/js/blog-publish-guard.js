@@ -15,6 +15,11 @@
     notice.hidden = false;
     notice.textContent = message;
   };
+  const announcePublicationState = (published) => {
+    if (typeof CustomEvent === 'function' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('domainfits:publicationchange', { detail: { published } }));
+    }
+  };
 
   fetch('/blog/blog-config.json', { cache: 'no-store' })
     .then((response) => {
@@ -30,12 +35,15 @@
         if (cta) cta.hidden = false;
         notice.hidden = true;
         if (robots) robots.content = 'index,follow,max-image-preview:large';
+        announcePublicationState(true);
         return;
       }
       showDraftNotice('This article is not currently published. Return to the blog archive for available articles.');
+      announcePublicationState(false);
     })
     .catch((error) => {
       showDraftNotice('Publication status could not be verified, so this article remains hidden. Please return to the blog archive.');
+      announcePublicationState(false);
       console.error('DomainFits publication guard:', error);
     });
 })();

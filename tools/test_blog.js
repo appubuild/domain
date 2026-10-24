@@ -60,6 +60,9 @@ class FakeElement {
   append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this.children = children.flatMap((child) => child?.isFragment ? child.children : [child]); }
   setAttribute(name, value) { this.attributes[name] = String(value); }
+  getAttribute(name) { return this.attributes[name] ?? null; }
+  hasAttribute(name) { return Object.prototype.hasOwnProperty.call(this.attributes, name); }
+  removeAttribute(name) { delete this.attributes[name]; }
   addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); }
   dispatch(type) { for (const callback of this.listeners[type] || []) callback({ target: this }); }
   click() { if (!this.disabled) this.dispatch('click'); }
@@ -67,8 +70,8 @@ class FakeElement {
     if (!this.subqueries.has(selector)) this.subqueries.set(selector, new FakeElement('span'));
     return this.subqueries.get(selector);
   }
-  focus() {}
-  scrollIntoView() {}
+  focus() { this.focused = true; }
+  scrollIntoView() { this.scrolledIntoView = true; }
 }
 
 async function render(configData, { category = '', search = '' } = {}) {
@@ -150,7 +153,7 @@ function listFiles(directory) {
   });
 }
 
-function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', placement = 'both', strict = true, brandable = false } = {}) {
+function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', placement = 'both', strict = true, brandable = false, controlMode = 'drawer' } = {}) {
   const ids = new Map();
   for (const [, id] of generatorHtml.matchAll(/\bid="([^"]+)"/g)) {
     if (!ids.has(id)) ids.set(id, new FakeElement('input'));
@@ -167,6 +170,11 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   element('countPresetSelect').value = 'custom';
   element('strictDictToggle').checked = strict;
   element('brandableModeToggle').checked = brandable;
+  element('generatorSettingsAccordionToggle').setAttribute('aria-expanded', 'true');
+  element('generatorSettingsFab').setAttribute('aria-expanded', 'false');
+  element('exportMenuToggle').setAttribute('aria-expanded', 'false');
+  element('exportSpeedMenu').hidden = true;
+  element('settingsBackdrop').hidden = true;
   element('camelCaseToggle').checked = true;
   element('inSearchInput').value = '';
   const lengthInputs = [2, 3, 4, 5, 6, 7].map((value) => element(`len${value}`));
@@ -175,6 +183,7 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
 
   const document = {
     readyState: 'complete',
+    body: new FakeElement('body'),
     getElementById: element,
     createElement: (tagName) => new FakeElement(tagName),
     createDocumentFragment: () => {
@@ -190,6 +199,7 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   };
   const window = {
     listeners: {},
+    DOMAINFITS_SITE_CONFIG: { generatorControlsMode: controlMode },
     addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
     dispatch(type) { for (const callback of this.listeners[type] || []) callback({ type }); },
     requestAnimationFrame: (callback) => { callback(); return 1; },
@@ -197,7 +207,7 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
     setTimeout: (callback) => { callback(); return 1; }
   };
   vm.runInNewContext(`${domainDataSource}\n${generatorSource}`, { document, window, console, navigator: {} });
-  return { grid: element('domainGrid'), elements: ids, window };
+  return { grid: element('domainGrid'), elements: ids, window, document };
 }
 
 (async () => {
@@ -256,7 +266,7 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   }
   assert.match(generatorHtml, /id="brandableModeToggle"(?![^>]*checked)[^>]*>/, 'Brandable Mode must default off');
   assert.match(generatorHtml, /domain-generator-data\.js\?v=20261024-1/);
-  assert.match(generatorHtml, /domain-generator\.js\?v=20261024-1/);
+  assert.match(generatorHtml, /domain-generator\.js\?v=20261024-2/);
   assert.match(generatorHtml, /class="mode-switches"/);
   assert.match(generatorCss, /\.mode-switches \{ display: grid/);
   assert.match(generatorCss, /@media \(max-width: 520px\)[\s\S]*?\.mode-switches \{ grid-template-columns: 1fr/);
@@ -303,6 +313,32 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   const longRun = runGenerator({ root: 'Pay', lengths: [7] });
   assert.ok(longRun.grid.children.length > 0, 'the 7+ option should generate actual results');
   assert.ok(longRun.grid.children.every((card) => Number(card.children[1].children[0].dataset.partnerLength) >= 7));
+
+  const drawerCase = runGenerator({ controlMode: 'drawer' });
+  assert.equal(drawerCase.elements.get('main-content').dataset.controlsMode, 'drawer');
+  assert.equal(drawerCase.elements.get('generator').getAttribute('aria-hidden'), 'true', 'the closed drawer is removed from the accessibility tree');
+  drawerCase.elements.get('generatorSettingsFab').click();
+  assert.ok(drawerCase.elements.get('generator').classList.contains('is-open'));
+  assert.equal(drawerCase.elements.get('generator').getAttribute('aria-modal'), 'true');
+  assert.equal(drawerCase.elements.get('settingsBackdrop').hidden, false);
+  assert.ok(drawerCase.document.body.classList.contains('generator-drawer-open'));
+  drawerCase.elements.get('generateBtn').click();
+  assert.ok(!drawerCase.elements.get('generator').classList.contains('is-open'), 'Generate closes the settings drawer');
+  assert.equal(drawerCase.elements.get('settingsBackdrop').hidden, true);
+  assert.ok(drawerCase.elements.get('generatedResults').scrolledIntoView, 'Generate brings results into view');
+  assert.equal(drawerCase.elements.get('btnCountBadge').textContent, String(drawerCase.grid.children.length));
+  assert.equal(drawerCase.elements.get('mobileBtnCountBadge').textContent, String(drawerCase.grid.children.length));
+
+  const accordionCase = runGenerator({ controlMode: 'accordion' });
+  assert.equal(accordionCase.elements.get('main-content').dataset.controlsMode, 'accordion');
+  assert.equal(accordionCase.elements.get('generator').getAttribute('aria-hidden'), 'false');
+  assert.equal(accordionCase.elements.get('generatorSettingsFab').hidden, true, 'the drawer FAB is not shown in accordion mode');
+  accordionCase.elements.get('generatorSettingsAccordionToggle').click();
+  assert.equal(accordionCase.elements.get('generatorSettingsAccordionToggle').getAttribute('aria-expanded'), 'false');
+  assert.ok(accordionCase.elements.get('generator').classList.contains('is-collapsed'));
+  accordionCase.elements.get('generatorSettingsAccordionToggle').click();
+  assert.equal(accordionCase.elements.get('generatorSettingsAccordionToggle').getAttribute('aria-expanded'), 'true');
+  assert.ok(!accordionCase.elements.get('generator').classList.contains('is-collapsed'));
 
   const normal = JSON.parse(JSON.stringify(config));
   const base = await render(normal);

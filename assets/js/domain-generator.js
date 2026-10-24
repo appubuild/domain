@@ -5,6 +5,7 @@
   const $ = (id) => document.getElementById(id);
   const LENGTHS = [2, 3, 4, 5, 6, 7];
   const MAX_RESULTS = 2000;
+  const controlsMode = window.DOMAINFITS_SITE_CONFIG?.generatorControlsMode === 'accordion' ? 'accordion' : 'drawer';
   let allGeneratedDomains = [];
   let displayedDomains = [];
   let toastTimer;
@@ -184,6 +185,113 @@
     lastStrictMode = isStrict;
     lastBrandableMode = isBrandable;
     runGeneration();
+  }
+
+  function setPanelInert(panel, inert) {
+    panel.inert = inert;
+    if (inert) panel.setAttribute('inert', '');
+    else panel.removeAttribute('inert');
+  }
+
+  function setAccordionExpanded(expanded) {
+    const panel = $('generator');
+    const toggle = $('generatorSettingsAccordionToggle');
+    const body = $('generatorSettingsBody');
+    panel.classList.toggle('is-collapsed', !expanded);
+    toggle.setAttribute('aria-expanded', String(expanded));
+    toggle.querySelector('[data-settings-toggle-state]').textContent = expanded ? 'Expanded' : 'Show settings';
+    body.setAttribute('aria-hidden', String(!expanded));
+    setPanelInert(body, !expanded);
+  }
+
+  function closeExportMenu() {
+    const menu = $('exportSpeedMenu');
+    const toggle = $('exportMenuToggle');
+    if (!menu || !toggle) return;
+    menu.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-label', 'Open export menu');
+  }
+
+  function openSettingsDrawer() {
+    const panel = $('generator');
+    panel.classList.add('is-open');
+    panel.setAttribute('aria-hidden', 'false');
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-labelledby', 'settingsDrawerTitle');
+    panel.setAttribute('aria-modal', 'true');
+    setPanelInert(panel, false);
+    $('settingsBackdrop').hidden = false;
+    $('generatorSettingsFab').setAttribute('aria-expanded', 'true');
+    $('generatorSettingsFab').setAttribute('aria-label', 'Close generation settings');
+    document.body?.classList.add('generator-drawer-open');
+    closeExportMenu();
+    const focusCloseButton = () => $('generatorSettingsClose').focus();
+    if (window.requestAnimationFrame) window.requestAnimationFrame(focusCloseButton);
+    else focusCloseButton();
+  }
+
+  function closeSettingsDrawer({ restoreFocus = true } = {}) {
+    const panel = $('generator');
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden', 'true');
+    panel.removeAttribute('aria-modal');
+    panel.removeAttribute('role');
+    panel.removeAttribute('aria-labelledby');
+    setPanelInert(panel, true);
+    $('settingsBackdrop').hidden = true;
+    $('generatorSettingsFab').setAttribute('aria-expanded', 'false');
+    $('generatorSettingsFab').setAttribute('aria-label', 'Open generation settings');
+    document.body?.classList.remove('generator-drawer-open');
+    if (restoreFocus) $('generatorSettingsFab').focus();
+  }
+
+  function setupControlsExperience() {
+    const main = $('main-content');
+    const panel = $('generator');
+    main.dataset.controlsMode = controlsMode;
+    if (controlsMode === 'accordion') {
+      panel.classList.remove('is-open');
+      panel.removeAttribute('role');
+      panel.removeAttribute('aria-modal');
+      panel.removeAttribute('aria-labelledby');
+      panel.setAttribute('aria-hidden', 'false');
+      setPanelInert(panel, false);
+      $('settingsBackdrop').hidden = true;
+      $('generatorSettingsFab').hidden = true;
+      setAccordionExpanded(true);
+      return;
+    }
+
+    $('generatorSettingsAccordionToggle').hidden = true;
+    closeSettingsDrawer({ restoreFocus: false });
+  }
+
+  function updateExportCount() {
+    const count = allGeneratedDomains.length;
+    ['btnCountBadge', 'mobileBtnCountBadge'].forEach((id) => {
+      const badge = $(id);
+      if (badge) badge.textContent = String(count);
+    });
+    const copyLabel = `Copy all ${count} generated ideas`;
+    ['copyAllTopBtn', 'copyAllMobileBtn'].forEach((id) => {
+      const button = $(id);
+      if (button) {
+        button.setAttribute('aria-label', copyLabel);
+        button.title = copyLabel;
+      }
+    });
+  }
+
+  function generateFromSettings() {
+    if (controlsMode === 'drawer') closeSettingsDrawer({ restoreFocus: false });
+    closeExportMenu();
+    runGeneration(true);
+    if (controlsMode === 'drawer') {
+      const results = $('generatedResults');
+      results.focus({ preventScroll: true });
+      results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   function updateCheckboxUI() {
@@ -393,7 +501,7 @@
     allGeneratedDomains = brandableMode
       ? generateBrandableDomains(root, extension, placement, selectedLengthsForRun, requested, camelCase, isStrict, category)
       : generateDomains(root, extension, placement, selectedLengthsForRun, requested, camelCase, isStrict, category);
-    $('btnCountBadge').textContent = String(allGeneratedDomains.length);
+    updateExportCount();
     updateResultNote(requested);
     applyInstantSearch();
 
@@ -621,10 +729,60 @@
       runGeneration();
     }));
     $('inSearchInput').addEventListener('input', applyInstantSearch);
-    $('generateBtn').addEventListener('click', () => runGeneration(true));
+    $('generateBtn').addEventListener('click', generateFromSettings);
+    $('generatorSettingsAccordionToggle').addEventListener('click', () => {
+      const expanded = $('generatorSettingsAccordionToggle').getAttribute('aria-expanded') !== 'true';
+      setAccordionExpanded(expanded);
+    });
+    $('generatorSettingsFab').addEventListener('click', () => {
+      if ($('generator').classList.contains('is-open')) closeSettingsDrawer();
+      else openSettingsDrawer();
+    });
+    $('generatorSettingsClose').addEventListener('click', () => closeSettingsDrawer());
+    $('settingsBackdrop').addEventListener('click', () => closeSettingsDrawer());
+    $('exportMenuToggle').addEventListener('click', () => {
+      const menu = $('exportSpeedMenu');
+      const open = menu.hidden;
+      menu.hidden = !open;
+      $('exportMenuToggle').setAttribute('aria-expanded', String(open));
+      $('exportMenuToggle').setAttribute('aria-label', open ? 'Close export menu' : 'Open export menu');
+    });
     $('copyAllTopBtn').addEventListener('click', copyAllDomains);
+    $('copyAllMobileBtn').addEventListener('click', () => { closeExportMenu(); copyAllDomains(); });
     $('exportTxtBtn').addEventListener('click', exportTxt);
+    $('exportTxtMobileBtn').addEventListener('click', () => { closeExportMenu(); exportTxt(); });
     $('exportCsvBtn').addEventListener('click', exportCsv);
+    $('exportCsvMobileBtn').addEventListener('click', () => { closeExportMenu(); exportCsv(); });
+    window.addEventListener('keydown', (event) => {
+      const drawerOpen = controlsMode === 'drawer' && $('generator').classList.contains('is-open');
+      if (event.key === 'Escape') {
+        if (drawerOpen) closeSettingsDrawer();
+        closeExportMenu();
+        return;
+      }
+      if (event.key !== 'Tab' || !drawerOpen) return;
+
+      const panel = $('generator');
+      if (typeof panel.querySelectorAll !== 'function') return;
+      const focusable = Array.from(panel.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    });
+    window.addEventListener('click', (event) => {
+      const dial = $('exportSpeedDial');
+      if (typeof dial.contains === 'function' && !dial.contains(event.target) && !$('exportSpeedMenu').hidden) closeExportMenu();
+    });
     $('domainGrid').addEventListener('click', (event) => {
       const card = event.target.closest('button[data-domain]');
       if (card) copyTextToClipboard(card.dataset.domain, `Copied ${card.dataset.domain}.`);
@@ -636,6 +794,7 @@
   }
 
   function init() {
+    setupControlsExperience();
     bindEvents();
     updateCheckboxUI();
     updateStrictUI();

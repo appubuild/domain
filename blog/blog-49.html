@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing | DomainFits</title>
   <meta name="description" content="Understand email authentication, DNS records, alignment, aggregate reports, staged policies, and a domain-owner audit checklist.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-49.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing"><meta property="og:description" content="Understand email authentication, DNS records, alignment, aggregate reports, staged policies, and a domain-owner audit checklist.">
   <meta property="og:url" content="https://example.com/blog/blog-49.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-spf-dkim-dmarc-email-authentication.svg"><meta property="og:image:alt" content="Email authentication flow checking SPF, DKIM signatures, and DMARC alignment against DNS.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="SPF, DKIM and DMARC Explained: Protecting Your Domain From Email Spoofing"><meta name="twitter:description" content="Understand email authentication, DNS records, alignment, aggregate reports, staged policies, and a domain-owner audit checklist.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="spf-dkim-dmarc-email-authentication" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> SPF lists servers authorized to send for an envelope domain. DKIM adds a cryptographic signature that a receiver can verify using a public key published in DNS. DMARC tells receivers how to evaluate alignment between the visible From domain and SPF or DKIM results, and can request reporting or a policy action. Configure them from your actual sending services, test carefully, and increase enforcement only after legitimate mail is accounted for.</p></blockquote>
 <h2 id="what-email-authentication-can-establish">What email authentication can establish</h2>
 <p>Email uses several identity fields. The address a person sees in the <code>From</code> header is not always the same domain used in the SMTP envelope or the signing domain. SPF and DKIM evaluate identities at different parts of the transaction. DMARC connects those results to the domain visible in the From header using alignment rules.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>Authentication helps a receiving service decide whether a message appears authorized by a domain. It does not prove that the human who wrote the message is trustworthy, that a link is safe, or that the content is legitimate. A compromised account or an authorized but abusive sender can still send harmful mail. Continue to use account security, anti-phishing controls, secure mail systems, and user education.</p>
 <h2 id="spf-which-sending-hosts-are-authorized">SPF: which sending hosts are authorized?</h2>
 <p>Sender Policy Framework (SPF) is a DNS policy that identifies which sending hosts are authorized for a domain used in the SMTP envelope. A receiving mail server can compare the connecting host with that policy. SPF is evaluated against a particular identity; it does not directly authenticate the visible From field in every message.</p>

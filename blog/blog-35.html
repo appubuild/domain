@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data | DomainFits</title>
   <meta name="description" content="Learn the roles of MCP hosts, clients, and servers, how tools connect to APIs, and how to manage authentication and untrusted output.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-35.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data"><meta property="og:description" content="Learn the roles of MCP hosts, clients, and servers, how tools connect to APIs, and how to manage authentication and untrusted output.">
   <meta property="og:url" content="https://example.com/blog/blog-35.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-model-context-protocol-mcp.svg"><meta property="og:image:alt" content="MCP host, client, server, and an example tool connected to an external data source.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="What Is Model Context Protocol (MCP)? How AI Apps Connect to Tools and Data"><meta name="twitter:description" content="Learn the roles of MCP hosts, clients, and servers, how tools connect to APIs, and how to manage authentication and untrusted output.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="model-context-protocol-mcp" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> An MCP host is the AI application a person uses. It manages one or more MCP clients, which communicate with MCP servers. A server can expose tools, resources, and prompt templates. The host decides what to offer the model, the user or application grants access, and the server performs its own authorization and validation. MCP can wrap an existing API; it does not replace the API’s security model or make tool output trustworthy.</p></blockquote>
 <h2 id="the-problem-mcp-addresses">The problem MCP addresses</h2>
 <p>Before a shared protocol, each AI application could require a different integration for every data source or tool. A developer might write a connector for one chat app, another for a desktop assistant, and a third for an internal agent. The connector logic could repeat: discover available actions, describe their inputs, send a request, handle a response, and report errors.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>MCP provides a common way for compatible hosts and servers to exchange this information. That can reduce bespoke wiring, but compatibility is not automatic. Host capabilities differ, servers may support different features, and protocol versions evolve. A team still needs to verify the specific client, server, transport, authentication method, and policy supported by its software.</p>
 <p>It helps to think of MCP as an interface contract around a connection. It does not supply the underlying business data, guarantee that an operation is safe, or decide whether the user is allowed to perform it. Those questions remain responsibilities of the host application and service operator.</p>
 <h2 id="host-client-and-server">Host, client, and server</h2>

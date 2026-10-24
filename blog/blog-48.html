@@ -3,22 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Passkeys Explained: How Passwordless Authentication Works for Modern Websites | DomainFits</title>
   <meta name="description" content="Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.">
   <meta name="robots" content="noindex,nofollow">
   <link rel="canonical" href="https://example.com/blog/blog-48.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="article"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Passkeys Explained: How Passwordless Authentication Works for Modern Websites"><meta property="og:description" content="Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.">
   <meta property="og:url" content="https://example.com/blog/blog-48.html">
   <meta property="og:image" content="https://example.com/assets/img/blog/feature-passkeys-passwordless-authentication.svg"><meta property="og:image:alt" content="Passkey registration and sign-in using a device-held private key and a server public key.">
   <meta property="article:published_time" content="2026-10-23"><meta property="article:modified_time" content="2026-10-23">
   <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="Passkeys Explained: How Passwordless Authentication Works for Modern Websites"><meta name="twitter:description" content="Learn how passkeys use public-key challenges, how devices authenticate, and what website owners should plan for recovery and rollout.">
+  <!-- Google Search Console verification: paste the exact meta tag provided for the production domain in this <head>. -->
   <!-- Replace example.com with the production domain before deployment. Draft pages stay noindex until blog-config.json marks them published. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/blog-publish-guard.js?v=20261023-1" defer></script>
+  <script src="/assets/js/blog-publish-guard.js?v=20261024-2" defer></script>
   <script type="application/ld+json">{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -84,6 +96,7 @@
       <div class="header-actions"><a class="button button-small button-primary" href="/tools/domain-generator.html">Try the tool <span aria-hidden="true">↗</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
     </div>
   </header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
   <main id="main-content" class="page-main">
     <section class="container draft-notice" data-draft-notice role="status">This article is currently an unpublished draft. Return to the blog archive for available articles.</section>
     <div class="container article-layout" data-publish-guard data-post-slug="passkeys-passwordless-authentication" hidden>
@@ -100,6 +113,7 @@
 <blockquote><p><strong>Quick answer:</strong> Passkeys are credentials based on public-key cryptography and the Web Authentication (WebAuthn) / FIDO ecosystem. They can be phishing-resistant when implemented with correct origin checks and user verification. They reduce password reuse and phishing risk, but account recovery, device loss, synchronization, accessibility, and fallback methods still need careful design.</p></blockquote>
 <h2 id="passwords-mfa-and-passkeys">Passwords, MFA, and passkeys</h2>
 <p>A password is something a user knows. Multi-factor authentication (MFA) adds another kind of proof, such as a device or biometric unlock. A one-time code sent by text can help against some password attacks, but it can be vulnerable to phishing or phone-number takeover. Security keys and passkeys can provide stronger origin-bound authentication when implemented correctly.</p>
+<aside class="ad-slot ad-slot--article-inline" data-ad-slot="article-inline" aria-label="Advertisement" hidden></aside>
 <p>A passkey is not simply a fingerprint stored on a website. A fingerprint or face unlock may be used locally to authorize the device to use a credential. The site receives a cryptographic assertion, not the biometric template. The exact device and synchronization behavior depends on the operating system, credential manager, browser, and configuration.</p>
 <div class="table-scroll"><table><thead><tr><th scope="col">Sign-in method</th><th scope="col">What the site receives</th><th scope="col">Common concern</th></tr></thead><tbody><tr><td>Password</td><td>Shared secret or verifier-derived proof</td><td>Reuse, phishing, credential stuffing</td></tr><tr><td>SMS code</td><td>One-time code delivered to a phone number</td><td>SIM swap, interception, phishing</td></tr><tr><td>Authenticator code</td><td>Time-based or generated one-time code</td><td>Phishing proxy, recovery and device loss</td></tr><tr><td>Passkey</td><td>Signed challenge using a private key</td><td>Rollout compatibility and recovery design</td></tr></tbody></table></div>
 <p>No single method solves every account risk. A passkey can improve sign-in security, while an attacker who compromises the account recovery process may still take over the account.</p>

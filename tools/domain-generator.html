@@ -3,23 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f8fc">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Domain Name Generator &amp; Startup Name Finder | DomainFits</title>
   <meta name="description" content="Find brandable domain ideas for a startup or business with a keyword-based name generator. Filter results and export a shortlist; availability is not checked.">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <link rel="canonical" href="https://example.com/tools/domain-generator.html">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/img/pwa-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/assets/img/pwa-192.png">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="website"><meta property="og:site_name" content="DomainFits">
   <meta property="og:title" content="Domain Name Generator &amp; Startup Name Finder | DomainFits">
   <meta property="og:description" content="Find brandable domain ideas for a startup or business. Filter results and export a shortlist; availability is not checked.">
   <meta property="og:url" content="https://example.com/tools/domain-generator.html"><meta name="twitter:card" content="summary">
   <!-- Google Search Console: add the verification meta tag issued for your deployed domain here. -->
   <!-- TODO: Replace the example.com canonical and OG URLs with your production domain. -->
-  <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-1">
-  <script src="/assets/js/main.js?v=20261023-4" defer></script>
+  <!-- Configure web-only AdSense slots in /assets/js/ads-config.js; native Capacitor apps remain ad-free. -->
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-2">
+  <script src="/assets/js/site-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ads-config.js?v=20261024-2" defer></script>
+  <script src="/assets/js/platform.js?v=20261024-2" defer></script>
+  <script src="/assets/js/ad-manager.js?v=20261024-2" defer></script>
+  <script src="/assets/js/pwa.js?v=20261024-2" defer></script>
+  <script src="/assets/js/main.js?v=20261024-2" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
   <script src="/assets/js/domain-generator-data.js?v=20261024-1" defer></script>
-  <script src="/assets/js/domain-generator.js?v=20261024-1" defer></script>
+  <script src="/assets/js/domain-generator.js?v=20261024-2" defer></script>
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -116,8 +128,10 @@
     <nav class="site-nav" id="site-navigation" aria-label="Main navigation"><a href="/index.html">Home</a><a href="/tools/domain-generator.html" aria-current="page">Generator</a><a href="/blog/index.html">Blog</a><a href="/pages/about.html">About</a><a href="/pages/contact.html">Contact</a></nav>
     <div class="header-actions"><a class="button button-small button-primary" href="#generator">Start generating <span aria-hidden="true">↓</span></a><button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch to dark theme" title="Switch theme"><span aria-hidden="true">◐</span></button></div>
   </div></header>
+  <aside class="ad-slot ad-slot--header-banner" data-ad-slot="header-banner" aria-label="Advertisement" hidden></aside>
 
-  <main id="main-content" class="page-main">
+
+  <main id="main-content" class="page-main generator-main" data-controls-mode="drawer">
     <div class="container">
       <section class="generator-intro">
         <p class="eyebrow">Free browser-based naming tool</p>
@@ -127,7 +141,17 @@
 
       <div class="notice notice-warning" role="note"><strong>Important:</strong> This tool does not check domain registration, registrar pricing, trademarks, business names, or social handles. Verify every promising name independently before using it.</div>
 
-      <section class="generator-panel" id="generator" aria-label="Domain name generator controls">
+      <section class="generator-panel" id="generator" aria-label="Domain name generator controls" aria-hidden="true" inert>
+        <button class="generator-settings-accordion-toggle" id="generatorSettingsAccordionToggle" type="button" aria-expanded="true" aria-controls="generatorSettingsBody">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/></svg>
+          <span>Generation settings</span><span data-settings-toggle-state>Expanded</span>
+        </button>
+        <div class="settings-drawer-header">
+          <div><p class="eyebrow">Tune your ideas</p><h2 id="settingsDrawerTitle">Generation settings</h2></div>
+          <button class="settings-drawer-close" id="generatorSettingsClose" type="button" aria-label="Close generation settings" title="Close settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+        </div>
+        <div class="generator-settings-body" id="generatorSettingsBody">
+          <div class="generator-settings-content">
         <div class="controls-grid">
           <div class="field">
             <label class="control-label" for="rootInput">Root keyword <span class="control-hint" id="semanticDetectedBadge">General brand</span></label>
@@ -216,22 +240,40 @@
           <label class="inline-check"><input type="checkbox" id="camelCaseToggle" checked><span>Use readable capitalization</span></label>
           <button class="button button-primary generate-button" id="generateBtn" type="button"><span id="syncIcon" aria-hidden="true">↻</span> Generate ideas</button>
         </div>
+          </div>
+        </div>
       </section>
+      <button class="settings-drawer-backdrop" id="settingsBackdrop" type="button" aria-label="Close generation settings" hidden></button>
 
-      <section aria-label="Generated domain ideas">
+      <section id="generatedResults" tabindex="-1" aria-label="Generated domain ideas">
         <div class="generator-toolbar">
           <div class="search-wrap"><label class="control-label" for="inSearchInput">Filter this batch</label><input class="search-input" id="inSearchInput" type="search" placeholder="Search generated ideas…" autocomplete="off"></div>
           <div class="toolbar-meta"><span>Showing <strong id="visibleCounter">0</strong> of <strong id="totalCounter">0</strong> ideas</span></div>
-          <div class="toolbar-buttons">
-            <button class="utility-button" id="copyAllTopBtn" type="button">Copy all (<span id="btnCountBadge">0</span>)</button>
-            <button class="utility-button" id="exportTxtBtn" type="button">Download TXT</button>
-            <button class="utility-button" id="exportCsvBtn" type="button">Download CSV</button>
+          <div class="toolbar-buttons" aria-label="Export generated ideas">
+            <button class="utility-button icon-action" id="copyAllTopBtn" type="button" aria-label="Copy all 0 generated ideas" title="Copy all generated ideas">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg><span class="action-count-badge" id="btnCountBadge">0</span>
+            </button>
+            <button class="utility-button icon-action" id="exportTxtBtn" type="button" aria-label="Download TXT shortlist" title="Download TXT">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>
+            </button>
+            <button class="utility-button icon-action" id="exportCsvBtn" type="button" aria-label="Download CSV shortlist" title="Download CSV">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16m6-16v16M3 15h18"/></svg>
+            </button>
           </div>
         </div>
         <p class="result-note" id="resultCountNote" aria-live="polite">Generate a batch to see ideas. Domain availability is not verified.</p>
         <div class="domain-grid" id="domainGrid" aria-live="polite"></div>
       </section>
-
+      <aside class="ad-slot ad-slot--generator-inline" data-ad-slot="generator-inline" aria-label="Advertisement" hidden></aside>
+      <div class="export-speed-dial" id="exportSpeedDial">
+        <div class="export-menu" id="exportSpeedMenu" role="group" aria-label="Export domain ideas" hidden>
+          <button class="export-menu-option" id="copyAllMobileBtn" type="button" aria-label="Copy all 0 generated ideas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h2"/></svg><span>Copy All</span><span class="mobile-count-badge" id="mobileBtnCountBadge">0</span></button>
+          <button class="export-menu-option" id="exportTxtMobileBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg><span>Download TXT</span></button>
+          <button class="export-menu-option" id="exportCsvMobileBtn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16m6-16v16M3 15h18"/></svg><span>Download CSV</span></button>
+        </div>
+        <button class="export-menu-toggle" id="exportMenuToggle" type="button" aria-label="Open export menu" aria-expanded="false" aria-controls="exportSpeedMenu" title="Export ideas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M5 16v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"/></svg></button>
+      </div>
+      <button class="controls-fab" id="generatorSettingsFab" type="button" aria-label="Open generation settings" aria-expanded="false" aria-controls="generator"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="10" cy="18" r="2" fill="currentColor" stroke="none"/></svg><span class="visually-hidden">Settings</span></button>
       <div class="toast" id="toast" role="status" aria-live="polite"><span id="toastMsg">Copied.</span></div>
 
       <section class="generator-content article-body" aria-labelledby="guide-title">
