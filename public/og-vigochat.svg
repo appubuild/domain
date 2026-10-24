@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#050711"/>
+      <stop offset="50%" stop-color="#0A0E24"/>
+      <stop offset="100%" stop-color="#04050B"/>
+    </linearGradient>
+    <radialGradient id="orbIndigo" cx="0.2" cy="0.2" r="0.5">
+      <stop offset="0%" stop-color="#6366F1" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="orbCyan" cx="0.8" cy="0.75" r="0.5">
+      <stop offset="0%" stop-color="#06B6D4" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="550" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#818CF8"/>
+      <stop offset="50%" stop-color="#C084FC"/>
+      <stop offset="100%" stop-color="#22D3EE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#orbIndigo)"/>
+  <rect width="1200" height="630" fill="url(#orbCyan)"/>
+  <rect x="40" y="40" width="1120" height="550" rx="28" fill="#0A0D1D" fill-opacity="0.65" stroke="#6366F1" stroke-opacity="0.35" stroke-width="2"/>
+  <rect x="85" y="95" width="310" height="44" rx="22" fill="#10B981" fill-opacity="0.14" stroke="#10B981" stroke-opacity="0.5"/>
+  <circle cx="112" cy="117" r="6" fill="#10B981"/>
+  <text x="130" y="123" fill="#6EE7B7" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="700" letter-spacing="1.2">PREMIUM .COM AVAILABLE</text>
+  <text x="85" y="255" fill="#F8FAFC" font-family="Plus Jakarta Sans, Inter, sans-serif" font-size="88" font-weight="800" letter-spacing="-2">VigoChat<tspan fill="url(#brandGrad)">.com</tspan></text>
+  <text x="85" y="325" fill="#94A3B8" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="500">Category-Defining 8-Letter Domain for Next-Gen AI, Messaging &amp; SaaS</text>
+  <g transform="translate(85, 415)">
+    <rect x="0" y="0" width="210" height="86" rx="16" fill="#131832" stroke="#334155"/>
+    <text x="24" y="36" fill="#94A3B8" font-family="Inter, sans-serif" font-size="14" font-weight="600">EXTENSION</text>
+    <text x="24" y="68" fill="#F8FAFC" font-family="JetBrains Mono, monospace" font-size="26" font-weight="700">Global .COM</text>
+    <rect x="230" y="0" width="210" height="86" rx="16" fill="#131832" stroke="#334155"/>
+    <text x="254" y="36" fill="#94A3B8" font-family="Inter, sans-serif" font-size="14" font-weight="600">LENGTH</text>
+    <text x="254" y="68" fill="#22D3EE" font-family="JetBrains Mono, monospace" font-size="26" font-weight="700">8 Letters</text>
+    <rect x="460" y="0" width="240" height="86" rx="16" fill="#131832" stroke="#334155"/>
+    <text x="484" y="36" fill="#94A3B8" font-family="Inter, sans-serif" font-size="14" font-weight="600">PHONETICS</text>
+    <text x="484" y="68" fill="#C084FC" font-family="JetBrains Mono, monospace" font-size="26" font-weight="700">Vi-go-Chat</text>
+    <rect x="720" y="0" width="300" height="86" rx="16" fill="#1E1B4B" stroke="#6366F1"/>
+    <text x="744" y="36" fill="#A5B4FC" font-family="Inter, sans-serif" font-size="14" font-weight="600">TRANSFER</text>
+    <text x="744" y="68" fill="#FFFFFF" font-family="JetBrains Mono, monospace" font-size="24" font-weight="700">100% Escrow Protected</text>
+  </g>
+</svg>
