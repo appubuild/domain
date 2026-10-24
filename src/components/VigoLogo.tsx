@@ -1,4 +1,5 @@
 import React from 'react';
+import { SITE_CONFIG } from '../config';
 
 interface VigoLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -96,14 +97,14 @@ export const VigoLogo: React.FC<VigoLogoProps> = ({
 
       <div className="flex items-center gap-2">
         <span
-          className={`font-display font-extrabold tracking-tight text-white ${textSize}`}
+          className={`font-display font-extrabold tracking-tight text-slate-900 dark:text-white ${textSize}`}
         >
-          VigoChat
-          <span className="text-gradient-vigo">.com</span>
+          {SITE_CONFIG.brandPrefix}
+          <span className="text-gradient-vigo">{SITE_CONFIG.tld}</span>
         </span>
         {showBadge && (
-          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold uppercase tracking-wider bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
             For Sale
           </span>
         )}

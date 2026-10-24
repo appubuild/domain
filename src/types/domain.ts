@@ -1,6 +1,14 @@
+export type ThemeMode = 'dark' | 'light';
+
 export type DealStructureType = 'outright' | 'lease' | 'investor';
 
-export type MarketplaceId = 'escrow' | 'atom' | 'godaddy' | 'afternic' | 'sedo';
+export type MarketplaceId =
+  | 'escrow'
+  | 'dan'
+  | 'atom'
+  | 'godaddy'
+  | 'afternic'
+  | 'sedo';
 
 export interface ModalTriggerContext {
   isOpen: boolean;
@@ -8,6 +16,19 @@ export interface ModalTriggerContext {
   prefilledOffer?: string;
   preferredMarketplace?: MarketplaceId;
   sourceLabel?: string;
+}
+
+export interface LeadOfferPayload {
+  domainName: string;
+  fullName: string;
+  email: string;
+  offerAmount: string;
+  dealType: DealStructureType;
+  preferredMarketplace: MarketplaceId;
+  message: string;
+  timestamp: string;
+  sourceLabel: string;
+  referenceId: string;
 }
 
 export interface ChatMessage {
@@ -67,15 +88,16 @@ export interface BrandSpecItem {
   accent: 'indigo' | 'violet' | 'cyan' | 'emerald' | 'amber';
 }
 
-export interface MarketplaceListing {
+export interface MarketplaceConfigItem {
   id: MarketplaceId;
   name: string;
+  shortName: string;
   subtitle: string;
   badge: string;
   protectionText: string;
   transferSpeed: string;
   feeNote: string;
   url: string;
-  accentColor: string;
+  accent: string;
   featured?: boolean;
 }

@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
   Sparkles,
 } from 'lucide-react';
+import { SITE_CONFIG } from '../config';
 import {
   BRAND_SPECS_MATRIX,
   COMPARABLE_DOMAIN_BENCHMARKS,
@@ -53,51 +54,71 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
   const getAccentBadgeClasses = (accent: BrandSpecItem['accent']) => {
     switch (accent) {
       case 'indigo':
-        return 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30';
+        return 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30';
       case 'violet':
-        return 'bg-violet-500/15 text-violet-300 border-violet-500/30';
+        return 'bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30';
       case 'emerald':
-        return 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+        return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30';
       case 'cyan':
-        return 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30';
+        return 'bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border-cyan-500/30';
       case 'amber':
-        return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+        return 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30';
     }
   };
 
   const brandScores = [
-    { label: 'Radio & Podcast Test ("Vi-go-Chat")', score: '10 / 10', pct: '100%' },
-    { label: 'Global .COM Extension Authority', score: '10 / 10', pct: '100%' },
-    { label: '8-Letter Brevity & Visual Balance', score: '9.8 / 10', pct: '98%' },
-    { label: 'AI & Messaging Keyword Relevance', score: '9.9 / 10', pct: '99%' },
+    {
+      label: `Radio & Podcast Test ("${SITE_CONFIG.phoneticSpelling}")`,
+      score: '10 / 10',
+      pct: '100%',
+    },
+    {
+      label: `Global ${SITE_CONFIG.tld.toUpperCase()} Extension Authority`,
+      score: '10 / 10',
+      pct: '100%',
+    },
+    {
+      label: `${SITE_CONFIG.brandPrefix.length}-Letter Brevity & Visual Balance`,
+      score: '9.8 / 10',
+      pct: '98%',
+    },
+    {
+      label: 'AI & Messaging Keyword Relevance',
+      score: '9.9 / 10',
+      pct: '99%',
+    },
   ];
 
   return (
     <section
       id="brand-matrix"
-      className="relative py-20 lg:py-28 border-t border-slate-800/80 bg-gradient-to-b from-[#050711] via-[#080B1C] to-[#050711]"
+      className="relative py-20 lg:py-28 border-t border-slate-200 dark:border-slate-800/80 bg-gradient-to-b from-white via-indigo-50/40 to-white dark:from-[#050711] dark:via-[#080B1C] dark:to-[#050711] transition-colors duration-250"
     >
       {/* Ambient Glow */}
-      <div className="pointer-events-none absolute top-1/4 right-0 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[140px]" />
+      <div className="pointer-events-none absolute top-1/4 right-0 w-[500px] h-[500px] bg-violet-500/10 rounded-full blur-[140px]" />
       <div className="pointer-events-none absolute bottom-10 left-0 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[140px]" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Heading */}
         <div className="text-center max-w-3xl mx-auto mb-14 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-300 text-xs font-mono uppercase tracking-wider">
-            <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/30 text-violet-700 dark:text-violet-300 text-xs font-mono font-semibold uppercase tracking-wider">
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-600 dark:text-cyan-400" />
             <span>Domain Valuation &amp; Brand Power Matrix</span>
           </div>
-          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
+          <h2 className="font-display text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
             Engineered for{' '}
-            <span className="text-gradient-vigo">Instant Category Leadership</span>
+            <span className="text-gradient-vigo">
+              Instant Category Leadership
+            </span>
           </h2>
-          <p className="text-slate-400 text-base sm:text-lg leading-relaxed">
+          <p className="text-slate-600 dark:text-slate-400 text-base sm:text-lg leading-relaxed">
             A great domain name permanently lowers customer acquisition cost
             (CAC), boosts organic click-through rates, and commands instant
             investor respect. Here is why{' '}
-            <strong className="text-white">VigoChat.com</strong> is a rare
-            tier-one digital asset.
+            <strong className="text-slate-900 dark:text-white">
+              {SITE_CONFIG.displayDomain}
+            </strong>{' '}
+            is a rare tier-one digital asset.
           </p>
         </div>
 
@@ -120,7 +141,7 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
                 <div>
                   {/* Top Spec Label & Highlight Badge */}
                   <div className="flex items-center justify-between gap-2 mb-5">
-                    <span className="font-mono text-xs font-bold tracking-wider text-slate-400 uppercase">
+                    <span className="font-mono text-xs font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase">
                       {spec.label}
                     </span>
                     <span
@@ -134,16 +155,16 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
 
                   {/* Icon + Title */}
                   <div className="flex items-center gap-3.5 mb-3">
-                    <div className="w-11 h-11 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center justify-center text-indigo-400">
-                      <Icon className="w-5 h-5 text-cyan-300" />
+                    <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-slate-900 border border-indigo-200 dark:border-slate-700/80 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      <Icon className="w-5 h-5 text-indigo-600 dark:text-cyan-300" />
                     </div>
-                    <h3 className="font-display text-xl font-bold text-white">
+                    <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white">
                       {spec.title}
                     </h3>
                   </div>
 
                   {/* Description */}
-                  <p className="text-sm text-slate-300 leading-relaxed mb-5">
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed mb-5">
                     {spec.description}
                   </p>
 
@@ -153,17 +174,17 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
                       <button
                         type="button"
                         onClick={onPronounceDomain}
-                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-600/30 to-indigo-600/30 hover:from-violet-600/50 hover:to-indigo-600/50 border border-violet-400/40 text-xs font-mono font-semibold text-violet-100 flex items-center justify-center gap-2 transition-all"
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-violet-500/15 to-indigo-500/15 hover:from-violet-500/25 hover:to-indigo-500/25 dark:from-violet-600/30 dark:to-indigo-600/30 dark:hover:from-violet-600/50 dark:hover:to-indigo-600/50 border border-violet-400/40 text-xs font-mono font-semibold text-violet-800 dark:text-violet-200 flex items-center justify-center gap-2 transition-all"
                       >
                         <Volume2
-                          className={`w-4 h-4 text-cyan-300 ${
+                          className={`w-4 h-4 text-indigo-600 dark:text-cyan-300 ${
                             isPronouncing ? 'animate-bounce' : ''
                           }`}
                         />
                         <span>
                           {isPronouncing
-                            ? 'Playing Audio: "Vi - go - Chat . com"'
-                            : 'Click to Hear Radio Test: "Vi-go-Chat"'}
+                            ? `Playing Audio: "${SITE_CONFIG.phoneticSpelling}${SITE_CONFIG.tld}"`
+                            : `Click to Hear Radio Test: "${SITE_CONFIG.phoneticSpelling}"`}
                         </span>
                       </button>
                     </div>
@@ -171,13 +192,13 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
                 </div>
 
                 {/* Sub-metrics Checklist */}
-                <div className="pt-4 border-t border-slate-800/80 space-y-2">
+                <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 space-y-2">
                   {spec.subMetrics.map((sub, sIdx) => (
                     <div
                       key={sIdx}
-                      className="flex items-center gap-2 text-xs font-mono text-slate-300"
+                      className="flex items-center gap-2 text-xs font-mono text-slate-700 dark:text-slate-300"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                       <span>{sub}</span>
                     </div>
                   ))}
@@ -192,30 +213,44 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
           {/* Left: Linguistic Anatomy & Brand Scorecard */}
           <div className="lg:col-span-5 rounded-3xl glass-card p-6 sm:p-8 flex flex-col justify-between">
             <div className="space-y-5">
-              <div className="inline-flex items-center gap-2 text-xs font-mono text-cyan-300 uppercase tracking-wider">
+              <div className="inline-flex items-center gap-2 text-xs font-mono font-semibold text-indigo-700 dark:text-cyan-300 uppercase tracking-wider">
                 <Sparkles className="w-4 h-4" />
                 <span>Linguistic &amp; Syllabic Breakdown</span>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#070A17] border border-indigo-500/30 flex items-center justify-between gap-2">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#070A17] border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-xs font-mono text-slate-400">
+                  <div className="text-xs font-mono text-slate-500 dark:text-slate-400">
                     3-SYLLABLE PHONETIC STRUCTURE
                   </div>
-                  <div className="font-display text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-1">
-                    <span className="text-indigo-400">Vi</span>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-violet-400">go</span>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-cyan-400">Chat</span>
-                    <span className="text-slate-400 text-lg font-mono">
-                      .com
+                  <div className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
+                    <span className="text-indigo-600 dark:text-indigo-400">
+                      Vi
+                    </span>
+                    <span className="text-slate-400 dark:text-slate-600">
+                      •
+                    </span>
+                    <span className="text-violet-600 dark:text-violet-400">
+                      go
+                    </span>
+                    <span className="text-slate-400 dark:text-slate-600">
+                      •
+                    </span>
+                    <span className="text-cyan-600 dark:text-cyan-400">
+                      Chat
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400 text-lg font-mono">
+                      {SITE_CONFIG.tld}
                     </span>
                   </div>
                 </div>
                 <div className="text-right font-mono">
-                  <div className="text-xs text-slate-400">CHARACTERS</div>
-                  <div className="text-2xl font-bold text-emerald-400">8</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">
+                    CHARACTERS
+                  </div>
+                  <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {SITE_CONFIG.brandPrefix.length}
+                  </div>
                 </div>
               </div>
 
@@ -224,14 +259,14 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
                 {brandScores.map((item, i) => (
                   <div key={i} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-300 font-medium">
+                      <span className="text-slate-700 dark:text-slate-300 font-medium">
                         {item.label}
                       </span>
-                      <span className="font-mono font-bold text-cyan-300">
+                      <span className="font-mono font-bold text-indigo-700 dark:text-cyan-300">
                         {item.score}
                       </span>
                     </div>
-                    <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden p-0.5 border border-slate-800">
+                    <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-900 overflow-hidden p-0.5 border border-slate-300/60 dark:border-slate-800">
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-cyan-400"
                         style={{ width: item.pct }}
@@ -242,9 +277,9 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
               <span>Includes vector logo &amp; brand guidelines</span>
-              <span className="font-mono text-emerald-400 font-semibold">
+              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
                 Ready for Day-1 Launch
               </span>
             </div>
@@ -255,14 +290,14 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
             <div>
               <div className="flex flex-wrap items-center justify-between gap-2 mb-5">
                 <div>
-                  <span className="text-xs font-mono text-indigo-300 uppercase tracking-wider">
+                  <span className="text-xs font-mono font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
                     MARKET COMPARABLES &amp; MOAT
                   </span>
-                  <h3 className="font-display text-xl sm:text-2xl font-bold text-white mt-1">
+                  <h3 className="font-display text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1">
                     Why Category Leaders Invest in &ldquo;Chat&rdquo; .COMs
                   </h3>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                <span className="px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   Asymmetric Startup ROI
                 </span>
               </div>
@@ -273,36 +308,43 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
                     key={idx}
                     className={`p-4 rounded-2xl border transition-all ${
                       item.highlight
-                        ? 'bg-gradient-to-r from-indigo-950/90 via-violet-950/70 to-cyan-950/80 border-indigo-400/50 shadow-lg shadow-indigo-950/50'
-                        : 'bg-[#080B1A]/90 border-slate-800/90'
+                        ? 'bg-gradient-to-r from-indigo-50 via-violet-50/70 to-cyan-50 dark:from-indigo-950/60 dark:via-violet-950/40 dark:to-cyan-950/60 border-indigo-400/60 shadow-md dark:shadow-lg shadow-indigo-500/10 dark:shadow-indigo-950/20'
+                        : 'bg-slate-50 dark:bg-[#080B1A]/90 border-slate-200 dark:border-slate-800/90'
                     }`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                       <div className="flex items-center gap-2.5">
-                        <span className="font-mono font-bold text-base text-white">
+                        <span className="font-mono font-bold text-base text-slate-900 dark:text-white">
                           {item.domain}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700">
                           {item.category}
                         </span>
                       </div>
                       <span
                         className={`font-mono text-xs sm:text-sm font-bold ${
-                          item.highlight ? 'text-cyan-300' : 'text-indigo-300'
+                          item.highlight
+                            ? 'text-cyan-700 dark:text-cyan-300'
+                            : 'text-indigo-700 dark:text-indigo-300'
                         }`}
                       >
                         {item.reportedValuation}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300">{item.insight}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      {item.insight}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-slate-400">
-                Lock in <strong className="text-white">VigoChat.com</strong>{' '}
+            <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Lock in{' '}
+                <strong className="text-slate-900 dark:text-white">
+                  {SITE_CONFIG.displayDomain}
+                </strong>{' '}
                 before it is acquired by a funded AI competitor.
               </p>
               <button
@@ -310,14 +352,14 @@ export const BrandPowerMatrix: React.FC<BrandPowerMatrixProps> = ({
                 onClick={() =>
                   onOpenModal({
                     dealType: 'outright',
-                    prefilledOffer: '24800',
+                    prefilledOffer: String(SITE_CONFIG.pricing.binPrice),
                     sourceLabel: 'Brand Power Matrix Benchmark CTA',
                   })
                 }
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-colors"
               >
-                <span>Make Acquisition Offer</span>
-                <ArrowUpRight className="w-4 h-4" />
+                <span className="text-white">Make Acquisition Offer</span>
+                <ArrowUpRight className="w-4 h-4 text-white" />
               </button>
             </div>
           </div>

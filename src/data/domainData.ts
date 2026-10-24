@@ -1,12 +1,13 @@
+import { SITE_CONFIG } from '../config';
 import {
   BrandSpecItem,
   ChatPersona,
-  MarketplaceListing,
+  MarketplaceConfigItem,
   UseCaseItem,
 } from '../types/domain';
 
-export const DOMAIN_PRICE_BIN = 24800;
-export const DOMAIN_MIN_OFFER = 9500;
+export const DOMAIN_PRICE_BIN = SITE_CONFIG.pricing.binPrice;
+export const DOMAIN_MIN_OFFER = SITE_CONFIG.pricing.minOffer;
 
 export const HERO_CHAT_PERSONAS: ChatPersona[] = [
   {
@@ -27,7 +28,7 @@ export const HERO_CHAT_PERSONAS: ChatPersona[] = [
       {
         id: 'm2',
         sender: 'ai',
-        authorName: 'VigoChat AI',
+        authorName: `${SITE_CONFIG.brandPrefix} AI`,
         authorRole: 'Autonomous Support Agent',
         text: 'Zero-downtime SSO migration plan staged! I have queued dual-write webhook buffering for all 45,000 seats and verified your SAML 2.0 metadata. Ready to execute?',
         timestamp: '10:42 AM',
@@ -40,9 +41,8 @@ export const HERO_CHAT_PERSONAS: ChatPersona[] = [
     ],
     quickPrompts: [
       {
-        prompt: 'Why is VigoChat.com a category-defining brand?',
-        aiReply:
-          'VigoChat.com combines "Vigo" (Latin root for vigor, energy, life) with "Chat" — the #1 high-intent keyword in AI & SaaS. At just 8 letters and 3 punchy syllables (Vi-go-Chat), it passes the radio test instantly and commands immediate enterprise trust.',
+        prompt: `Why is ${SITE_CONFIG.displayDomain} a category-defining brand?`,
+        aiReply: `${SITE_CONFIG.displayDomain} combines "Vigo" (Latin root for vigor, energy, life) with "Chat" — the #1 high-intent keyword in AI & SaaS. At just 8 letters and 3 punchy syllables (${SITE_CONFIG.phoneticSpelling}), it passes the radio test instantly and commands immediate enterprise trust.`,
         latency: '34ms',
         tag: 'Brand Intelligence',
       },
@@ -74,7 +74,7 @@ export const HERO_CHAT_PERSONAS: ChatPersona[] = [
         sender: 'user',
         authorName: '0xKai.eth',
         authorRole: 'Governance Delegate',
-        text: 'Proposal #84 just hit quorum! Can VigoChat open the token-gated Alpha Lounge for all stakers holding >500 VIGO?',
+        text: `Proposal #84 just hit quorum! Can ${SITE_CONFIG.brandPrefix} open the token-gated Alpha Lounge for all stakers holding >500 VIGO?`,
         timestamp: '11:15 AM',
       },
       {
@@ -126,7 +126,7 @@ export const HERO_CHAT_PERSONAS: ChatPersona[] = [
       {
         id: 't2',
         sender: 'ai',
-        authorName: 'VigoChat Workspace AI',
+        authorName: `${SITE_CONFIG.brandPrefix} Workspace AI`,
         authorRole: 'Executive Thread Synthesizer',
         text: 'Root cause: Redis connection pool saturation at 13:48 UTC. Fix deployed via PR #4102 in 6 minutes. I created 3 Jira tickets for connection pooling alerts and attached the timeline.',
         timestamp: '02:04 PM',
@@ -163,8 +163,7 @@ export const USE_CASES_DATA: UseCaseItem[] = [
     title: 'AI & Customer Support Ecosystem',
     category: 'Automated Chatbots • CRM Sync • Omnichannel',
     tagline: 'Resolve 94%+ of customer inquiries autonomously in 40+ languages.',
-    description:
-      'Position VigoChat.com as the next-generation challenger to Intercom, Zendesk, and Ada. Built for autonomous AI agents that don’t just answer questions—they execute refunds, update subscriptions, and sync bi-directionally with Salesforce, HubSpot, and Stripe.',
+    description: `Position ${SITE_CONFIG.displayDomain} as the next-generation challenger to Intercom, Zendesk, and Ada. Built for autonomous AI agents that don’t just answer questions—they execute refunds, update subscriptions, and sync bi-directionally with Salesforce, HubSpot, and Stripe.`,
     accentGradient: 'from-indigo-500/20 via-indigo-500/5 to-transparent',
     badgeText: 'High-CPC SaaS Category ($22.40 Avg CPC)',
     kpis: [
@@ -186,8 +185,7 @@ export const USE_CASES_DATA: UseCaseItem[] = [
     title: 'Social & Web3 Community Hubs',
     category: 'Next-Gen Discord / Telegram Alternative',
     tagline: 'Token-gated guilds, spatial audio stages, and sovereign social graphs.',
-    description:
-      'VigoChat rolls off the tongue as an iconic consumer or Web3 super-app. Ideal for high-velocity creator communities, crypto DAOs, trading floors, and private social networks requiring zero-knowledge authentication and native micro-tipping.',
+    description: `${SITE_CONFIG.brandPrefix} rolls off the tongue as an iconic consumer or Web3 super-app. Ideal for high-velocity creator communities, crypto DAOs, trading floors, and private social networks requiring zero-knowledge authentication and native micro-tipping.`,
     accentGradient: 'from-violet-500/20 via-fuchsia-500/5 to-transparent',
     badgeText: 'Viral Consumer & Web3 Fit',
     kpis: [
@@ -209,8 +207,7 @@ export const USE_CASES_DATA: UseCaseItem[] = [
     title: 'High-Security Team Collaboration',
     category: 'Enterprise Slack & Teams Challenger',
     tagline: 'Where mission-critical engineering and executive teams move faster.',
-    description:
-      'Give enterprise buyers immediate confidence with a crisp, authoritative .com brand. VigoChat powers AI-native workplace messaging where long threads summarize themselves, meetings turn into Jira tickets, and every message is protected by end-to-end encryption.',
+    description: `Give enterprise buyers immediate confidence with a crisp, authoritative .com brand. ${SITE_CONFIG.brandPrefix} powers AI-native workplace messaging where long threads summarize themselves, meetings turn into Jira tickets, and every message is protected by end-to-end encryption.`,
     accentGradient: 'from-cyan-500/20 via-sky-500/5 to-transparent',
     badgeText: 'Enterprise B2B Authority',
     kpis: [
@@ -232,8 +229,7 @@ export const USE_CASES_DATA: UseCaseItem[] = [
     title: 'Telehealth, Live Video & Voice',
     category: 'HIPAA-Ready Encrypted Video & Clinical Chat',
     tagline: 'Crystal-clear encrypted video consultations with ambient AI charting.',
-    description:
-      '"Vigo" evokes vitality, health, and vigor—making VigoChat.com a natural powerhouse for digital health, telemedicine platforms, remote patient monitoring, and high-trust financial advisory video portals.',
+    description: `"Vigo" evokes vitality, health, and vigor—making ${SITE_CONFIG.displayDomain} a natural powerhouse for digital health, telemedicine platforms, remote patient monitoring, and high-trust financial advisory video portals.`,
     accentGradient: 'from-emerald-500/20 via-teal-500/5 to-transparent',
     badgeText: 'Healthcare & FinTech Ready',
     kpis: [
@@ -259,17 +255,25 @@ export const BRAND_SPECS_MATRIX: BrandSpecItem[] = [
     highlightValue: '.COM',
     description:
       'The undisputed gold standard of global business. Over 92% of unicorn SaaS companies and Fortune 500 enterprises operate on an exact-match .com domain.',
-    subMetrics: ['100% Direct Type-In Trust', 'No Traffic Leakage to Competitors', 'Global Investor Recognition'],
+    subMetrics: [
+      '100% Direct Type-In Trust',
+      'No Traffic Leakage to Competitors',
+      'Global Investor Recognition',
+    ],
     accent: 'indigo',
   },
   {
     id: 'pronunciation',
     label: 'PHONETIC PRECISION',
     title: '3 Syllables, Punchy & Memorable',
-    highlightValue: 'Vi-go-Chat',
+    highlightValue: SITE_CONFIG.phoneticSpelling,
     description:
       'Passes the "Radio & Podcast Test" on the first listen. Derived from "Vigor" (energy, vitality, speed) + "Chat" (universal communication). Easy to spell in every major language.',
-    subMetrics: ['8 Letters Total Length', 'Phonetic: /ˈviː.ɡoʊ.tʃæt/', 'Zero Spelling Ambiguity'],
+    subMetrics: [
+      '8 Letters Total Length',
+      `Phonetic: ${SITE_CONFIG.ipaPronunciation}`,
+      'Zero Spelling Ambiguity',
+    ],
     accent: 'violet',
   },
   {
@@ -279,7 +283,11 @@ export const BRAND_SPECS_MATRIX: BrandSpecItem[] = [
     highlightValue: '0 Spam Flags',
     description:
       'Verified clean historical profile across Google Safe Browsing, Spamhaus, and email deliverability registries. Launch your product and transactional emails on Day 1 without penalty.',
-    subMetrics: ['Clean DNS & WHOIS Provenance', 'High Inbox Deliverability Score', 'Zero Trademark Conflicts'],
+    subMetrics: [
+      'Clean DNS & WHOIS Provenance',
+      'High Inbox Deliverability Score',
+      'Zero Trademark Conflicts',
+    ],
     accent: 'emerald',
   },
   {
@@ -289,7 +297,11 @@ export const BRAND_SPECS_MATRIX: BrandSpecItem[] = [
     highlightValue: '$18.40+ CPC',
     description:
       'Contains the exact high-intent root keyword "Chat" alongside a distinctive brand prefix. Built for instant semantic relevance in AI, Customer Support, and Messaging search queries.',
-    subMetrics: ['Exact-Match "Chat" Anchor', 'Ready for Instant Indexing', 'High Click-Through Authority'],
+    subMetrics: [
+      'Exact-Match "Chat" Anchor',
+      'Ready for Instant Indexing',
+      'High Click-Through Authority',
+    ],
     accent: 'cyan',
   },
   {
@@ -298,8 +310,12 @@ export const BRAND_SPECS_MATRIX: BrandSpecItem[] = [
     title: 'Fast Certified Escrow Transfer',
     highlightValue: '< 24 Hours',
     description:
-      'Seamless registrar push or EPP auth-code transfer protected 100% by Escrow.com or your preferred verified marketplace. Funds are only released after you confirm full domain control.',
-    subMetrics: ['100% Buyer Protection Guarantee', 'Instant DNS Delegation for Lease', 'Corporate Invoice & Bill of Sale'],
+      'Seamless registrar push or EPP auth-code transfer protected 100% by Escrow.com, Dan, or your preferred verified marketplace. Funds are only released after you confirm full domain control.',
+    subMetrics: [
+      '100% Buyer Protection Guarantee',
+      'Instant DNS Delegation for Lease',
+      'Corporate Invoice & Bill of Sale',
+    ],
     accent: 'amber',
   },
 ];
@@ -324,92 +340,35 @@ export const COMPARABLE_DOMAIN_BENCHMARKS = [
     insight: 'Demonstrates how an 8-letter .com becomes a permanent moat in customer support.',
   },
   {
-    domain: 'VigoChat.com',
+    domain: SITE_CONFIG.displayDomain,
     category: '8-Letter Brandable .com',
-    reportedValuation: '$24,800 BIN / Offer',
+    reportedValuation: `$${SITE_CONFIG.pricing.binPrice.toLocaleString()} BIN / Offer`,
     insight: 'Available today for a fraction of Series-A rebranding costs—with lease-to-own flexibility.',
     highlight: true,
   },
 ];
 
-export const MARKETPLACE_LISTINGS: MarketplaceListing[] = [
-  {
-    id: 'escrow',
-    name: 'Escrow.com Direct',
-    subtitle: 'Official Licensed Domain Escrow',
-    badge: '0% Buyer Markup • Recommended',
-    protectionText: '100% Escrow Protected • ISO 27001 Certified',
-    transferSpeed: 'Same-Day Registrar Push',
-    feeNote: 'Lowest total cost — save up to 15% vs third-party marketplace commissions',
-    url: '#acquire-escrow',
-    accentColor: 'emerald',
-    featured: true,
-  },
-  {
-    id: 'atom',
-    name: 'Atom (Squadhelp)',
-    subtitle: 'Premier Startup Brand Marketplace',
-    badge: 'Verified Premium Listing',
-    protectionText: 'Atom Escrow + Free Logo & Brand Perks',
-    transferSpeed: 'Instant Automated Transfer',
-    feeNote: 'Supports credit card, wire, crypto & flexible monthly lease-to-own',
-    url: '#acquire-atom',
-    accentColor: 'indigo',
-  },
-  {
-    id: 'godaddy',
-    name: 'GoDaddy Auctions / BuyNow',
-    subtitle: 'World’s Largest Registrar Network',
-    badge: 'Fast Transfer Enabled',
-    protectionText: 'GoDaddy Verified Ownership & Guarantee',
-    transferSpeed: 'Instant Account Push',
-    feeNote: 'Ideal if your corporate domain portfolio is already managed on GoDaddy',
-    url: '#acquire-godaddy',
-    accentColor: 'cyan',
-  },
-  {
-    id: 'afternic',
-    name: 'Afternic DLS Network',
-    subtitle: 'Global Registrar Fast-Transfer Partner',
-    badge: 'MLS Verified Asset',
-    protectionText: 'Protected by GoDaddy / Afternic Escrow',
-    transferSpeed: 'AutomatedMLS Transfer',
-    feeNote: 'Checkout directly through 100+ partner registrars worldwide',
-    url: '#acquire-afternic',
-    accentColor: 'violet',
-  },
-  {
-    id: 'sedo',
-    name: 'Sedo.com Marketplace',
-    subtitle: 'European & Global Domain Exchange',
-    badge: 'Certified Transfer Agent',
-    protectionText: 'Dedicated Sedo Transfer Specialist',
-    transferSpeed: '24–48h Verified Handover',
-    feeNote: 'Supports USD, EUR, and GBP corporate wire transfers with VAT invoicing',
-    url: '#acquire-sedo',
-    accentColor: 'amber',
-  },
-];
+export const MARKETPLACE_LISTINGS: MarketplaceConfigItem[] = Object.values(
+  SITE_CONFIG.marketplaces
+);
 
 export const FAQ_ITEMS = [
   {
-    question: 'How does the domain transfer process work and how is my payment protected?',
-    answer:
-      'Every transaction is 100% protected through a licensed escrow service (Escrow.com, Atom, GoDaddy/Afternic, or Sedo). Once you initiate purchase or your offer is accepted, your funds are held securely in escrow. We then push VigoChat.com directly to your registrar account (or provide the EPP transfer authorization code). The escrow provider only releases funds to the seller after verifying that you have full, sole ownership and control of the domain.',
+    question:
+      'How does the domain transfer process work and how is my payment protected?',
+    answer: `Every transaction is 100% protected through a licensed escrow service (Escrow.com, Dan, Atom, GoDaddy/Afternic, or Sedo). Once you initiate purchase or your offer is accepted, your funds are held securely in escrow. We then push ${SITE_CONFIG.displayDomain} directly to your registrar account (or provide the EPP transfer authorization code). The escrow provider only releases funds to the seller after verifying that you have full, sole ownership and control of the domain.`,
   },
   {
-    question: 'Can we use VigoChat.com immediately if we choose the Lease-to-Own plan?',
-    answer:
-      'Yes! With our Lease-to-Own structure, you gain full DNS nameserver control immediately upon your first monthly payment. You can launch your website, configure corporate email (@vigochat.com), and build your brand right away while spreading the acquisition cost over 6 to 24 months. Upon final payment, full registrar ownership transfers automatically to your account.',
+    question: `Can we use ${SITE_CONFIG.displayDomain} immediately if we choose the Lease-to-Own plan?`,
+    answer: `Yes! With our Lease-to-Own structure, you gain full DNS nameserver control immediately upon your first monthly payment. You can launch your website, configure corporate email (@${SITE_CONFIG.domainName}), and build your brand right away while spreading the acquisition cost over 6 to 24 months. Upon final payment, full registrar ownership transfers automatically to your account.`,
   },
   {
-    question: 'What is included with the acquisition of VigoChat.com?',
-    answer:
-      'You receive 100% unencumbered ownership rights to the VigoChat.com domain name, an official corporate Bill of Sale & tax invoice, the custom SVG vector logo/monogram suite shown on this page, and complimentary technical assistance during DNS/registrar migration.',
+    question: `What is included with the acquisition of ${SITE_CONFIG.displayDomain}?`,
+    answer: `You receive 100% unencumbered ownership rights to the ${SITE_CONFIG.displayDomain} domain name, an official corporate Bill of Sale & tax invoice, the custom SVG vector logo/monogram suite shown on this page, and complimentary technical assistance during DNS/registrar migration.`,
   },
   {
-    question: 'Are you open to reasonable offers or startup equity + cash structures?',
-    answer:
-      'Yes. While our Buy-It-Now (BIN) price of $24,800 USD guarantees immediate acquisition, we actively review serious cash offers from founders, domain investors, and venture-backed startups. You can submit an offer directly via the Quick Offer Modal, WhatsApp, or Email and receive a response within 2 business hours.',
+    question:
+      'Are you open to reasonable offers or startup equity + cash structures?',
+    answer: `Yes. While our Buy-It-Now (BIN) price of $${SITE_CONFIG.pricing.binPrice.toLocaleString()} ${SITE_CONFIG.pricing.currency} guarantees immediate acquisition, we actively review serious cash offers from founders, domain investors, and venture-backed startups. You can submit an offer directly via the Quick Offer Modal, WhatsApp, or Email and receive a response within 2 business hours.`,
   },
 ];
