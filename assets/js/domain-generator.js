@@ -9,6 +9,8 @@
   let displayedDomains = [];
   let toastTimer;
   let generationTimer;
+  let lastStrictMode = null;
+  let lastBrandableMode = null;
 
   const ONSETS = ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'qu', 'r', 's', 't', 'v', 'w', 'x', 'y', 'z', 'bl', 'br', 'ch', 'cl', 'cr', 'fl', 'gl', 'pr', 'st', 'tr'];
   const NUCLEI = ['a', 'e', 'i', 'o', 'u'];
@@ -135,20 +137,53 @@
   }
 
   function updateStrictUI() {
-    const isStrict = $('strictDictToggle').checked;
+    const toggle = $('strictDictToggle');
+    const isStrict = toggle.checked;
     $('strictBanner').classList.toggle('is-creative', !isStrict);
-    $('strictIconBadge').textContent = isStrict ? '✓' : '✦';
-    $('strictStatusBadge').textContent = isStrict ? 'Curated list' : 'Creative allowed';
+    $('strictStatusBadge').textContent = isStrict ? 'On' : 'Off';
+    $('strictStatusBadge').setAttribute('aria-label', isStrict ? 'Curated words only' : 'Creative words allowed');
+    toggle.setAttribute('aria-label', isStrict
+      ? 'Curated word-list mode on; switch off to allow invented words'
+      : 'Curated word-list mode off; invented words are allowed');
     $('strictDescText').textContent = isStrict
-      ? 'Uses the built-in word list only. The list is curated for this tool but is not a dictionary or trademark certification.'
-      : 'Adds invented and synthetic brandable syllables to the built-in list. Review every suggestion for pronunciation, meaning, and existing use.';
+      ? 'Uses the included curated list, not a dictionary or trademark certification.'
+      : 'Allows invented and synthetic words alongside the included list.';
   }
 
   function updateBrandableUI() {
-    const enabled = $('brandableModeToggle').checked;
+    const toggle = $('brandableModeToggle');
+    const enabled = toggle.checked;
     $('brandableModePanel').classList.toggle('is-active', enabled);
-    $('brandableModeBadge').textContent = enabled ? 'Active' : 'Off';
-    $('brandableModeBadge').setAttribute('aria-label', `Brandable Mode ${enabled ? 'active' : 'off'}`);
+    $('brandableModeBadge').textContent = enabled ? 'On' : 'Off';
+    $('brandableModeBadge').setAttribute('aria-label', `Brandable Mode ${enabled ? 'on' : 'off'}`);
+    toggle.setAttribute('aria-label', `Brandable Mode ${enabled ? 'on' : 'off'}`);
+  }
+
+  function handleStrictModeToggle() {
+    updateStrictUI();
+    const isStrict = $('strictDictToggle').checked;
+    if (isStrict === lastStrictMode) return;
+    lastStrictMode = isStrict;
+    runGeneration();
+  }
+
+  function handleBrandableModeToggle() {
+    updateBrandableUI();
+    const isBrandable = $('brandableModeToggle').checked;
+    if (isBrandable === lastBrandableMode) return;
+    lastBrandableMode = isBrandable;
+    runGeneration();
+  }
+
+  function syncRestoredModeState() {
+    updateStrictUI();
+    updateBrandableUI();
+    const isStrict = $('strictDictToggle').checked;
+    const isBrandable = $('brandableModeToggle').checked;
+    if (isStrict === lastStrictMode && isBrandable === lastBrandableMode) return;
+    lastStrictMode = isStrict;
+    lastBrandableMode = isBrandable;
+    runGeneration();
   }
 
   function updateCheckboxUI() {
@@ -571,14 +606,11 @@
     $('extInput').addEventListener('blur', () => runGeneration());
     $('placementSelect').addEventListener('change', () => runGeneration());
     $('camelCaseToggle').addEventListener('change', updateNamingStyle);
-    $('strictDictToggle').addEventListener('change', () => {
-      updateStrictUI();
-      runGeneration();
-    });
-    $('brandableModeToggle').addEventListener('change', () => {
-      updateBrandableUI();
-      runGeneration();
-    });
+    $('strictDictToggle').addEventListener('input', handleStrictModeToggle);
+    $('strictDictToggle').addEventListener('change', handleStrictModeToggle);
+    $('brandableModeToggle').addEventListener('input', handleBrandableModeToggle);
+    $('brandableModeToggle').addEventListener('change', handleBrandableModeToggle);
+    window.addEventListener('pageshow', syncRestoredModeState);
     $('lenAll').addEventListener('change', () => {
       LENGTHS.forEach((length) => { $(`len${length}`).checked = $('lenAll').checked; });
       updateCheckboxUI();
@@ -609,6 +641,8 @@
     updateStrictUI();
     updateBrandableUI();
     updateCategoryBadge();
+    lastStrictMode = $('strictDictToggle').checked;
+    lastBrandableMode = $('brandableModeToggle').checked;
     runGeneration();
   }
 

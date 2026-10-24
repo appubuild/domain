@@ -15,11 +15,11 @@
   <!-- Google Search Console: add the verification meta tag issued for your deployed domain here. -->
   <!-- TODO: Replace the example.com canonical and OG URLs with your production domain. -->
   <!-- Analytics / AdSense snippets are intentionally inactive; see /includes/analytics-ads.html. -->
-  <link rel="stylesheet" href="/assets/css/style.css?v=20261023-5">
+  <link rel="stylesheet" href="/assets/css/style.css?v=20261024-1">
   <script src="/assets/js/main.js?v=20261023-4" defer></script>
   <script src="/assets/js/reveal.js" defer></script>
-  <script src="/assets/js/domain-generator-data.js" defer></script>
-  <script src="/assets/js/domain-generator.js" defer></script>
+  <script src="/assets/js/domain-generator-data.js?v=20261024-1" defer></script>
+  <script src="/assets/js/domain-generator.js?v=20261024-1" defer></script>
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -171,23 +171,31 @@
           </div>
         </div>
 
-        <div class="strict-banner is-strict" id="strictBanner">
-          <div class="strict-copy">
-            <span class="strict-icon" id="strictIconBadge" aria-hidden="true">✓</span>
-            <div><strong>Curated word-list mode <span class="mode-badge" id="strictStatusBadge">Active</span></strong><p id="strictDescText">Uses the built-in word list only. The list is curated for this tool but is not a dictionary or trademark certification.</p></div>
+        <div class="mode-switches" role="group" aria-label="Generation modes">
+          <div class="mode-control-card strict-banner is-strict" id="strictBanner">
+            <label class="mode-control-copy" for="strictDictToggle">
+              <strong id="strictModeLabel">Curated word-list</strong>
+              <span class="mode-badge" id="strictStatusBadge">Curated</span>
+            </label>
+            <label class="switch" aria-labelledby="strictModeLabel" title="Switch off to allow invented syllables">
+              <input type="checkbox" id="strictDictToggle" checked aria-describedby="strictDescText">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+            <span class="visually-hidden" id="strictDescText">Uses the included curated word list. Switching off allows invented and synthetic words; the list is not dictionary or trademark certification.</span>
           </div>
-          <label class="switch" aria-label="Allow creative brandable words">
-            <input type="checkbox" id="strictDictToggle" checked aria-describedby="strictDescText">
-            <span class="switch-track" aria-hidden="true"></span>
-          </label>
+          <div class="mode-control-card brandable-mode-panel" id="brandableModePanel">
+            <label class="mode-control-copy" for="brandableModeToggle">
+              <strong id="brandableModeLabel">Brandable Mode</strong>
+              <span class="mode-badge" id="brandableModeBadge">Off</span>
+            </label>
+            <label class="switch" aria-labelledby="brandableModeLabel" title="Add suffix and word-splice ideas">
+              <input type="checkbox" id="brandableModeToggle" aria-describedby="brandableModeDesc">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+            <span class="visually-hidden" id="brandableModeDesc">Adds modern suffix, morphology, and short portmanteau patterns while retaining the standard generator when switched off.</span>
+          </div>
         </div>
-        <p class="control-hint">Switch off to allow invented and synthetic brandable syllables alongside the built-in words.</p>
-
-        <div class="brandable-mode-panel" id="brandableModePanel">
-          <label class="inline-check" for="brandableModeToggle"><input type="checkbox" id="brandableModeToggle"><span><strong>Brandable Mode</strong></span></label>
-          <span class="mode-badge" id="brandableModeBadge">Off</span>
-          <p>When enabled, combine root keywords with modern suffixes and curated partner words, plus short portmanteau blends. Turn it off to keep the original root-plus-word generation mode.</p>
-        </div>
+        <p class="mode-controls-hint">Curated uses the built-in list; turn it off to allow invented words. Brandable adds modern suffix and splice ideas.</p>
 
         <div class="filter-panel">
           <div class="filter-heading"><h2>Partner word length</h2><span id="activeLengthDesc">Filter: 3 partner letters</span></div>

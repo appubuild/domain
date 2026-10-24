@@ -21,6 +21,7 @@ const androidInstrumentationTest = fs.readFileSync(path.join(ROOT, 'android/app/
 const androidColors = fs.readFileSync(path.join(ROOT, 'android/app/src/main/res/values/colors.xml'), 'utf8');
 const generatorSource = fs.readFileSync(path.join(ROOT, 'assets/js/domain-generator.js'), 'utf8');
 const generatorHtml = fs.readFileSync(path.join(ROOT, 'tools/domain-generator.html'), 'utf8');
+const generatorCss = fs.readFileSync(path.join(ROOT, 'assets/css/style.css'), 'utf8');
 const domainDataSource = fs.readFileSync(path.join(ROOT, 'assets/js/domain-generator-data.js'), 'utf8');
 const domainDataContext = {};
 vm.runInNewContext(`${domainDataSource}\nglobalThis.__testData = { longPartnerWords: LONG_PARTNER_WORDS, categoryKeys: Object.keys(CATEGORY_KEYWORDS) };`, domainDataContext);
@@ -188,12 +189,15 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
     }
   };
   const window = {
+    listeners: {},
+    addEventListener(type, callback) { (this.listeners[type] ||= []).push(callback); },
+    dispatch(type) { for (const callback of this.listeners[type] || []) callback({ type }); },
     requestAnimationFrame: (callback) => { callback(); return 1; },
     clearTimeout: () => {},
     setTimeout: (callback) => { callback(); return 1; }
   };
   vm.runInNewContext(`${domainDataSource}\n${generatorSource}`, { document, window, console, navigator: {} });
-  return { grid: element('domainGrid'), elements: ids };
+  return { grid: element('domainGrid'), elements: ids, window };
 }
 
 (async () => {
@@ -251,6 +255,11 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
     assert.match(generatorHtml, new RegExp(`value="${category}"`), `missing selector option for ${category}`);
   }
   assert.match(generatorHtml, /id="brandableModeToggle"(?![^>]*checked)[^>]*>/, 'Brandable Mode must default off');
+  assert.match(generatorHtml, /domain-generator-data\.js\?v=20261024-1/);
+  assert.match(generatorHtml, /domain-generator\.js\?v=20261024-1/);
+  assert.match(generatorHtml, /class="mode-switches"/);
+  assert.match(generatorCss, /\.mode-switches \{ display: grid/);
+  assert.match(generatorCss, /@media \(max-width: 520px\)[\s\S]*?\.mode-switches \{ grid-template-columns: 1fr/);
   assert.match(generatorSource, /function generateBrandableDomains/);
   assert.match(generatorSource, /BRANDABLE_MORPHEMES = \['ly', 'io', 'ify', 'eer', 'via', 'nest', 'tify'/);
   assert.match(generatorSource, /const brandableMode = \$\('brandableModeToggle'\)\.checked/);
@@ -261,10 +270,20 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   assert.ok(fintechNames.includes('PayCoin.com'));
   assert.ok(fintechNames.includes('PayFund.com'));
 
+  const strictCase = runGenerator({ root: 'Domain', lengths: [3] });
+  assert.equal(strictCase.elements.get('strictStatusBadge').textContent, 'On');
+  strictCase.elements.get('strictDictToggle').checked = false;
+  strictCase.elements.get('strictDictToggle').dispatch('input');
+  assert.equal(strictCase.elements.get('strictStatusBadge').textContent, 'Off');
+  assert.ok(strictCase.elements.get('strictBanner').classList.contains('is-creative'));
+
   const brandableCase = runGenerator({ root: 'Domain', lengths: [3] });
   assert.equal(brandableCase.elements.get('brandableModeBadge').textContent, 'Off');
   brandableCase.elements.get('brandableModeToggle').checked = true;
+  brandableCase.elements.get('brandableModeToggle').dispatch('input');
   brandableCase.elements.get('brandableModeToggle').dispatch('change');
+  assert.equal(brandableCase.elements.get('brandableModeBadge').textContent, 'On');
+  assert.ok(brandableCase.elements.get('brandableModePanel').classList.contains('is-active'));
   const brandableCards = brandableCase.grid.children;
   const domainify = brandableCards.find((card) => card.dataset.domain === 'Domainify.com');
   const domaineer = brandableCards.find((card) => card.dataset.domain === 'Domaineer.com');
@@ -274,6 +293,12 @@ function runGenerator({ root = 'Domain', lengths = [3], category = 'smart', plac
   assert.equal(domainifyBadge.dataset.partnerLength, '3');
   assert.equal(domainifyBadge.dataset.labelLength, '9');
   assert.match(domainifyBadge.title, /partner component: 3 letters.*Total domain label: 9 characters/);
+
+  const restoredBrandable = runGenerator({ root: 'Domain', lengths: [3] });
+  restoredBrandable.elements.get('brandableModeToggle').checked = true;
+  restoredBrandable.window.dispatch('pageshow');
+  assert.equal(restoredBrandable.elements.get('brandableModeBadge').textContent, 'On', 'restored checkbox state should refresh the UI');
+  assert.ok(restoredBrandable.grid.children.some((card) => card.dataset.domain === 'Domainify.com'));
 
   const longRun = runGenerator({ root: 'Pay', lengths: [7] });
   assert.ok(longRun.grid.children.length > 0, 'the 7+ option should generate actual results');
