@@ -151,6 +151,7 @@ public; anything that writes must verify the caller's JWT and role.
 | Admin shows "not configured" | Supabase env vars absent from the build | Set both vars, rebuild |
 | Admin shows "no administrator role" | Signed in without `user_roles` row | Insert the row in SQL, reload |
 | Content edits do not appear | Static export serves bytes baked at build time | Rebuild and re-upload |
+| Dev server 500s with `Cannot find module './NNN.js'` | `npm run build` ran while `next dev` was live and rewrote `.next`; dev and build share that directory | Stop the dev server, `npm run clean`, then restart — or run the build after stopping it |
 
 ---
 

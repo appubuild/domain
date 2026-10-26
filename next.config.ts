@@ -16,6 +16,12 @@ import path from "node:path";
 const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,
+  /**
+   * The preview runs behind a proxy on `*.e2b.app`. Next blocks cross-origin
+   * dev requests (HMR socket, RSC fetches, /_next/* assets) unless the origin is
+   * listed, which would render the preview without styles or interactivity.
+   */
+  allowedDevOrigins: ["localhost", "127.0.0.1", "*.e2b.app"],
   images: { unoptimized: true },
   poweredByHeader: false,
   reactStrictMode: true,
