@@ -116,8 +116,18 @@ where schemaname = 'public' and rowsecurity = false;   -- must return zero rows
 
 ### Edge Functions (optional)
 
-- **Availability proxy** — centralises RDAP calls, applies rate limits and stores results in
-  `availability_cache`. Set `NEXT_PUBLIC_AVAILABILITY_FN_URL` to its URL.
+- **Availability proxy** — `supabase/functions/availability/index.ts`. Centralises RDAP calls,
+  caches answers in Postgres (`availability_cache`, 6 h definitive / 10 min inconclusive) and
+  returns the same result shape as the client engine. Deploy with:
+
+  ```bash
+  supabase functions deploy availability --no-verify-jwt
+  # then set NEXT_PUBLIC_AVAILABILITY_FN_URL=https://<ref>.supabase.co/functions/v1/availability
+  ```
+
+  Without it the site still checks names, calling public RDAP endpoints directly from the
+  browser; registries that refuse cross-origin requests show up as failed checks, never as
+  available.
 - **AI content studio** — drafts only, never auto-publishes. Requires a provider key stored as a
   function secret; the feature stays off until `feature_flags.ai_content_studio = true`.
 
@@ -151,7 +161,7 @@ public; anything that writes must verify the caller's JWT and role.
 | Admin shows "not configured" | Supabase env vars absent from the build | Set both vars, rebuild |
 | Admin shows "no administrator role" | Signed in without `user_roles` row | Insert the row in SQL, reload |
 | Content edits do not appear | Static export serves bytes baked at build time | Rebuild and re-upload |
-| Dev server 500s with `Cannot find module './NNN.js'` | `npm run build` ran while `next dev` was live and rewrote `.next`; dev and build share that directory | Stop the dev server, `npm run clean`, then restart — or run the build after stopping it |
+| Dev server 500s with `Cannot find module './NNN.js'` or `ENOENT .../app-paths-manifest.json` | `npm run build` ran while `next dev` was live and rewrote `.next`; dev and build share that directory | Stop the dev server, `npm run clean`, then restart. `npm run build` now refuses to run while something listens on port 3000 (override with `DOMAINFITS_ALLOW_BUILD_WITH_DEV=1`) |
 
 ---
 

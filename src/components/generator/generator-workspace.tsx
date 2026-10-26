@@ -13,10 +13,13 @@ import {
 import { requestFromSearchParams, searchParamsFromRequest } from "@/lib/generator/url-state";
 import {
   DEFAULT_FILTERS,
-  type AvailabilityInfo,
+  applyFilters,
   type ResultFilters,
   type SortKey,
 } from "@/lib/generator/filters";
+import { domainsForCheck, summarizeByLabel, summarizeResults } from "@/lib/availability/client";
+import { useAvailability } from "@/lib/availability/use-availability";
+import { trackEvent } from "@/lib/analytics/events";
 import { exportFilename, serializeExport, type ExportFormat } from "@/lib/export/exporters";
 import {
   mergeFavorites,
@@ -66,7 +69,7 @@ export function GeneratorWorkspace() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [favoriteRecords, setFavoriteRecords] = useState<FavoriteRecord[]>([]);
-  const [availability] = useState<Map<string, AvailabilityInfo>>(new Map());
+  const availabilityApi = useAvailability();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
@@ -93,6 +96,63 @@ export function GeneratorWorkspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const availability = useMemo(
+    () => summarizeByLabel(candidates, availabilityApi.byDomain),
+    [availabilityApi.byDomain, candidates],
+  );
+
+  const visibleCandidates = useMemo(
+    () => applyFilters(candidates, filters, sort, { favorites, availability }).visible,
+    [availability, candidates, favorites, filters, sort],
+  );
+
+  /**
+   * Runs real registry lookups for the chosen scope.
+   *
+   * The toast reports exactly what came back — including failures — because "checking"
+   * that silently reports nothing would be worse than not offering the button at all.
+   */
+  const handleCheckAvailability = useCallback(
+    async (scope: ExportScope) => {
+      const list = scope === "selected" ? candidates.filter((candidate) => selected.has(candidate.label)) : visibleCandidates;
+      if (list.length === 0) {
+        push({ tone: "warn", title: "Nothing to check", description: "Select some names, or adjust the filters." });
+        return;
+      }
+      const domains = domainsForCheck(list, lastRequest?.tlds ?? []);
+      if (domains.length === 0) {
+        push({ tone: "warn", title: "No domains to check", description: "Refresh the results and try again." });
+        return;
+      }
+      const results = await availabilityApi.run(domains);
+      if (results.length === 0) {
+        push({ tone: "info", title: "Check cancelled" });
+        return;
+      }
+      const summary = summarizeResults(results);
+      const available = summary.find((entry) => entry.status === "available_verified")?.count ?? 0;
+      const failed = results.filter(
+        (result) => result.status === "check_failed" || result.status === "rate_limited" || result.status === "unknown",
+      ).length;
+
+      push({
+        tone: available > 0 ? "success" : failed > 0 ? "warn" : "info",
+        title: `${results.length} name${results.length === 1 ? "" : "s"} checked`,
+        description:
+          `${summary.map((entry) => `${entry.count} ${entry.status.replace(/_/g, " ")}`).join(" · ")}.` +
+          (failed > 0 ? " Failed checks are not evidence of availability." : ""),
+      });
+    },
+    [availabilityApi, candidates, lastRequest?.tlds, push, selected, visibleCandidates],
+  );
+
+  const handleCheckSingle = useCallback(
+    (domains: string[]) => {
+      void availabilityApi.run(domains);
+    },
+    [availabilityApi],
+  );
+
   const runGeneration = useCallback(
     (request: GenerationRequest, formState: GeneratorFormState) => {
       setBusy(true);
@@ -116,6 +176,17 @@ export function GeneratorWorkspace() {
         };
         pushRecentSearch(record);
         setRecent(readRecentSearches());
+
+        trackEvent("generation_run", {
+          payload: {
+            roots: request.roots.slice(0, 5),
+            tlds: request.tlds,
+            brandable: request.brandable,
+            requested: result.diagnostics.requested,
+            produced: result.diagnostics.produced,
+            exhausted: result.diagnostics.produced < result.diagnostics.requested,
+          },
+        });
 
         if (result.candidates.length === 0) {
           push({
@@ -191,6 +262,7 @@ export function GeneratorWorkspace() {
             overall: candidate.overall,
           },
         ]);
+        trackEvent("favorite_added", { payload: { domain, root: candidate.root } });
         push({ tone: "success", title: "Saved to favourites", description: `${domain} — stored in this browser.` });
       }
       setFavoriteRecords(next);
@@ -256,6 +328,9 @@ export function GeneratorWorkspace() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+      trackEvent("export_created", {
+        payload: { format, scope, count: list.length, availabilityIncluded: availability.size > 0 },
+      });
       push({
         tone: "success",
         title: `${list.length} name${list.length === 1 ? "" : "s"} exported`,
@@ -395,6 +470,13 @@ export function GeneratorWorkspace() {
               favorites={favorites}
               onToggleFavorite={toggleFavorite}
               availability={availability}
+              domainResults={availabilityApi.byDomain}
+              onCheckAvailability={(scope) => void handleCheckAvailability(scope)}
+              onCheckDomains={handleCheckSingle}
+              checkingAvailability={availabilityApi.checking}
+              availabilityProgress={availabilityApi.progress}
+              availabilityMode={availabilityApi.mode}
+              availabilityNote={availabilityApi.note}
               onExport={handleExport}
               onCopy={handleCopy}
               onRegenerate={() => handleGenerate(true)}

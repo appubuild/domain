@@ -21,7 +21,7 @@ Build and verify:
 ```bash
 npm run typecheck              # tsc --noEmit, strict
 npm test                       # 132 tests (engine, DB/RLS, availability, content)
-npm run build                  # → out/  + compiled redirects
+npm run build                  # → out/  + compiled redirects (refuses if dev is running)
 ```
 
 ## Deploy
@@ -39,18 +39,20 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 | --- | --- | --- |
 | Generator UI | `src/app/generator/`, `src/components/generator/` | Multi-root keywords, affix positions, 12 styles, filters, export |
 | Naming engines | `src/lib/generator/`, `src/lib/engine/`, `src/lib/brain/` | Candidate strategies A–G, scoring with exposed component weights |
-| Availability | `src/lib/availability/` | RDAP-first, 8 statuses, no scraping, TTL cache |
+| Availability | `src/lib/availability/`, `supabase/functions/availability/` | RDAP-first, 8 statuses, no scraping, TTL cache; edge function proxies lookups server-side |
 | Content pipeline | `src/lib/content/` | Build-time snapshot with Supabase fallback, sanitiser, SEO helpers |
 | Public routes | `src/app/` | Static export; every route pre-rendered with `dynamicParams = false` |
 | Admin panel | `src/app/admin/`, `src/components/admin/` | 23 modules, one declarative CRUD registry |
 | Database | `supabase/migrations/`, `supabase/seed/` | 44 tables, RLS on all, seeded dictionaries |
-| Build tooling | `scripts/` | Seed generator, redirect emitter |
+| Analytics | `src/lib/analytics/` | First-party events only; says "not configured" when it cannot store |
+| Build tooling | `scripts/` | Seed generator, redirect emitter, pre-build dev-server guard |
 
 ## Documentation
 
 - [`docs/00-phase-0-audit.md`](docs/00-phase-0-audit.md) — architecture and constraints audit
 - [`docs/admin-guide.md`](docs/admin-guide.md) — modules, roles, publish workflow, rollback
 - [`docs/phase-1-3-report.md`](docs/phase-1-3-report.md) — what is verified, what is blocked, defects fixed
+- [`docs/phase-4-report.md`](docs/phase-4-report.md) — availability wiring, analytics, test hardening
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

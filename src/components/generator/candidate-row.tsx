@@ -6,8 +6,9 @@ import type { Candidate } from "@/lib/brain/types";
 import { Badge, Button, Dialog, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils/format";
 import type { AvailabilityInfo } from "@/lib/generator/filters";
+import type { AvailabilityResult } from "@/lib/availability/types";
 
-const STATUS_PRESENTATION: Record<
+export const STATUS_PRESENTATION: Record<
   AvailabilityInfo["status"],
   { label: string; tone: "neutral" | "success" | "danger" | "warn" | "info"; hint: string }
 > = {
@@ -90,6 +91,8 @@ export function CandidateRow({
   selected,
   favorite,
   availability,
+  domainResults,
+  onCheckDomains,
   onToggleSelect,
   onToggleFavorite,
 }: {
@@ -98,6 +101,8 @@ export function CandidateRow({
   selected: boolean;
   favorite: boolean;
   availability?: AvailabilityInfo;
+  domainResults?: Map<string, AvailabilityResult>;
+  onCheckDomains?: (domains: string[]) => void;
   onToggleSelect: (label: string) => void;
   onToggleFavorite: (candidate: Candidate) => void;
 }) {
@@ -208,6 +213,8 @@ export function CandidateRow({
       <CandidateDetail
         candidate={candidate}
         availability={availability}
+        domainResults={domainResults}
+        onCheckDomains={onCheckDomains}
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
       />
@@ -218,11 +225,15 @@ export function CandidateRow({
 export function CandidateDetail({
   candidate,
   availability,
+  domainResults,
+  onCheckDomains,
   open,
   onClose,
 }: {
   candidate: Candidate;
   availability?: AvailabilityInfo;
+  domainResults?: Map<string, AvailabilityResult>;
+  onCheckDomains?: (domains: string[]) => void;
   open: boolean;
   onClose: () => void;
 }) {
@@ -282,16 +293,50 @@ export function CandidateDetail({
         </section>
 
         <section className="space-y-1.5">
-          <h3 className="text-[13px] font-semibold text-fg">
-            Domain{candidate.domains.length === 1 ? "" : "s"}
-          </h3>
-          <div className="flex flex-wrap gap-1.5">
-            {tldList.map((domain) => (
-              <code key={domain} className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px]">
-                {domain}
-              </code>
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-[13px] font-semibold text-fg">
+              Domain{candidate.domains.length === 1 ? "" : "s"}
+            </h3>
+            {onCheckDomains ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onCheckDomains(tldList)}
+                disabled={tldList.length === 0}
+              >
+                Check {tldList.length === 1 ? "this name" : `these ${tldList.length}`}
+              </Button>
+            ) : null}
           </div>
+          <ul className="space-y-1">
+            {tldList.map((domain) => {
+              const result = domainResults?.get(domain.toLowerCase());
+              return (
+                <li key={domain} className="flex flex-wrap items-center gap-2">
+                  <code className="rounded border border-border bg-surface-2 px-2 py-1 text-[12px]">{domain}</code>
+                  <AvailabilityChip
+                    info={
+                      result
+                        ? {
+                            status: result.status,
+                            checkedAt: result.checkedAt,
+                            provider: result.providerId === "none" ? null : result.providerId,
+                            cached: result.cached,
+                            confirmed: result.confirmed,
+                          }
+                        : undefined
+                    }
+                  />
+                  {result ? (
+                    <span className="text-[11px] text-fg-subtle">
+                      {new Date(result.checkedAt).toLocaleString()}
+                      {result.cached ? " · cached" : ""}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
           <p className="text-[11px] text-fg-subtle">
             Registrar links are only shown when an affiliate provider is configured for the extension.
             See the affiliate disclosure.

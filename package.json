@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev -H 0.0.0.0 -p 3000",
-    "build": "next build && tsx scripts/emit-redirects.ts",
+    "build": "tsx scripts/prebuild-check.ts && next build && tsx scripts/emit-redirects.ts",
     "start": "npx --yes serve out -l 3000 -s",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

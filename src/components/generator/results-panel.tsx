@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Filter, ListFilter, X } from "lucide-react";
+import { Download, Filter, ListFilter, ShieldCheck, X } from "lucide-react";
 import type { Candidate, CandidateStrategy, GenerationDiagnostics } from "@/lib/brain/types";
-import { Badge, Button, Callout, Drawer, EmptyState, Select } from "@/components/ui";
+import { Badge, Button, Callout, Drawer, EmptyState, ProgressBar, Select } from "@/components/ui";
 import { ChipGroup, Field, Input } from "@/components/ui/form";
 import { cn } from "@/lib/utils/format";
 import {
@@ -16,9 +16,23 @@ import {
   type ResultFilters,
   type SortKey,
 } from "@/lib/generator/filters";
+import type { AvailabilityResult, AvailabilityStatus } from "@/lib/availability/types";
+import type { AvailabilityMode } from "@/lib/availability/client";
+import type { AvailabilityProgress } from "@/lib/availability/use-availability";
 import { CandidateRow, humanStrategy } from "./candidate-row";
 
 export type ExportScope = "visible" | "selected";
+
+const AVAILABILITY_STATUS_ORDER: AvailabilityStatus[] = [
+  "available_verified",
+  "premium_or_special_pricing",
+  "registered",
+  "unavailable",
+  "unknown",
+  "check_failed",
+  "rate_limited",
+  "unsupported_tld",
+];
 
 const STRATEGIES: CandidateStrategy[] = [
   "direct-combination",
@@ -44,6 +58,13 @@ export function ResultsPanel({
   favorites,
   onToggleFavorite,
   availability,
+  domainResults,
+  onCheckAvailability,
+  onCheckDomains,
+  checkingAvailability,
+  availabilityProgress,
+  availabilityMode,
+  availabilityNote,
   onExport,
   onCopy,
   onRegenerate,
@@ -60,6 +81,13 @@ export function ResultsPanel({
   favorites: Set<string>;
   onToggleFavorite: (candidate: Candidate) => void;
   availability: Map<string, AvailabilityInfo>;
+  domainResults: Map<string, AvailabilityResult>;
+  onCheckAvailability: (scope: ExportScope) => void;
+  onCheckDomains: (domains: string[]) => void;
+  checkingAvailability: boolean;
+  availabilityProgress: AvailabilityProgress | null;
+  availabilityMode: AvailabilityMode;
+  availabilityNote: string;
   onExport: (format: "txt" | "csv" | "json", scope: ExportScope) => void;
   onCopy: (scope: ExportScope) => void;
   onRegenerate: () => void;
@@ -357,6 +385,21 @@ export function ResultsPanel({
           <Button
             variant="secondary"
             size="sm"
+            onClick={() => onCheckAvailability(selected.size > 0 ? "selected" : "visible")}
+            disabled={candidates.length === 0 || visible.length === 0 || availabilityMode === "none"}
+            loading={checkingAvailability}
+            title={
+              availabilityMode === "none"
+                ? "No availability provider is configured for this build."
+                : availabilityNote
+            }
+          >
+            <ShieldCheck className="size-3.5" aria-hidden="true" />
+            {selected.size > 0 ? `Check ${selected.size} selected` : `Check ${visible.length} names`}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setExportOpen(true)}
             disabled={candidates.length === 0}
           >
@@ -370,6 +413,28 @@ export function ResultsPanel({
           ) : null}
         </div>
       </div>
+
+      {availabilityProgress ? (
+        <div className="space-y-1 rounded-[var(--radius)] border border-border bg-surface px-3 py-2">
+          <ProgressBar
+            value={availabilityProgress.completed}
+            max={availabilityProgress.total}
+            label={`Checking ${availabilityProgress.completed} of ${availabilityProgress.total}`}
+          />
+          <p className="text-[11px] text-fg-subtle">
+            {AVAILABILITY_STATUS_ORDER.filter((status) => (availabilityProgress.tally[status] ?? 0) > 0)
+              .map((status) => `${availabilityProgress.tally[status]} ${status.replace(/_/g, " ")}`)
+              .join(" · ")}
+          </p>
+        </div>
+      ) : availabilityMode !== "none" ? (
+        <p className="text-[11px] leading-relaxed text-fg-subtle">{availabilityNote}</p>
+      ) : (
+        <Callout tone="warn" title="Availability checking is unavailable in this build">
+          No availability provider is configured, so names stay <strong>not checked</strong>. They are never
+          shown as available without a real registry answer.
+        </Callout>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[16rem_1fr]">
         <aside className="hidden lg:block">
@@ -414,6 +479,8 @@ export function ResultsPanel({
                   selected={selected.has(candidate.label)}
                   favorite={favorites.has(candidate.label)}
                   availability={availability.get(candidate.label)}
+                  domainResults={domainResults}
+                  onCheckDomains={onCheckDomains}
                   onToggleSelect={toggleSelect}
                   onToggleFavorite={onToggleFavorite}
                 />

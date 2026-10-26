@@ -139,6 +139,14 @@ third-party tracker is loaded anywhere in the app.
 verified results, 10 minutes for inconclusive ones). Clearing rows forces fresh lookups; the
 generator never presents a cached `unknown` as `available`.
 
+**Wiring the availability function.** The generator checks names through
+`NEXT_PUBLIC_AVAILABILITY_FN_URL` when it is set, and falls back to direct RDAP calls from the
+browser otherwise. Deploy the function with
+`supabase functions deploy availability --no-verify-jwt`, set the variable to
+`https://<ref>.supabase.co/functions/v1/availability`, and rebuild. The results panel states
+which transport is in use; a direct-RDAP build warns that some registries block cross-origin
+requests (those show as failed checks, never as available).
+
 **Feature flags.** Every optional capability defaults to off and must stay off for the core
 generator to work. Flags are read when a request starts; flipping one changes the next run,
 not the current one.
