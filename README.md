@@ -44,6 +44,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 | Public routes | `src/app/` | Static export; every route pre-rendered with `dynamicParams = false` |
 | Admin panel | `src/app/admin/`, `src/components/admin/` | 23 modules, one declarative CRUD registry |
 | Database | `supabase/migrations/`, `supabase/seed/` | 44 tables, RLS on all, seeded dictionaries |
+| Monetization | `src/lib/affiliate/`, `src/lib/ads/`, `supabase/functions/affiliate-click/` | Validated registrar links + AdSense-only slots; both fail closed and ship off |
 | Analytics | `src/lib/analytics/` | First-party events only; says "not configured" when it cannot store |
 | Build tooling | `scripts/` | Seed generator, redirect emitter, pre-build dev-server guard |
 
@@ -53,6 +54,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/admin-guide.md`](docs/admin-guide.md) — modules, roles, publish workflow, rollback
 - [`docs/phase-1-3-report.md`](docs/phase-1-3-report.md) — what is verified, what is blocked, defects fixed
 - [`docs/phase-4-report.md`](docs/phase-4-report.md) — availability wiring, analytics, test hardening
+- [`docs/phase-5-report.md`](docs/phase-5-report.md) — affiliate routing and advertising runtime
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

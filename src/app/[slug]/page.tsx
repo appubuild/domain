@@ -8,6 +8,7 @@ import { sanitizeHtml } from "@/lib/content/sanitize";
 import { Breadcrumbs } from "@/components/ui/nav";
 import { Badge, ButtonLink, Callout } from "@/components/ui/primitives";
 import { JsonLd } from "@/components/seo/json-ld";
+import { AdSlot } from "@/components/ads/ad-slot";
 
 /**
  * CMS pages (About, Privacy, Terms, How it works, …).
@@ -69,6 +70,8 @@ export default async function CmsPage({ params }: { params: Promise<{ slug: stri
       </header>
 
       <div className="prose-cms" dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.body) }} />
+
+      <AdSlot template="page" placement="end-of-content" className="mt-8" />
 
       {isHowItWorks ? (
         <div className="mt-10 rounded-[var(--radius-lg)] border border-border bg-surface p-5">

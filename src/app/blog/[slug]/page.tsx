@@ -7,6 +7,7 @@ import { readingMinutes, sanitizeHtml } from "@/lib/content/sanitize";
 import { Breadcrumbs } from "@/components/ui/nav";
 import { Badge, Callout } from "@/components/ui/primitives";
 import { JsonLd } from "@/components/seo/json-ld";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { formatDate } from "@/lib/utils/format";
 
 export const dynamicParams = false;
@@ -65,6 +66,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <p className="text-[15px] leading-relaxed text-fg-muted">{post.excerpt}</p>
       </header>
 
+      <AdSlot template="blog-post" placement="after-intro" className="mt-6" />
+
       <div className="prose-cms mt-8" dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }} />
 
       {faq.length > 0 ? (
@@ -78,6 +81,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           ))}
         </section>
       ) : null}
+
+      <AdSlot template="blog-post" placement="end-of-content" className="mt-8" />
 
       <Callout tone="info" className="mt-8" title="Scores are heuristics">
         Nothing in this article is investment, legal or trademark advice. Our tool reports what a naming

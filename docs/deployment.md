@@ -128,6 +128,12 @@ where schemaname = 'public' and rowsecurity = false;   -- must return zero rows
   Without it the site still checks names, calling public RDAP endpoints directly from the
   browser; registries that refuse cross-origin requests show up as failed checks, never as
   available.
+
+- **Affiliate click-through** — `supabase/functions/affiliate-click/index.ts`. Re-validates the
+  provider, host allowlist and `affiliate_routing` flag server-side, records the click and issues
+  the 302. Deploy with `supabase functions deploy affiliate-click --no-verify-jwt`, then set
+  `NEXT_PUBLIC_AFFILIATE_FN_URL`. Without it, links are built (and validated) in the browser and
+  clicks are recorded best-effort.
 - **AI content studio** — drafts only, never auto-publishes. Requires a provider key stored as a
   function secret; the feature stays off until `feature_flags.ai_content_studio = true`.
 

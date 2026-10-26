@@ -139,6 +139,23 @@ third-party tracker is loaded anywhere in the app.
 verified results, 10 minutes for inconclusive ones). Clearing rows forces fresh lookups; the
 generator never presents a cached `unknown` as `available`.
 
+**Affiliate routing.** Links appear only when all three conditions hold: a provider row is
+enabled, the `affiliate_routing` feature flag is on, and the provider claims the extension
+(explicit `affiliate_tld_rules` row → `supported_tlds` → the single fallback provider). The URL
+template must be `https://`, contain `{domain}`, and resolve to a host in `allowed_hosts` —
+otherwise the link is dropped rather than shown broken. There are no built-in or "demo"
+registrars, so a fresh install shows no registrar links at all.
+
+With `NEXT_PUBLIC_AFFILIATE_FN_URL` set, the browser links to the click-through function, which
+re-validates the provider and host against the database before issuing the 302 and recording the
+click. Without it, the client builds the link itself (same validation) and records clicks
+best-effort through `click_events`.
+
+**Advertising.** AdSense only, and only when every gate passes: provider `adsense`, global switch
+on, script enabled, a `ca-pub-…` publisher ID, a matching enabled slot with a numeric unit ID, and
+(default) recorded consent. A failing gate renders **nothing** — no placeholder, no caption.
+Operators can supply IDs, never JavaScript.
+
 **Wiring the availability function.** The generator checks names through
 `NEXT_PUBLIC_AVAILABILITY_FN_URL` when it is set, and falls back to direct RDAP calls from the
 browser otherwise. Deploy the function with

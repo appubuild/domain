@@ -1,12 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, Copy, CopyCheck, Info, Star } from "lucide-react";
 import type { Candidate } from "@/lib/brain/types";
 import { Badge, Button, Dialog, Tooltip } from "@/components/ui";
 import { cn } from "@/lib/utils/format";
 import type { AvailabilityInfo } from "@/lib/generator/filters";
 import type { AvailabilityResult } from "@/lib/availability/types";
+import { useAffiliates } from "@/lib/affiliate/use-affiliates";
+import type { RegistrarLink } from "@/lib/affiliate/links";
 
 export const STATUS_PRESENTATION: Record<
   AvailabilityInfo["status"],
@@ -238,8 +241,13 @@ export function CandidateDetail({
   onClose: () => void;
 }) {
   const status = STATUS_PRESENTATION[availability?.status ?? "unchecked"];
+  const affiliates = useAffiliates();
 
   const tldList = useMemo(() => candidate.domains.map((entry) => entry.domain), [candidate.domains]);
+  const registrarLinks = useMemo(
+    () => (open ? affiliates.linksFor(candidate.domains.filter((entry) => tldList.includes(entry.domain))) : []),
+    [affiliates, candidate.domains, open, tldList],
+  );
 
   return (
     <Dialog open={open} onClose={onClose} title={candidate.domains[0]?.domain ?? candidate.label} size="lg">
@@ -337,10 +345,43 @@ export function CandidateDetail({
               );
             })}
           </ul>
-          <p className="text-[11px] text-fg-subtle">
-            Registrar links are only shown when an affiliate provider is configured for the extension.
-            See the affiliate disclosure.
-          </p>
+          {registrarLinks.length > 0 ? (
+            <div className="rounded-[var(--radius)] border border-border bg-surface-2/50 p-2.5">
+              <p className="mb-1.5 text-[11px] font-medium text-fg-muted">
+                Register with a configured registrar
+              </p>
+              <ul className="flex flex-wrap gap-1.5">
+                {registrarLinks.map((link) => (
+                  <li key={`${link.providerId}:${link.domain}`}>
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      onClick={() => affiliates.track(link)}
+                      className="inline-flex items-center gap-1 rounded-[var(--radius)] border border-border-strong bg-surface px-2 py-1 text-[12px] font-medium text-fg hover:border-accent hover:text-accent"
+                      title={link.disclosure}
+                    >
+                      {link.providerName}
+                      <span className="font-mono text-[11px] text-fg-subtle">{link.domain}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-[10.5px] leading-relaxed text-fg-subtle">
+                {registrarLinks[0]?.disclosure} Opens in a new tab. Availability is decided by registry
+                data, never by commission —{" "}
+                <Link href="/affiliate-disclosure" className="underline hover:text-fg">
+                  affiliate disclosure
+                </Link>
+                .
+              </p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-fg-subtle">
+              Registrar links are only shown when an affiliate provider is configured for the extension.
+              See the affiliate disclosure.
+            </p>
+          )}
         </section>
 
         {candidate.notes.length > 0 ? (

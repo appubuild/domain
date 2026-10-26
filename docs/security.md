@@ -80,9 +80,16 @@ values; `src/lib/config/env.ts` has no accessor for anything else.
 - **JSON-LD** escapes `<` and `>` so data cannot terminate the script element.
 - **Generated names** are validated as labels before display or export (length, allowed
   characters, hyphen rules, no leading/trailing hyphen).
-- **Affiliate links** are built from an allowlisted template containing `{domain}` with
-  `https://` enforced by a database constraint; the target host is re-validated against
-  `allowed_hosts` before redirect, and every click is recorded.
+- **Affiliate links** are rebuilt and validated before use: `https://` only, `{domain}`
+  required (also a database CHECK), the substituted URL's host must match `allowed_hosts`
+  exactly or as a subdomain, and credentials/ports are rejected. Look-alike hosts
+  (`registrar.example.evil.com`, `registrar.example@evil.com`) are covered by tests. With the
+  click-through function deployed, validation happens again server-side from the database, so a
+  tampered client cannot send a visitor anywhere new; the redirect carries
+  `referrer-policy: no-referrer`.
+- **Advertising** is AdSense-only and cannot load operator JavaScript. Gates: provider,
+  global switch, script switch, `ca-pub-[0-9]{10,20}` publisher ID, enabled slot with
+  `[0-9]{6,25}` unit ID, and consent (required by default). A gate failure renders nothing.
 - **Redirects** are validated for shape, self-targeting and real-route shadowing before being
   compiled into host rules.
 
