@@ -1,0 +1,368 @@
+@import "tailwindcss";
+
+/*
+ * DomainFits design tokens.
+ *
+ * Every colour used anywhere in the app comes from these variables — components must
+ * never hardcode hex values. Light/dark are driven by `data-theme` on <html>, which is
+ * set by an inline bootstrap script (see `src/components/theme/theme-script.tsx`) to
+ * avoid a flash of the wrong theme.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* surfaces */
+  --bg: #fbfbf9;
+  --surface: #ffffff;
+  --surface-2: #f4f4f1;
+  --surface-3: #ecece7;
+  --overlay: rgb(12 14 18 / 0.45);
+
+  /* lines */
+  --border: #e3e3dd;
+  --border-strong: #cbcbc4;
+
+  /* text */
+  --fg: #14161a;
+  --fg-muted: #565f6b;
+  --fg-subtle: #79828f;
+  --fg-inverse: #ffffff;
+
+  /* brand accent — restrained teal, AA on light surfaces */
+  --accent: #067a68;
+  --accent-hover: #05695a;
+  --accent-fg: #ffffff;
+  --accent-soft: #e4f4f0;
+  --accent-soft-fg: #04564a;
+
+  /* secondary accent, used for "brandable" signals */
+  --violet: #6d28d9;
+  --violet-soft: #f1ebfe;
+  --violet-soft-fg: #5b21b6;
+
+  /* status */
+  --success: #157347;
+  --success-soft: #e6f4ec;
+  --warn: #9a5b04;
+  --warn-soft: #fdf2df;
+  --danger: #b42318;
+  --danger-soft: #fdeceb;
+  --info: #1d5fa8;
+  --info-soft: #e8f1fb;
+
+  /* elevation + shape */
+  --shadow-xs: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-sm: 0 1px 3px rgb(16 24 40 / 0.07), 0 1px 2px rgb(16 24 40 / 0.04);
+  --shadow-md: 0 4px 12px -2px rgb(16 24 40 / 0.1), 0 2px 6px -2px rgb(16 24 40 / 0.06);
+  --shadow-lg: 0 16px 40px -12px rgb(16 24 40 / 0.22);
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* focus ring */
+  --ring: #067a68;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0a0c0f;
+  --surface: #101318;
+  --surface-2: #161a21;
+  --surface-3: #1e242c;
+  --overlay: rgb(2 4 6 / 0.66);
+
+  --border: #252b34;
+  --border-strong: #38404b;
+
+  --fg: #e9ecf0;
+  --fg-muted: #9aa4b1;
+  --fg-subtle: #77818e;
+  --fg-inverse: #0a0c0f;
+
+  --accent: #2fd4b8;
+  --accent-hover: #4ee0c7;
+  --accent-fg: #052620;
+  --accent-soft: #0d2f2a;
+  --accent-soft-fg: #7ceada;
+
+  --violet: #a78bfa;
+  --violet-soft: #211a3a;
+  --violet-soft-fg: #cbbbff;
+
+  --success: #4ade80;
+  --success-soft: #10281a;
+  --warn: #fbbf24;
+  --warn-soft: #2c2210;
+  --danger: #f87171;
+  --danger-soft: #2c1615;
+  --info: #7cb6f7;
+  --info-soft: #101f2e;
+
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 14px -2px rgb(0 0 0 / 0.55);
+  --shadow-lg: 0 18px 44px -14px rgb(0 0 0 / 0.7);
+
+  --ring: #2fd4b8;
+}
+
+/* Map tokens into Tailwind's theme so utilities (bg-surface, text-fg-muted, …) exist. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-fg-inverse: var(--fg-inverse);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-fg: var(--accent-soft-fg);
+  --color-violet: var(--violet);
+  --color-violet-soft: var(--violet-soft);
+  --color-violet-soft-fg: var(--violet-soft-fg);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-overlay: var(--overlay);
+
+  --radius-sm: var(--radius-sm);
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    letter-spacing: -0.011em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Numbers in tables/results must align. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--accent-soft-fg);
+  }
+
+  /* Respect the user's motion preference everywhere. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Thin, theme-aware scrollbars for dense panels. */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+  }
+}
+
+@layer components {
+  /* CMS / rich-text output. Content is sanitised to this whitelist before it is stored,
+     so these rules only ever style known-safe elements. */
+  .prose-cms {
+    color: var(--fg);
+    line-height: 1.7;
+    font-size: 1rem;
+  }
+  .prose-cms > * + * {
+    margin-top: 1em;
+  }
+  .prose-cms h2 {
+    font-size: 1.5rem;
+    font-weight: 650;
+    line-height: 1.25;
+    margin-top: 2em;
+    letter-spacing: -0.015em;
+  }
+  .prose-cms h3 {
+    font-size: 1.2rem;
+    font-weight: 650;
+    margin-top: 1.6em;
+  }
+  .prose-cms h4 {
+    font-size: 1.05rem;
+    font-weight: 650;
+    margin-top: 1.4em;
+  }
+  .prose-cms a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+  }
+  .prose-cms a:hover {
+    color: var(--accent-hover);
+  }
+  .prose-cms strong {
+    font-weight: 650;
+  }
+  .prose-cms ul,
+  .prose-cms ol {
+    padding-left: 1.4em;
+  }
+  .prose-cms ul {
+    list-style: disc;
+  }
+  .prose-cms ol {
+    list-style: decimal;
+  }
+  .prose-cms li + li {
+    margin-top: 0.4em;
+  }
+  .prose-cms blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1em;
+    color: var(--fg-muted);
+    font-style: italic;
+  }
+  .prose-cms code {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.35em;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+  .prose-cms pre {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1em;
+    overflow-x: auto;
+  }
+  .prose-cms pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .prose-cms img {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    max-width: 100%;
+    height: auto;
+  }
+  .prose-cms table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.925rem;
+  }
+  .prose-cms th,
+  .prose-cms td {
+    border: 1px solid var(--border);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  .prose-cms th {
+    background: var(--surface-2);
+    font-weight: 650;
+  }
+  .prose-cms hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 2em 0;
+  }
+  .prose-cms figcaption {
+    color: var(--fg-subtle);
+    font-size: 0.85rem;
+    margin-top: 0.5em;
+  }
+
+  /* Skeleton shimmer used by loading states. */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.08), transparent);
+    animation: skeleton-sweep 1.4s ease-in-out infinite;
+  }
+  @keyframes skeleton-sweep {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  /* Screen-reader-only helper. */
+  .sr-only-focusable:not(:focus):not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+}

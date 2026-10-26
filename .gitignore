@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js / build output
+.next/
+out/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# testing
+coverage/
+
+# local data stores (never commit a database file)
+data/
+*.sqlite
+*.sqlite-journal
+*.db
+
+# env files — only .env.example is committed
+.env
+.env.local
+.env.*.local
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+*.log
