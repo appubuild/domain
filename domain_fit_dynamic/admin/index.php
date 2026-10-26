@@ -8,7 +8,7 @@ start_app_session();
 if (isset($_SESSION['admin_id'])) {
     try {
         $existingPdo = db();
-        if (admin_user($existingPdo)) redirect_to('admin/dashboard.php');
+        if (admin_user($existingPdo)) redirect_to('admin/dashboard');
     } catch (Throwable $error) {
         // Render a generic configuration message below.
     }
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo instanceof PDO) {
                 $pdo->prepare('UPDATE admin_users SET last_login_at=UTC_TIMESTAMP() WHERE id=:id')->execute(['id' => $user['id']]);
                 $pdo->prepare('DELETE FROM admin_login_limits WHERE ip_hash=:ip')->execute(['ip' => $rateKey]);
                 audit_log($pdo, (int) $user['id'], 'admin.login', 'admin_user', (string) $user['id']);
-                redirect_to('admin/dashboard.php');
+                redirect_to('admin/dashboard');
             }
             $nowSql = 'UTC_TIMESTAMP()';
             if (!$limit) {
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $pdo instanceof PDO) {
     }
 }
 ?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Admin sign in · DomainFits</title><link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>"><link rel="stylesheet" href="<?= e(asset_url('css/dynamic.css')) ?>"></head><body class="admin-body"><main class="login-wrap"><section class="login-card"><a class="brand" href="<?= e(app_url('index.php')) ?>"><img src="<?= e(asset_url('img/logo.svg')) ?>" alt=""><span><?= e($pdo instanceof PDO ? setting($pdo, 'site_title', 'DomainFits') : 'DomainFits') ?></span></a><h1>Sign in</h1><p>Use an administrator account created through the command line.</p>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Admin sign in · DomainFits</title><link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>"><link rel="stylesheet" href="<?= e(asset_url('css/dynamic.css')) ?>"></head><body class="admin-body"><main class="login-wrap"><section class="login-card"><a class="brand" href="<?= e(app_url('')) ?>"><img src="<?= e(asset_url('img/logo.svg')) ?>" alt=""><span><?= e($pdo instanceof PDO ? setting($pdo, 'site_title', 'DomainFits') : 'DomainFits') ?></span></a><h1>Sign in</h1><p>Use an administrator account created through the command line.</p>
 <?php if ($errorMessage !== ''): ?><div class="notice notice-error" role="alert"><?= e($errorMessage) ?></div><?php endif; ?>
-<?php if ($pdo instanceof PDO): ?><form class="admin-form" method="post" action="<?= e(app_url('admin/index.php')) ?>"><?= csrf_field() ?><div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" maxlength="254" required value="<?= e(request_string($_POST, 'email')) ?>"></div><div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div><button class="button button-primary" type="submit">Sign in</button></form><?php endif; ?>
+<?php if ($pdo instanceof PDO): ?><form class="admin-form" method="post" action="<?= e(app_url('admin/login')) ?>"><?= csrf_field() ?><div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="username" maxlength="254" required value="<?= e(request_string($_POST, 'email')) ?>"></div><div class="field"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div><button class="button button-primary" type="submit">Sign in</button></form><?php endif; ?>
 </section></main></body></html>

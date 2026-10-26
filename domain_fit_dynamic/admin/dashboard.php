@@ -18,7 +18,7 @@ admin_header($pdo, $admin, 'Dashboard');
 <div class="admin-stats">
   <article class="admin-stat"><span>Published articles</span><strong><?= number_format($counts['published_posts']) ?></strong><small>Currently public</small></article>
   <article class="admin-stat"><span>Draft / review</span><strong><?= number_format($counts['draft_posts']) ?></strong><small>Includes gated editorial days</small></article>
-  <article class="admin-stat"><span>Unread contacts</span><strong><?= number_format($counts['unread_contacts']) ?></strong><small><a href="<?= e(app_url('admin/contact.php')) ?>">Open inbox</a></small></article>
+  <article class="admin-stat"><span>Unread contacts</span><strong><?= number_format($counts['unread_contacts']) ?></strong><small><a href="<?= e(app_url('admin/contact')) ?>">Open inbox</a></small></article>
   <article class="admin-stat"><span>Published pages</span><strong><?= number_format($counts['pages']) ?></strong><small>Custom CMS pages</small></article>
 </div>
 <div class="admin-stats">
@@ -29,7 +29,7 @@ admin_header($pdo, $admin, 'Dashboard');
 </div>
 <div class="admin-columns">
   <section class="admin-card"><h2>Recent site activity</h2>
-    <?php if (!$siteAnalyticsEnabled): ?><p>First-party analytics is currently disabled. Enable it in <a href="<?= e(app_url('admin/settings.php')) ?>">Site settings</a> only after reviewing your privacy notice and local requirements.</p><?php elseif (!$daily): ?><p>No event data yet. Page-view and generator-run counts are approximate aggregate metrics.</p><?php else: ?>
+    <?php if (!$siteAnalyticsEnabled): ?><p>First-party analytics is currently disabled. Enable it in <a href="<?= e(app_url('admin/site-settings')) ?>">Site settings</a> only after reviewing your privacy notice and local requirements.</p><?php elseif (!$daily): ?><p>No event data yet. Page-view and generator-run counts are approximate aggregate metrics.</p><?php else: ?>
     <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Date (UTC)</th><th>Page views</th><th>Generator runs</th></tr></thead><tbody><?php foreach ($daily as $row): ?><tr><td><?= e($row['event_day']) ?></td><td><?= number_format((int) $row['page_views']) ?></td><td><?= number_format((int) $row['generator_runs']) ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
   </section>
   <section class="admin-card"><h2>Setup checklist</h2><ul><li>Set the database and secret environment variables.</li><li>Review the imported 32 published guides and day 31–50 drafts.</li><li>Set the production site origin and update the privacy/legal content.</li><li>Keep analytics and ad integrations off until IDs and notices are configured.</li><li>Back up the MySQL database and uploaded logo/hero images.</li></ul></section>

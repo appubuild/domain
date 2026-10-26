@@ -8,23 +8,48 @@ try {
         $footerGroups[$group][] = $item;
     }
 } catch (Throwable $error) {
+    error_log('Footer navigation query failed: ' . $error->getMessage());
     $footerGroups = [];
 }
 $footerCopy = (string) setting($pdo, 'footer_text', 'Thoughtful domain ideas for what comes next.');
 $copyright = trim((string) setting($pdo, 'copyright_text', '')) ?: ('© ' . date('Y') . ' ' . setting($pdo, 'site_title', 'DomainFits') . '. All rights reserved.');
+$footerColumnsClass = count($footerGroups) > 2 ? ' blog-footer-main' : '';
 ?>
 <?= render_ad_slot($pdo, 'footer_banner') ?>
-<footer class="site-footer"><div class="container footer-top">
-  <div class="footer-brand">
-    <a class="brand" href="<?= e(app_url('index.php')) ?>"><img src="<?= e($logoPath !== '' ? $logoPath : asset_url('img/logo.svg')) ?>" width="38" height="38" alt=""><span><?= e(setting($pdo, 'site_title', 'DomainFits')) ?></span></a>
-    <p><?= e($footerCopy) ?></p>
+<footer class="site-footer" aria-label="Site footer">
+  <div class="container footer-main<?= e($footerColumnsClass) ?>">
+    <div class="footer-brand-block">
+      <a class="brand brand-footer" href="<?= e(app_url('')) ?>">
+        <img src="<?= e($logoPath !== '' ? $logoPath : asset_url('img/logo.svg')) ?>" width="38" height="38" alt="">
+        <span><?= e(setting($pdo, 'site_title', 'DomainFits')) ?></span>
+      </a>
+      <p><?= e($footerCopy) ?></p>
+    </div>
+    <?php if ($footerGroups): foreach ($footerGroups as $group => $items): ?>
+      <nav class="footer-links-group" aria-label="<?= e($group) ?>">
+        <h2><?= e($group) ?></h2>
+        <?php foreach ($items as $item): ?>
+          <a href="<?= e(site_href((string) $item['href'])) ?>"><?= e($item['label']) ?></a>
+        <?php endforeach; ?>
+      </nav>
+    <?php endforeach; else: ?>
+      <nav class="footer-links-group" aria-label="Explore">
+        <h2>Explore</h2>
+        <a href="<?= e(app_url('tools/domain-generator')) ?>">Domain generator</a>
+        <a href="<?= e(app_url('blog/')) ?>">Blog</a>
+      </nav>
+      <nav class="footer-links-group" aria-label="Company">
+        <h2>Company</h2>
+        <a href="<?= e(app_url('about')) ?>">About</a>
+        <a href="<?= e(app_url('contact')) ?>">Contact</a>
+        <a href="<?= e(app_url('privacy-policy')) ?>">Privacy policy</a>
+      </nav>
+    <?php endif; ?>
   </div>
-  <?php if ($footerGroups): foreach ($footerGroups as $group => $items): ?>
-    <div class="footer-links"><h2><?= e($group) ?></h2><?php foreach ($items as $item): ?><a href="<?= e(site_href((string) $item['href'])) ?>"><?= e($item['label']) ?></a><?php endforeach; ?></div>
-  <?php endforeach; else: ?>
-    <div class="footer-links"><h2>Explore</h2><a href="<?= e(app_url('tools/domain-generator')) ?>">Domain generator</a><a href="<?= e(app_url('blog/')) ?>">Blog</a></div>
-    <div class="footer-links"><h2>Company</h2><a href="<?= e(app_url('pages/about')) ?>">About</a><a href="<?= e(app_url('pages/contact')) ?>">Contact</a><a href="<?= e(app_url('pages/privacy-policy')) ?>">Privacy policy</a></div>
-  <?php endif; ?>
-</div><div class="container footer-bottom"><p><?= e($copyright) ?></p><a href="#top">Back to top ↑</a></div></footer>
+  <div class="container footer-bottom">
+    <p><?= e($copyright) ?></p>
+    <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
+  </div>
+</footer>
 </body>
 </html>

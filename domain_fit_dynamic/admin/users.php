@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
             audit_log($pdo,(int)$admin['id'],'admin.created','admin_user',(string)$userId,'Account created in admin.');
             flash('success','Administrator account created. Share the password through a secure channel.');
-            redirect_to('admin/users.php');
+            redirect_to('admin/users');
         } elseif ($action === 'role') {
             $targetId = filter_var($_POST['user_id'] ?? null,FILTER_VALIDATE_INT);
             $roleId = filter_var($_POST['role_id'] ?? null,FILTER_VALIDATE_INT);
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
             audit_log($pdo,(int)$admin['id'],'admin.role_changed','admin_user',(string)$targetId,'Role: ' . $roleKey);
             flash('success','User role updated.');
-            redirect_to('admin/users.php');
+            redirect_to('admin/users');
         } elseif ($action === 'status') {
             $targetId = filter_var($_POST['user_id'] ?? null,FILTER_VALIDATE_INT);
             $newStatus = in_array(($_POST['status'] ?? ''),['active','disabled'],true) ? (string) $_POST['status'] : '';
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('UPDATE admin_users SET status=:status WHERE id=:id')->execute(['status'=>$newStatus,'id'=>$targetId]);
             audit_log($pdo,(int)$admin['id'],'admin.status_changed','admin_user',(string)$targetId,'Status: ' . $newStatus);
             flash('success','User status updated.');
-            redirect_to('admin/users.php');
+            redirect_to('admin/users');
         }
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();

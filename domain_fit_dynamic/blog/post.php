@@ -39,7 +39,7 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <?= render_ad_slot($pdo, 'header_banner') ?>
 <main id="main-content" class="page-main article-main">
-  <div class="container breadcrumbs"><a href="<?= e(app_url('index.php')) ?>">Home</a><span aria-hidden="true">/</span><a href="<?= e(app_url('blog/')) ?>">Blog</a><span aria-hidden="true">/</span><span><?= e($post['title']) ?></span></div>
+  <div class="container breadcrumbs"><a href="<?= e(app_url('')) ?>">Home</a><span aria-hidden="true">/</span><a href="<?= e(app_url('blog/')) ?>">Blog</a><span aria-hidden="true">/</span><span><?= e($post['title']) ?></span></div>
   <article class="container article-shell">
     <header class="article-page-header"><p class="eyebrow"><?= e($post['category']) ?><?= $post['published_at'] ? ' · ' . e(format_public_date($post['published_at'])) : '' ?></p><h1><?= e($post['title']) ?></h1><p class="article-excerpt"><?= e($post['excerpt']) ?></p>
       <?php if ($tags): ?><div class="article-tags" aria-label="Article tags"><?php foreach ($tags as $tag): ?><span><?= e($tag) ?></span><?php endforeach; ?></div><?php endif; ?>

@@ -14,22 +14,111 @@ ServerSignature Off
 </FilesMatch>
 
 RewriteEngine On
+
+# Keep private application code, configuration, and runtime data inaccessible.
 RewriteRule ^(?:config|includes|scripts|storage)(?:/|$) - [F,L,NC]
 RewriteRule ^(?:database\.sql|\.env(?:\..*)?)$ - [F,L,NC]
+
+# Canonicalize common legacy PHP entry points for browser-safe GET/HEAD requests.
+# Apache preserves the original query string when the redirect target has no "?".
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*index\.php(?:[?\s]) [NC]
+RewriteRule ^index\.php$ ./ [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*admin/index\.php(?:[?\s]) [NC]
+RewriteRule ^admin/index\.php$ admin/login [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*admin/(?:posts|pages|domain-brain)/index\.php(?:[?\s]) [NC]
+RewriteRule ^admin/(posts|pages|domain-brain)/index\.php$ admin/$1 [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*blog/index\.php(?:[?\s]) [NC]
+RewriteRule ^blog/index\.php$ blog/ [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*tools/domain-generator\.php(?:[?\s]) [NC]
+RewriteRule ^tools/domain-generator\.php$ tools/domain-generator [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*pages/contact\.php(?:[?\s]) [NC]
+RewriteRule ^pages/contact\.php$ contact [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*admin/settings\.php(?:[?\s]) [NC]
+RewriteRule ^admin/settings\.php$ admin/site-settings [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*sitemap\.php(?:[?\s]) [NC]
+RewriteRule ^sitemap\.php$ sitemap.xml [R=301,L,NE]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*robots\.php(?:[?\s]) [NC]
+RewriteRule ^robots\.php$ robots.txt [R=301,L,NE]
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*ads-txt\.php(?:[?\s]) [NC]
+RewriteRule ^ads-txt\.php$ ads.txt [R=301,L,NE]
+
+# Preserve semantic canonical routes when older controller URLs include a slug.
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*pages/view\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (?:^|&)slug=([a-z0-9-]+)(?:&|$) [NC]
+RewriteRule ^pages/view\.php$ pages/%1 [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*blog/post\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (?:^|&)slug=([a-z0-9-]+)(?:&|$) [NC]
+RewriteRule ^blog/post\.php$ blog/%1 [R=301,L,NE]
+
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*go\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (?:^|&)slug=([a-z0-9-]+)(?:&|$) [NC]
+RewriteRule ^go\.php$ go/%1 [R=301,L,NE]
+
+# All other direct PHP GET/HEAD URLs permanently lose their extension.
+RewriteCond %{REQUEST_METHOD} ^(?:GET|HEAD)$
+RewriteCond %{THE_REQUEST} \s/+[^\s?]*\.php(?:[?\s]) [NC]
+RewriteRule ^(.+)\.php$ $1 [R=301,L,NE]
+
+# Public clean routes.
 RewriteRule ^(?:sitemap\.xml)$ sitemap.php [QSA,L]
 RewriteRule ^(?:robots\.txt)$ robots.php [QSA,L]
 RewriteRule ^(?:ads\.txt)$ ads-txt.php [QSA,L]
-RewriteRule ^admin/?$ admin/dashboard.php [QSA,L]
-RewriteRule ^go/([a-z0-9-]+)/?$ go.php?slug=$1 [QSA,L,NC]
 RewriteRule ^tools/domain-generator(?:\.html)?/?$ tools/domain-generator.php [QSA,L,NC]
-RewriteRule ^blog/(?:index\.html)?$ blog/index.php [QSA,L,NC]
+RewriteRule ^contact/?$ pages/contact.php [QSA,L,NC]
+RewriteRule ^pages/contact/?$ pages/contact.php [QSA,L,NC]
+RewriteRule ^(about|privacy-policy|terms-and-conditions|disclaimer)/?$ pages/view.php?slug=$1 [QSA,L,NC]
+RewriteRule ^pages/([a-z0-9-]+)\.html$ pages/legacy.php?slug=$1 [QSA,L,NC]
+RewriteRule ^pages/([a-z0-9-]+)/?$ pages/view.php?slug=$1 [QSA,L,NC]
+
+# Admin login, dashboard, settings and module aliases.
+RewriteRule ^admin/?$ admin/dashboard.php [QSA,L,NC]
+RewriteRule ^admin/login/?$ admin/index.php [QSA,L,NC]
+RewriteRule ^admin/dashboard/?$ admin/dashboard.php [QSA,L,NC]
+RewriteRule ^admin/site-settings/?$ admin/settings.php [QSA,L,NC]
+RewriteRule ^admin/settings/?$ admin/settings.php [QSA,L,NC]
+RewriteRule ^admin/posts/?$ admin/posts/index.php [QSA,L,NC]
+RewriteRule ^admin/pages/?$ admin/pages/index.php [QSA,L,NC]
+RewriteRule ^admin/domain-brain/?$ admin/domain-brain/index.php [QSA,L,NC]
+RewriteRule ^admin/posts/(edit|delete)/?$ admin/posts/$1.php [QSA,L,NC]
+RewriteRule ^admin/pages/(edit|delete)/?$ admin/pages/$1.php [QSA,L,NC]
+RewriteRule ^admin/(ads|affiliates|analytics|contact|navigation|users|logout)/?$ admin/$1.php [QSA,L,NC]
+
+# Public blog routes and historic static-file aliases.
+RewriteRule ^blog/?$ blog/index.php [QSA,L,NC]
+RewriteRule ^blog/(?:index\.html)$ blog/index.php [QSA,L,NC]
 RewriteRule ^blog/(blog-[0-9]+\.html)$ blog/legacy.php?file=$1 [QSA,L,NC]
 RewriteRule ^blog/([a-z0-9-]+)/?$ blog/post.php?slug=$1 [QSA,L,NC]
-RewriteRule ^pages/([a-z0-9-]+)\.html$ pages/legacy.php?slug=$1 [QSA,L,NC]
-RewriteRule ^pages/contact/?$ pages/contact.php [QSA,L,NC]
-RewriteRule ^pages/([a-z0-9-]+)/?$ pages/view.php?slug=$1 [QSA,L,NC]
-RewriteRule ^api/([a-z0-9-]+)/?$ api/$1.php [QSA,L,NC]
+
+# Affiliate redirect and first-party JSON API. The alias supports older clients.
+RewriteRule ^go/([a-z0-9-]+)/?$ go.php?slug=$1 [QSA,L,NC]
+RewriteRule ^api/generate-words/?$ api/generate.php [QSA,L,NC]
 RewriteRule ^api/([a-z0-9-]+)\.(?:json|js)$ api/$1.php [QSA,L,NC]
+RewriteRule ^api/([a-z0-9-]+)/?$ api/$1.php [QSA,L,NC]
+
+# Map other existing PHP modules to extensionless URLs without changing their code paths.
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [QSA,L,NC]
 
 <IfModule mod_rewrite.c>
   RewriteCond %{REQUEST_FILENAME} -f [OR]

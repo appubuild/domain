@@ -9,5 +9,5 @@ $pdo = db();
 $admin = admin_user($pdo);
 if (!$admin) {
     unset($_SESSION['admin_id']);
-    redirect_to('admin/index.php');
+    redirect_to('admin/login');
 }

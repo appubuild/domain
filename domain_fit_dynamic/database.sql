@@ -287,18 +287,18 @@ INSERT INTO site_settings (setting_key, value_json, is_public) VALUES
 ON DUPLICATE KEY UPDATE setting_key = VALUES(setting_key);
 
 INSERT IGNORE INTO navigation_items (menu_location, group_label, label, href, sort_order, is_active) VALUES
-('header','','Home','index.php',10,1),
+('header','','Home','',10,1),
 ('header','','Generator','tools/domain-generator',20,1),
 ('header','','Blog','blog/',30,1),
-('header','','About','pages/about',40,1),
-('header','','Contact','pages/contact',50,1),
+('header','','About','about',40,1),
+('header','','Contact','contact',50,1),
 ('footer','Explore','Domain generator','tools/domain-generator',10,1),
 ('footer','Explore','Blog','blog/',20,1),
-('footer','Company','About','pages/about',10,1),
-('footer','Company','Contact','pages/contact',20,1),
-('footer','Information','Privacy policy','pages/privacy-policy',10,1),
-('footer','Information','Terms and conditions','pages/terms-and-conditions',20,1),
-('footer','Information','Disclaimer','pages/disclaimer',30,1);
+('footer','Company','About','about',10,1),
+('footer','Company','Contact','contact',20,1),
+('footer','Information','Privacy policy','privacy-policy',10,1),
+('footer','Information','Terms and conditions','terms-and-conditions',20,1),
+('footer','Information','Disclaimer','disclaimer',30,1);
 
 INSERT IGNORE INTO ad_slots (placement, label, publisher_id, ad_unit_id, ad_format, is_enabled) VALUES
 ('header_banner','Advertisement','','','auto',0),

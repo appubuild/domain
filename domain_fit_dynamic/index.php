@@ -27,7 +27,7 @@ $structured_data = [
     '@type' => 'WebSite',
     'name' => setting($pdo, 'site_title', 'DomainFits'),
     'description' => $page_description,
-    'url' => absolute_public_url(app_url('index.php')),
+    'url' => absolute_public_url(app_url('')),
 ];
 require __DIR__ . '/includes/header.php';
 ?>

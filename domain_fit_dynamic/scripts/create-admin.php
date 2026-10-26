@@ -59,7 +59,7 @@ try {
     $attach->execute(['user' => $userId, 'role' => $role]);
     audit_log($pdo, $userId, 'admin.created', 'admin_user', (string) $userId, 'Initial administrator created through CLI.');
     $pdo->commit();
-    fwrite(STDOUT, "Administrator created. Sign in at " . app_url('admin/index.php') . PHP_EOL);
+    fwrite(STDOUT, "Administrator created. Sign in at " . app_url('admin/login') . PHP_EOL);
 } catch (Throwable $error) {
     if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
     fwrite(STDERR, 'Admin creation failed: ' . $error->getMessage() . PHP_EOL);

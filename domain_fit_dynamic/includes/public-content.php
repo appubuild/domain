@@ -51,7 +51,7 @@ function not_found_page(PDO $pdo, string $message = 'This page could not be foun
     $page_description = $message;
     $noindex = true;
     require dirname(__DIR__) . '/includes/header.php';
-    echo '<main id="main-content" class="page-main"><section class="container page-heading"><p class="eyebrow">404</p><h1>Page not found</h1><p>' . e($message) . '</p><a class="button button-primary" href="' . e(app_url('index.php')) . '">Return home</a></section></main>';
+    echo '<main id="main-content" class="page-main"><section class="container page-heading"><p class="eyebrow">404</p><h1>Page not found</h1><p>' . e($message) . '</p><a class="button button-primary" href="' . e(app_url('')) . '">Return home</a></section></main>';
     require dirname(__DIR__) . '/includes/footer.php';
     exit;
 }

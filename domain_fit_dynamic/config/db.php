@@ -2,6 +2,40 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/env.php';
+
+/** Route PHP runtime errors to private storage while leaving display output clean. */
+function configure_php_error_logging(): void
+{
+    static $configured = false;
+    if ($configured) {
+        return;
+    }
+    $configured = true;
+
+    if (PHP_SAPI !== 'cli') {
+        @ini_set('display_errors', '0');
+        @ini_set('display_startup_errors', '0');
+    }
+    @ini_set('log_errors', '1');
+    error_reporting(E_ALL);
+
+    $directory = dirname(__DIR__) . '/storage/logs';
+    if (!is_dir($directory)) {
+        @mkdir($directory, 0750, true);
+    }
+    if (is_dir($directory) && is_writable($directory)) {
+        $logFile = $directory . '/php-error.log';
+        if (!is_file($logFile)) {
+            @touch($logFile);
+        }
+        if (is_file($logFile)) {
+            @chmod($logFile, 0600);
+            @ini_set('error_log', $logFile);
+        }
+    }
+}
+
+configure_php_error_logging();
 load_local_env_file(dirname(__DIR__) . '/.env');
 
 /** PDO connection for the isolated dynamic copy. Hosting variables override the private local .env. */

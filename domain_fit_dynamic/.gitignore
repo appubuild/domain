@@ -1,3 +1,5 @@
 .env
 .env.*
 !.env.example
+/storage/logs/*.log
+/storage/logs/*.tmp

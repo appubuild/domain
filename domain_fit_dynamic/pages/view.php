@@ -11,7 +11,9 @@ $page = $query->fetch();
 if (!$page) not_found_page($pdo);
 $page_title = trim((string) $page['seo_title']) ?: ((string) $page['title'] . ' | ' . setting($pdo, 'site_title', 'DomainFits'));
 $page_description = trim((string) $page['seo_description']) ?: (string) $page['excerpt'];
-$canonical_url = trim((string) $page['canonical_url']) ?: 'pages/' . $page['slug'];
+$shortPageSlugs = ['about', 'privacy-policy', 'terms-and-conditions', 'disclaimer'];
+$pageRoute = in_array($slug, $shortPageSlugs, true) ? $slug : 'pages/' . $page['slug'];
+$canonical_url = trim((string) $page['canonical_url']) ?: $pageRoute;
 $og_image = (string) $page['og_image'];
 $noindex = (bool) $page['noindex'];
 $structured_data = [
@@ -19,7 +21,7 @@ $structured_data = [
     '@type' => 'WebPage',
     'name' => $page['title'],
     'description' => $page_description,
-    'url' => absolute_public_url(app_url('pages/' . $page['slug'])),
+    'url' => absolute_public_url(app_url($pageRoute)),
 ];
 require __DIR__ . '/../includes/header.php';
 ?>

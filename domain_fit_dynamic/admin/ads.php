@@ -55,7 +55,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   save_setting($pdo,'gtm_enabled',$gtmEnabled,(int)$admin['id'],false);
   audit_log($pdo,(int)$admin['id'],'integrations.updated','ads','all','Ads, ads.txt and analytics integration settings updated.');
   $pdo->commit();
-  cache_clear_all();flash('success','Advertising and integration settings saved.');redirect_to('admin/ads.php');
+  cache_clear_all();flash('success','Advertising and integration settings saved.');redirect_to('admin/ads');
  }catch(Throwable $error){if($pdo->inTransaction())$pdo->rollBack();error_log('Ads/settings: '.$error->getMessage());$errorMessage=$error instanceof RuntimeException?$error->getMessage():'Settings could not be saved. Check IDs and database configuration.';}
 }
 $slots=$pdo->query('SELECT placement,label,publisher_id,ad_unit_id,ad_format,is_enabled FROM ad_slots ORDER BY id')->fetchAll();

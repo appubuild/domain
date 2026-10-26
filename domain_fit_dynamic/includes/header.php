@@ -41,11 +41,11 @@ try {
 }
 if (!$navItems) {
     $navItems = [
-        ['label' => 'Home', 'href' => 'index.php'],
+        ['label' => 'Home', 'href' => ''],
         ['label' => 'Generator', 'href' => 'tools/domain-generator'],
         ['label' => 'Blog', 'href' => 'blog/'],
-        ['label' => 'About', 'href' => 'pages/about'],
-        ['label' => 'Contact', 'href' => 'pages/contact'],
+        ['label' => 'About', 'href' => 'about'],
+        ['label' => 'Contact', 'href' => 'contact'],
     ];
 }
 $themeHex = $themeMode === 'dark' ? '#10121b' : '#f7f8fc';
@@ -87,7 +87,7 @@ $themeHex = $themeMode === 'dark' ? '#10121b' : '#f7f8fc';
 <?php if ($gtmEnabled): ?><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?= e($gtmId) ?>" height="0" width="0" style="display:none;visibility:hidden" title="Tag Manager"></iframe></noscript><?php endif; ?>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header class="site-header"><div class="container header-inner">
-  <a class="brand" href="<?= e(app_url('index.php')) ?>" aria-label="<?= e($siteTitle) ?> home">
+  <a class="brand" href="<?= e(app_url('')) ?>" aria-label="<?= e($siteTitle) ?> home">
     <?php if ($logoPath !== ''): ?><img src="<?= e($logoPath) ?>" width="38" height="38" alt="<?= e($siteTitle) ?> logo"><?php else: ?><img src="<?= e(asset_url('img/logo.svg')) ?>" width="38" height="38" alt="<?= e($siteTitle) ?> logo"><?php endif; ?>
     <span><?= e($siteTitle) ?></span>
   </a>

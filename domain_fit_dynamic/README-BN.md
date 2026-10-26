@@ -29,8 +29,10 @@
    ```
 
    Script email, display name ও password terminal-এ নেয়, password hash করে এবং প্রথম Super Administrator তৈরি করে। কোনো web installer বা default login নেই।
-5. `uploads/` ও `storage/cache/` directory PHP process-এর জন্য writable করুন। Directory listing বন্ধ এবং upload folder-এ PHP execution নিষিদ্ধ `.htaccess`-এ নির্ধারিত।
+5. `uploads/`, `storage/cache/` এবং `storage/logs/` PHP process-এর জন্য writable করুন। Directory listing বন্ধ, runtime storage web থেকে block এবং upload folder-এ PHP execution নিষিদ্ধ `.htaccess`-এ নির্ধারিত।
 6. `/domain_fit_dynamic/admin/` খুলে login করে Site settings, Navigation menus, Contact inbox, page/post content এবং privacy information review করুন। Production origin ও backup যাচাই করুন।
+
+PHP error log: Hosting File Manager-এ CMS folder → `storage/` → `logs/` → `php-error.log`। প্রথম PHP request-এ ফাইলটি তৈরি হবে; না হলে hosting account-এর PHP process-এর জন্য `storage/logs/` writable করুন। `storage/` ও `storage/logs/`-এর `.htaccess` ফাইল HTTP access block করে—log-টি browser-এ খোলা যাবে না, File Manager বা hosting-এর private log viewer ব্যবহার করুন। Log file Git-এ commit হয় না।
 
 ### Public URL ও API
 
@@ -46,7 +48,7 @@
 - Safe ads.txt endpoint: `/domain_fit_dynamic/ads.txt`
 - Affiliate redirect: `/domain_fit_dynamic/go/{slug}`
 
-`.htaccess` থেকে clean URL route হয়। Directory-তে সরাসরি `.php` URL-ও কাজ করতে পারে। Site subdirectory থেকে অন্য path-এ স্থানান্তর করলে `APP_BASE_PATH` ও `SITE_ORIGIN` একসঙ্গে বদলান।
+`.htaccess` থেকে clean URL route হয়: `/tools/domain-generator`, `/blog/`, `/blog/{slug}`, `/about` ও `/pages/about`, `/contact` ও `/pages/contact`, `/privacy-policy`, `/admin/` ও `/admin/login`, `/admin/dashboard`, `/admin/site-settings` এবং admin modules। Direct `.php` URL-এ GET/HEAD request এলে স্থায়ী 301 redirect হয়ে extensionless URL-এ যায়; query string রাখা হয়। Forms clean path-এ submit করে। Site subdirectory থেকে অন্য path-এ স্থানান্তর করলে `APP_BASE_PATH` ও `SITE_ORIGIN` deployment path অনুযায়ী বদলান।
 
 ## Content, review gate ও wordbank
 

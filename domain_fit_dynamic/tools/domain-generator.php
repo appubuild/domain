@@ -3,7 +3,12 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/domain-brain.php';
 require_once __DIR__ . '/../includes/ads-helper.php';
 $pdo = db();
-$bank = get_generator_wordbank($pdo);
+try {
+    $bank = get_generator_wordbank($pdo);
+} catch (Throwable $error) {
+    error_log('Domain generator page: wordbank load failed; using local fallback: ' . $error->getMessage());
+    $bank = generator_fallback_wordbank((bool) setting($pdo, 'generator_review_only', false));
+}
 $page_title = 'Domain Name Generator for Brandable Startup Ideas | ' . setting($pdo, 'site_title', 'DomainFits');
 $page_description = 'Explore domain-name ideas with a curated word list or creative syllables. Filter and export a shortlist; registration availability and trademark status are not checked.';
 $canonical_url = 'tools/domain-generator';
@@ -172,7 +177,7 @@ require __DIR__ . '/../includes/header.php';
         <h2>Before you register a name</h2>
         <ul><li>Check the exact domain and extension with a registrar, including renewal and premium pricing.</li><li>Search trademark records and existing businesses in the places and categories where you plan to operate.</li><li>Say the name aloud and check whether another person can spell it after hearing it.</li><li>Review the meaning, pronunciation, and potential confusion in your audience's languages.</li></ul>
         <h2>Need an AI domain name generator or an available domain checker?</h2>
-        <p>People use both phrases when looking for business names, but this tool does not use a live AI model and it does not check domain availability. It is a browser-based startup name finder for brainstorming. For a real business name search, review official company and trademark records in the places where you plan to operate. Check the exact domain with a registrar, then review the result with a qualified adviser if the name has commercial value. Read our <a href="<?= e(app_url('pages/disclaimer.html')) ?>">disclaimer</a> and <a href="<?= e(app_url('pages/terms-and-conditions.html')) ?>">terms</a> before relying on any output.</p>
+        <p>People use both phrases when looking for business names, but this tool does not use a live AI model and it does not check domain availability. It is a browser-based startup name finder for brainstorming. For a real business name search, review official company and trademark records in the places where you plan to operate. Check the exact domain with a registrar, then review the result with a qualified adviser if the name has commercial value. Read our <a href="<?= e(app_url('disclaimer')) ?>">disclaimer</a> and <a href="<?= e(app_url('terms-and-conditions')) ?>">terms</a> before relying on any output.</p>
       </section>
     </div>
   </main>

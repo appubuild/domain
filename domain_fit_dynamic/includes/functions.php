@@ -18,8 +18,52 @@ function app_base_path(): string
 
 function app_url(string $path = ''): string
 {
-    $path = ltrim($path, '/');
-    return app_base_path() . '/' . $path;
+    $fragment = '';
+    $fragmentPosition = strpos($path, '#');
+    if ($fragmentPosition !== false) {
+        $fragment = substr($path, $fragmentPosition);
+        $path = substr($path, 0, $fragmentPosition);
+    }
+    $query = '';
+    $queryPosition = strpos($path, '?');
+    if ($queryPosition !== false) {
+        $query = substr($path, $queryPosition);
+        $path = substr($path, 0, $queryPosition);
+    }
+    $route = ltrim($path, '/');
+
+    $canonicalRoutes = [
+        'index.php' => '',
+        'admin/index.php' => 'admin/login',
+        'admin/settings.php' => 'admin/site-settings',
+        'admin/posts/index.php' => 'admin/posts',
+        'admin/pages/index.php' => 'admin/pages',
+        'admin/domain-brain/index.php' => 'admin/domain-brain',
+        'blog/index.php' => 'blog/',
+        'pages/contact.php' => 'contact',
+        'tools/domain-generator.php' => 'tools/domain-generator',
+        'sitemap.php' => 'sitemap.xml',
+        'robots.php' => 'robots.txt',
+        'ads-txt.php' => 'ads.txt',
+        'api/generate-words.php' => 'api/generate',
+    ];
+    $slugRoutePrefixes = [
+        'pages/view.php' => 'pages/',
+        'pages/legacy.php' => 'pages/',
+        'blog/post.php' => 'blog/',
+        'go.php' => 'go/',
+    ];
+    if (isset($canonicalRoutes[$route])) {
+        $route = $canonicalRoutes[$route];
+    } elseif (isset($slugRoutePrefixes[$route]) && preg_match('~(?:^|&)slug=([a-z0-9-]+)(?:&|$)~i', ltrim($query, '?'), $slugMatch)) {
+        $route = $slugRoutePrefixes[$route] . strtolower($slugMatch[1]);
+        $query = preg_replace('~([?&])slug=[^&]*(?:&|$)~i', '$1', $query, 1) ?? $query;
+        $query = preg_replace('~\\?&|[?&]$~', '', $query) ?? $query;
+    } else {
+        $route = preg_replace('~\\.php$~i', '', $route) ?? $route;
+    }
+
+    return app_base_path() . '/' . $route . $query . $fragment;
 }
 
 function asset_url(string $path): string
@@ -114,7 +158,7 @@ function setting(PDO $pdo, string $key, mixed $default = null): mixed
                 $cache[$connectionId][$row['setting_key']] = json_decode((string) $row['value_json'], true);
             }
         } catch (Throwable $error) {
-            // A first-run page can still render defaults while the installer is being completed.
+            error_log('Public site settings unavailable; rendering defaults: ' . $error->getMessage());
         }
     }
     return $cache[$connectionId][$key] ?? $default;
@@ -122,14 +166,19 @@ function setting(PDO $pdo, string $key, mixed $default = null): mixed
 
 function private_setting(PDO $pdo, string $key, mixed $default = null): mixed
 {
-    $statement = $pdo->prepare('SELECT value_json FROM site_settings WHERE setting_key = :key LIMIT 1');
-    $statement->execute(['key' => $key]);
-    $value = $statement->fetchColumn();
-    if ($value === false) {
+    try {
+        $statement = $pdo->prepare('SELECT value_json FROM site_settings WHERE setting_key = :key LIMIT 1');
+        $statement->execute(['key' => $key]);
+        $value = $statement->fetchColumn();
+        if ($value === false) {
+            return $default;
+        }
+        $decoded = json_decode((string) $value, true);
+        return $decoded === null && (string) $value !== 'null' ? $default : $decoded;
+    } catch (Throwable $error) {
+        error_log('Private site setting unavailable for ' . $key . ': ' . $error->getMessage());
         return $default;
     }
-    $decoded = json_decode((string) $value, true);
-    return $decoded === null && (string) $value !== 'null' ? $default : $decoded;
 }
 
 function save_setting(PDO $pdo, string $key, mixed $value, ?int $adminId = null, bool $isPublic = true): void
