@@ -1,0 +1,1 @@
+Quill 2.0.3 is self-hosted locally from npm; no runtime CDN dependency.

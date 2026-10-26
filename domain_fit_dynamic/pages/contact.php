@@ -38,4 +38,5 @@ require __DIR__ . '/../includes/header.php';
     <aside class="contact-aside"><h2>Before you send</h2><p>For a technical issue, mention the page and steps that caused it. For a correction, include the section and a reliable source if available. For a privacy request, include only the details needed to identify your request.</p><div class="cms-rich-content"><?= public_content((string) $page['content_html']) ?></div><p>For information about this project, visit <a href="<?= e(app_url('about')) ?>">About DomainFits</a>.</p></aside>
   </section>
 </main>
+<?= render_ad_slot($pdo, 'page_footer') ?>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

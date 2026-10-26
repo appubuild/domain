@@ -27,4 +27,5 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <?= render_ad_slot($pdo, 'header_banner') ?>
 <main id="main-content" class="page-main cms-page-main"><div class="container cms-page-content"><?= public_content((string) $page['content_html']) ?></div></main>
+<?= render_ad_slot($pdo, 'page_footer') ?>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

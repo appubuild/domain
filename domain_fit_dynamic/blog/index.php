@@ -13,15 +13,29 @@ $page_title = 'Blog: domain names, naming and website guides | ' . setting($pdo,
 $page_description = 'Practical guides to domain names, DNS, hosting, naming, and website operations.';
 $canonical_url = $filtersActive ? '' : 'blog/';
 $noindex = $filtersActive;
-$categories = $pdo->query("SELECT DISTINCT category FROM blog_posts WHERE status='published' AND published_at <= UTC_TIMESTAMP() AND category <> '' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
+$relationalCategoriesReady = false;
+try {
+    $categories = $pdo->query("SELECT DISTINCT c.name FROM categories c JOIN blog_post_categories pc ON pc.category_id=c.id JOIN blog_posts p ON p.id=pc.post_id WHERE p.status='published' AND p.published_at <= UTC_TIMESTAMP() ORDER BY c.name")->fetchAll(PDO::FETCH_COLUMN);
+    $relationalCategoriesReady = true;
+} catch (Throwable $error) {
+    error_log('Relational blog categories unavailable; using legacy values: ' . $error->getMessage());
+    $categories = [];
+}
+if (!$categories) $categories = $pdo->query("SELECT DISTINCT category FROM blog_posts WHERE status='published' AND published_at <= UTC_TIMESTAMP() AND category <> '' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
 $cacheKey = 'blog_index_' . hash('sha256', json_encode([$search, $category, $pageNumber]));
 $data = cache_get($cacheKey);
 if (!is_array($data)) {
     $where = "status='published' AND published_at <= UTC_TIMESTAMP()";
     $params = [];
     if ($category !== '') {
-        $where .= ' AND category = :category';
-        $params['category'] = $category;
+        if ($relationalCategoriesReady) {
+            $where .= ' AND (category = :category_legacy OR EXISTS (SELECT 1 FROM blog_post_categories pc JOIN categories c ON c.id=pc.category_id WHERE pc.post_id=blog_posts.id AND c.name=:category_relational))';
+            $params['category_legacy'] = $category;
+            $params['category_relational'] = $category;
+        } else {
+            $where .= ' AND category = :category';
+            $params['category'] = $category;
+        }
     }
     if ($search !== '') {
         $where .= ' AND (title LIKE :title_query OR excerpt LIKE :excerpt_query)';

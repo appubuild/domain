@@ -12,10 +12,19 @@ function apply_security_headers(): void
     header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
 }
 
-function admin_header(PDO $pdo, array $admin, string $title): void
+function admin_header(PDO $pdo, array $admin, string $title, array $extraStyles = []): void
 {
     apply_security_headers();
+    $requestPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
+    $basePath = app_base_path();
+    if ($basePath !== '' && str_starts_with($requestPath, $basePath)) $requestPath = substr($requestPath, strlen($basePath));
+    $activePath = trim($requestPath, '/');
+    if ($activePath === 'admin') $activePath = 'admin/dashboard';
+    if (preg_match('~^admin/posts(?:/|$)~', $activePath)) $activePath = 'admin/posts';
+    if (preg_match('~^admin/pages(?:/|$)~', $activePath)) $activePath = 'admin/pages';
+    if (preg_match('~^admin/domain-brain(?:/|$)~', $activePath)) $activePath = 'admin/domain-brain';
     $links = [
+
         ['view_dashboard','Dashboard','admin/dashboard'],
         ['manage_posts','Posts','admin/posts'],
         ['manage_pages','Pages','admin/pages'],
@@ -29,9 +38,9 @@ function admin_header(PDO $pdo, array $admin, string $title): void
         ['manage_settings','Site settings','admin/site-settings'],
     ];
     ?>
-    <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title><?= e($title) ?> · Admin</title><link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>"><link rel="stylesheet" href="<?= e(asset_url('css/dynamic.css')) ?>"><script src="<?= e(asset_url('js/admin.js')) ?>" defer></script></head><body class="admin-body">
+    <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title><?= e($title) ?> · Admin</title><link rel="stylesheet" href="<?= e(asset_url('css/style.css')) ?>"><link rel="stylesheet" href="<?= e(asset_url('css/dynamic.css')) ?>"><?php foreach ($extraStyles as $style): ?><link rel="stylesheet" href="<?= e(asset_url((string) $style)) ?>"><?php endforeach; ?><script src="<?= e(asset_url('js/admin.js')) ?>" defer></script></head><body class="admin-body">
     <div class="admin-shell"><aside class="admin-sidebar"><a class="brand" href="<?= e(app_url('admin/dashboard')) ?>"><img src="<?= e(asset_url('img/logo.svg')) ?>" width="36" height="36" alt=""><span>DomainFits CMS</span></a><nav aria-label="Admin navigation">
-    <?php foreach ($links as [$permission, $label, $path]): if (has_permission($pdo, (int) $admin['id'], $permission)): ?><a href="<?= e(app_url($path)) ?>"><?= e($label) ?></a><?php endif; endforeach; ?>
+    <?php foreach ($links as [$permission, $label, $path]): if (has_permission($pdo, (int) $admin['id'], $permission)): $active = $activePath === $path; ?><a href="<?= e(app_url($path)) ?>" class="<?= $active ? 'is-active' : '' ?>" <?= $active ? 'aria-current="page"' : '' ?>><?= e($label) ?></a><?php endif; endforeach; ?>
     </nav><div class="admin-user"><strong><?= e($admin['display_name']) ?></strong><span><?= e($admin['email']) ?></span><form method="post" action="<?= e(app_url('admin/logout')) ?>"><?= csrf_field() ?><button class="admin-logout" type="submit">Log out</button></form></div></aside><main class="admin-main"><div class="admin-topbar"><a href="<?= e(app_url('')) ?>" target="_blank" rel="noopener">Open public site ↗</a><span>Admin workspace</span></div><div class="admin-content"><h1><?= e($title) ?></h1>
     <?php if ($message = flash('success')): ?><div class="notice notice-success" role="status"><?= e($message) ?></div><?php endif; ?>
     <?php if ($message = flash('error')): ?><div class="notice notice-error" role="alert"><?= e($message) ?></div><?php endif; ?>

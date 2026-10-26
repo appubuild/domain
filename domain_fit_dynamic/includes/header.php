@@ -33,6 +33,8 @@ $gtmId = (string) private_setting($pdo, 'gtm_container_id', '');
 $gtmEnabled = (bool) private_setting($pdo, 'gtm_enabled', false) && preg_match('/^GTM-[A-Z0-9]{4,12}$/', $gtmId) === 1;
 $generatorMode = setting($pdo, 'generator_controls_mode', 'drawer') === 'accordion' ? 'accordion' : 'drawer';
 $searchVerification = (string) setting($pdo, 'google_site_verification', '');
+$customHeadCode = private_setting($pdo, 'custom_head_code', '');
+$customHeadCode = is_string($customHeadCode) && strlen($customHeadCode) <= 20000 ? $customHeadCode : '';
 $navItems = [];
 try {
     $navItems = $pdo->query("SELECT label, href FROM navigation_items WHERE menu_location = 'header' AND is_active = 1 ORDER BY sort_order, id")->fetchAll();
@@ -82,6 +84,7 @@ $themeHex = $themeMode === 'dark' ? '#10121b' : '#f7f8fc';
   <?php if (isset($structured_data) && is_array($structured_data)): ?><script type="application/ld+json"><?= json_encode($structured_data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script><?php endif; ?>
   <script src="<?= e(asset_url('js/main.js')) ?>" defer></script>
   <script src="<?= e(asset_url('js/dynamic-cms.js')) ?>" defer></script>
+  <?php if ($customHeadCode !== ''): ?><?= $customHeadCode ?><?php endif; ?>
 </head>
 <body id="top">
 <?php if ($gtmEnabled): ?><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?= e($gtmId) ?>" height="0" width="0" style="display:none;visibility:hidden" title="Tag Manager"></iframe></noscript><?php endif; ?>

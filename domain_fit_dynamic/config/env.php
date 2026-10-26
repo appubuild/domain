@@ -16,7 +16,7 @@ function load_local_env_file(string $path): void
 
     $allowedKeys = [
         'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS',
-        'APP_BASE_PATH', 'SITE_ORIGIN', 'APP_SECRET', 'ANALYTICS_SALT',
+        'APP_BASE_PATH', 'SITE_ORIGIN', 'APP_SECRET', 'ANALYTICS_SALT', 'GEMINI_API_KEY', 'GEMINI_MODEL',
     ];
     $lines = @file($path, FILE_IGNORE_NEW_LINES);
     if (!is_array($lines)) {

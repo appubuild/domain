@@ -14,6 +14,8 @@ try {
 $footerCopy = (string) setting($pdo, 'footer_text', 'Thoughtful domain ideas for what comes next.');
 $copyright = trim((string) setting($pdo, 'copyright_text', '')) ?: ('© ' . date('Y') . ' ' . setting($pdo, 'site_title', 'DomainFits') . '. All rights reserved.');
 $footerColumnsClass = count($footerGroups) > 2 ? ' blog-footer-main' : '';
+$customFooterCode = private_setting($pdo, 'custom_footer_code', '');
+$customFooterCode = is_string($customFooterCode) && strlen($customFooterCode) <= 20000 ? $customFooterCode : '';
 ?>
 <?= render_ad_slot($pdo, 'footer_banner') ?>
 <footer class="site-footer" aria-label="Site footer">
@@ -51,5 +53,6 @@ $footerColumnsClass = count($footerGroups) > 2 ? ' blog-footer-main' : '';
     <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
   </div>
 </footer>
+<?php if ($customFooterCode !== ''): ?><?= $customFooterCode ?><?php endif; ?>
 </body>
 </html>
