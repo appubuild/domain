@@ -1,0 +1,14 @@
+# Define these in the hosting control panel / PHP-FPM environment (do not upload real credentials).
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=your_hosting_database
+DB_USER=your_hosting_database_user
+DB_PASS=use-a-unique-database-password
+
+# URL path for this app. Use /domain_fit_dynamic when deployed in that folder; use an empty value at web root.
+APP_BASE_PATH=/domain_fit_dynamic
+# Absolute HTTPS site origin, with no trailing slash. Used for canonical metadata and sitemap URLs.
+SITE_ORIGIN=https://your-domain.example
+# Generate long random secrets, separate from DB_PASS. Do not commit real values.
+APP_SECRET=replace-with-at-least-32-random-bytes
+ANALYTICS_SALT=replace-with-a-different-random-secret

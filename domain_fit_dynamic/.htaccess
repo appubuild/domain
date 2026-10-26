@@ -1,0 +1,39 @@
+Options -Indexes
+DirectoryIndex index.php
+ServerSignature Off
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+<FilesMatch "^(database\.sql|README-BN\.md|\.env.*|composer\.(json|lock)|package(-lock)?\.json)$">
+  Require all denied
+</FilesMatch>
+
+RewriteEngine On
+RewriteRule ^(?:config|includes|scripts|storage)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:database\.sql|\.env(?:\..*)?)$ - [F,L,NC]
+RewriteRule ^(?:sitemap\.xml)$ sitemap.php [QSA,L]
+RewriteRule ^(?:robots\.txt)$ robots.php [QSA,L]
+RewriteRule ^(?:ads\.txt)$ ads-txt.php [QSA,L]
+RewriteRule ^admin/?$ admin/dashboard.php [QSA,L]
+RewriteRule ^go/([a-z0-9-]+)/?$ go.php?slug=$1 [QSA,L,NC]
+RewriteRule ^tools/domain-generator(?:\.html)?/?$ tools/domain-generator.php [QSA,L,NC]
+RewriteRule ^blog/(?:index\.html)?$ blog/index.php [QSA,L,NC]
+RewriteRule ^blog/(blog-[0-9]+\.html)$ blog/legacy.php?file=$1 [QSA,L,NC]
+RewriteRule ^blog/([a-z0-9-]+)/?$ blog/post.php?slug=$1 [QSA,L,NC]
+RewriteRule ^pages/([a-z0-9-]+)\.html$ pages/legacy.php?slug=$1 [QSA,L,NC]
+RewriteRule ^pages/contact/?$ pages/contact.php [QSA,L,NC]
+RewriteRule ^pages/([a-z0-9-]+)/?$ pages/view.php?slug=$1 [QSA,L,NC]
+RewriteRule ^api/([a-z0-9-]+)/?$ api/$1.php [QSA,L,NC]
+RewriteRule ^api/([a-z0-9-]+)\.(?:json|js)$ api/$1.php [QSA,L,NC]
+
+<IfModule mod_rewrite.c>
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
