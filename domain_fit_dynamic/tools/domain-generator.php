@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/domain-brain.php';
+require_once __DIR__ . '/../includes/public-content.php';
 require_once __DIR__ . '/../includes/ads-helper.php';
 $pdo = db();
 try {
