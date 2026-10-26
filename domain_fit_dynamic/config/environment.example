@@ -1,4 +1,5 @@
-# Define these in the hosting control panel / PHP-FPM environment (do not upload real credentials).
+# Optional reference for hosting-panel/PHP-FPM variables. This file is not loaded directly.
+# Local development config is domain_fit_dynamic/.env (copy ../.env.example); never commit real credentials.
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=your_hosting_database

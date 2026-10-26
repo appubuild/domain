@@ -1,7 +1,10 @@
 <?php
 declare(strict_types=1);
 
-/** PDO connection for the isolated dynamic copy. Set credentials only in Hostinger env vars. */
+require_once __DIR__ . '/env.php';
+load_local_env_file(dirname(__DIR__) . '/.env');
+
+/** PDO connection for the isolated dynamic copy. Hosting variables override the private local .env. */
 function db(): PDO
 {
     static $pdo = null;

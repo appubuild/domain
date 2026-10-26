@@ -13,12 +13,14 @@
 
 1. Hosting panel-এ নতুন MySQL database ও dedicated database user তৈরি করুন। Initial import-এর জন্য database-এ table create/index permission দিন; runtime-এ প্রয়োজনের অতিরিক্ত privilege দেবেন না।
 2. phpMyAdmin থেকে ওই database নির্বাচন করে `database.sql` import করুন। এতে generator wordbank/category seed, ৩২টি published article, ২০টি Day 31–50 draft, কয়েকটি তথ্যপাতা এবং default-off ad slots তৈরি হবে। কোনো default admin/password, AdSense publisher ID, GA4 ID বা GTM ID তৈরি হয় না।
-3. Hosting panel-এর PHP environment-এ `config/environment.example`-এর variable-গুলো নিজের তথ্য দিয়ে সেট করুন। Secret source control-এ রাখবেন না:
-   - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`
+3. `domain_fit_dynamic/.env` ফাইল খুলে নিজের তথ্য দিন; `.env.example` একই folder-এ নমুনা হিসেবে আছে। GitHub থেকে deploy করলে server-এ `.env.example` কপি করে `.env` নাম দিন, তারপর `.env` সম্পাদনা করুন। এই CMS-এর local loader ফাইলটি পড়ে; hosting panel-এর environment variable দিলে সেটি `.env`-এর মানের ওপর অগ্রাধিকার পাবে।
+   - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` — hosting panel-এর MySQL database অংশ থেকে নিন।
    - `APP_SECRET` — কমপক্ষে ৩২টি random byte/character-এর অনন্য secret; admin-login rate limit এর ওপর নির্ভর করে।
    - `ANALYTICS_SALT` — `APP_SECRET` থেকে আলাদা অনন্য secret; optional daily approximate visitor digest-এর জন্য। এটি না থাকলেও aggregate page-view event গণনা করা যায়।
-   - `APP_BASE_PATH=/domain_fit_dynamic`; app যদি website root-এ থাকে, এটি খালি string দিন। Folder/path ভিন্ন হলে সঠিক public path দিন।
+   - `APP_BASE_PATH=/domain_fit_dynamic`; app যদি website root-এ থাকে, `APP_BASE_PATH=` খালি রাখুন। Folder/path ভিন্ন হলে সঠিক public path দিন।
    - `SITE_ORIGIN=https://আপনার-প্রকৃত-ডোমেইন` (শেষে `/` ছাড়া); canonical URL ও sitemap-এর জন্য এটি দিন।
+
+   `.env` Git-এ ignore করা এবং `.htaccess` দিয়ে web থেকে block করা। Server-এ permission সম্ভব হলে `600` দিন। `.env` বা database password commit/share করবেন না। `config/environment.example` পুরোনো hosting-variable তালিকা হিসেবেও রাখা হয়েছে; local file হলো project root-এর `.env`।
 4. SSH-এর interactive terminal-এ চালান:
 
    ```bash
