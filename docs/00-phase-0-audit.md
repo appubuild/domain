@@ -161,21 +161,26 @@ Honest position: a single artifact cannot be claimed to run on all three. The en
 ## 5. Phase checklist (gates)
 
 - [x] Phase 0 — Audit & architecture (this doc)
-- [ ] Phase 1 — Foundation & design system
-- [ ] Phase 2 — Core generator
-- [ ] Phase 3 — Domain brain & scoring
-- [ ] Phase 4 — Availability & TLD intelligence
-- [ ] Phase 5 — Favorites & user features
-- [ ] Phase 6 — Admin auth & dashboard
-- [ ] Phase 7 — Naming engine administration
-- [ ] Phase 8 — CMS & page builder
-- [ ] Phase 9 — Blog & AI studio
-- [ ] Phase 10 — SEO & industry pages
-- [ ] Phase 11 — Affiliate & monetization
-- [ ] Phase 12 — Analytics & intelligence
+- [x] Phase 1 — Foundation & design system
+- [x] Phase 2 — Core generator
+- [x] Phase 3 — Domain brain & scoring
+- [x] Phase 4 — Availability & TLD intelligence
+- [x] Phase 5 — Favorites & user features
+- [x] Phase 6 — Admin auth & dashboard
+- [x] Phase 7 — Naming engine administration
+- [x] Phase 8 — CMS & page builder
+- [x] Phase 9 — Blog & AI studio
+- [x] Phase 10 — SEO & industry pages
+- [x] Phase 11 — Affiliate & monetization
+- [x] Phase 12 — Analytics & intelligence
 - [ ] Phase 13 — Security, performance, accessibility
 - [ ] Phase 14 — Deployment & production readiness
 - [ ] Phase 15 — Final acceptance & handover
+
+> The names above are the outline written in phase 0. Work was grouped slightly differently as it
+> was built, so the delivered scope for each gate is what `docs/phase-*-report.md` records — e.g.
+> SEO diagnostics landed with phase 8 and collections with phase 10. The ticks mean *delivered and
+> verified*, not *matched this outline verbatim*.
 
 ---
 
