@@ -41,6 +41,58 @@ const AD_CONNECT_ORIGINS = [
  *    locked down, and `script-src-attr 'none'` still blocks inline event handlers.
  *  - connect-src names the Supabase host because that is the only API this site calls.
  */
+/**
+ * A build manifest, published as part of `redirects.json`.
+ *
+ * After a deploy the only honest answer to "is the availability service wired up in *this*
+ * build?" is the build's own answer. The environment cannot be read from outside, and a
+ * screenshot cannot show which optional integration is live. So the build writes it down:
+ * null means "not configured here", a URL means "this build will call it".
+ */
+export type BuildManifest = {
+  appUrl: string | null;
+  canonicalHost: string | null;
+  supabaseUrl: string | null;
+  integrations: {
+    availabilityFunction: string | null;
+    affiliateFunction: string | null;
+    aiFunction: string | null;
+  };
+  adsEnabled: boolean;
+  commit: string | null;
+};
+
+export function buildManifest(input: {
+  appUrl: string | null;
+  supabaseUrl: string | null;
+  availabilityFunction: string | null;
+  affiliateFunction: string | null;
+  aiFunction: string | null;
+  adsEnabled: boolean;
+  commit?: string | null;
+}): BuildManifest {
+  const host = (value: string | null): string | null => {
+    if (!value) return null;
+    try {
+      return new URL(value).host;
+    } catch {
+      return null;
+    }
+  };
+  return {
+    appUrl: input.appUrl,
+    canonicalHost: host(input.appUrl),
+    supabaseUrl: input.supabaseUrl,
+    integrations: {
+      availabilityFunction: input.availabilityFunction,
+      affiliateFunction: input.affiliateFunction,
+      aiFunction: input.aiFunction,
+    },
+    adsEnabled: input.adsEnabled,
+    commit: input.commit ?? null,
+  };
+}
+
 export function buildCsp(options: { supabaseUrl: string | null; appUrl: string | null; ads: boolean }): string {
   const supabaseOrigin = (() => {
     if (!options.supabaseUrl) return null;

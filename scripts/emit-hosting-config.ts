@@ -20,7 +20,14 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { apacheConfig, buildCsp, netlifyHeaders, netlifyRedirects, type RedirectRow } from "./lib/hosting-config";
+import {
+  apacheConfig,
+  buildCsp,
+  buildManifest,
+  netlifyHeaders,
+  netlifyRedirects,
+  type RedirectRow,
+} from "./lib/hosting-config";
 
 const OUT_DIR = path.resolve("out");
 const RESERVED_PREFIXES = ["/_next", "/admin", "/api"];
@@ -146,6 +153,15 @@ async function main() {
           adsAllowed: ads.enabled,
           note: ads.note,
         },
+        build: buildManifest({
+          appUrl,
+          supabaseUrl,
+          availabilityFunction: process.env.NEXT_PUBLIC_AVAILABILITY_FN_URL ?? null,
+          affiliateFunction: process.env.NEXT_PUBLIC_AFFILIATE_FN_URL ?? null,
+          aiFunction: process.env.NEXT_PUBLIC_AI_FN_URL ?? null,
+          adsEnabled: ads.enabled,
+          commit: process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GITHUB_SHA ?? null,
+        }),
       },
       null,
       2,
@@ -157,6 +173,18 @@ async function main() {
   console.log(`[hosting] ${redirects.length} redirect rule(s) compiled (source: ${source}).`);
   console.log(`[hosting] security headers written to out/.htaccess and out/_headers — ${ads.note}.`);
   if (!appUrl) console.warn("[hosting] NEXT_PUBLIC_APP_URL is unset: no canonical-host redirect and no HSTS were emitted.");
+  const wired = [
+    ["availability", process.env.NEXT_PUBLIC_AVAILABILITY_FN_URL],
+    ["affiliate", process.env.NEXT_PUBLIC_AFFILIATE_FN_URL],
+    ["ai", process.env.NEXT_PUBLIC_AI_FN_URL],
+  ]
+    .filter(([, value]) => Boolean(value))
+    .map(([name]) => name);
+  console.log(
+    wired.length > 0
+      ? `[hosting] edge functions wired into this build: ${wired.join(", ")}.`
+      : "[hosting] no edge functions are wired into this build; availability will report unsupported extensions.",
+  );
 }
 
 main().catch((error) => {

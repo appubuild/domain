@@ -20,7 +20,8 @@
     "db:seed:generate": "tsx scripts/generate-seed.ts",
     "clean": "rm -rf .next out",
     "audit:size": "tsx scripts/audit-bundle.ts",
-    "test:a11y": "vitest run tests/a11y"
+    "test:a11y": "vitest run tests/a11y",
+    "smoke": "tsx scripts/smoke.ts"
   },
   "overrides": {
     "next": {

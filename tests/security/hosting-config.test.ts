@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 import {
   apacheConfig,
   buildCsp,
+  buildManifest,
   netlifyHeaders,
   netlifyRedirects,
   type RedirectRow,
@@ -152,5 +153,57 @@ describe("netlify configuration", () => {
   it("formats rules as source, destination, status", () => {
     const file = netlifyRedirects([{ source_path: "/a", target_path: "/b", status_code: 301, enabled: true }]);
     expect(file).toContain("/a  /b  301");
+  });
+});
+
+describe("build manifest", () => {
+  const manifest = buildManifest({
+    appUrl: APP,
+    supabaseUrl: SUPABASE,
+    availabilityFunction: `${SUPABASE}/functions/v1/availability`,
+    affiliateFunction: null,
+    aiFunction: null,
+    adsEnabled: false,
+    commit: "1578bba",
+  });
+
+  it("records which optional integrations this build will actually call", () => {
+    // "Is the availability service wired up?" cannot be answered from the outside, so the
+    // build answers it itself. A null must never be rendered as "configured".
+    expect(manifest.integrations.availabilityFunction).toBe(`${SUPABASE}/functions/v1/availability`);
+    expect(manifest.integrations.affiliateFunction).toBeNull();
+    expect(manifest.integrations.aiFunction).toBeNull();
+  });
+
+  it("keeps the canonical host rather than the full URL for convenience checks", () => {
+    expect(manifest.canonicalHost).toBe("domainfits.example");
+    expect(manifest.appUrl).toBe(APP);
+  });
+
+  it("survives a missing configuration without inventing one", () => {
+    const bare = buildManifest({
+      appUrl: null,
+      supabaseUrl: null,
+      availabilityFunction: null,
+      affiliateFunction: null,
+      aiFunction: null,
+      adsEnabled: false,
+    });
+    expect(bare.canonicalHost).toBeNull();
+    expect(bare.commit).toBeNull();
+    expect(bare.adsEnabled).toBe(false);
+  });
+
+  it("drops an unparseable app URL instead of throwing during the build", () => {
+    const broken = buildManifest({
+      appUrl: "not a url",
+      supabaseUrl: null,
+      availabilityFunction: null,
+      affiliateFunction: null,
+      aiFunction: null,
+      adsEnabled: false,
+    });
+    expect(broken.appUrl).toBe("not a url");
+    expect(broken.canonicalHost).toBeNull();
   });
 });
