@@ -131,7 +131,21 @@ the next page load without a rebuild.
 
 ---
 
-## 7. Files touched
+## 7. Deployed
+
+| | |
+| --- | --- |
+| Deployment | `dpl_Hw5QENjk3VG84DyBvLGptYViZgGt` — **READY**, promoted to production |
+| Commit | `a60b7e5` (branch `arena/b181432b-domain`) |
+| URL | <https://domainfits.vercel.app> |
+| Build | 67 static pages (one more than phase 10: `/admin/monetization`), `✓ Exporting (2/2)` |
+| Database read | `[redirects] … (source: supabase)` with no warning; `/redirects.json` regenerated at 11:26 UTC |
+
+Checked on the live site afterwards: `/` and `/blog/` render with **no ad container anywhere**
+(the correct state while every gate is closed), and `/admin/monetization/` answers with the
+administrator sign-in gate rather than an empty panel.
+
+## 8. Files touched
 
 ```
 src/lib/ads/config.ts                    # flagEnabled + "flag-off" as the first gate
