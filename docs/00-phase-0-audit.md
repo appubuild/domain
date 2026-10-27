@@ -173,7 +173,7 @@ Honest position: a single artifact cannot be claimed to run on all three. The en
 - [x] Phase 10 — SEO & industry pages
 - [x] Phase 11 — Affiliate & monetization
 - [x] Phase 12 — Analytics & intelligence
-- [ ] Phase 13 — Security, performance, accessibility
+- [x] Phase 13 — Security, performance, accessibility
 - [ ] Phase 14 — Deployment & production readiness
 - [ ] Phase 15 — Final acceptance & handover
 

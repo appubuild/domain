@@ -20,16 +20,20 @@ Build and verify:
 
 ```bash
 npm run typecheck              # tsc --noEmit, strict
-npm test                       # 132 tests (engine, DB/RLS, availability, content)
-npm run build                  # → out/  + compiled redirects (refuses if dev is running)
+npm test                       # 747 tests (engine, DB/RLS, availability, content, a11y, security)
+npm run build                  # → out/ + .htaccess, _headers, _redirects (refuses if dev is running)
+npm run test:a11y              # axe over every built page; run after a build
+npm run audit:size             # first-load weight per route, against budgets
+npm run verify                 # all of the above, in the order that makes them meaningful
 ```
 
 ## Deploy
 
 1. `npm run build`
 2. Upload the **contents** of `out/` to your document root.
-3. Confirm `out/.htaccess` was uploaded (Apache) — it carries canonical-host rules, redirects
-   and the 404 handler. Netlify/Cloudflare Pages can use `out/_redirects` instead.
+3. Confirm `out/.htaccess` was uploaded (Apache) — it carries canonical-host rules, redirects,
+   the security headers, the cache policy and the 404 handler. Netlify/Cloudflare Pages use
+   `out/_redirects` and `out/_headers` instead.
 
 Full instructions: [`docs/deployment.md`](docs/deployment.md).
 
@@ -50,7 +54,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 | Database | `supabase/migrations/`, `supabase/seed/` | 44 tables, RLS on all, seeded dictionaries |
 | Monetization | `src/lib/affiliate/`, `src/lib/ads/`, `supabase/functions/affiliate-click/` | Validated registrar links + AdSense-only slots; both fail closed and ship off |
 | Analytics | `src/lib/analytics/`, `supabase/migrations/0009_*` | First-party events only, aggregated in Postgres; says "not configured" when it cannot store |
-| Build tooling | `scripts/` | Seed generator, redirect emitter, pre-build dev-server guard |
+| Build tooling | `scripts/` | Seed generator, hosting-config emitter (redirects, headers, caching), bundle audit, pre-build dev-server guard |
 
 ## Documentation
 
@@ -66,6 +70,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/phase-10-report.md`](docs/phase-10-report.md) — collections, saved searches and the admin surface
 - [`docs/phase-11-report.md`](docs/phase-11-report.md) — affiliate and ad runtime, and why both ship off
 - [`docs/phase-12-report.md`](docs/phase-12-report.md) — exact analytics, instrumentation coverage, a view that bypassed RLS
+- [`docs/phase-13-report.md`](docs/phase-13-report.md) — security headers, measured weight, and the contrast defects axe cannot see
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

@@ -149,14 +149,64 @@ values; `src/lib/config/env.ts` has no accessor for anything else.
 
 ---
 
-## 8. Known gaps
+## 8. Headers and the content security policy
 
-1. No CSP header is generated yet; `.htaccess` could carry one once the final asset and ad
-   origins are known.
+Because the site is a static export, headers are **generated at build time** by
+`scripts/emit-hosting-config.ts` into `out/.htaccess` (Apache, LiteSpeed) and `out/_headers`
+(Netlify, Cloudflare Pages); `out/redirects.json` carries a copy for auditing. Vercel ignores
+both files — see `docs/deployment.md` §4.
+
+| Header | Value | Why |
+| --- | --- | --- |
+| `Content-Security-Policy` | see below | blocks injected origins, framing and form hijacking |
+| `X-Content-Type-Options` | `nosniff` | stops MIME confusion attacks |
+| `X-Frame-Options` | `SAMEORIGIN` | clickjacking, especially over `/admin` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | no path leakage to registrars or ad hosts |
+| `Permissions-Policy` | camera/mic/geo/payment/usb off | nothing here needs them |
+| `Cross-Origin-Opener-Policy` | `same-origin` | no window handle from an opener |
+| `Cross-Origin-Resource-Policy` | `same-origin` | our assets are not for other sites to embed |
+| `Strict-Transport-Security` | 1 year, `includeSubDomains` | only emitted when `NEXT_PUBLIC_APP_URL` is https |
+
+The policy itself, as generated with Supabase configured and advertising off:
+
+```
+default-src 'self'; script-src 'self' 'unsafe-inline'; script-src-attr 'none';
+style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self';
+connect-src 'self' https://<project>.supabase.co wss://<project>.supabase.co;
+object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';
+manifest-src 'self'; worker-src 'self' blob:; upgrade-insecure-requests
+```
+
+Honest about the weak point: **`script-src` allows `'unsafe-inline'`.** Next inlines its
+hydration bootstrap into every page, and a nonce or hash requires something to generate it per
+response — which a static host cannot do. What the policy still buys you is real: no
+third-party script can be loaded, `script-src-attr 'none'` blocks inline event handlers
+(`onclick=…`), `object-src`/`base-uri`/`frame-ancestors` are closed, and `connect-src` names
+exactly one API. If you later serve the build from something that *can* set headers per request
+(Cloudflare Workers, an nginx with `sub_filter`), move to hashes: `tests/a11y` and
+`tests/security` will keep the rest of the policy honest while you do.
+
+Ad origins are **conditional**. `emit-hosting-config.ts` reads `ad_settings.global_enabled` at
+build time; when it is false — or when the read fails — no Google origins are written. A policy
+that quietly permits an ad network it is not using is worse than one that breaks loudly.
+
+---
+
+## 9. Known gaps
+
+1. ~~No CSP header is generated yet~~ — done in phase 13. The remaining limitation is
+   `'unsafe-inline'` in `script-src`, explained above.
 2. Rate limiting for Edge Functions is designed but unverified here (no deployment).
 3. No 2FA enforcement for admins — rely on the provider's MFA settings.
-4. `npm audit` reports 2 advisories (moderate `next` 15.5.x, high transitive `postcss`);
-   resolving them requires a major Next.js upgrade and is tracked, not hidden.
+4. ~~`npm audit` advisories~~ — cleared in phase 13 with an `overrides` entry pinning the
+   `postcss` copy that Next bundles (8.4.31 → 8.5.32). The advisory was build-time only, but a
+   build tool that reads attacker-controlled CSS is still worth patching. `npm audit` now
+   reports **0 vulnerabilities**; `tests` do not assert this, because the advisory database is
+   remote and a test would fail for reasons unrelated to this code.
 5. The sanitizer is allowlist-based but hand-written; it is unit-tested against common XSS
    vectors, not formally proven. Treat rich text as admin-trusted input and keep the admin
    role narrow.
+6. No browser runs in this environment, so there is no Lighthouse score, no real
+   keyboard traversal and no screen-reader session. What *is* verified: axe-core over every
+   built page, contrast computed from the tokens, and structural assertions — see
+   `docs/phase-13-report.md` for exactly which claims rest on which evidence.

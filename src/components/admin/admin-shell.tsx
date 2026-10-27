@@ -28,7 +28,14 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (status === "loading") {
     return (
-      <div className="flex min-h-[60dvh] items-center justify-center gap-3 text-sm text-fg-muted">
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex min-h-[60dvh] items-center justify-center gap-3 text-sm text-fg-muted"
+      >
+        {/* The shell is prerendered without content, so it carries the page's only heading —
+            a screen reader arriving before hydration still lands somewhere with a name. */}
+        <h1 className="sr-only">Administration</h1>
         <Spinner /> Checking your session…
       </div>
     );
@@ -37,6 +44,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   if (status === "unconfigured") {
     return (
       <div className="mx-auto w-full max-w-2xl px-4 py-16">
+        <h1 className="sr-only">Administration</h1>
         <Callout tone="warn" title="Admin area unavailable">
           Supabase is not configured for this build, so there is no authentication provider and no database to
           manage. Apply the migrations, set the two public Supabase environment variables and rebuild. This page

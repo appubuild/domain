@@ -21,12 +21,12 @@
 
   /* lines */
   --border: #e3e3dd;
-  --border-strong: #cbcbc4;
+  --border-strong: #7d7d76;
 
   /* text */
   --fg: #14161a;
-  --fg-muted: #565f6b;
-  --fg-subtle: #79828f;
+  --fg-muted: #4b535e;
+  --fg-subtle: #5f6874;
   --fg-inverse: #ffffff;
 
   /* brand accent — restrained teal, AA on light surfaces */
@@ -75,11 +75,11 @@
   --overlay: rgb(2 4 6 / 0.66);
 
   --border: #252b34;
-  --border-strong: #38404b;
+  --border-strong: #6b7686;
 
   --fg: #e9ecf0;
   --fg-muted: #9aa4b1;
-  --fg-subtle: #77818e;
+  --fg-subtle: #8b95a2;
   --fg-inverse: #0a0c0f;
 
   --accent: #2fd4b8;
