@@ -199,6 +199,7 @@ describe("admin navigation", () => {
       "/admin/settings/",
       "/admin/users/",
       "/admin/studio/",
+      "/admin/media/",
     ]);
 
     for (const group of ADMIN_NAV) {

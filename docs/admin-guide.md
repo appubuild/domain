@@ -65,6 +65,7 @@ required.
 | Content | Blog posts | `posts` | Articles at `/blog/{slug}` |
 | Content | Blog categories | `post_categories` | Post grouping |
 | Content | AI studio | `ai_drafts` | Draft-only generation; never publishes |
+| Content | Media library | `media` + `media` bucket | Images, alt text, import/delete |
 | Content | Redirects | `redirects` | Compiled into `out/.htaccess` and `out/_redirects` |
 | SEO | SEO templates | `seo_templates` | Title/description patterns per entity |
 | Access | Users & roles | `user_roles`, `app_roles` | Who may administer |
@@ -152,6 +153,21 @@ With `NEXT_PUBLIC_AFFILIATE_FN_URL` set, the browser links to the click-through 
 re-validates the provider and host against the database before issuing the 302 and recording the
 click. Without it, the client builds the link itself (same validation) and records clicks
 best-effort through `click_events`.
+
+**Media library.** Uploads go to the `media` bucket in Supabase Storage; the row records size,
+dimensions and alt text. Rules that will stop you, on purpose:
+
+- JPEG, PNG, WebP and AVIF only, up to 5 MB. SVG is refused — it is a script container.
+- **Alt text is required before the upload completes.** "image", "photo" and the file name
+  are rejected as placeholders. If an image is purely decorative, do not upload it to a
+  content page; give it a description or leave it out.
+- Delete removes the metadata row first and the stored file second. If the file removal fails
+  the screen says so — a row pointing at a missing file would render a broken image publicly.
+- There is no resizing. Upload the size you need: 1600×900 is a sensible hero, 1200×630 for
+  social cards. A 4000-pixel photo stays 4000 pixels wide on the static site.
+
+To use an image in a post, press **URL** on its card and paste it into the post's *Cover image
+URL* field, then fill in *Cover image alt text*.
 
 **AI studio.** Draft-only: generated outlines, drafts, metadata and FAQ blocks land in
 `ai_drafts` with status `pending_review`. Publishing is not reachable from that screen — copy the

@@ -98,7 +98,7 @@ Both hosts apply `_redirects` before serving files, so database redirects work w
 ```bash
 supabase login
 supabase link --project-ref <ref>
-supabase db push --include-seed     # migrations 0001–0006 + seed data
+supabase db push --include-seed     # migrations 0001–0007 + seed data
 ```
 
 Then:
@@ -106,6 +106,15 @@ Then:
 1. Authentication → create your admin user; disable public sign-ups unless needed.
 2. SQL editor: `insert into public.user_roles (user_id, role_id) values ('<uuid>', 'admin');`
 3. Copy the project URL and **anon** key into `.env.local`, rebuild.
+4. Storage: migration `0007_media_storage.sql` creates the public `media` bucket and its
+   administrator-only write policies. Confirm it in Storage → Buckets. If you created a
+   bucket by hand earlier, check it is named exactly `media`; the admin library hard-codes
+   that name and uploads fail closed otherwise.
+
+   The bucket is public because the exported site is static HTML: a signed URL would expire
+   while still cached in the page. Only administrators can write to it, and the four accepted
+   formats (JPEG, PNG, WebP, AVIF) are enforced by both the upload screen and a table
+   constraint. SVG is refused deliberately — an uploaded SVG is stored XSS on a public origin.
 
 RLS is enabled on all 44 tables, so the anon key is safe in the browser. Verify with:
 
