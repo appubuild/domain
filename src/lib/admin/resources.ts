@@ -6,7 +6,7 @@
  * eight hand-written forms with eight different bugs.
  *
  * Field types map to controls:
- *   text | textarea | rich | number | boolean | select | tags | json
+ *   text | textarea | rich | number | boolean | select | tags | json | reference | media
  *
  * `sanitize` marks fields whose HTML must pass through the sanitiser before saving.
  */
@@ -20,7 +20,8 @@ export type FieldType =
   | "select"
   | "tags"
   | "json"
-  | "reference";
+  | "reference"
+  | "media";
 
 /**
  * Foreign-key descriptor for `reference` fields.
@@ -39,6 +40,24 @@ export type AdminReference = {
   orderBy?: { column: string; ascending: boolean };
   /** Shown when the referenced table has no usable rows. */
   emptyHint?: string;
+};
+
+/**
+ * Image field descriptor (`type: "media"`).
+ *
+ * The stored value is a public URL, so the field still works if storage is never configured
+ * and a URL is pasted by hand. When the media library is available, a picker offers the
+ * uploaded images instead — and `altKey` names the sibling field that should receive the
+ * image's alt text, which is what stops a cover image being saved without one.
+ */
+export type AdminMediaField = {
+  /** Field that holds the alt text for this image, e.g. "cover_image_alt". */
+  altKey?: string;
+  /**
+   * Suggested pixel size, shown in the picker. Display-only: nothing is resized or verified,
+   * so it must not read like a guarantee.
+   */
+  recommended?: string;
 };
 
 export type AdminField = {
@@ -62,6 +81,8 @@ export type AdminField = {
   immutable?: boolean;
   /** Options source for `reference` fields. */
   reference?: AdminReference;
+  /** Picker configuration for `media` fields. */
+  media?: AdminMediaField;
   /**
    * Empty string is stored as SQL NULL. Required for nullable uuid references, where an empty
    * string would be a type error rather than "no parent".
@@ -119,6 +140,14 @@ export const ADMIN_RESOURCES: AdminResource[] = [
       { key: "body", label: "Body", type: "rich", sanitize: true },
       { key: "seo_title", label: "SEO title", type: "text", maxLength: 70, hideInList: true },
       { key: "meta_description", label: "Meta description", type: "textarea", maxLength: 170, hideInList: true },
+      {
+        key: "og_image_url",
+        label: "Social share image",
+        type: "media",
+        hideInList: true,
+        media: { recommended: "1200 × 630" },
+        help: "Shown when this page is shared. Falls back to the site default when blank.",
+      },
       { key: "status", label: "Status", type: "select", options: STATUS_OPTIONS, defaultValue: "draft" },
       { key: "noindex", label: "Exclude from search engines", type: "boolean", defaultValue: false, hideInList: true },
     ],
@@ -165,18 +194,20 @@ export const ADMIN_RESOURCES: AdminResource[] = [
       { key: "meta_description", label: "Meta description", type: "textarea", maxLength: 170, hideInList: true },
       {
         key: "cover_image_url",
-        label: "Cover image URL",
-        type: "text",
+        label: "Cover image",
+        type: "media",
         hideInList: true,
-        help: "Paste a public URL from the media library (Copy URL). An alt text is required alongside it.",
+        media: { altKey: "cover_image_alt", recommended: "1600 × 900" },
+        help: "Pick from the media library, or paste any public URL. Choosing an image fills the alt text below when it is empty.",
       },
-      { key: "cover_image_alt", label: "Cover image alt text", type: "text", maxLength: 160, hideInList: true },
+      { key: "cover_image_alt", label: "Cover image alt text", type: "text", maxLength: 160, hideInList: true, help: "Required whenever a cover image is set — the SEO diagnostics screen reports it as an error otherwise." },
       {
         key: "og_image_url",
-        label: "Social share image URL",
-        type: "text",
+        label: "Social share image",
+        type: "media",
         hideInList: true,
-        help: "1200×630 works everywhere. Falls back to the site default when blank.",
+        media: { recommended: "1200 × 630" },
+        help: "Falls back to the site default when blank.",
       },
       { key: "reading_minutes", label: "Reading minutes", type: "number", min: 0, max: 120, hideInList: true },
       { key: "noindex", label: "Exclude from search engines", type: "boolean", defaultValue: false, hideInList: true },

@@ -107,3 +107,52 @@ describe("field definitions", () => {
     }
   });
 });
+
+describe("media fields", () => {
+  const mediaFields = ADMIN_RESOURCES.flatMap((resource) =>
+    resource.fields
+      .filter((field) => field.type === "media")
+      .map((field) => ({ resource, field })),
+  );
+
+  it("declares the image fields the site actually renders", () => {
+    const keys = new Set(mediaFields.map(({ resource, field }) => `${resource.key}.${field.key}`));
+    expect(keys.has("posts.cover_image_url")).toBe(true);
+    expect(keys.has("posts.og_image_url")).toBe(true);
+    expect(keys.has("pages.og_image_url")).toBe(true);
+  });
+
+  it("points every altKey at a real text field in the same resource", () => {
+    for (const { resource, field } of mediaFields) {
+      const altKey = field.media?.altKey;
+      if (!altKey) continue;
+      const target = resource.fields.find((candidate) => candidate.key === altKey);
+      expect(target, `${resource.label}.${field.key} → missing field ${altKey}`).toBeDefined();
+      expect(target?.type, `${resource.label}.${altKey} must be text`).toBe("text");
+    }
+  });
+
+  it("gives a cover image an alt field, so the picker can fill it", () => {
+    for (const { resource, field } of mediaFields) {
+      if (field.key === "cover_image_url") {
+        expect(field.media?.altKey, `${resource.label}.cover_image_url needs an altKey`).toBeDefined();
+      }
+    }
+  });
+
+  it("never marks an image field as an HTML field", () => {
+    for (const { field } of mediaFields) {
+      expect(field.sanitize).not.toBe(true);
+      expect(field.type).toBe("media");
+    }
+  });
+
+  it("keeps image fields out of list columns", () => {
+    for (const { resource, field } of mediaFields) {
+      expect(
+        resource.listColumns.some((column) => column.key === field.key && !field.hideInList),
+        `${resource.label}.${field.key} is both a list column and a URL`,
+      ).toBe(false);
+    }
+  });
+});

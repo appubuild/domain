@@ -302,3 +302,23 @@ export function dimensionsLabel(width: number | null, height: number | null): st
 export function describeRow(row: Pick<MediaRow, "mime_type" | "byte_size" | "width" | "height">): string {
   return [typeLabel(row.mime_type), formatBytes(row.byte_size), dimensionsLabel(row.width, row.height)].join(" · ");
 }
+
+/* ------------------------------------------------------------------------------------ *
+ * Picking an image for a content field
+ * ------------------------------------------------------------------------------------ */
+
+/**
+ * The alt text to write into a sibling field when an image is picked from the library.
+ *
+ * Returns `null` when the field must be left alone — that is the important case. An author
+ * who has already described their own image should not have that replaced by whatever the
+ * library row happens to say, and re-selecting the same image must not churn the form.
+ *
+ * A row with no usable alt text also yields `null` rather than an empty string, so the
+ * caller cannot accidentally blank a description that was already correct.
+ */
+export function altTextForPick(row: Pick<MediaRow, "alt_text">, currentAlt: string | null | undefined): string | null {
+  if ((currentAlt ?? "").trim().length > 0) return null;
+  const candidate = row.alt_text.trim();
+  return candidate.length > 0 ? candidate : null;
+}

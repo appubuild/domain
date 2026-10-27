@@ -23,6 +23,7 @@ import {
   dimensionsLabel,
   formatBytes,
   isValidStoragePath,
+  altTextForPick,
   mediaUsage,
   publicUrlFor,
   sanitiseStem,
@@ -247,6 +248,27 @@ describe("rows", () => {
 
   it("summarises a row for the grid", () => {
     expect(describeRow(row)).toBe("PNG · 240 KB · 1600 × 900");
+  });
+});
+
+describe("picking an image for a content field", () => {
+  const described = { alt_text: "A laptop on a desk showing the generator" };
+  const blank = { alt_text: "   " };
+
+  it("fills an empty alt field with the image's description", () => {
+    expect(altTextForPick(described, "")).toBe("A laptop on a desk showing the generator");
+    expect(altTextForPick(described, "   ")).toBe("A laptop on a desk showing the generator");
+    expect(altTextForPick(described, null)).toBe("A laptop on a desk showing the generator");
+  });
+
+  it("never overwrites words an author already wrote", () => {
+    expect(altTextForPick(described, "Our editor's own description")).toBeNull();
+  });
+
+  it("leaves the field alone when the image has no description", () => {
+    // Returning "" here would blank a correct description that was already in the form.
+    expect(altTextForPick(blank, "")).toBeNull();
+    expect(altTextForPick({ alt_text: "" }, "kept")).toBeNull();
   });
 });
 
