@@ -201,6 +201,7 @@ describe("admin navigation", () => {
       "/admin/studio/",
       "/admin/media/",
       "/admin/seo/",
+      "/admin/monetization/",
     ]);
 
     for (const group of ADMIN_NAV) {

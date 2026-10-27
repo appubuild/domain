@@ -21,6 +21,7 @@ import { AdSlot } from "@/components/ads/ad-slot";
 
 function enabledConfig(overrides: Partial<AdConfig["settings"]> = {}): AdConfig {
   return {
+    flagEnabled: true,
     settings: {
       provider: "adsense",
       publisherId: "ca-pub-1234567890123456",

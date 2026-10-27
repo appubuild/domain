@@ -57,6 +57,7 @@ required.
 | Naming & scoring | Exclusion rules | `excluded_rules` | Substring / word / regex blocks and warnings |
 | Extensions | Domain extensions | `tlds` | Which TLDs are offered and how they can be checked |
 | Availability | Providers | `availability_providers` | RDAP endpoints, timeouts, rate limits |
+| Monetization | Monetization status | — | Whether ads and registrar links would actually render, and the first gate that stops them |
 | Monetization | Affiliate providers | `affiliate_providers` | `{domain}` templates, allowlisted hosts, disclosure |
 | Monetization | Affiliate extension rules | `affiliate_tld_rules` | Which provider handles which extension |
 | Monetization | Ad placements | `ad_slots` | Slot keys, page templates, placements, unit IDs |
@@ -74,6 +75,29 @@ required.
 | Access | Users & roles | `user_roles`, `app_roles` | Who may administer |
 | System | Settings | `site_settings` | Brand, SEO defaults, feature switches |
 | System | Feature flags | `feature_flags` | Optional capabilities (AI studio, accounts, …) |
+
+### Turning monetization on (and knowing whether it worked)
+
+Advertising and registrar routing are off by default and each has several hard gates. A form
+that saves says nothing about whether the feature is live — **Monetization → Monetization
+status** answers that, by calling the same decision function the public pages call:
+
+- per placement: which page renders it, whether it would render for a consenting visitor, and
+  the first gate that blocks it (flag → provider → global switch → script → publisher ID →
+  slot exists → slot enabled → unit ID → consent);
+- a placement whose template has no page yet is reported as "no page yet", not as ready;
+- a second row for the same template/position is reported as **shadowed** — only the lowest
+  `display_order` ever renders;
+- registrar routing: flag state, enabled providers, extension rules, and clicks in the last 30
+  days. A count that cannot be read is shown as `—`, never as `0`.
+
+To actually serve ads, in this order: `feature_flags.advertising` on → provider `adsense` +
+publisher ID + "serve site-wide" + "load provider script" in **Ad settings** → a **placement**
+with an enabled row and a numeric ad unit ID. Keep test mode on until the units are verified.
+Consent remains a visitor-side gate: an undecided visitor sees a prompt, a refusal renders
+nothing.
+
+None of this needs a rebuild — ads and registrar links are read by the browser at run time.
 
 ### Versioned configuration
 

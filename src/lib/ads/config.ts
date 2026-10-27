@@ -39,9 +39,16 @@ export type AdSlotConfig = {
 export type AdConfig = {
   settings: AdSettings;
   slots: AdSlotConfig[];
+  /**
+   * `feature_flags.advertising`. A separate intent switch from `settings.globalEnabled`:
+   * the flag says "we intend to show ads", the settings say "the configuration is valid".
+   * Both must be on — turning ads off in an emergency should be one toggle, not five.
+   */
+  flagEnabled: boolean;
 };
 
 export const DISABLED_ADS: AdConfig = {
+  flagEnabled: false,
   settings: {
     provider: "none",
     publisherId: null,
@@ -63,6 +70,7 @@ export type AdDecision =
   | { render: true; slot: AdSlotConfig; publisherId: string; unitId: string; testMode: boolean; label: string };
 
 export type AdBlockReason =
+  | "flag-off"
   | "provider-none"
   | "globally-disabled"
   | "script-disabled"
@@ -84,6 +92,7 @@ export function resolveAdRender(
   input: { template: AdSlotConfig["template"]; placement: AdSlotConfig["placement"]; consentGranted?: boolean },
 ): AdDecision {
   const { settings } = config;
+  if (!config.flagEnabled) return { render: false, reason: "flag-off" };
   if (settings.provider !== "adsense") return { render: false, reason: "provider-none" };
   if (!settings.globalEnabled) return { render: false, reason: "globally-disabled" };
   if (!settings.scriptEnabled) return { render: false, reason: "script-disabled" };

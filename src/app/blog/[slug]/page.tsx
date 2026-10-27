@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { loadSiteContent } from "@/lib/content/source";
 import { articleJsonLd, breadcrumbJsonLd, buildMetadata, faqJsonLd } from "@/lib/content/seo";
 import { readingMinutes, sanitizeHtml } from "@/lib/content/sanitize";
+import { splitArticleBody } from "@/lib/content/article";
 import { Breadcrumbs } from "@/components/ui/nav";
 import { Badge, Callout } from "@/components/ui/primitives";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -41,6 +42,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const related = content.posts.filter((item) => item.slug !== post.slug).slice(0, 2);
   const faq = post.faq ?? [];
   const minutes = readingMinutes(post.body);
+  // Sanitise once, then split for the mid-content placement.
+  const body = splitArticleBody(sanitizeHtml(post.body));
 
   return (
     <article className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
@@ -68,7 +71,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
       <AdSlot template="blog-post" placement="after-intro" className="mt-6" />
 
-      <div className="prose-cms mt-8" dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.body) }} />
+      <div className="prose-cms mt-8" dangerouslySetInnerHTML={{ __html: body.lead }} />
+
+      {/* Only when the article has a middle to speak of — a two-paragraph post gets no
+          mid-content placement. Renders nothing when advertising is not configured. */}
+      {body.rest ? <AdSlot template="blog-post" placement="mid-content" className="mt-8" /> : null}
+
+      {body.rest ? <div className="prose-cms mt-8" dangerouslySetInnerHTML={{ __html: body.rest }} /> : null}
 
       {faq.length > 0 ? (
         <section className="mt-10 space-y-3">

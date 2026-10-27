@@ -1,5 +1,6 @@
 import { ArrowRight, CircleCheck, Compass, Gauge, Layers } from "lucide-react";
 import { ButtonLink, Badge, Card, SectionHeading } from "@/components/ui/primitives";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { BRAND_DEFAULTS } from "@/lib/config/site";
 
 const principles = [
@@ -75,6 +76,11 @@ export default function HomePage() {
           </Card>
         </div>
       </section>
+
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6">
+        {/* Home template placement. Renders nothing unless advertising is fully configured. */}
+        <AdSlot template="home" placement="after-intro" className="mt-8" />
+      </div>
 
       <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6">
         <SectionHeading

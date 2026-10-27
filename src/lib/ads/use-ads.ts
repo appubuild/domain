@@ -45,12 +45,15 @@ export async function loadAdConfig(options: { force?: boolean } = {}): Promise<A
   };
 
   try {
-    const [settingsResponse, slotsResponse] = await Promise.all([
+    const [settingsResponse, slotsResponse, flagResponse] = await Promise.all([
       fetch(`${PUBLIC_ENV.supabaseUrl}/rest/v1/ad_settings?id=eq.global&select=*`, { headers }),
       fetch(`${PUBLIC_ENV.supabaseUrl}/rest/v1/ad_slots?select=*&order=display_order.asc`, { headers }),
+      fetch(`${PUBLIC_ENV.supabaseUrl}/rest/v1/feature_flags?key=eq.advertising&select=key,enabled`, {
+        headers,
+      }),
     ]);
 
-    if (!settingsResponse.ok || !slotsResponse.ok) {
+    if (!settingsResponse.ok || !slotsResponse.ok || !flagResponse.ok) {
       const result: AdLoadResult = { config: DISABLED_ADS, source: "none" };
       cache = { at: Date.now(), result };
       return result;
@@ -58,9 +61,12 @@ export async function loadAdConfig(options: { force?: boolean } = {}): Promise<A
 
     const settingsRows = (await settingsResponse.json()) as Array<Record<string, unknown>>;
     const slotRows = (await slotsResponse.json()) as Array<Record<string, unknown>>;
+    const flagRows = (await flagResponse.json()) as Array<Record<string, unknown>>;
 
     const result: AdLoadResult = {
       config: {
+        // A missing flag row is not consent to serve ads: only an explicit `true` counts.
+        flagEnabled: flagRows[0]?.enabled === true,
         settings: parseAdSettings(settingsRows[0]),
         slots: slotRows.map(parseAdSlotRow).filter((slot): slot is AdSlotConfig => slot !== null),
       },

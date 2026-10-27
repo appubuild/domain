@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { loadSiteContent } from "@/lib/content/source";
@@ -5,6 +6,7 @@ import { breadcrumbJsonLd, buildMetadata } from "@/lib/content/seo";
 import { Breadcrumbs } from "@/components/ui/nav";
 import { Badge, Callout, EmptyState, SectionHeading } from "@/components/ui/primitives";
 import { JsonLd } from "@/components/seo/json-ld";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { formatDate } from "@/lib/utils/format";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,6 +23,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function BlogIndexPage() {
   const content = await loadSiteContent();
   const posts = [...content.posts].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  /**
+   * `mid-content` has to mean mid-content: the advertising placement goes after the third
+   * post, and is omitted entirely when a list that short has no "middle" to speak of.
+   */
+  const adAfterIndex = posts.length > 3 ? 2 : -1;
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6">
@@ -47,8 +54,12 @@ export default async function BlogIndexPage() {
             description="Posts published in the admin CMS appear here after the next build. Only published, non-future-dated posts are listed or included in the sitemap."
           />
         ) : (
-          posts.map((post) => (
-            <article key={post.slug} className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
+          posts.map((post, index) => (
+            <Fragment key={post.slug}>
+            {index === adAfterIndex ? (
+              <AdSlot template="blog-index" placement="mid-content" />
+            ) : null}
+            <article className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
               <div className="flex flex-wrap items-center gap-2 text-[11px] text-fg-subtle">
                 <Badge tone="accent">{post.category}</Badge>
                 <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
@@ -70,6 +81,7 @@ export default async function BlogIndexPage() {
                 </Link>
               </div>
             </article>
+            </Fragment>
           ))
         )}
       </div>

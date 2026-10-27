@@ -33,6 +33,7 @@ function slot(overrides: Partial<AdSlotConfig> = {}): AdSlotConfig {
 
 function config(overrides: Partial<AdConfig> = {}): AdConfig {
   return {
+    flagEnabled: true,
     settings: {
       provider: "adsense",
       publisherId: "ca-pub-1234567890123456",
@@ -59,7 +60,14 @@ describe("resolveAdRender", () => {
   });
 
   it("refuses when advertising is disabled by default", () => {
-    expect(resolveAdRender(DISABLED_ADS, target)).toEqual({ render: false, reason: "provider-none" });
+    expect(resolveAdRender(DISABLED_ADS, target)).toEqual({ render: false, reason: "flag-off" });
+  });
+
+  it("refuses when the advertising feature flag is off, even with valid settings", () => {
+    const flaggedOff = config({ flagEnabled: false });
+    expect(resolveAdRender(flaggedOff, target)).toEqual({ render: false, reason: "flag-off" });
+    // The flag is the first gate: a broken settings row must not mask "we turned it off".
+    expect(adSlotView(flaggedOff, { ...target, consent: null })).toEqual({ kind: "none", reason: "flag-off" });
   });
 
   it.each([
@@ -207,7 +215,7 @@ describe("adSlotView", () => {
 
     expect(adSlotView(DISABLED_ADS, { ...target, consent: null })).toEqual({
       kind: "none",
-      reason: "provider-none",
+      reason: "flag-off",
     });
   });
 });

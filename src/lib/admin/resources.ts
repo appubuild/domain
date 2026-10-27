@@ -907,6 +907,7 @@ export const ADMIN_NAV: Array<{ heading: string; items: Array<{ label: string; h
   {
     heading: "Monetization",
     items: [
+      { label: "Monetization status", href: "/admin/monetization/" },
       { label: "Affiliate providers", href: "/admin/affiliates/", resource: "affiliates" },
       { label: "Affiliate extension rules", href: "/admin/affiliate-rules/", resource: "affiliate-rules" },
       { label: "Ad placements", href: "/admin/ad-slots/", resource: "ad-slots" },

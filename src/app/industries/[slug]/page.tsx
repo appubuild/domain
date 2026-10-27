@@ -7,6 +7,7 @@ import { breadcrumbJsonLd, buildMetadata, faqJsonLd } from "@/lib/content/seo";
 import { sanitizeHtml } from "@/lib/content/sanitize";
 import { Breadcrumbs } from "@/components/ui/nav";
 import { Badge, ButtonLink, Card } from "@/components/ui/primitives";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { JsonLd } from "@/components/seo/json-ld";
 
 /**
@@ -84,6 +85,10 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
           <p className="mt-3 text-[15px] leading-relaxed text-fg-muted">{industry.description}</p>
 
           <div className="prose-cms mt-6" dangerouslySetInnerHTML={{ __html: sanitizeHtml(`<p>${industry.intro}</p>`) }} />
+
+          {/* Industry template placement, directly after the intro. Renders nothing unless
+              advertising is fully configured. */}
+          <AdSlot template="industry" placement="after-intro" className="mt-6" />
 
           {industry.relatedTerms.length > 0 ? (
             <section className="mt-7 space-y-2">

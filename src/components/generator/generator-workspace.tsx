@@ -33,6 +33,7 @@ import {
 import { Badge, Button, Callout, useToast } from "@/components/ui";
 import { cn } from "@/lib/utils/format";
 import { GeneratorControls, formStateFromRequest, requestFromFormState, type GeneratorFormState } from "./generator-controls";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { ResultsPanel, type ExportScope } from "./results-panel";
 
 const EMPTY_FORM: GeneratorFormState = formStateFromRequest(
@@ -489,6 +490,10 @@ export function GeneratorWorkspace() {
               Generating… large target counts can take a moment.
             </p>
           ) : null}
+
+          {/* Ad placement for the generator template. Renders nothing at all unless the
+              advertising flag, the global settings and an enabled slot all agree. */}
+          <AdSlot template="generator" placement="sidebar" className="mt-6" />
         </div>
       </div>
     </div>
