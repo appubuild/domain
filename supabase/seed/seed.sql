@@ -1439,7 +1439,7 @@ insert into public.pages (slug, title, excerpt, body, status, seo_title, meta_de
 <li>Reporting a name the engine should never generate.</li>
 </ul>
 <h2>What we cannot help with</h2>
-<p>We cannot register domains, act as a registrar, provide legal or trademark advice, or guarantee that a name will be approved by any advertising programme.</p>', 'published', 'Contact DomainFits', 'Contact the DomainFits team about naming data, corrections, privacy requests or partnership enquiries.', now()),
+<p>We cannot register domains, act as a registrar, provide legal or trademark advice, or guarantee that a name will be approved by any advertising programme.</p>', 'published', 'Contact DomainFits — support and feedback', 'Contact the DomainFits team about naming data, corrections, privacy requests or partnership enquiries.', now()),
   ('privacy', 'Privacy policy', 'What we collect, why, and how to remove it.', '<p><em>Last reviewed: this document is part of the product build and must be reviewed by a qualified professional before you rely on it publicly. It is a working draft, not legal advice.</em></p>
 <h2>Anonymous first</h2>
 <p>You can generate names without an account. In that mode your keywords, results and favourites stay in your browser''s local storage and are never sent to our servers.</p>
@@ -1496,7 +1496,7 @@ insert into public.pages (slug, title, excerpt, body, status, seo_title, meta_de
 <p>These are heuristics derived from letter patterns and dictionary membership. They are not linguistic research, appraisals, or predictions of commercial success.</p>
 <h2 id="availability">Availability</h2>
 <p>Availability is a separate engine with provider adapters. It distinguishes <em>available_verified</em>, <em>registered</em>, <em>unavailable</em>, <em>premium_or_special_pricing</em>, <em>unknown</em>, <em>check_failed</em>, <em>rate_limited</em> and <em>unsupported_tld</em>.</p>
-<p>A missing RDAP record or absent DNS answer is never treated as proof that a domain can be registered. Unknown is reported as unknown, and every result carries its provider and timestamp.</p>', 'published', 'How the DomainFits naming engine works', 'A walkthrough of the naming pipeline: keyword normalisation, semantic expansion, six generation strategies, constraint filtering, de-duplication and explainable scoring.', now()),
+<p>A missing RDAP record or absent DNS answer is never treated as proof that a domain can be registered. Unknown is reported as unknown, and every result carries its provider and timestamp.</p>', 'published', 'How the DomainFits naming engine works', 'A walkthrough of the naming pipeline: normalisation, semantic expansion, generation strategies, constraint filtering and explainable scoring.', now()),
   ('faq', 'Frequently asked questions', 'Short answers about scores, availability, accounts and exports.', '<h2>Does a high score mean the domain is available?</h2>
 <p>No. Quality and brandability are computed without any availability data. A name scoring 95 may already be registered; an available name may score 20.</p>
 <h2>Why does a name say "not checked"?</h2>
@@ -1506,7 +1506,7 @@ insert into public.pages (slug, title, excerpt, body, status, seo_title, meta_de
 <h2>Do I need an account?</h2>
 <p>No. Generation, filters and exports work anonymously, and favourites are stored in your browser. An account adds cross-device saving and collections.</p>
 <h2>Is the AI wording literal?</h2>
-<p>No. AI-assisted suggestions are optional, require a configured provider, and always pass through the same validation and scoring as deterministic candidates.</p>', 'published', 'DomainFits FAQ', 'Answers about naming scores, availability statuses, exports, accounts and advertising on DomainFits.', now()),
+<p>No. AI-assisted suggestions are optional, require a configured provider, and always pass through the same validation and scoring as deterministic candidates.</p>', 'published', 'DomainFits FAQ — scores, availability and exports', 'Answers about naming scores, availability statuses, exports, accounts and advertising on DomainFits.', now()),
   ('cookies', 'Cookies and local storage', 'What is stored in your browser and how to clear it.', '<h2>Strictly necessary</h2>
 <p>If you sign in, an authentication session is stored by our auth provider. Without it the admin area cannot function.</p>
 <h2>Preferences</h2>

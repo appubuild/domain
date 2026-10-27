@@ -66,6 +66,7 @@ required.
 | Content | Blog categories | `post_categories` | Post grouping |
 | Content | AI studio | `ai_drafts` | Draft-only generation; never publishes |
 | Content | Media library | `media` + `media` bucket | Images, alt text, import/delete |
+| SEO | Diagnostics | `pages`, `posts`, `redirects` | Findings from the live content, no score |
 | Content | Redirects | `redirects` | Compiled into `out/.htaccess` and `out/_redirects` |
 | SEO | SEO templates | `seo_templates` | Title/description patterns per entity |
 | Access | Users & roles | `user_roles`, `app_roles` | Who may administer |
@@ -153,6 +154,20 @@ With `NEXT_PUBLIC_AFFILIATE_FN_URL` set, the browser links to the click-through 
 re-validates the provider and host against the database before issuing the 302 and recording the
 click. Without it, the client builds the link itself (same validation) and records clicks
 best-effort through `click_events`.
+
+**SEO diagnostics.** `/admin/seo/` reads pages, posts, redirects and the menu, then lists what is
+wrong: pages published without a date (invisible everywhere), slugs that collide with real
+routes, missing or duplicated titles and descriptions, thin bodies, cover images without alt
+text, redirect loops and chains, dead redirect targets, broken internal links, and published
+pages nothing links to.
+
+Each finding shows the rule, the row, the public path and the fix. There is **no score** and no
+"health" figure — a number out of 100 would imply a ranking model this product does not have.
+"0 findings" means these rules found nothing; it does not mean the site ranks well. Backlinks,
+positions and real-user metrics are explicitly not checked.
+
+If a data source cannot be read, the screen says which rules did not run. Treat that warning as
+"unknown", never as "clean".
 
 **Media library.** Uploads go to the `media` bucket in Supabase Storage; the row records size,
 dimensions and alt text. Rules that will stop you, on purpose:

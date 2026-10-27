@@ -824,7 +824,10 @@ export const ADMIN_NAV: Array<{ heading: string; items: Array<{ label: string; h
   },
   {
     heading: "SEO",
-    items: [{ label: "SEO templates", href: "/admin/seo-templates/", resource: "seo-templates" }],
+    items: [
+      { label: "Diagnostics", href: "/admin/seo/" },
+      { label: "SEO templates", href: "/admin/seo-templates/", resource: "seo-templates" },
+    ],
   },
   {
     heading: "Access",
