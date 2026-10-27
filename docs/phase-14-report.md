@@ -35,9 +35,17 @@ internet access):
 | `Origin: https://evil.example` | `access-control-allow-origin: https://domainfits.vercel.app` (not reflected) |
 | 65 concurrent requests from one client | all `200`, no `429` — see §4 |
 
-**Build manifest, live on production:** `source: supabase`, `build.commit: 5e56c16…`,
-`build.integrations.availabilityFunction` set, `affiliateFunction`/`aiFunction` `null`,
-`adsEnabled: false`.
+**Build manifest, live on production** (`https://domainfits.vercel.app/redirects.json`):
+`source: supabase`, `build.commit: 321fe31…`, `build.integrations.availabilityFunction` set to the
+function URL, `affiliateFunction`/`aiFunction` `null`, `adsEnabled: false`.
+
+**The chain from that variable to a browser request**, one link at a time: the manifest proves
+`NEXT_PUBLIC_AVAILABILITY_FN_URL` was present at build time; `buildBrowserEngine()` is tested to
+select the `edge-function` provider and label the UI accordingly when that value is non-empty
+(`tests/availability/client.test.ts`); and the function itself is proven to answer, reflect the
+allowlisted origin and cache. The one link that cannot be observed from here is a real browser
+performing the fetch — no browser is available in this environment, so it is stated as not
+verified rather than assumed.
 
 **Rollback drill (run, not rehearsed):** production was re-deployed from the previous release
 (`1578bba`), reached READY/PROMOTED in 53 s, and the alias was verified to serve the older
@@ -60,6 +68,8 @@ the local server emits none), 0 failures.
 
 ## 3. Asserted, not verified
 
+- **A browser calling the availability function.** See §2: every link except the browser's own
+  fetch is verified.
 - **The rate limit.** The unit test proves the code returns `429` with `Retry-After` once a
   caller exceeds the window. The live probe did not: 65 concurrent requests all succeeded because
   the platform spread them across isolates, and the counter lives in isolate memory. It is a
