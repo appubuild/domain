@@ -18,18 +18,29 @@
 
 import { PUBLIC_ENV } from "@/lib/config/env";
 
-export type AppEventType =
-  | "generation_run"
-  | "filter_applied"
-  | "export_created"
-  | "favorite_added"
-  | "availability_check"
-  | "availability_failure"
-  | "affiliate_click"
-  | "page_view"
-  | "signup"
-  | "login"
-  | "ai_generation";
+/**
+ * The event vocabulary, as a value rather than only a type.
+ *
+ * The database CHECK constraint lists the same names. Having the list here means the
+ * instrumentation table (`EVENT_CATALOG` in `./report`) can be checked against it: an event
+ * added to one and forgotten in the other fails a test instead of silently never being
+ * emitted, which is exactly how three of these went uncounted for several phases.
+ */
+export const EVENT_TYPES = [
+  "generation_run",
+  "filter_applied",
+  "export_created",
+  "favorite_added",
+  "availability_check",
+  "availability_failure",
+  "affiliate_click",
+  "page_view",
+  "signup",
+  "login",
+  "ai_generation",
+] as const;
+
+export type AppEventType = (typeof EVENT_TYPES)[number];
 
 export type RecordOutcome = {
   recorded: boolean;

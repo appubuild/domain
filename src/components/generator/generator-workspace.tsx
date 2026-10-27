@@ -75,6 +75,39 @@ export function GeneratorWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
   const initialised = useRef(false);
+  const lastFilterSignature = useRef<string | null>(null);
+
+  /**
+   * Filter changes, recorded once the controls settle.
+   *
+   * A slider drag emits dozens of state updates; a per-keystroke event stream would be noise
+   * that also costs an insert each. So the signature is compared after a short pause and only
+   * the settled state is written, and only while there are results to filter.
+   */
+  useEffect(() => {
+    if (candidates.length === 0) return;
+    const signature = JSON.stringify({ filters, sort });
+    if (lastFilterSignature.current === null) {
+      // First settled state after a generation is the baseline, not a change.
+      lastFilterSignature.current = signature;
+      return;
+    }
+    if (lastFilterSignature.current === signature) return;
+    const timer = setTimeout(() => {
+      lastFilterSignature.current = signature;
+      trackEvent("filter_applied", {
+        payload: {
+          sort,
+          tld: filters.tld || "any",
+          minQuality: filters.minQuality,
+          minBrandability: filters.minBrandability,
+          strategies: filters.strategies.length,
+          search: filters.search ? "yes" : "no",
+        },
+      });
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [candidates.length, filters, sort]);
 
   // Restore favourites + recent searches, then honour a shared URL exactly once.
   useEffect(() => {

@@ -6,6 +6,7 @@ import { ThemeProvider, themeBootstrapScript } from "@/components/theme/theme-pr
 import { ToastProvider } from "@/components/ui/overlay";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { PageViewCounter } from "@/components/analytics/page-view-counter";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -46,6 +47,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
       </head>
       <body>
+        {/* First-party page counter: one row per public page load, nothing else. */}
+        <PageViewCounter />
         <ThemeProvider>
           <ToastProvider>
             <a

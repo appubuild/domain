@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Bot, ClipboardCheck, RefreshCw, Sparkles, X } from "lucide-react";
+import { trackEvent } from "@/lib/analytics/events";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { PUBLIC_ENV } from "@/lib/config/env";
 import {
@@ -142,6 +143,7 @@ export default function AdminStudioPage() {
         return;
       }
 
+      trackEvent("ai_generation", { payload: { kind: request.kind, words: request.wordTarget } });
       push({
         tone: "success",
         title: "Draft created",

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LogIn } from "lucide-react";
+import { trackEvent } from "@/lib/analytics/events";
 import { useAdminSession } from "@/lib/auth/use-session";
 import { Button, Callout, Input } from "@/components/ui";
 
@@ -31,6 +32,9 @@ export default function AdminLoginPage() {
       setLocalError(message);
       return;
     }
+    // Counted only on success: a failed attempt is a security event for the auth provider's
+    // rate limiter, not an analytics row.
+    trackEvent("login", { payload: { area: "admin" } });
     router.replace("/admin/");
   };
 
