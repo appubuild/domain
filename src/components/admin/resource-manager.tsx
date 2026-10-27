@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { sanitizeHtml } from "@/lib/content/sanitize";
-import type { AdminField, AdminResource } from "@/lib/admin/resources";
+import type { AdminField, AdminReference, AdminResource } from "@/lib/admin/resources";
 import {
   Badge,
   Button,
@@ -79,8 +79,12 @@ function coerce(field: AdminField, value: unknown): unknown {
     }
     case "rich":
       return field.sanitize ? sanitizeHtml(String(value ?? "")) : String(value ?? "");
-    default:
-      return typeof value === "string" ? value : String(value ?? "");
+    default: {
+      const text = typeof value === "string" ? value : String(value ?? "");
+      // A nullable uuid column cannot accept "" — that is a type error, not "no parent".
+      if (field.nullable && text.trim() === "") return null;
+      return text;
+    }
   }
 }
 
@@ -532,7 +536,9 @@ function FieldControl({
         {field.required ? <span className="ml-0.5 text-danger">*</span> : null}
       </label>
 
-      {field.type === "boolean" ? (
+      {field.type === "reference" ? (
+        <ReferenceField field={field} value={value} disabled={disabled} onChange={onChange} />
+      ) : field.type === "boolean" ? (
         <label className="flex items-center gap-2 text-[13px] text-fg-muted">
           <input
             id={id}
@@ -606,5 +612,141 @@ export function SettingsDialog({
     <Dialog open={open} onClose={onClose} title={title} footer={<Button variant="secondary" onClick={onClose}>Close</Button>}>
       {children}
     </Dialog>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reference fields                                                           */
+/* -------------------------------------------------------------------------- */
+
+type ReferenceOption = { value: string; label: string };
+
+type ReferenceState =
+  | { status: "loading"; options: ReferenceOption[] }
+  | { status: "ready"; options: ReferenceOption[] }
+  | { status: "error"; options: ReferenceOption[]; message: string };
+
+/**
+ * Loads options for a foreign-key field.
+ *
+ * Failure is never silent: if the referenced table cannot be read, the control degrades to a
+ * text input holding the current value (so the row can still be saved unchanged) and the
+ * reason is shown underneath. Blanking the field or guessing an option would quietly corrupt
+ * the relationship.
+ */
+function useReferenceOptions(reference: AdminReference | undefined): ReferenceState {
+  const [state, setState] = useState<ReferenceState>({ status: "loading", options: [] });
+
+  useEffect(() => {
+    if (!reference) return;
+    let cancelled = false;
+
+    const supabase = getSupabase();
+    if (!supabase) {
+      setState({ status: "error", options: [], message: "Supabase is not configured." });
+      return;
+    }
+
+    void (async () => {
+      const selection = Array.from(new Set([reference.valueColumn, reference.labelColumn])).join(",");
+      let query = supabase.from(reference.table).select(selection).limit(500);
+      for (const [column, value] of Object.entries(reference.filter ?? {})) {
+        query = query.eq(column, value);
+      }
+      if (reference.orderBy) {
+        query = query.order(reference.orderBy.column, { ascending: reference.orderBy.ascending });
+      }
+
+      const { data, error } = await query;
+      if (cancelled) return;
+      if (error) {
+        setState({ status: "error", options: [], message: error.message });
+        return;
+      }
+
+      const options = ((data ?? []) as unknown as Array<Record<string, unknown>>)
+        .map((row) => {
+          const value = row[reference.valueColumn];
+          const label = row[reference.labelColumn];
+          if (value === null || value === undefined) return null;
+          return { value: String(value), label: label ? String(label) : String(value) };
+        })
+        .filter((option): option is ReferenceOption => option !== null);
+
+      setState({ status: "ready", options });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reference]);
+
+  return state;
+}
+
+function ReferenceField({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: AdminField;
+  value: unknown;
+  disabled?: boolean;
+  onChange: (value: unknown) => void;
+}) {
+  const reference = useReferenceOptions(field.reference);
+  const current = value === null || value === undefined ? "" : String(value);
+
+  if (!field.reference) {
+    return (
+      <Input value={current} onChange={(event) => onChange(event.target.value)} disabled={disabled} />
+    );
+  }
+
+  if (reference.status === "error") {
+    return (
+      <div className="space-y-1">
+        <Input
+          value={current}
+          onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
+          aria-label={`${field.label} identifier`}
+          className="font-mono text-[12px]"
+        />
+        <p className="text-[11px] text-warn">
+          Could not load options from <code>{field.reference.table}</code>: {reference.message}. The stored
+          identifier is shown instead — edit it only if you know the target row.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <Select
+        value={current}
+        disabled={disabled || reference.status === "loading"}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {field.nullable ? <option value="">— none —</option> : null}
+        {current !== "" && !reference.options.some((option) => option.value === current) ? (
+          // The referenced row may have been deleted or filtered out; keep the value visible.
+          <option value={current}>{current} (not in the current list)</option>
+        ) : null}
+        {reference.options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </Select>
+      {reference.status === "loading" ? (
+        <p className="text-[11px] text-fg-subtle">Loading options…</p>
+      ) : reference.options.length === 0 ? (
+        <p className="text-[11px] text-fg-subtle">
+          {field.reference.emptyHint ?? `No rows in ${field.reference.table} yet.`}
+        </p>
+      ) : null}
+    </div>
   );
 }

@@ -192,7 +192,14 @@ describe("admin registry", () => {
 
 describe("admin navigation", () => {
   it("links only to resources that exist, or to a hand-written screen", () => {
-    const handWritten = new Set(["/admin/", "/admin/analytics/", "/admin/audit/", "/admin/settings/", "/admin/users/"]);
+    const handWritten = new Set([
+      "/admin/",
+      "/admin/analytics/",
+      "/admin/audit/",
+      "/admin/settings/",
+      "/admin/users/",
+      "/admin/studio/",
+    ]);
 
     for (const group of ADMIN_NAV) {
       for (const item of group.items) {

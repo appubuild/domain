@@ -58,11 +58,13 @@ required.
 | Extensions | Domain extensions | `tlds` | Which TLDs are offered and how they can be checked |
 | Availability | Providers | `availability_providers` | RDAP endpoints, timeouts, rate limits |
 | Monetization | Affiliate providers | `affiliate_providers` | `{domain}` templates, allowlisted hosts, disclosure |
+| Monetization | Affiliate extension rules | `affiliate_tld_rules` | Which provider handles which extension |
 | Monetization | Ad placements | `ad_slots` | Slot keys, page templates, placements, unit IDs |
 | Monetization | Ad settings | `ad_settings` | Global ad switch, publisher ID, consent, test mode |
 | Content | Pages | `pages` | CMS pages at `/{slug}` |
 | Content | Blog posts | `posts` | Articles at `/blog/{slug}` |
 | Content | Blog categories | `post_categories` | Post grouping |
+| Content | AI studio | `ai_drafts` | Draft-only generation; never publishes |
 | Content | Redirects | `redirects` | Compiled into `out/.htaccess` and `out/_redirects` |
 | SEO | SEO templates | `seo_templates` | Title/description patterns per entity |
 | Access | Users & roles | `user_roles`, `app_roles` | Who may administer |
@@ -150,6 +152,12 @@ With `NEXT_PUBLIC_AFFILIATE_FN_URL` set, the browser links to the click-through 
 re-validates the provider and host against the database before issuing the 302 and recording the
 click. Without it, the client builds the link itself (same validation) and records clicks
 best-effort through `click_events`.
+
+**AI studio.** Draft-only: generated outlines, drafts, metadata and FAQ blocks land in
+`ai_drafts` with status `pending_review`. Publishing is not reachable from that screen — copy the
+text into a post, edit it, publish the post, rebuild. Requires `NEXT_PUBLIC_AI_FN_URL`, the
+`ai_studio` flag and an `AI_API_KEY` secret on the function; without all three the form is
+disabled rather than pretending.
 
 **Advertising.** AdSense only, and only when every gate passes: provider `adsense`, global switch
 on, script enabled, a `ca-pub-…` publisher ID, a matching enabled slot with a numeric unit ID, and

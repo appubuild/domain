@@ -42,7 +42,8 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 | Availability | `src/lib/availability/`, `supabase/functions/availability/` | RDAP-first, 8 statuses, no scraping, TTL cache; edge function proxies lookups server-side |
 | Content pipeline | `src/lib/content/` | Build-time snapshot with Supabase fallback, sanitiser, SEO helpers |
 | Public routes | `src/app/` | Static export; every route pre-rendered with `dynamicParams = false` |
-| Admin panel | `src/app/admin/`, `src/components/admin/` | 23 modules, one declarative CRUD registry |
+| Admin panel | `src/app/admin/`, `src/components/admin/` | 25 modules, one declarative CRUD registry (incl. foreign-key reference fields) |
+| AI studio | `src/lib/ai/`, `supabase/functions/ai-studio/` | Drafts only, admin-authenticated, off by default |
 | Database | `supabase/migrations/`, `supabase/seed/` | 44 tables, RLS on all, seeded dictionaries |
 | Monetization | `src/lib/affiliate/`, `src/lib/ads/`, `supabase/functions/affiliate-click/` | Validated registrar links + AdSense-only slots; both fail closed and ship off |
 | Analytics | `src/lib/analytics/` | First-party events only; says "not configured" when it cannot store |
@@ -55,6 +56,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/phase-1-3-report.md`](docs/phase-1-3-report.md) — what is verified, what is blocked, defects fixed
 - [`docs/phase-4-report.md`](docs/phase-4-report.md) — availability wiring, analytics, test hardening
 - [`docs/phase-5-report.md`](docs/phase-5-report.md) — affiliate routing and advertising runtime
+- [`docs/phase-6-report.md`](docs/phase-6-report.md) — admin reference fields and the AI content studio
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

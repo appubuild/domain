@@ -20,6 +20,8 @@ export type PublicEnv = {
   availabilityFunctionUrl: string | null;
   /** Optional URL of the deployed affiliate click-through function. */
   affiliateFunctionUrl: string | null;
+  /** Optional URL of the deployed AI content studio function. */
+  aiFunctionUrl: string | null;
   /** Explicitly opt in to the browser-local Postgres demo store. */
   allowLocalStore: boolean;
   buildCommit: string;
@@ -42,6 +44,8 @@ function readPublic(name: string): string | null {
       return process.env.NEXT_PUBLIC_AVAILABILITY_FN_URL ?? null;
     case "NEXT_PUBLIC_AFFILIATE_FN_URL":
       return process.env.NEXT_PUBLIC_AFFILIATE_FN_URL ?? null;
+    case "NEXT_PUBLIC_AI_FN_URL":
+      return process.env.NEXT_PUBLIC_AI_FN_URL ?? null;
     case "NEXT_PUBLIC_ALLOW_LOCAL_STORE":
       return process.env.NEXT_PUBLIC_ALLOW_LOCAL_STORE ?? null;
     case "NEXT_PUBLIC_BUILD_COMMIT":
@@ -96,6 +100,7 @@ export function getPublicEnv(): PublicEnv {
     affiliateFunctionUrl: isHttpUrl(readPublic("NEXT_PUBLIC_AFFILIATE_FN_URL"))
       ? readPublic("NEXT_PUBLIC_AFFILIATE_FN_URL")
       : null,
+    aiFunctionUrl: isHttpUrl(readPublic("NEXT_PUBLIC_AI_FN_URL")) ? readPublic("NEXT_PUBLIC_AI_FN_URL") : null,
     allowLocalStore,
     buildCommit: readPublic("NEXT_PUBLIC_BUILD_COMMIT") || "dev",
   };

@@ -11,7 +11,35 @@
  * `sanitize` marks fields whose HTML must pass through the sanitiser before saving.
  */
 
-export type FieldType = "text" | "textarea" | "rich" | "number" | "boolean" | "select" | "tags" | "json";
+export type FieldType =
+  | "text"
+  | "textarea"
+  | "rich"
+  | "number"
+  | "boolean"
+  | "select"
+  | "tags"
+  | "json"
+  | "reference";
+
+/**
+ * Foreign-key descriptor for `reference` fields.
+ *
+ * The options are loaded from the referenced table at edit time, so an administrator picks a
+ * provider/industry/category by name instead of pasting a UUID. A reference is *not* a
+ * constraint: the database foreign key is the authority, and a failed option load leaves the
+ * current value editable as text rather than silently blanking it.
+ */
+export type AdminReference = {
+  table: string;
+  valueColumn: string;
+  labelColumn: string;
+  /** Only offer rows matching these equality filters, e.g. {enabled: "true"}. */
+  filter?: Record<string, string>;
+  orderBy?: { column: string; ascending: boolean };
+  /** Shown when the referenced table has no usable rows. */
+  emptyHint?: string;
+};
 
 export type AdminField = {
   key: string;
@@ -32,6 +60,13 @@ export type AdminField = {
   hideInList?: boolean;
   /** Read-only after creation (primary keys). */
   immutable?: boolean;
+  /** Options source for `reference` fields. */
+  reference?: AdminReference;
+  /**
+   * Empty string is stored as SQL NULL. Required for nullable uuid references, where an empty
+   * string would be a type error rather than "no parent".
+   */
+  nullable?: boolean;
   defaultValue?: string | number | boolean | string[];
 };
 
@@ -110,6 +145,20 @@ export const ADMIN_RESOURCES: AdminResource[] = [
       { key: "excerpt", label: "Excerpt", type: "textarea", maxLength: 320 },
       { key: "body", label: "Body", type: "rich", sanitize: true },
       { key: "author_name", label: "Author name", type: "text", maxLength: 80 },
+      {
+        key: "category_id",
+        label: "Category",
+        type: "reference",
+        nullable: true,
+        hideInList: true,
+        reference: {
+          table: "post_categories",
+          valueColumn: "id",
+          labelColumn: "name",
+          orderBy: { column: "name", ascending: true },
+          emptyHint: "No categories yet — the post can be saved without one.",
+        },
+      },
       { key: "status", label: "Status", type: "select", options: [...STATUS_OPTIONS, { value: "scheduled", label: "Scheduled" }], defaultValue: "draft" },
       { key: "published_at", label: "Publish date/time (ISO)", type: "text", help: "Required when publishing. Example: 2026-01-31T09:00:00Z", hideInList: true },
       { key: "seo_title", label: "SEO title", type: "text", maxLength: 70, hideInList: true },
@@ -138,6 +187,19 @@ export const ADMIN_RESOURCES: AdminResource[] = [
       { key: "id", label: "ID", type: "text", required: true, immutable: true, help: "Stable identifier used by the engine and existing URLs." },
       { key: "name", label: "Name", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true },
+      {
+        key: "parent_id",
+        label: "Parent industry",
+        type: "reference",
+        nullable: true,
+        hideInList: true,
+        reference: {
+          table: "industries",
+          valueColumn: "id",
+          labelColumn: "name",
+          orderBy: { column: "display_order", ascending: true },
+        },
+      },
       { key: "description", label: "Description", type: "textarea" },
       { key: "intro", label: "Landing page intro", type: "textarea", sanitize: true, help: "Plain text or limited HTML; sanitised on save." },
       { key: "semantic_weight", label: "Semantic weight", type: "number", min: 0, max: 5 },
@@ -289,6 +351,42 @@ export const ADMIN_RESOURCES: AdminResource[] = [
     searchColumns: ["name", "slug"],
     orderBy: { column: "priority", ascending: true },
     warning: "Destinations are validated against the allowed hosts list to prevent open redirects.",
+  },
+  {
+    key: "affiliate-rules",
+    table: "affiliate_tld_rules",
+    label: "Affiliate extension rules",
+    singular: "extension rule",
+    description:
+      "Maps an extension to the provider that should handle clicks for it. An explicit rule beats a provider's supported-TLD list.",
+    listColumns: [
+      { key: "tld", label: "Extension", mono: true },
+      { key: "provider_id", label: "Provider", mono: true },
+      { key: "enabled", label: "Enabled", badge: true },
+    ],
+    fields: [
+      { key: "tld", label: "Extension", type: "text", required: true, immutable: true, help: "Lower-case, no leading dot. Example: com" },
+      {
+        key: "provider_id",
+        label: "Provider",
+        type: "reference",
+        required: true,
+        immutable: true,
+        reference: {
+          table: "affiliate_providers",
+          valueColumn: "id",
+          labelColumn: "name",
+          orderBy: { column: "priority", ascending: true },
+          emptyHint: "Create an affiliate provider first — a rule with no provider routes nowhere.",
+        },
+      },
+      { key: "enabled", label: "Enabled", type: "boolean", defaultValue: true },
+    ],
+    identityKeys: ["tld", "provider_id"],
+    searchColumns: ["tld"],
+    orderBy: { column: "tld", ascending: true },
+    warning:
+      "Rules only take effect when the provider is enabled and the affiliate_routing flag is on. Clicks are re-validated server-side.",
   },
   {
     key: "redirects",
@@ -487,7 +585,19 @@ export const ADMIN_RESOURCES: AdminResource[] = [
           { value: "product", label: "product" },
         ],
       },
-      { key: "industry_id", label: "Industry (optional)", type: "text", help: "Leave blank for all industries." },
+      {
+        key: "industry_id",
+        label: "Industry (optional)",
+        type: "reference",
+        nullable: true,
+        help: "Leave blank for all industries.",
+        reference: {
+          table: "industries",
+          valueColumn: "id",
+          labelColumn: "name",
+          orderBy: { column: "display_order", ascending: true },
+        },
+      },
       { key: "enabled", label: "Enabled", type: "boolean", defaultValue: true },
     ],
     searchColumns: ["label", "id", "template"],
@@ -682,6 +792,7 @@ export const ADMIN_NAV: Array<{ heading: string; items: Array<{ label: string; h
     heading: "Monetization",
     items: [
       { label: "Affiliate providers", href: "/admin/affiliates/", resource: "affiliates" },
+      { label: "Affiliate extension rules", href: "/admin/affiliate-rules/", resource: "affiliate-rules" },
       { label: "Ad placements", href: "/admin/ad-slots/", resource: "ad-slots" },
       { label: "Ad settings", href: "/admin/ad-settings/", resource: "ad-settings" },
     ],
@@ -692,6 +803,7 @@ export const ADMIN_NAV: Array<{ heading: string; items: Array<{ label: string; h
       { label: "Pages", href: "/admin/pages/", resource: "pages" },
       { label: "Blog posts", href: "/admin/posts/", resource: "posts" },
       { label: "Blog categories", href: "/admin/post-categories/", resource: "post-categories" },
+      { label: "AI studio", href: "/admin/studio/" },
       { label: "Redirects", href: "/admin/redirects/", resource: "redirects" },
     ],
   },
