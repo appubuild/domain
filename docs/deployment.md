@@ -121,14 +121,25 @@ Environment variables (see §1 for what each one does when missing):
 Only publishable values belong here. `NEXT_PUBLIC_APP_URL` is production-only so preview
 deployments do not emit canonicals and sitemap entries for the production origin.
 
-### Auto-deploy is disabled on this project
+### What a push actually does
 
-The project was created through the Vercel API, which leaves
-`gitProviderOptions.createDeployments = "disabled"`. **Pushing to `main` does not build.**
-Either enable Project → Settings → Git → *Deploy on push*, or create each deployment
-explicitly (from the dashboard, or `POST /v13/deployments` with
-`{"name":"domainfits","project":"prj_hU5cKmOSxtqOUAnQve0MAWPiIEU7","target":"production",
-"gitSource":{"type":"github","ref":"<branch>","repoId":1382063430}}`).
+Observed behaviour on this project (verified, not assumed):
+
+| Push | Result |
+| --- | --- |
+| to `arena/b181432b-domain` (any non-production branch) | a **preview** deployment is created automatically and aliased to `domainfits-git-arena-…vercel.app`; `domainfits.vercel.app` does **not** change |
+| to `main` (the project's production branch) | a **production** deployment, which takes the `domainfits.vercel.app` alias |
+
+The project object still reports `gitProviderOptions.createDeployments = "disabled"`, which
+contradicts the two preview builds created from pushes (`dpl_7H4j34NR…`, `dpl_6JATaYT4…`).
+Trust the deployments list over that flag. If a future push does *not* produce a build, enable
+Project → Settings → Git → *Deploy on push*, or create one explicitly:
+
+```
+POST /v13/deployments
+{"name":"domainfits","project":"prj_hU5cKmOSxtqOUAnQve0MAWPiIEU7","target":"production",
+ "gitSource":{"type":"github","ref":"<branch>","repoId":1382063430}}
+```
 
 Because the output is static, **a content edit is not live until a deployment finishes.** Plan
 edits around deploys rather than expecting them to appear immediately.
@@ -235,7 +246,8 @@ public; anything that writes must verify the caller's JWT and role.
 | Admin shows "not configured" | Supabase env vars absent from the build | Set both vars, rebuild |
 | Admin shows "no administrator role" | Signed in without `user_roles` row | Insert the row in SQL, reload |
 | Content edits do not appear | Static export serves bytes baked at build time | Rebuild and re-upload (on Vercel: trigger a deployment, §4) |
-| Pushing to `main` produced no deployment | The Vercel project was created through the API with `createDeployments: "disabled"` | Enable Project → Settings → Git → *Deploy on push*, or deploy explicitly (§4) |
+| A push produced no deployment | Git integration not active for that branch, or the project's `createDeployments` flag blocks it | Enable Project → Settings → Git → *Deploy on push*, or deploy explicitly (§4) |
+| Push built a preview but `domainfits.vercel.app` is unchanged | Only the production branch (`main`) moves the production alias | Merge to `main`, or create a deployment with `"target":"production"` (§4) |
 | Vercel build used the offline content pack | `NEXT_PUBLIC_SUPABASE_*` missing for that environment, or the REST read failed | Check the build log for the `[redirects] … (source: …)` line; set the vars and redeploy |
 | Dev server 500s with `Cannot find module './NNN.js'` or `ENOENT .../app-paths-manifest.json` | `npm run build` ran while `next dev` was live and rewrote `.next`; dev and build share that directory | Stop the dev server, `npm run clean`, then restart. `npm run build` now refuses to run while something listens on port 3000 (override with `DOMAINFITS_ALLOW_BUILD_WITH_DEV=1`) |
 

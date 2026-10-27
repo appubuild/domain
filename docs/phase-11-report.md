@@ -141,6 +141,11 @@ the next page load without a rebuild.
 | Build | 67 static pages (one more than phase 10: `/admin/monetization`), `✓ Exporting (2/2)` |
 | Database read | `[redirects] … (source: supabase)` with no warning; `/redirects.json` regenerated at 11:26 UTC |
 
+A push of this phase's docs commit produced a second, git-sourced **preview** deployment on its
+own (`dpl_6JATaYT4VU13Dd4LRrBswD8nkZ4F`, READY), so pushes do build — previews for this branch,
+production aliases only from `main`. `docs/deployment.md` §4 records that, and notes the project
+object still claims `createDeployments: "disabled"`, which the deployments list disproves.
+
 Checked on the live site afterwards: `/` and `/blog/` render with **no ad container anywhere**
 (the correct state while every gate is closed), and `/admin/monetization/` answers with the
 administrator sign-in gate rather than an empty panel.
