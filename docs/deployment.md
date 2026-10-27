@@ -34,7 +34,9 @@ values are public and inlined at build time.
 | `NEXT_PUBLIC_SUPABASE_URL` | For CMS/admin | Site builds from the offline content pack; admin shows "not configured" |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | For CMS/admin | Same as above |
 | `NEXT_PUBLIC_DATA_BACKEND` | No | `local` when Supabase is absent |
-| `NEXT_PUBLIC_AVAILABILITY_FN_URL` | No | Availability runs directly against RDAP from the browser |
+| `NEXT_PUBLIC_AVAILABILITY_FN_URL` | Recommended | Availability runs directly against RDAP from the browser, where CORS decides whether any check succeeds |
+| `NEXT_PUBLIC_AFFILIATE_FN_URL` | No | Registrar links are built and validated in the browser; clicks recorded best-effort |
+| `NEXT_PUBLIC_AI_FN_URL` | No | The AI studio reports that no function is configured instead of drafting |
 | `NEXT_PUBLIC_ALLOW_LOCAL_STORE` | No | `false`; never enable in production |
 
 Secrets — service-role keys, registrar keys, AI provider keys — must never appear here. They
@@ -131,11 +133,22 @@ header set work without Apache.
 
 ## 4. Vercel (current production host)
 
-> **Note on headers.** Vercel does not read `.htaccess` or `_headers`. On this host the generated
-> files are inert: add the same directives to a `vercel.json` `headers` block if you want them
-> applied here. The CSP names the Supabase origin and only allows ad origins when
-> `ad_settings.global_enabled` is true, so if you copy it, copy it *from the build output* rather
-> than from this document.
+> **Headers on Vercel.** Vercel does not read `.htaccess` or `_headers`; the generated files are
+> inert here. The headers that must reach this host therefore live in a committed `vercel.json`,
+> which Vercel reads *before* the build (so it cannot be generated post-build like the others).
+> Two consequences, both deliberate:
+>
+> - the non-CSP set is identical to the generated one, and `tests/security/vercel-headers.test.ts`
+>   fails if they drift;
+> - the CSP is **staged**: a `Content-Security-Policy` header carrying only the directives that
+>   cannot break rendering (`object-src`, `base-uri`, `form-action`, `frame-ancestors`,
+>   `upgrade-insecure-requests`), and the full policy as `Content-Security-Policy-Report-Only`.
+>   Promoting the full policy is operator TODO #7 — it needs a real browser console, which is the
+>   one thing this repository cannot check.
+>
+> The `vercel.json` copy names the Supabase origin of the production project and does not include
+> ad origins. Enabling ads therefore requires editing that file (the generated Apache/Netlify
+> copies handle it automatically from `ad_settings.global_enabled`).
 
 
 <https://domainfits.vercel.app> — project `domainfits`
@@ -190,9 +203,29 @@ edits around deploys rather than expecting them to appear immediately.
 ### Verifying a deployment
 
 ```bash
-curl -s https://<deployment-url>/redirects.json   # source: "supabase" proves the DB read worked
-curl -s https://<deployment-url>/sitemap.xml | head -c 200   # absolute URLs prove APP_URL was set
+npm run smoke -- https://<deployment-url>     # routes, 404s, headings, sitemap, manifest
+curl -s https://<deployment-url>/redirects.json   # source + build manifest
 ```
+
+`redirects.json` now also carries the **build manifest** — which optional integrations this
+build will call, whether ads are on, and the commit:
+
+```json
+"build": {
+  "appUrl": "https://domainfits.vercel.app",
+  "supabaseUrl": "https://<ref>.supabase.co",
+  "integrations": {
+    "availabilityFunction": "https://<ref>.supabase.co/functions/v1/availability",
+    "affiliateFunction": null,
+    "aiFunction": null
+  },
+  "adsEnabled": false,
+  "commit": "5e56c16…"
+}
+```
+
+That is the only way to answer "is the availability service wired into *this* deployment?"
+from outside: the environment is invisible, and `null` is an answer, not a placeholder.
 
 `redirects.json` is the honest signal: `scripts/emit-redirects.ts` prints a warning and reports
 the same information in the build log when the Supabase read fails, and writes `"source":
@@ -236,31 +269,66 @@ select tablename, rowsecurity from pg_tables
 where schemaname = 'public' and rowsecurity = false;   -- must return zero rows
 ```
 
-### Edge Functions (optional)
+### Edge Functions
 
-- **Availability proxy** — `supabase/functions/availability/index.ts`. Centralises RDAP calls,
-  caches answers in Postgres (`availability_cache`, 6 h definitive / 10 min inconclusive) and
-  returns the same result shape as the client engine. Deploy with:
+Three functions live in `supabase/functions/`. They are **not** part of the static build: the
+site calls them from the browser when the matching `NEXT_PUBLIC_*_FN_URL` variable is set at
+build time, and behaves honestly (never "available", never a fake draft, never a phantom click)
+when it is not.
 
-  ```bash
-  supabase functions deploy availability --no-verify-jwt
-  # then set NEXT_PUBLIC_AVAILABILITY_FN_URL=https://<ref>.supabase.co/functions/v1/availability
-  ```
+| Function | State (2026-10-27) | Secrets it reads | Wired by |
+| --- | --- | --- | --- |
+| `availability` | **deployed, ACTIVE, v4**, `verify_jwt: false` | `AVAILABILITY_ALLOWED_ORIGIN`, `AVAILABILITY_RATE_LIMIT` | `NEXT_PUBLIC_AVAILABILITY_FN_URL` |
+| `affiliate-click` | **not deployed** (monetization off by design) | `AFFILIATE_ALLOWED_ORIGIN` | `NEXT_PUBLIC_AFFILIATE_FN_URL` |
+| `ai-studio` | **not deployed** (needs a provider key) | `AI_API_KEY`, `AI_API_URL`, `AI_MODEL` | `NEXT_PUBLIC_AI_FN_URL` |
 
-  Without it the site still checks names, calling public RDAP endpoints directly from the
-  browser; registries that refuse cross-origin requests show up as failed checks, never as
-  available.
+Deploy and configure the availability service:
 
-- **Affiliate click-through** — `supabase/functions/affiliate-click/index.ts`. Re-validates the
-  provider, host allowlist and `affiliate_routing` flag server-side, records the click and issues
-  the 302. Deploy with `supabase functions deploy affiliate-click --no-verify-jwt`, then set
-  `NEXT_PUBLIC_AFFILIATE_FN_URL`. Without it, links are built (and validated) in the browser and
-  clicks are recorded best-effort.
-- **AI content studio** — drafts only, never auto-publishes. Requires a provider key stored as a
-  function secret; the feature stays off until `feature_flags.ai_content_studio = true`.
+```bash
+supabase functions deploy availability --no-verify-jwt   # public, read-only lookups
+supabase secrets set \
+  AVAILABILITY_ALLOWED_ORIGIN="https://domainfits.vercel.app,https://domainfits-*.vercel.app,https://*.e2b.app,http://localhost:3000" \
+  AVAILABILITY_RATE_LIMIT=60
+```
 
-Deploy with `supabase functions deploy <name> --no-verify-jwt` only where a function is truly
-public; anything that writes must verify the caller's JWT and role.
+`AVAILABILITY_ALLOWED_ORIGIN` is a comma-separated allowlist, each entry optionally holding one
+`*` (preview aliases). An origin that is not on it still receives a response body but no
+matching `access-control-allow-origin`, so a browser refuses to hand it to the page. Leaving it
+unset means `*`: the lookups are read-only, but any site could then spend this project's
+registry quota. `https://*.e2b.app` is only needed for the Arena sandbox preview.
+
+Because the function is public, three things bound it — and only the third is a guarantee:
+
+1. the origin allowlist above (a browser-side gate, not a server-side one: `curl` ignores it);
+2. a **soft** rate limit of `AVAILABILITY_RATE_LIMIT` lookups per caller IP per minute, held in
+   isolate memory. Measured: 65 concurrent requests from one client produced **no 429**, because
+   the platform spread them across isolates; the 429 path itself is proven by unit test
+   (`tests/availability/edge-policy.test.ts`). Treat it as a speed bump.
+3. the Postgres cache — one registry query per name per 6 h. This is what actually protects the
+   registries and what keeps an abusive caller cheap.
+
+Verify a deployment from outside (no dashboard needed):
+
+```bash
+# 1. the function answers, and the cache works
+curl -s "https://bjbbrgjiyoquacoypsia.supabase.co/functions/v1/availability?domain=google.com"
+#    → {"results":[{"status":"registered","confirmed":true,"cached":…}]}
+
+# 2. duplicates collapse — a second proof that the *current* code is deployed
+curl -s ".../availability?domains=a_bad,a_bad"     # → 1 result, not 2
+
+# 3. CORS reflects only an allowlisted origin
+curl -sI -H "Origin: https://domainfits.vercel.app" ".../availability?domain=google.com" \
+  | grep -i access-control-allow-origin      # → the same origin
+curl -sI -H "Origin: https://evil.example" ... | grep -i access-control-allow-origin
+#    → a different origin (the first concrete entry), which the browser will reject
+```
+
+The response's `Date` and `x-deno-execution-id` headers are useful when an edit seems not to have
+taken effect: a stale isolate is visible as an unchanged execution id across minutes.
+
+`deno` is not installed in this environment, so `npm run typecheck:functions` type-checks all
+three function sources with `tsc` against `supabase/functions/_shared/deno-stub.d.ts` instead.
 
 ---
 
@@ -274,7 +342,9 @@ public; anything that writes must verify the caller's JWT and role.
 - [ ] admin sign-in works and a non-admin account is correctly refused
 - [ ] redirects from the admin table reach the live site after a rebuild
 - [ ] ad slots stay disabled until a publisher ID and consent flow exist
-- [ ] previous `out/` kept as the rollback artifact
+- [ ] previous `out/` kept as the rollback artifact (§8)
+- [ ] `vercel.json` deployed, and the report-only CSP watched before promotion (§4, TODO #7)
+- [ ] operator TODO list in §10 reviewed — items 3–6 are prerequisites for a public launch
 
 ---
 
@@ -298,6 +368,94 @@ public; anything that writes must verify the caller's JWT and role.
 
 ## 8. Rollback
 
-The previous `out/` directory is a complete, independent release. Keep the last known-good copy;
-restoring it is a file copy, not a migration. Database rollback is a Supabase backup restore —
-take one before `db push` and before bulk content changes.
+Every deployment is a complete, immutable release: the previous `out/` directory on shared
+hosting, the previous deployment on Vercel. Restoring it is a file copy or an alias move, not a
+migration. Database rollback is a Supabase backup restore — take one before `db push` and before
+bulk content changes.
+
+### 8.1 Recorded drill (2026-10-27)
+
+The drill was run for real, against production, and observed from outside the sandbox:
+
+| Step | Command / action | Observed |
+| --- | --- | --- |
+| 1. Note the current release | `dpl_9TaWHE9YQ4tZKyT9iYestLJYzj5i` @ `5e56c16` | live `redirects.json` carried a `build` manifest with `commit: 5e56c16…` |
+| 2. Re-deploy the previous release as production | `POST /v13/deployments` with `target: production`, `gitSource.ref: 1578bba` | `dpl_x4dgUx2cmiSdVHSNJgWh5g6Wzpi3` — READY in **53 s**, `readySubstate: PROMOTED`, alias `domainfits.vercel.app` reassigned |
+| 3. Verify the rollback from outside | `GET /redirects.json?drill=rollback-1578bba` | `source: supabase`, `headers.contentSecurityPolicy` present, **no `build` key** — the older release is what is being served |
+| 4. Restore forward | deploy the current branch head as production again | alias returns to the new build; manifest reappears with the new commit |
+| 5. Confirm the app, not just the artifact | `GET /`, `/generator/`, `/admin/login/` | 200 + expected headings on each (see `npm run smoke`) |
+
+Total production time on the older release: **under four minutes**, with no error page served at
+any point. Two things this drill established that a document cannot:
+
+- **A deployment is the rollback unit**, not a git revert. Reverting the commit and rebuilding
+  would have re-run a full build; re-deploying the old sha took one API call and produced a
+  byte-identical artifact.
+- **`redirects.json` is the release fingerprint.** It states the source of the redirect table
+  and, since `5e56c16`, the commit and the integrations the build will call. If a rollback is
+  ever in doubt, that file answers it without opening a dashboard.
+
+Rollback that is *not* covered by a deploy: database state. Migrations are forward-only here.
+If a release depends on a migration, rolling the site back does not roll the schema back — the
+old build must tolerate the newer schema, or the database must be restored from a backup
+(Supabase → Database → Backups) and every writer stopped first.
+
+---
+
+## 9. Domain cutover
+
+Written as a runbook because the order matters: **the origin is baked into every page.**
+
+1. **Pick the final host** and decide the redirect direction (bare → `www`, or `www` → bare).
+   The canonical form lives in `NEXT_PUBLIC_APP_URL` and appears in canonicals, Open Graph tags,
+   `sitemap.xml`, `robots.txt` and the `…/.well-known`-style files.
+2. **Add the domain in Vercel** (Project → Settings → Domains). Set the chosen host as the
+   primary and the other as a 308 redirect; Vercel serves the certificate automatically.
+3. **Point DNS**: `A 76.76.21.21` for the apex, `CNAME cname.vercel-dns.com` for subdomains.
+   Wait for the domain to show *Valid Configuration* before continuing.
+4. **Update Supabase auth** — Authentication → URL Configuration: `Site URL` = the new origin,
+   and add `https://<new-host>/**` to the redirect allow-list. Missing this breaks password
+   recovery and email confirmation, and it fails at the worst possible moment (a user's click).
+5. **Update the function allowlist**: `supabase secrets set AVAILABILITY_ALLOWED_ORIGIN="https://<new-host>,…"`.
+   Forgetting it looks exactly like an outage — the availability checks start returning
+   `check_failed` because the browser blocks the response.
+6. **Set `NEXT_PUBLIC_APP_URL` to the new origin for production and rebuild.** Nothing changes on
+   the host until a deployment finishes; a stale canonical splits search signals silently.
+7. **Re-verify:**
+
+   ```bash
+   npm run smoke -- https://<new-host>            # routes, 404s, sitemap, manifest
+   curl -sI https://<new-host>/ | grep -i 'content-security-policy\|strict-transport'
+   curl -s  https://<new-host>/sitemap.xml | head -c 200      # absolute URLs on the new host
+   curl -s  https://<old-host>/ | head -1                     # must be a 301/308, not a 200
+   curl -s  "…/availability?domain=google.com" -H "Origin: https://<new-host>" -I | grep -i access-control
+   ```
+
+8. **Search Console**: add the new property, submit the sitemap, and keep the old one verified so
+   the change-of-address is seen. Do not delete the old host until the redirect has been live for
+   at least a month.
+
+Until step 6 is done, the site keeps claiming the old origin — that is the honest failure mode:
+a correct site pointing at the wrong canonical, not a broken page.
+
+---
+
+## 10. Operator TODO list
+
+These cannot be done from this repository: they need a credential, a payment, or a decision that
+belongs to the owner. Each is written so it can be executed without reading any other document.
+
+| # | Task | Why it is blocked here | Exact command / action |
+| --- | --- | --- | --- |
+| 1 | Deploy `ai-studio` | Needs a paid provider key | `supabase secrets set AI_API_KEY=<key> AI_API_URL=https://api.openai.com/v1 AI_MODEL=<model>`, then `supabase functions deploy ai-studio` (JWT **on**), then set `NEXT_PUBLIC_AI_FN_URL` in Vercel and set `feature_flags.ai_content_studio = true` |
+| 2 | Deploy `affiliate-click` | Monetization is off by design; needs a registrar/partner account | `supabase secrets set AFFILIATE_ALLOWED_ORIGIN=https://<host>`, `supabase functions deploy affiliate-click --no-verify-jwt`, set `NEXT_PUBLIC_AFFILIATE_FN_URL`, then enable `affiliate_routing` per provider in the admin |
+| 3 | Buy and point a real domain | Registrar + DNS are not accessible from here | §9 above |
+| 4 | Store the admin password | Secrets must not pass through this conversation | `info@appobuild.com` exists, is confirmed, and holds the `owner` grant — set its password in Supabase → Authentication → Users |
+| 5 | Turn on signups (or keep them off) | Product decision; currently **enabled with autoconfirm**, which means anyone can create an account | Supabase → Authentication → Providers → Email |
+| 6 | AdSense publisher ID + consent | Requires an approved account; ads stay off until both exist | Set `adsense_client`/`adsense_slot` in `ad_settings`, add a consent banner, then rebuild — the CSP picks up ad origins automatically once `global_enabled` is true |
+| 7 | Promote the report-only CSP | Requires watching a real browser console, which this environment cannot do | Open the live site with DevTools → Console, look for `Content-Security-Policy` reports for a week, then move the `Content-Security-Policy-Report-Only` value in `vercel.json` into `Content-Security-Policy` and keep the §6 enforcing subset |
+| 8 | Search Console / analytics of record | Account-owned | Submit `sitemap.xml`, verify the property (see §9 step 8) |
+
+Two items that were on this list and are now **done**, recorded so they are not re-opened: the
+first admin user exists with the `owner` grant (`auth.users` = 1 row, `role_grants` = 1), and the
+availability service is deployed and wired into the build (`redirects.json → build.integrations`).
