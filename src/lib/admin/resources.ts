@@ -761,6 +761,77 @@ export const ADMIN_RESOURCES: AdminResource[] = [
     readonlyKeys: ["updated_by", "updated_at"],
     warning: "No arbitrary JavaScript can be added here. Slots reference ad-unit IDs only.",
   },
+  {
+    key: "nav-menus",
+    table: "nav_menus",
+    label: "Navigation menus",
+    singular: "menu",
+    description:
+      "Menu containers. `location` decides where one renders (header or footer) and `position` decides column order. Changes take effect on the next rebuild — the site is a static export.",
+    listColumns: [
+      { key: "id", label: "ID", mono: true },
+      { key: "name", label: "Heading" },
+      { key: "location", label: "Location", badge: true },
+      { key: "position", label: "Order" },
+      { key: "enabled", label: "Enabled", badge: true },
+    ],
+    fields: [
+      { key: "id", label: "ID", type: "text", required: true, immutable: true, help: "Stable identifier, e.g. footer-company. Links reference it." },
+      { key: "name", label: "Heading", type: "text", required: true, help: "Shown above the column in the footer. The primary menu's name is not displayed." },
+      {
+        key: "location",
+        label: "Location",
+        type: "select",
+        options: [
+          { value: "primary", label: "Header" },
+          { value: "footer", label: "Footer column" },
+          { value: "admin", label: "Admin sidebar (unused)" },
+        ],
+        defaultValue: "footer",
+      },
+      { key: "position", label: "Order", type: "number", min: 0, max: 9999, defaultValue: 100, help: "Lower sorts first. Ties fall back to the ID so exports stay stable." },
+      { key: "enabled", label: "Enabled", type: "boolean", defaultValue: true },
+    ],
+    identityKeys: ["id"],
+    searchColumns: ["id", "name"],
+    orderBy: { column: "position", ascending: true },
+    readonlyKeys: ["updated_at"],
+  },
+  {
+    key: "nav-items",
+    table: "nav_items",
+    label: "Menu items",
+    singular: "menu item",
+    description:
+      "Individual links. Internal paths must start with / (the SEO diagnostics screen reports any that resolve to nothing). Changes appear after the next rebuild.",
+    listColumns: [
+      { key: "menu_id", label: "Menu", mono: true },
+      { key: "label", label: "Label" },
+      { key: "href", label: "Link", mono: true },
+      { key: "position", label: "Order" },
+      { key: "enabled", label: "Enabled", badge: true },
+    ],
+    fields: [
+      { key: "menu_id", label: "Menu", type: "reference", required: true, reference: { table: "nav_menus", valueColumn: "id", labelColumn: "name", orderBy: { column: "position", ascending: true } } },
+      { key: "label", label: "Label", type: "text", required: true, maxLength: 40 },
+      {
+        key: "href",
+        label: "Link",
+        type: "text",
+        required: true,
+        placeholder: "/generator",
+        help: "Internal path starting with /, or an absolute https:// URL. Query strings and #fragments are allowed.",
+      },
+      { key: "description", label: "Description", type: "textarea", maxLength: 120, hideInList: true, help: "Shown in the mobile menu and as a title attribute on hover." },
+      { key: "position", label: "Order", type: "number", min: 0, max: 9999, defaultValue: 100 },
+      { key: "enabled", label: "Enabled", type: "boolean", defaultValue: true },
+    ],
+    searchColumns: ["label", "href"],
+    orderBy: { column: "position", ascending: true },
+    readonlyKeys: ["created_at"],
+    warning:
+      "The header and footer are generated at build time. A saved change is live only after the next deploy.",
+  },
 ];
 
 export function getResource(key: string): AdminResource | undefined {
@@ -820,6 +891,13 @@ export const ADMIN_NAV: Array<{ heading: string; items: Array<{ label: string; h
       { label: "Blog categories", href: "/admin/post-categories/", resource: "post-categories" },
       { label: "AI studio", href: "/admin/studio/" },
       { label: "Redirects", href: "/admin/redirects/", resource: "redirects" },
+    ],
+  },
+  {
+    heading: "Navigation",
+    items: [
+      { label: "Menu items", href: "/admin/nav-items/", resource: "nav-items" },
+      { label: "Menus", href: "/admin/nav-menus/", resource: "nav-menus" },
     ],
   },
   {

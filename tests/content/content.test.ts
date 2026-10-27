@@ -126,6 +126,10 @@ describe("supabase read path", () => {
       industries: [],
       tlds: [],
       site_settings: [],
+      nav_menus: [{ id: "primary", name: "Primary navigation", location: "primary", position: 10, enabled: true }],
+      nav_items: [
+        { menu_id: "primary", label: "Generator", href: "/generator", description: "", position: 10, enabled: true, parent_id: null },
+      ],
     };
 
     vi.stubGlobal(
@@ -147,6 +151,46 @@ describe("supabase read path", () => {
     expect(content.source).toBe("supabase");
     expect(content.warning).toBeNull();
     expect(content.pages.map((page) => page.slug)).toEqual(["from-cms"]);
+    // Navigation comes from the database too, not from the code constants.
+    expect(content.navigation.primary.map((item) => item.label)).toEqual(["Generator"]);
+  });
+
+  it("warns when the database has content but no navigation rows", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-for-test";
+    vi.resetModules();
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        const body = url.includes("/rest/v1/pages")
+          ? [
+              {
+                slug: "only-a-page",
+                title: "Only a page",
+                excerpt: "",
+                body: "<p>Text.</p>",
+                seo_title: null,
+                meta_description: null,
+                canonical_url: null,
+                noindex: false,
+                published_at: "2026-01-01T00:00:00.000Z",
+                updated_at: "2026-01-02T00:00:00.000Z",
+              },
+            ]
+          : [];
+        return { ok: true, status: 200, json: async () => body } as unknown as Response;
+      }),
+    );
+
+    const { loadSiteContent } = await import("@/lib/content/source");
+    const content = await loadSiteContent();
+
+    expect(content.source).toBe("supabase");
+    // The menu still renders (code defaults) but the build is told why.
+    expect(content.navigation.primary.length).toBeGreaterThan(0);
+    expect(content.warning).toContain("Navigation fell back");
   });
 });
 

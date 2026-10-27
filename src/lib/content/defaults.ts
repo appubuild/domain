@@ -45,7 +45,7 @@ export const DEFAULT_PAGES: DefaultPage[] = [
     slug: "contact",
     title: "Contact",
     excerpt: "How to reach the team, and what we can and cannot help with.",
-    seoTitle: "Contact DomainFits",
+    seoTitle: "Contact DomainFits — support and feedback",
     metaDescription: "Contact the DomainFits team about naming data, corrections, privacy requests or partnership enquiries.",
     body: `<h2>Get in touch</h2>
 <p>Email <a href="mailto:hello@example.com">hello@example.com</a> and we will respond within five working days. Replace this address with your own before launch — it is seeded as a placeholder.</p>
@@ -127,7 +127,7 @@ export const DEFAULT_PAGES: DefaultPage[] = [
     excerpt: "The strategies, constraints and scoring model behind every suggestion.",
     seoTitle: "How the DomainFits naming engine works",
     metaDescription:
-      "A walkthrough of the naming pipeline: keyword normalisation, semantic expansion, six generation strategies, constraint filtering, de-duplication and explainable scoring.",
+      "A walkthrough of the naming pipeline: normalisation, semantic expansion, generation strategies, constraint filtering and explainable scoring.",
     body: `<h2 id="pipeline">The pipeline</h2>
 <ol>
 <li><strong>Normalise.</strong> Keywords are trimmed, lower-cased and transliterated to ASCII. Invalid input is rejected with a reason instead of being silently rewritten.</li>
@@ -149,7 +149,7 @@ export const DEFAULT_PAGES: DefaultPage[] = [
     slug: "faq",
     title: "Frequently asked questions",
     excerpt: "Short answers about scores, availability, accounts and exports.",
-    seoTitle: "DomainFits FAQ",
+    seoTitle: "DomainFits FAQ — scores, availability and exports",
     metaDescription: "Answers about naming scores, availability statuses, exports, accounts and advertising on DomainFits.",
     body: `<h2>Does a high score mean the domain is available?</h2>
 <p>No. Quality and brandability are computed without any availability data. A name scoring 95 may already be registered; an available name may score 20.</p>

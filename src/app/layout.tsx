@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { BRAND_DEFAULTS } from "@/lib/config/site";
+import { loadSiteContent } from "@/lib/content/source";
 import { PUBLIC_ENV } from "@/lib/config/env";
 import { ThemeProvider, themeBootstrapScript } from "@/components/theme/theme-provider";
 import { ToastProvider } from "@/components/ui/overlay";
@@ -28,7 +29,17 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * Root layout.
+ *
+ * Navigation is resolved once, at build time: `loadSiteContent()` reads `nav_menus`/
+ * `nav_items` and falls back to the code defaults when the database has nothing usable.
+ * Because this is a static export, the menu is baked into every page — changing it means
+ * rebuilding, which the admin panel says plainly.
+ */
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const content = await loadSiteContent();
+
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
@@ -44,11 +55,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Skip to content
             </a>
             <div className="flex min-h-dvh flex-col">
-              <SiteHeader brand={BRAND_DEFAULTS} />
+              <SiteHeader brand={content.settings.brand} items={content.navigation.primary} />
               <main id="main" className="flex-1">
                 {children}
               </main>
-              <SiteFooter brand={BRAND_DEFAULTS} />
+              <SiteFooter brand={content.settings.brand} columns={content.navigation.footer} />
             </div>
           </ToastProvider>
         </ThemeProvider>

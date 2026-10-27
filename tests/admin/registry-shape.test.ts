@@ -42,7 +42,7 @@ describe("reference fields", () => {
     }
   });
 
-  it("mark uuid references nullable so an empty choice is stored as NULL", () => {
+  it("declare every reference as either optional or required", () => {
     for (const { resource, field } of referenceFields) {
       // Provider/industry/category ids are all nullable foreign keys in the schema, except
       // affiliate_tld_rules.provider_id, which is part of the row identity and required.
@@ -50,7 +50,12 @@ describe("reference fields", () => {
       if (isIdentity) {
         expect(field.nullable, `${resource}.${field.key} is identity, must not be nullable`).not.toBe(true);
       } else {
-        expect(field.nullable, `${resource}.${field.key} should be nullable`).toBe(true);
+        // A reference must state which it is: optional (nullable) or required. Leaving both
+        // unset is the ambiguity this rule exists to prevent.
+        expect(
+          field.nullable === true || field.required === true,
+          `${resource}.${field.key} is a reference but neither nullable nor required`,
+        ).toBe(true);
       }
     }
   });

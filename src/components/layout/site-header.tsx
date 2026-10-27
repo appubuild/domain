@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, Sparkles } from "lucide-react";
-import { PRIMARY_NAV, type SiteBrand } from "@/lib/config/site";
+import { PRIMARY_NAV, type NavItem, type SiteBrand } from "@/lib/config/site";
 import { cn } from "@/lib/utils/format";
 import { Drawer } from "@/components/ui/overlay";
 import { ButtonLink } from "@/components/ui/primitives";
@@ -17,7 +17,18 @@ import { ThemeToggle } from "./theme-toggle";
  * - Mobile: brand, menu button, theme control. Navigation lives in an accessible drawer
  *   with focus trapping and Escape handling (see `Drawer`).
  */
-export function SiteHeader({ brand }: { brand: SiteBrand }) {
+export function SiteHeader({
+  brand,
+  items = PRIMARY_NAV,
+}: {
+  brand: SiteBrand;
+  /**
+   * Rendered navigation. Comes from `nav_items` at build time when that table has usable
+   * rows, otherwise from `PRIMARY_NAV`. The default keeps this component usable in isolation
+   * (and in tests) without a data source.
+   */
+  items?: NavItem[];
+}) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -47,7 +58,7 @@ export function SiteHeader({ brand }: { brand: SiteBrand }) {
         </Link>
 
         <nav aria-label="Main" className="ml-2 hidden items-center gap-0.5 md:flex">
-          {PRIMARY_NAV.map((item) => (
+          {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -91,7 +102,7 @@ export function SiteHeader({ brand }: { brand: SiteBrand }) {
       <Drawer open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" side="left">
         <div id="mobile-menu" className="flex h-full flex-col gap-6">
           <nav aria-label="Mobile" className="flex flex-col gap-1">
-            {PRIMARY_NAV.map((item) => (
+            {items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

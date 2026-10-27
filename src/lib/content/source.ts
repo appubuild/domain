@@ -14,6 +14,7 @@
 
 import { PUBLIC_ENV } from "@/lib/config/env";
 import { BRAND_DEFAULTS, FOOTER_NAV, PRIMARY_NAV, type SiteBrand } from "@/lib/config/site";
+import { buildNavigation, type NavItemRow, type NavMenuRow } from "./navigation";
 import { INDUSTRIES } from "@/lib/brain/dictionaries/industries";
 import { TLD_DIRECTORY, type TldCheckability } from "@/lib/brain/tlds";
 import { DEFAULT_PAGES, type DefaultPage } from "./defaults";
@@ -134,6 +135,8 @@ type SupabaseRows = {
   industries?: Array<Record<string, unknown>>;
   tlds?: Array<Record<string, unknown>>;
   settings?: Array<Record<string, unknown>>;
+  navMenus?: Array<Record<string, unknown>>;
+  navItems?: Array<Record<string, unknown>>;
 };
 
 async function restGet(table: string, query: string): Promise<Array<Record<string, unknown>>> {
@@ -182,12 +185,14 @@ export async function loadSiteContent(): Promise<SiteContent> {
   }
 
   try {
-    const [pageRows, postRows, industryRows, tldRows, settingRows] = await Promise.all([
+    const [pageRows, postRows, industryRows, tldRows, settingRows, menuRows, itemRows] = await Promise.all([
       restGet("pages", "select=slug,title,excerpt,body,seo_title,meta_description,canonical_url,noindex,published_at,updated_at&status=eq.published&order=slug.asc"),
       restGet("posts", "select=slug,title,excerpt,body,author_name,published_at,seo_title,meta_description,cover_image_url,cover_image_alt,faq,category_id&status=eq.published&order=published_at.desc&limit=100"),
       restGet("industries", "select=id,name,slug,description,intro,enabled&enabled=eq.true&order=display_order.asc"),
       restGet("tlds", "select=tld,display_name,description,category,enabled,checkability,note&order=display_order.asc"),
       restGet("site_settings", "select=key,value&is_public=eq.true"),
+      restGet("nav_menus", "select=id,name,location,position,enabled&order=position.asc,id.asc"),
+      restGet("nav_items", "select=menu_id,label,href,description,position,enabled,parent_id&enabled=eq.true&order=position.asc"),
     ]);
 
     const rows: SupabaseRows = {
@@ -196,6 +201,8 @@ export async function loadSiteContent(): Promise<SiteContent> {
       industries: industryRows,
       tlds: tldRows,
       settings: settingRows,
+      navMenus: menuRows,
+      navItems: itemRows,
     };
 
     const settings = { ...fallback.settings };
@@ -295,16 +302,42 @@ export async function loadSiteContent(): Promise<SiteContent> {
           }))
         : fallback.tlds;
 
+    // Navigation comes from the database when it has usable rows; otherwise from the code
+    // defaults. `source` is reported so a build log can say which one was used.
+    const navigation = buildNavigation(
+      (rows.navMenus ?? []).map((row) => ({
+        id: str(row.id),
+        name: str(row.name),
+        location: str(row.location, "primary"),
+        position: typeof row.position === "number" ? row.position : null,
+        enabled: bool(row.enabled, true),
+      })) satisfies NavMenuRow[],
+      (rows.navItems ?? []).map((row) => ({
+        menu_id: str(row.menu_id),
+        label: str(row.label),
+        href: str(row.href),
+        description: str(row.description),
+        position: typeof row.position === "number" ? row.position : null,
+        enabled: bool(row.enabled, true),
+        parent_id: (row.parent_id as string | null) ?? null,
+      })) satisfies NavItemRow[],
+    );
+
+    const navWarning =
+      navigation.source === "defaults"
+        ? `Navigation fell back to the code defaults (${navigation.reason}). Seed nav_menus/nav_items or edit them in the admin panel.`
+        : null;
+
     return {
       source: "supabase",
-      warning: null,
+      warning: navWarning,
       builtAt: new Date().toISOString(),
       settings,
       pages,
       posts,
       industries,
       tlds,
-      navigation: fallback.navigation,
+      navigation: { primary: navigation.primary, footer: navigation.footer },
     };
   } catch (error) {
     return defaultContent(

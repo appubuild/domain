@@ -1,7 +1,16 @@
 import Link from "next/link";
 import { FOOTER_NAV, type SiteBrand } from "@/lib/config/site";
 
-export function SiteFooter({ brand }: { brand: SiteBrand }) {
+type FooterColumn = { heading: string; items: Array<{ label: string; href: string }> };
+
+export function SiteFooter({
+  brand,
+  columns = FOOTER_NAV,
+}: {
+  brand: SiteBrand;
+  /** Rendered link columns — from `nav_menus`/`nav_items` at build time when available. */
+  columns?: FooterColumn[];
+}) {
   const year = new Date().getFullYear();
   return (
     <footer className="mt-16 border-t border-border bg-surface">
@@ -20,7 +29,7 @@ export function SiteFooter({ brand }: { brand: SiteBrand }) {
             <p className="text-[13px] leading-relaxed text-fg-muted">{brand.description}</p>
           </div>
 
-          {FOOTER_NAV.map((column) => (
+          {columns.map((column) => (
             <nav key={column.heading} aria-label={column.heading} className="space-y-2">
               <h2 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
                 {column.heading}
