@@ -93,7 +93,61 @@ Both hosts apply `_redirects` before serving files, so database redirects work w
 
 ---
 
-## 4. Supabase
+## 4. Vercel (current production host)
+
+<https://domainfits.vercel.app> — project `domainfits`
+(`prj_hU5cKmOSxtqOUAnQve0MAWPiIEU7`, team *Md Sobur ALi's projects*), linked to
+`appubuild/domain`. Even though Vercel detects the Next.js framework preset, the build is still
+a **static export**: `npm run build` produces `out/` and the host serves those files. Nothing
+in this repository runs at request time.
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` (the repo default: prebuild guard → `next build` → redirects) |
+| Framework preset | Next.js |
+| Output | detected static export — no output directory override needed |
+| Node.js | 24.x on the build machine (`engines` in `package.json` allows newer majors) |
+
+Environment variables (see §1 for what each one does when missing):
+
+| Variable | Targets |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | production, preview, development |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | production, preview, development |
+| `NEXT_PUBLIC_DATA_BACKEND=supabase` | production, preview, development |
+| `NEXT_PUBLIC_SITE_NAME=DomainFits` | production, preview, development |
+| `NEXT_PUBLIC_APP_URL=https://domainfits.vercel.app` | **production only** |
+
+Only publishable values belong here. `NEXT_PUBLIC_APP_URL` is production-only so preview
+deployments do not emit canonicals and sitemap entries for the production origin.
+
+### Auto-deploy is disabled on this project
+
+The project was created through the Vercel API, which leaves
+`gitProviderOptions.createDeployments = "disabled"`. **Pushing to `main` does not build.**
+Either enable Project → Settings → Git → *Deploy on push*, or create each deployment
+explicitly (from the dashboard, or `POST /v13/deployments` with
+`{"name":"domainfits","project":"prj_hU5cKmOSxtqOUAnQve0MAWPiIEU7","target":"production",
+"gitSource":{"type":"github","ref":"<branch>","repoId":1382063430}}`).
+
+Because the output is static, **a content edit is not live until a deployment finishes.** Plan
+edits around deploys rather than expecting them to appear immediately.
+
+### Verifying a deployment
+
+```bash
+curl -s https://<deployment-url>/redirects.json   # source: "supabase" proves the DB read worked
+curl -s https://<deployment-url>/sitemap.xml | head -c 200   # absolute URLs prove APP_URL was set
+```
+
+`redirects.json` is the honest signal: `scripts/emit-redirects.ts` prints a warning and reports
+the same information in the build log when the Supabase read fails, and writes `"source":
+"supabase"` only after a 2xx response. An empty `redirects` array with `"source": "supabase"`
+means "the table is empty", not "the read failed".
+
+---
+
+## 5. Supabase
 
 ```bash
 supabase login
@@ -156,7 +210,7 @@ public; anything that writes must verify the caller's JWT and role.
 
 ---
 
-## 5. Going live checklist
+## 6. Going live checklist
 
 - [ ] `NEXT_PUBLIC_APP_URL` set to the final origin, then rebuilt
 - [ ] `out/.htaccess` present and `https` + canonical host resolve with one 301 hop
@@ -170,7 +224,7 @@ public; anything that writes must verify the caller's JWT and role.
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -180,12 +234,14 @@ public; anything that writes must verify the caller's JWT and role.
 | Sitemap empty | `NEXT_PUBLIC_APP_URL` missing at build time | Set it and rebuild |
 | Admin shows "not configured" | Supabase env vars absent from the build | Set both vars, rebuild |
 | Admin shows "no administrator role" | Signed in without `user_roles` row | Insert the row in SQL, reload |
-| Content edits do not appear | Static export serves bytes baked at build time | Rebuild and re-upload |
+| Content edits do not appear | Static export serves bytes baked at build time | Rebuild and re-upload (on Vercel: trigger a deployment, §4) |
+| Pushing to `main` produced no deployment | The Vercel project was created through the API with `createDeployments: "disabled"` | Enable Project → Settings → Git → *Deploy on push*, or deploy explicitly (§4) |
+| Vercel build used the offline content pack | `NEXT_PUBLIC_SUPABASE_*` missing for that environment, or the REST read failed | Check the build log for the `[redirects] … (source: …)` line; set the vars and redeploy |
 | Dev server 500s with `Cannot find module './NNN.js'` or `ENOENT .../app-paths-manifest.json` | `npm run build` ran while `next dev` was live and rewrote `.next`; dev and build share that directory | Stop the dev server, `npm run clean`, then restart. `npm run build` now refuses to run while something listens on port 3000 (override with `DOMAINFITS_ALLOW_BUILD_WITH_DEV=1`) |
 
 ---
 
-## 7. Rollback
+## 8. Rollback
 
 The previous `out/` directory is a complete, independent release. Keep the last known-good copy;
 restoring it is a file copy, not a migration. Database rollback is a Supabase backup restore —
