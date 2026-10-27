@@ -98,10 +98,10 @@ Two consequences, both handled:
 
 1. The admin screen now merges the rendered menus from `site.ts` with whatever is in
    `nav_items`, and the seed test does the same. False orphan reports are gone.
-2. A real inconsistency is now documented rather than hidden: **`nav_items` exists, is seeded,
-   and nothing renders it.** Editing it changes no pixel. Wiring database-driven navigation into
-   a static export is a larger change (it must be resolved at build time), so it is recorded as
-   the next candidate rather than half-done — see §6.
+2. A real inconsistency was documented rather than hidden: **`nav_items` existed, was seeded,
+   and nothing rendered it.** Editing it changed no pixel. That was fixed in phase 9 — the
+   header and footer now read `nav_menus`/`nav_items` at build time, with the code constants as
+   the fallback. See [`phase-9-report.md`](phase-9-report.md).
 
 The seed content itself was also cleaned up by the engine: three notices (two short SEO titles,
 one 169-character description) were fixed in `seed.sql`, so the shipped content now produces
@@ -134,9 +134,7 @@ do. All three were test or fixture mistakes, not engine bugs, which is the right
   request are out of scope; the checks are structural only.
 - **No historical view.** The screen shows the current state; there is no trend, no "fixed since
   last run". Nothing is stored — findings are recomputed on every load.
-- **`nav_items` is not rendered.** Menu editing happens in `src/lib/config/site.ts`. Making the
-  table authoritative means resolving navigation at build time and changing the header/footer
-  props; not attempted here.
+- **`nav_items` was not rendered when this phase shipped.** Superseded by phase 9.
 - **No per-page drill-down.** A finding links to the module and to the public path, not to the
   specific row's editor drawer (the CRUD manager opens by query string, which is not wired yet).
 - **The seed ships no blog posts**, so `/blog/` is empty on a fresh install. That is an honest

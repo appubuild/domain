@@ -66,6 +66,8 @@ required.
 | Content | Blog categories | `post_categories` | Post grouping |
 | Content | AI studio | `ai_drafts` | Draft-only generation; never publishes |
 | Content | Media library | `media` + `media` bucket | Images, alt text, import/delete |
+| Navigation | Menu items | `nav_items` | Header links and footer columns |
+| Navigation | Menus | `nav_menus` | Column order, heading, visibility |
 | SEO | Diagnostics | `pages`, `posts`, `redirects` | Findings from the live content, no score |
 | Content | Redirects | `redirects` | Compiled into `out/.htaccess` and `out/_redirects` |
 | SEO | SEO templates | `seo_templates` | Title/description patterns per entity |
@@ -154,6 +156,14 @@ With `NEXT_PUBLIC_AFFILIATE_FN_URL` set, the browser links to the click-through 
 re-validates the provider and host against the database before issuing the 302 and recording the
 click. Without it, the client builds the link itself (same validation) and records clicks
 best-effort through `click_events`.
+
+**Navigation.** The header and footer are read from `nav_menus`/`nav_items` **at build time** —
+this site is a static export, so a saved menu change appears only after the next deploy. Menus
+with `location = footer` become footer columns in `position` order; the one with
+`location = primary` becomes the header bar. A menu with no enabled items is skipped; if the
+whole table is empty the site falls back to the menu defined in `src/lib/config/site.ts` rather
+than rendering nothing. Links must start with `/`, `#`, `https://` or `mailto:` — anything else
+is dropped, and the SEO diagnostics screen reports menu entries that point at nothing.
 
 **SEO diagnostics.** `/admin/seo/` reads pages, posts, redirects and the menu, then lists what is
 wrong: pages published without a date (invisible everywhere), slugs that collide with real

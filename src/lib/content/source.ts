@@ -78,6 +78,18 @@ export type SiteContent = {
 
 const FETCH_TIMEOUT_MS = 4000;
 
+/**
+ * Short-lived cache for the whole content load.
+ *
+ * A static build calls `loadSiteContent()` from the root layout, every page and the sitemap.
+ * Without a cache that is dozens of identical REST round-trips — and in `next dev`, whose
+ * server renders per request, an unreachable database would add the fetch timeout to every
+ * single page view. The TTL is short enough that a dev server notices an edit within a
+ * minute and long enough that a build does one read.
+ */
+const CONTENT_TTL_MS = 60_000;
+let contentPromise: { at: number; value: Promise<SiteContent> } | null = null;
+
 function wordCount(html: string): number {
   return html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
 }
@@ -179,6 +191,19 @@ function strArray(value: unknown): string[] {
  * pack and is reported in `warning` so it cannot silently look like live data.
  */
 export async function loadSiteContent(): Promise<SiteContent> {
+  const now = Date.now();
+  if (!contentPromise || now - contentPromise.at > CONTENT_TTL_MS) {
+    contentPromise = { at: now, value: loadSiteContentUncached() };
+  }
+  return contentPromise.value;
+}
+
+/** Clears the memoised content. Used by tests, which stub `fetch` per case. */
+export function resetContentCache(): void {
+  contentPromise = null;
+}
+
+async function loadSiteContentUncached(): Promise<SiteContent> {
   const fallback = defaultContent();
   if (!PUBLIC_ENV.supabaseUrl || !PUBLIC_ENV.supabaseAnonKey) {
     return fallback;

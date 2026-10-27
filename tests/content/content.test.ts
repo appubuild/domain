@@ -145,7 +145,8 @@ describe("supabase read path", () => {
       }),
     );
 
-    const { loadSiteContent } = await import("@/lib/content/source");
+    const { loadSiteContent, resetContentCache } = await import("@/lib/content/source");
+    resetContentCache();
     const content = await loadSiteContent();
 
     expect(content.source).toBe("supabase");
@@ -184,7 +185,8 @@ describe("supabase read path", () => {
       }),
     );
 
-    const { loadSiteContent } = await import("@/lib/content/source");
+    const { loadSiteContent, resetContentCache } = await import("@/lib/content/source");
+    resetContentCache();
     const content = await loadSiteContent();
 
     expect(content.source).toBe("supabase");

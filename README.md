@@ -46,6 +46,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 | AI studio | `src/lib/ai/`, `supabase/functions/ai-studio/` | Drafts only, admin-authenticated, off by default |
 | Media library | `src/lib/media/`, `supabase/migrations/0007_media_storage.sql` | Storage uploads, alt text required, no SVG |
 | SEO diagnostics | `src/lib/seo/diagnostics.ts` | Real findings from real rows; no invented score |
+| Navigation | `src/lib/content/navigation.ts` | Header/footer resolved from `nav_menus`/`nav_items` at build time |
 | Database | `supabase/migrations/`, `supabase/seed/` | 44 tables, RLS on all, seeded dictionaries |
 | Monetization | `src/lib/affiliate/`, `src/lib/ads/`, `supabase/functions/affiliate-click/` | Validated registrar links + AdSense-only slots; both fail closed and ship off |
 | Analytics | `src/lib/analytics/` | First-party events only; says "not configured" when it cannot store |
@@ -61,6 +62,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/phase-6-report.md`](docs/phase-6-report.md) — admin reference fields and the AI content studio
 - [`docs/phase-7-report.md`](docs/phase-7-report.md) — the media library and its upload rules
 - [`docs/phase-8-report.md`](docs/phase-8-report.md) — SEO diagnostics, and why there is no score
+- [`docs/phase-9-report.md`](docs/phase-9-report.md) — the live Supabase project, and rendered navigation
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

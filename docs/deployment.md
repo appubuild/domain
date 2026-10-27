@@ -98,7 +98,7 @@ Both hosts apply `_redirects` before serving files, so database redirects work w
 ```bash
 supabase login
 supabase link --project-ref <ref>
-supabase db push --include-seed     # migrations 0001–0007 + seed data
+supabase db push --include-seed     # migrations 0001–0008 + seed data
 ```
 
 Then:
@@ -115,6 +115,11 @@ Then:
    while still cached in the page. Only administrators can write to it, and the four accepted
    formats (JPEG, PNG, WebP, AVIF) are enforced by both the upload screen and a table
    constraint. SVG is refused deliberately — an uploaded SVG is stored XSS on a public origin.
+
+**Current project:** `DomainFits` (`bjbbrgjiyoquacoypsia`) already has migrations `0001`–`0008`
+applied and the seed loaded (verified: 44 tables, 0 without RLS, 80 policies, `media` bucket
+present). The remaining manual steps are the admin account and `NEXT_PUBLIC_APP_URL` — see
+[`phase-9-report.md`](phase-9-report.md) §5.
 
 RLS is enabled on all 44 tables, so the anon key is safe in the browser. Verify with:
 
