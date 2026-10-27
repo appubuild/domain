@@ -32,7 +32,7 @@ export default function HomePage() {
       <section className="border-b border-border bg-surface">
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:py-20">
           <div className="max-w-2xl space-y-5">
-            <Badge tone="accent">Phase 1 · Foundation</Badge>
+            <Badge tone="accent">Deterministic naming · live availability</Badge>
             <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
               {BRAND_DEFAULTS.tagline}
             </h1>
@@ -54,18 +54,18 @@ export default function HomePage() {
 
           <Card className="self-start p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-subtle">
-              Design system
+              What the generator gives you
             </p>
             <p className="mt-1 text-sm text-fg-muted">
-              Tokens, themes and primitives are in place. The generator, brain and admin modules
-              build on this foundation in the next phases.
+              Type what the name is for. Every run is reproducible from the same seed, and every
+              status is the registry&rsquo;s own answer — or an explicit unknown.
             </p>
             <dl className="mt-4 space-y-2.5 text-sm">
               {[
-                ["Themes", "Light · dark · system"],
-                ["Tokens", "Single source in globals.css"],
-                ["Primitives", "Buttons, fields, dialogs, drawers, toasts, tabs"],
-                ["Accessibility", "Focus traps, skip link, reduced motion"],
+                ["Candidates", "Rules, templates and phonetic blends"],
+                ["Scores", "Named factors with visible weights"],
+                ["Availability", "Checked per TLD, cached and dated"],
+                ["Exports", "CSV, TXT and JSON"],
               ].map(([term, value]) => (
                 <div key={term} className="flex items-baseline justify-between gap-4 border-t border-border pt-2.5">
                   <dt className="text-fg-subtle">{term}</dt>
