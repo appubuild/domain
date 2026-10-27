@@ -176,7 +176,31 @@ that have nothing to do with this code.
 
 ---
 
-## 5. Files touched
+## 5. Verified on the live deployment
+
+Deployment `dpl_8ct5KdNmxw3k9nD4NWBXCmE9sdXv` @ `1578bba` went READY/PROMOTED, and the emitted
+policy can be read back from production itself:
+
+```json
+GET https://domainfits.vercel.app/redirects.json
+"headers": {
+  "contentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline';
+   script-src-attr 'none'; … connect-src 'self'
+   https://bjbbrgjiyoquacoypsia.supabase.co wss://bjbbrgjiyoquacoypsia.supabase.co; …",
+  "adsAllowed": false,
+  "note": "ads are off; ad origins omitted"
+}
+```
+
+That single file proves three things that could otherwise only be asserted: the emitter ran
+inside the real build, `connect-src` names the real project rather than a placeholder, and the
+ad origins really are conditional — `ad_settings.global_enabled` is false in production, and no
+Google origin appears in the policy.
+
+Pages spot-checked after promotion: `/`, `/faq/`, `/generator/`, `/blog/`. GitHub Actions-style
+CI does not exist here; `npm run verify` is the gate, run locally and recorded above.
+
+## 6. Files touched
 
 ```
 scripts/emit-hosting-config.ts        # new: replaces emit-redirects.ts, emits headers + caching
