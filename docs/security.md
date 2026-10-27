@@ -50,6 +50,33 @@ The public anon key is *designed* to be in the bundle. It grants only what RLS a
 - `audit_logs` is append-only for admins: insert allowed, update/delete not.
 - Availability and click tables accept inserts from the app but expose no bulk read to anon.
 
+### The view that bypassed its own policy
+
+`analytics_daily` (migration `0005`) was a plain view. A view runs with its **owner's** rights
+unless told otherwise, and its owner is `postgres`, so the aggregate inside it read
+`analytics_events` without passing the admin-only RLS policy on that table. The contents were
+only counts per day and event type — no paths, no payloads, no session hashes — but the read was
+one the policies were meant to refuse, and it was reachable with the public anon key.
+
+Migration `0009` closes it three ways: the view is `security_invoker` (the caller's own RLS now
+applies), `anon` loses its `SELECT` grant, and `SELECT` is re-granted to `authenticated` only.
+The same migration adds five `security_invoker` reporting functions with `EXECUTE` revoked
+**from `PUBLIC`** — PostgreSQL grants `EXECUTE` on a new function to `PUBLIC` by default, so
+revoking from `anon` alone would have left the privilege reachable through `PUBLIC`.
+
+Verified on the live project (`bjbbrgjiyoquacoypsia`) after applying:
+
+```
+analytics_daily.reloptions        {security_invoker=true}
+anon  select on analytics_daily   false
+authenticated select              true
+5 reporting functions             security_definer = false, anon EXECUTE = false
+```
+
+The general lesson generalises past this one view: **any view or function that aggregates a
+policy-protected table needs an explicit check**, because both default to running with more
+rights than the caller has.
+
 A verified behaviour worth remembering: an RLS-blocked `UPDATE` matches **zero rows silently**.
 Tests therefore assert the stored value, not the absence of an error.
 
@@ -113,7 +140,12 @@ values; `src/lib/config/env.ts` has no accessor for anything else.
 - Ad scripts load **only** when `ad_settings.global_enabled`, a publisher ID passes the
   `ca-pub-…` constraint, and the slot is enabled. Consent is a switch, not a promise: the site
   does not display ads until a consent flow is configured.
-- Click and event tables store a session hash and a path, nothing identifying.
+- Click and event tables store a session hash and a path, nothing identifying. The session
+  hash is a random per-tab id in `sessionStorage`; it is not a fingerprint, is not derived from
+  anything about the device, and disappears when the tab closes.
+- Public page views are counted client-side and **honour Do Not Track**; `/admin` is never
+  counted. The event vocabulary is fixed by a table constraint, so a payload cannot introduce a
+  new event type.
 
 ---
 

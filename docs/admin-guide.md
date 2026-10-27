@@ -46,7 +46,7 @@ required.
 | Group | Module | Table | What it changes |
 | --- | --- | --- | --- |
 | Overview | Dashboard | — | Live counts and recent audit entries |
-| Overview | Analytics | `analytics_events`, `click_events` | First-party event counts, top paths, clicked domains |
+| Overview | Analytics | `analytics_events`, `click_events` | First-party event totals, daily series, funnel, keywords, instrumentation coverage |
 | Overview | Audit log | `audit_logs` | Append-only record of admin writes |
 | Domain brain | Dictionary | `dictionary_terms` | Words, morphemes, synonyms and exclusions used by expansion |
 | Domain brain | Word libraries | `word_libraries` | Prefix/suffix affix pools |
@@ -75,6 +75,26 @@ required.
 | Access | Users & roles | `user_roles`, `app_roles` | Who may administer |
 | System | Settings | `site_settings` | Brand, SEO defaults, feature switches |
 | System | Feature flags | `feature_flags` | Optional capabilities (AI studio, accounts, …) |
+
+### Reading the analytics screen
+
+Everything on **Overview → Analytics** is counted in Postgres from rows that were really
+written. There is no third-party tracker, no estimated traffic and no engagement score. Three
+conventions keep it honest:
+
+- **A day with no events is a zero bar**, never a gap. A chart that drops empty days stretches
+  one Saturday across a week.
+- **Conversion rates are suppressed below 25 generations** in the window, and print `—`. A
+  handful of events is not a rate. The funnel counts are also *aggregate*: sessions are per
+  browser tab, and the steps are not joined into per-visitor paths.
+- **"Zero" and "not wired up" are different.** The instrumentation table lists every event type
+  the schema accepts, what emits it, and how many rows it produced. A zero against *no producer*
+  means the feature does not exist yet — e.g. `signup` has no producer because there is no
+  public sign-up screen, and registrar clicks are counted in `click_events`, not as an event.
+
+`page_view` is counted in the browser on each public page load, skips `/admin`, and honours
+`Do Not Track`. Published content still needs a rebuild to change; analytics do not — they are
+read live.
 
 ### Turning monetization on (and knowing whether it worked)
 
