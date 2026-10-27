@@ -382,11 +382,17 @@ The drill was run for real, against production, and observed from outside the sa
 | 1. Note the current release | `dpl_9TaWHE9YQ4tZKyT9iYestLJYzj5i` @ `5e56c16` | live `redirects.json` carried a `build` manifest with `commit: 5e56c16…` |
 | 2. Re-deploy the previous release as production | `POST /v13/deployments` with `target: production`, `gitSource.ref: 1578bba` | `dpl_x4dgUx2cmiSdVHSNJgWh5g6Wzpi3` — READY in **53 s**, `readySubstate: PROMOTED`, alias `domainfits.vercel.app` reassigned |
 | 3. Verify the rollback from outside | `GET /redirects.json?drill=rollback-1578bba` | `source: supabase`, `headers.contentSecurityPolicy` present, **no `build` key** — the older release is what is being served |
-| 4. Restore forward | deploy the current branch head as production again | alias returns to the new build; manifest reappears with the new commit |
-| 5. Confirm the app, not just the artifact | `GET /`, `/generator/`, `/admin/login/` | 200 + expected headings on each (see `npm run smoke`) |
+| 4. Restore forward | deploy the current branch head (`321fe31`) as production | `dpl_9SACDoR1LzRPZbn4PGX4bTbKez2C` — READY in **55 s**, PROMOTED; alias back on `domainfits.vercel.app` |
+| 5. Verify the restore | `GET /redirects.json?after=321fe31` and a header probe from an external host | `build.commit: 321fe31…`, availability function wired, and the CSP seen on the wire (see below) |
+| 6. Confirm the app, not just the artifact | `GET /`, `/generator/`, `/admin/login/` | 200 + expected headings on each (see `npm run smoke`) |
 
 Total production time on the older release: **under four minutes**, with no error page served at
-any point. Two things this drill established that a document cannot:
+any point. The restore also produced the first observed proof that `vercel.json` is applied by the
+host — the response for `/` carried `content-security-policy`,
+`content-security-policy-report-only`, `strict-transport-security`, `x-content-type-options`,
+`x-frame-options` and `referrer-policy` (read from a second host, not from a browser tab).
+
+Two things this drill established that a document cannot:
 
 - **A deployment is the rollback unit**, not a git revert. Reverting the commit and rebuilding
   would have re-run a full build; re-deploying the old sha took one API call and produced a

@@ -42,7 +42,13 @@ internet access):
 **Rollback drill (run, not rehearsed):** production was re-deployed from the previous release
 (`1578bba`), reached READY/PROMOTED in 53 s, and the alias was verified to serve the older
 artifact (no `build` key, `source: supabase`, CSP present). Production was then restored to the
-current build. Full table: [`deployment.md`](deployment.md) §8.1.
+current build (`321fe31`, READY in 55 s) and the manifest reappeared with the new commit. Full
+table: [`deployment.md`](deployment.md) §8.1.
+
+**Security headers on the live host:** observed on `https://domainfits.vercel.app/` from a second
+network — `content-security-policy`, `content-security-policy-report-only`, `strict-transport-security`,
+`x-content-type-options`, `x-frame-options`, `referrer-policy`, `permissions-policy`,
+`cross-origin-opener-policy`, `cross-origin-resource-policy`.
 
 **Admin data reality:** `auth.users` = 1 (`info@appobuild.com`, confirmed), `role_grants` = 1
 (`owner`); `app_roles` = viewer 20 / editor 50 / admin 80 / owner 100. The first-admin TODO is
@@ -59,10 +65,13 @@ the local server emits none), 0 failures.
   the platform spread them across isolates, and the counter lives in isolate memory. It is a
   speed bump, not a quota — the Postgres cache is what actually bounds registry traffic. Documented
   as such in `deployment.md` §5.
-- **The CSP on the live host.** `vercel.json` is committed and, once deployed, the header set is
-  whatever Vercel applies. Nothing in this environment can read response headers from the public
-  internet, so the file is checked by test (enforcing subset cannot contain a fetch directive, the
-  report-only value equals the generator's policy) rather than by observation.
+- **Nothing.** The CSP on the live host was initially in this list; it is now verified. After the
+  restore deployment (`dpl_9SACDoR1LzRPZbn4PGX4bTbKez2C` @ `321fe31`), a request to
+  `https://domainfits.vercel.app/` made from Supabase's egress returned:
+  `content-security-policy` (the enforcing subset), `content-security-policy-report-only` (the full
+  policy, byte-identical to the one in `redirects.json`), `strict-transport-security`,
+  `x-content-type-options: nosniff`, `x-frame-options: SAMEORIGIN`, `referrer-policy`. Vercel no
+  longer serves an unprotected response.
 - **The full CSP.** It ships report-only: `script-src 'self' 'unsafe-inline'` is unavoidable in a
   static export (Next inlines its hydration bootstrap; a nonce needs a server), so the policy is
   useful but not yet enforceable without watching a browser console. Promotion is TODO #7.

@@ -71,6 +71,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/phase-11-report.md`](docs/phase-11-report.md) — affiliate and ad runtime, and why both ship off
 - [`docs/phase-12-report.md`](docs/phase-12-report.md) — exact analytics, instrumentation coverage, a view that bypassed RLS
 - [`docs/phase-13-report.md`](docs/phase-13-report.md) — security headers, measured weight, and the contrast defects axe cannot see
+- [`docs/phase-14-report.md`](docs/phase-14-report.md) — production readiness: hardened public function, staged CSP, recorded rollback drill, operator TODOs
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

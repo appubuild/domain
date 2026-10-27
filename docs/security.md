@@ -154,7 +154,15 @@ values; `src/lib/config/env.ts` has no accessor for anything else.
 Because the site is a static export, headers are **generated at build time** by
 `scripts/emit-hosting-config.ts` into `out/.htaccess` (Apache, LiteSpeed) and `out/_headers`
 (Netlify, Cloudflare Pages); `out/redirects.json` carries a copy for auditing. Vercel ignores
-both files — see `docs/deployment.md` §4.
+both files, so the same set is committed in `vercel.json`, which that host reads *before* the
+build — see `docs/deployment.md` §4.
+
+On Vercel the CSP is staged: the enforcing header carries only `object-src`, `base-uri`,
+`form-action`, `frame-ancestors` and `upgrade-insecure-requests` (directives that cannot block a
+script, style or fetch), while the full policy below is sent as
+`Content-Security-Policy-Report-Only`. Promotion happens after a week of clean reports — the
+enforcing/report-only split is asserted by `tests/security/vercel-headers.test.ts`, which fails
+if a fetch directive is ever added to the enforcing header.
 
 | Header | Value | Why |
 | --- | --- | --- |
