@@ -49,7 +49,7 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 | Navigation | `src/lib/content/navigation.ts` | Header/footer resolved from `nav_menus`/`nav_items` at build time |
 | Database | `supabase/migrations/`, `supabase/seed/` | 44 tables, RLS on all, seeded dictionaries |
 | Monetization | `src/lib/affiliate/`, `src/lib/ads/`, `supabase/functions/affiliate-click/` | Validated registrar links + AdSense-only slots; both fail closed and ship off |
-| Analytics | `src/lib/analytics/` | First-party events only; says "not configured" when it cannot store |
+| Analytics | `src/lib/analytics/`, `supabase/migrations/0009_*` | First-party events only, aggregated in Postgres; says "not configured" when it cannot store |
 | Build tooling | `scripts/` | Seed generator, redirect emitter, pre-build dev-server guard |
 
 ## Documentation
@@ -63,6 +63,9 @@ Full instructions: [`docs/deployment.md`](docs/deployment.md).
 - [`docs/phase-7-report.md`](docs/phase-7-report.md) — the media library and its upload rules
 - [`docs/phase-8-report.md`](docs/phase-8-report.md) — SEO diagnostics, and why there is no score
 - [`docs/phase-9-report.md`](docs/phase-9-report.md) — the live Supabase project, and rendered navigation
+- [`docs/phase-10-report.md`](docs/phase-10-report.md) — collections, saved searches and the admin surface
+- [`docs/phase-11-report.md`](docs/phase-11-report.md) — affiliate and ad runtime, and why both ship off
+- [`docs/phase-12-report.md`](docs/phase-12-report.md) — exact analytics, instrumentation coverage, a view that bypassed RLS
 - [`docs/security.md`](docs/security.md) — auth model, RLS, secrets, sanitisation
 - [`docs/deployment.md`](docs/deployment.md) — hosting, environment, SEO cutover
 

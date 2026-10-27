@@ -156,7 +156,20 @@ and studio.
 - **The Edge Function still does not record `availability_failure` server-side.** The client
   does; a function-side counter needs the function deployed.
 
-## 7. Files touched
+## 7. Postscript: the homepage was still advertising the scaffold
+
+Not analytics, but found while checking the deploy: `/` still wore a **"Phase 1 · Foundation"**
+badge and a card explaining that the generator, brain and admin modules would be built "in the
+next phases". Every one of those existed. A visitor's first impression was that the site was a
+placeholder, which is a worse failure than a missing feature — the honesty rule cuts both ways,
+and understating what works is still a false statement.
+
+Replaced with an eyebrow that describes the product and a card listing what the generator does.
+Every claim on it is checked against the code: CSV/TXT/JSON exist in `src/lib/export/exporters.ts`
+(*not* the Markdown and sharing I first drafted), availability carries provider and timestamp,
+and score factors carry weights. Deployment `dpl_GS9JsEL7JjkQSpFLWSCjTAzjLR3Q` verified live.
+
+## 8. Files touched
 
 ```
 supabase/migrations/0009_analytics_reporting.sql   # new: 5 functions + the view fix
@@ -173,4 +186,5 @@ tests/analytics/report.test.ts                     # new
 tests/db/analytics-reporting.test.ts               # new
 docs/security.md                                   # the view-bypasses-RLS section
 docs/admin-guide.md                                # how to read the analytics screen
+src/app/page.tsx                                   # postscript: the stale Phase 1 hero
 ```
