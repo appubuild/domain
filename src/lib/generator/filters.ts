@@ -1,30 +1,48 @@
 /**
  * Client-side filtering and sorting for generated candidates.
  *
- * Filtering never mutates the underlying result set: favourites and selections are keyed
- * by label and survive filter changes, which is what Section 10.3 requires.
+ * Two rules govern everything here:
+ *
+ *   1. **Sorting never changes the result set.** It reorders whatever the filters left, so a sort
+ *      change cannot make a name appear or disappear.
+ *   2. **Filtering never regenerates.** The candidate list is generated once; filters only decide
+ *      which of those names are visible, across the whole list rather than the current page.
+ *
+ * Every comparator ends in a deterministic tie-breaker, so two runs over the same data always
+ * produce the same order (the interface shows the same list after a reload).
+ *
+ * The scores used for sorting are the engine's own quality/brandability figures. They say nothing
+ * about availability or market value, and they are never presented as if they did.
  */
 
-import type { Candidate, CandidateStrategy } from "@/lib/brain/types";
+import type { Candidate } from "@/lib/brain/types";
 
 export type SortKey =
   | "overall"
+  | "overall-asc"
   | "brandability"
+  | "brandability-asc"
   | "quality"
+  | "quality-asc"
   | "shortest"
+  | "longest"
   | "alphabetical"
+  | "alphabetical-desc"
   | "semantic"
-  | "root-match"
   | "recently-checked";
 
 export const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
-  { value: "overall", label: "Best overall" },
-  { value: "brandability", label: "Most brandable" },
-  { value: "quality", label: "Highest quality" },
-  { value: "shortest", label: "Shortest first" },
-  { value: "alphabetical", label: "A–Z" },
+  { value: "overall", label: "Domain score: high → low" },
+  { value: "overall-asc", label: "Domain score: low → high" },
+  { value: "brandability", label: "Brandability: high → low" },
+  { value: "brandability-asc", label: "Brandability: low → high" },
+  { value: "alphabetical", label: "A → Z" },
+  { value: "alphabetical-desc", label: "Z → A" },
+  { value: "shortest", label: "Shortest → longest" },
+  { value: "longest", label: "Longest → shortest" },
   { value: "semantic", label: "Semantic relevance" },
-  { value: "root-match", label: "Best root match" },
+  { value: "quality", label: "Quality: high → low" },
+  { value: "quality-asc", label: "Quality: low → high" },
   { value: "recently-checked", label: "Recently checked" },
 ];
 
@@ -49,19 +67,23 @@ export type AvailabilityInfo = {
 
 export type ResultFilters = {
   root: string;
+  /**
+   * Extension filter. A candidate can carry several extensions, so the rule is "keep the name
+   * when at least one of its extensions is selected" — the name is not duplicated per extension
+   * and its other extensions stay visible in the row.
+   */
   tld: string;
   minLength: number;
   maxLength: number;
+  /** Domain-score (overall) bounds; 0 disables the bound. */
+  minOverall: number;
+  maxOverall: number;
   minQuality: number;
   minBrandability: number;
-  strategies: CandidateStrategy[];
   availability: AvailabilityStatus[];
   favoritesOnly: boolean;
-  excludeHyphens: boolean;
-  excludeNumbers: boolean;
   requiredSubstring: string;
   excludedSubstring: string;
-  styleFilter: string;
   search: string;
 };
 
@@ -70,16 +92,14 @@ export const DEFAULT_FILTERS: ResultFilters = {
   tld: "",
   minLength: 0,
   maxLength: 0,
+  minOverall: 0,
+  maxOverall: 0,
   minQuality: 0,
   minBrandability: 0,
-  strategies: [],
   availability: [],
   favoritesOnly: false,
-  excludeHyphens: false,
-  excludeNumbers: false,
   requiredSubstring: "",
   excludedSubstring: "",
-  styleFilter: "",
   search: "",
 };
 
@@ -95,10 +115,7 @@ export type FilterOutcome = {
   total: number;
 };
 
-function availabilityFor(
-  candidate: Candidate,
-  context: FilterContext,
-): AvailabilityInfo | undefined {
+function availabilityFor(candidate: Candidate, context: FilterContext): AvailabilityInfo | undefined {
   return context.availability.get(candidate.label);
 }
 
@@ -134,28 +151,20 @@ export function applyFilters(
       reject("max-length");
       return false;
     }
+    if (filters.minOverall > 0 && candidate.overall < filters.minOverall) {
+      reject("overall-min");
+      return false;
+    }
+    if (filters.maxOverall > 0 && candidate.overall > filters.maxOverall) {
+      reject("overall-max");
+      return false;
+    }
     if (filters.minQuality > 0 && candidate.quality.score < filters.minQuality) {
       reject("quality");
       return false;
     }
     if (filters.minBrandability > 0 && candidate.brandability.score < filters.minBrandability) {
       reject("brandability");
-      return false;
-    }
-    if (filters.strategies.length > 0 && !filters.strategies.includes(candidate.strategy)) {
-      reject("strategy");
-      return false;
-    }
-    if (filters.styleFilter && !candidate.styles.includes(filters.styleFilter as Candidate["styles"][number])) {
-      reject("style");
-      return false;
-    }
-    if (filters.excludeHyphens && candidate.label.includes("-")) {
-      reject("hyphens");
-      return false;
-    }
-    if (filters.excludeNumbers && /[0-9]/.test(candidate.label)) {
-      reject("numbers");
       return false;
     }
     if (required && !candidate.label.includes(required)) {
@@ -191,6 +200,21 @@ export function applyFilters(
   };
 }
 
+/** Case-insensitive A→Z with a stable numeric tie-breaker. */
+function compareLabels(a: Candidate, b: Candidate): number {
+  const left = a.label.toLowerCase();
+  const right = b.label.toLowerCase();
+  if (left !== right) return left < right ? -1 : 1;
+  // Same letters, different length is impossible for equal lowercase strings, but the numeric
+  // fallback keeps the order total if two candidates ever collide.
+  return a.length - b.length || a.overall - b.overall;
+}
+
+function semanticFactor(candidate: Candidate): number {
+  const factor = candidate.quality.factors.find((item) => item.key === "semantic");
+  return factor?.score ?? 0;
+}
+
 export function sortCandidates(
   candidates: Candidate[],
   sort: SortKey,
@@ -199,36 +223,40 @@ export function sortCandidates(
   const copy = [...candidates];
   switch (sort) {
     case "brandability":
-      return copy.sort((a, b) => b.brandability.score - a.brandability.score || a.label.localeCompare(b.label));
+      return copy.sort(
+        (a, b) => b.brandability.score - a.brandability.score || b.overall - a.overall || compareLabels(a, b),
+      );
+    case "brandability-asc":
+      return copy.sort(
+        (a, b) => a.brandability.score - b.brandability.score || a.overall - b.overall || compareLabels(a, b),
+      );
     case "quality":
-      return copy.sort((a, b) => b.quality.score - a.quality.score || a.label.localeCompare(b.label));
+      return copy.sort((a, b) => b.quality.score - a.quality.score || b.overall - a.overall || compareLabels(a, b));
+    case "quality-asc":
+      return copy.sort((a, b) => a.quality.score - b.quality.score || a.overall - b.overall || compareLabels(a, b));
+    case "overall-asc":
+      return copy.sort((a, b) => a.overall - b.overall || compareLabels(a, b));
     case "shortest":
-      return copy.sort((a, b) => a.length - b.length || b.overall - a.overall || a.label.localeCompare(b.label));
+      // Length of the brand name without its extension: `PayNest` is 7, not `paynest.com`.
+      return copy.sort((a, b) => a.label.length - b.label.length || b.overall - a.overall || compareLabels(a, b));
+    case "longest":
+      return copy.sort((a, b) => b.label.length - a.label.length || b.overall - a.overall || compareLabels(a, b));
     case "alphabetical":
-      return copy.sort((a, b) => a.label.localeCompare(b.label));
+      return copy.sort(compareLabels);
+    case "alphabetical-desc":
+      return copy.sort((a, b) => -compareLabels(a, b));
     case "semantic":
-      return copy.sort(
-        (a, b) => semanticFactor(b) - semanticFactor(a) || b.overall - a.overall,
-      );
-    case "root-match":
-      return copy.sort(
-        (a, b) => Number(b.preservesRoot) - Number(a.preservesRoot) || b.overall - a.overall,
-      );
+      return copy.sort((a, b) => semanticFactor(b) - semanticFactor(a) || b.overall - a.overall || compareLabels(a, b));
     case "recently-checked":
       return copy.sort((a, b) => {
         const aTime = availabilityFor(a, context)?.checkedAt ?? "";
         const bTime = availabilityFor(b, context)?.checkedAt ?? "";
-        return bTime.localeCompare(aTime) || b.overall - a.overall;
+        return bTime.localeCompare(aTime) || b.overall - a.overall || compareLabels(a, b);
       });
     case "overall":
     default:
-      return copy.sort((a, b) => b.overall - a.overall || a.label.localeCompare(b.label));
+      return copy.sort((a, b) => b.overall - a.overall || compareLabels(a, b));
   }
-}
-
-function semanticFactor(candidate: Candidate): number {
-  const factor = candidate.quality.factors.find((item) => item.key === "semantic");
-  return factor?.score ?? 0;
 }
 
 /** Explains why a filter combination produced nothing. */
@@ -241,12 +269,10 @@ export function explainEmptyState(outcome: FilterOutcome): string {
     tld: "extension",
     "min-length": "minimum length",
     "max-length": "maximum length",
+    "overall-min": "minimum domain score",
+    "overall-max": "maximum domain score",
     quality: "quality score floor",
     brandability: "brandability floor",
-    strategy: "naming strategy",
-    style: "naming style",
-    hyphens: "hyphen exclusion",
-    numbers: "number exclusion",
     required: "required text",
     excluded: "excluded text",
     favorites: "favourites only",
@@ -259,7 +285,7 @@ export function explainEmptyState(outcome: FilterOutcome): string {
     `The “${labels[topRule] ?? topRule}” filter removed ${topCount} of ${outcome.total} names.`,
   ];
   if (second) parts.push(`Next most restrictive: ${labels[second[0]] ?? second[0]} (${second[1]}).`);
-  parts.push("Relax those filters or generate again with fewer constraints.");
+  parts.push("Relax those filters or generate again with different rules.");
   return parts.join(" ");
 }
 
@@ -269,16 +295,14 @@ export function countActiveFilters(filters: ResultFilters): number {
   if (filters.tld) count += 1;
   if (filters.minLength > 0) count += 1;
   if (filters.maxLength > 0) count += 1;
+  if (filters.minOverall > 0) count += 1;
+  if (filters.maxOverall > 0) count += 1;
   if (filters.minQuality > 0) count += 1;
   if (filters.minBrandability > 0) count += 1;
-  if (filters.strategies.length > 0) count += 1;
   if (filters.availability.length > 0) count += 1;
   if (filters.favoritesOnly) count += 1;
-  if (filters.excludeHyphens) count += 1;
-  if (filters.excludeNumbers) count += 1;
   if (filters.requiredSubstring) count += 1;
   if (filters.excludedSubstring) count += 1;
-  if (filters.styleFilter) count += 1;
   if (filters.search) count += 1;
   return count;
 }

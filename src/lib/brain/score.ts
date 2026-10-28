@@ -35,7 +35,6 @@ import type {
   GenerationConstraints,
   ScoreFactor,
   ScoreResult,
-  WordStyle,
 } from "./types";
 
 export type ScoreInput = {
@@ -44,7 +43,6 @@ export type ScoreInput = {
   components: string[];
   strategy: CandidateStrategy;
   industries: string[];
-  styles: WordStyle[];
   constraints: GenerationConstraints;
   brandableProfiles: BrandableProfileId[];
   qualityProfile?: QualityProfile;
@@ -102,19 +100,9 @@ function industryRelevance(
   };
 }
 
-function wordQuality(
-  components: string[],
-  strategy: CandidateStrategy,
-): { score: number; explanation: string } {
-  if (strategy === "invented" || strategy === "short-abstract" || strategy === "pseudo-word") {
-    return {
-      score: 72,
-      explanation: "Invented form: phonetic rather than dictionary-based.",
-    };
-  }
-  if (strategy === "portmanteau") {
-    return { score: 68, explanation: "Blended word: recognisable fragments, not full words." };
-  }
+function wordQuality(components: string[]): { score: number; explanation: string } {
+  // Every name is two words now, so this measures whether both halves are recognisable —
+  // a partner that is only a fragment drags the score down, which is the intent.
   const known = components.filter((component) => ALL_KNOWN_WORDS.has(component));
   const ratio = components.length === 0 ? 0 : known.length / components.length;
   return {
@@ -123,25 +111,15 @@ function wordQuality(
   };
 }
 
-function distinctivenessScore(
-  label: string,
-  components: string[],
-  strategy: CandidateStrategy,
-): { score: number; explanation: string } {
-  const invented = strategy === "invented" || strategy === "pseudo-word" || strategy === "short-abstract";
-  const blended = strategy === "portmanteau";
+function distinctivenessScore(label: string, components: string[]): { score: number; explanation: string } {
   const allCommon = components.every((component) => ALL_KNOWN_WORDS.has(component));
 
   let score = 45;
   const reasons: string[] = [];
 
-  if (invented) {
-    score += 35;
-    reasons.push("invented form is unlikely to duplicate an existing word");
-  } else if (blended) {
-    score += 25;
-    reasons.push("blended spelling stands apart from dictionary terms");
-  } else if (allCommon) {
+  // Two-part names are made of whole words by definition, so the only lever here is how common
+  // those words are and how unusual the resulting letter pattern is.
+  if (allCommon) {
     score -= 10;
     reasons.push("made only of common words");
   }
@@ -199,9 +177,6 @@ function ruleFitScore(
 
 function profileMatch(
   label: string,
-  components: string[],
-  strategy: CandidateStrategy,
-  styles: WordStyle[],
   definition: BrandableProfileDefinition,
 ): { score: number; explanation: string } {
   let score = 55;
@@ -225,20 +200,6 @@ function profileMatch(
     score -= 8;
   }
 
-  const styleMatch = styles.some((style) => definition.preferredStyles.includes(style));
-  if (styleMatch) {
-    score += 10;
-    notes.push("style is a preferred fit");
-  }
-
-  const isOriginal = strategy === "invented" || strategy === "pseudo-word" || strategy === "short-abstract" || strategy === "portmanteau";
-  if (isOriginal && definition.originalityBias > 0.6) {
-    score += 8;
-    notes.push("originality is rewarded by this profile");
-  } else if (!isOriginal && definition.originalityBias < 0.4) {
-    score += 6;
-    notes.push("literal naming is rewarded by this profile");
-  }
 
   return {
     score: clamp(score),
@@ -276,20 +237,16 @@ function buildFactors(
   return { score: Number(total.toFixed(1)), factors };
 }
 
-function collisionRisk(label: string, strategy: CandidateStrategy): { score: number; explanation: string } {
+function collisionRisk(label: string): { score: number; explanation: string } {
   // This is NOT a registry lookup. It estimates how likely a name is to already exist
   // based on its shape, and the UI labels it as a heuristic.
-  const invented = strategy === "invented" || strategy === "pseudo-word";
   let score = 50;
-  if (invented) score -= 20;
   if (label.length <= 5) score += 25;
   else if (label.length <= 7) score += 12;
   if (/^(app|get|the|my|go|pro|hub|lab)/.test(label)) score += 12;
   return {
     score: clamp(score),
-    explanation: invented
-      ? "Invented spellings are less likely to collide, but this is a shape heuristic only."
-      : "Common word shapes collide more often; this is a heuristic, not a registry check.",
+    explanation: "Common word shapes collide more often; this is a heuristic, not a registry check.",
   };
 }
 
@@ -300,9 +257,9 @@ export function scoreCandidate(input: ScoreInput): ScoredCandidate {
   const phonetics = assessPhonetics(input.label);
   const semantic = semanticRelevance(input.label, input.root, input.industries, input.components);
   const industry = industryRelevance(input.components, input.root, input.industries);
-  const words = wordQuality(input.components, input.strategy);
-  const distinctive = distinctivenessScore(input.label, input.components, input.strategy);
-  const risk = collisionRisk(input.label, input.strategy);
+  const words = wordQuality(input.components);
+  const distinctive = distinctivenessScore(input.label, input.components);
+  const risk = collisionRisk(input.label);
   const definition = getBrandableDefinition(
     input.brandableProfiles[0] ?? ("startup" as BrandableProfileId),
   );
@@ -355,13 +312,7 @@ export function scoreCandidate(input: ScoreInput): ScoredCandidate {
       explanation: semantic.explanation,
     },
     lengthFit: brandLength,
-    profileMatch: profileMatch(
-      input.label,
-      input.components,
-      input.strategy,
-      input.styles,
-      definition,
-    ),
+    profileMatch: profileMatch(input.label, definition),
   });
 
   const notes: string[] = [];

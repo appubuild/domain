@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Download, Filter, ListFilter, ShieldCheck, X } from "lucide-react";
-import type { Candidate, CandidateStrategy, GenerationDiagnostics } from "@/lib/brain/types";
+import type { Candidate, GenerationDiagnostics } from "@/lib/brain/types";
 import { Badge, Button, Callout, Drawer, EmptyState, ProgressBar, Select } from "@/components/ui";
 import { ChipGroup, Field, Input } from "@/components/ui/form";
 import { cn } from "@/lib/utils/format";
@@ -35,18 +35,6 @@ const AVAILABILITY_STATUS_ORDER: AvailabilityStatus[] = [
   "check_failed",
   "rate_limited",
   "unsupported_tld",
-];
-
-const STRATEGIES: CandidateStrategy[] = [
-  "direct-combination",
-  "semantic-combination",
-  "phrase-template",
-  "portmanteau",
-  "invented",
-  "pseudo-word",
-  "short-abstract",
-  "keyword-only",
-  "exact-combination",
 ];
 
 export function ResultsPanel({
@@ -201,6 +189,29 @@ export function ResultsPanel({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
+        <Field label="Domain score ≥" description="The combined 0–100 score.">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={filters.minOverall || ""}
+            onChange={(event) => onFiltersChange({ ...filters, minOverall: Number(event.target.value) || 0 })}
+            aria-label="Minimum domain score"
+          />
+        </Field>
+        <Field label="Domain score ≤">
+          <Input
+            type="number"
+            min={0}
+            max={100}
+            value={filters.maxOverall || ""}
+            onChange={(event) => onFiltersChange({ ...filters, maxOverall: Number(event.target.value) || 0 })}
+            aria-label="Maximum domain score"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
         <Field label="Quality ≥">
           <Input
             type="number"
@@ -225,25 +236,6 @@ export function ResultsPanel({
         </Field>
       </div>
 
-      <Field label="Naming strategy">
-        <ChipGroup
-          label="Naming strategy"
-          options={STRATEGIES.map((strategy) => ({
-            value: strategy,
-            label: humanStrategy(strategy),
-          }))}
-          selected={filters.strategies}
-          onToggle={(value) =>
-            onFiltersChange({
-              ...filters,
-              strategies: filters.strategies.includes(value)
-                ? filters.strategies.filter((item) => item !== value)
-                : [...filters.strategies, value],
-            })
-          }
-        />
-      </Field>
-
       <Field label="Availability" description="Only meaningful once a check has run.">
         <ChipGroup
           label="Availability status"
@@ -266,36 +258,16 @@ export function ResultsPanel({
         />
       </Field>
 
-      <Field label="Characters">
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-[13px] text-fg">
-            <input
-              type="checkbox"
-              checked={filters.excludeHyphens}
-              onChange={(event) => onFiltersChange({ ...filters, excludeHyphens: event.target.checked })}
-              className="size-4 rounded border-border-strong accent-[var(--accent)]"
-            />
-            Exclude hyphens
-          </label>
-          <label className="flex items-center gap-2 text-[13px] text-fg">
-            <input
-              type="checkbox"
-              checked={filters.excludeNumbers}
-              onChange={(event) => onFiltersChange({ ...filters, excludeNumbers: event.target.checked })}
-              className="size-4 rounded border-border-strong accent-[var(--accent)]"
-            />
-            Exclude numbers
-          </label>
-          <label className="flex items-center gap-2 text-[13px] text-fg">
-            <input
-              type="checkbox"
-              checked={filters.favoritesOnly}
-              onChange={(event) => onFiltersChange({ ...filters, favoritesOnly: event.target.checked })}
-              className="size-4 rounded border-border-strong accent-[var(--accent)]"
-            />
-            Favourites only
-          </label>
-        </div>
+      <Field label="Favourites">
+        <label className="flex items-center gap-2 text-[13px] text-fg">
+          <input
+            type="checkbox"
+            checked={filters.favoritesOnly}
+            onChange={(event) => onFiltersChange({ ...filters, favoritesOnly: event.target.checked })}
+            className="size-4 rounded border-border-strong accent-[var(--accent)]"
+          />
+          Saved names only
+        </label>
       </Field>
 
       <div className="grid grid-cols-2 gap-2">

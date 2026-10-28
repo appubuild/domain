@@ -1,36 +1,63 @@
 "use client";
 
 import { useMemo } from "react";
-import { Info, Sparkles, TriangleAlert } from "lucide-react";
-import { Badge, Callout } from "@/components/ui";
+import { Info, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui";
+import { displayForm } from "@/lib/brain/pipeline";
+import { evaluatePlacement } from "@/lib/brain/placement";
+import { partnerWords } from "@/lib/brain/partners";
 import { cn } from "@/lib/utils/format";
-import { analyseRoot, recommendNamingStyles, NAMING_STYLES } from "@/lib/generator/naming-styles";
-import { INDUSTRIES } from "@/lib/brain";
+import { analyseRoot } from "@/lib/generator/root-insight";
 
 /**
  * Root analysis.
  *
- * Everything shown here is derived from the engine's own data — the semantic profile, the known
- * word set, the syllable counter — so the panel cannot claim a meaning the generator does not
- * actually use. Where the dictionaries know nothing about a root it says so rather than making
- * something up.
+ * Everything shown here is derived from the engine's own data — the semantic profile, the
+ * known-word set, the syllable counter and the placement scorer — so the panel cannot claim
+ * anything the generator does not actually use. Where the dictionaries know nothing about a root
+ * it says so rather than making something up.
  *
- * The industry buttons are a manual override: they set the industries the request expands from,
- * which is exactly what the generation uses.
+ * The industry shown here is the one the request will use. It is read-only on purpose: the single
+ * control for changing it is the compact dropdown in the form, so there is one place to look and
+ * no second, conflicting selector.
  */
 export function RootAnalysisPanel({
   root,
   selectedIndustries,
-  onToggleIndustry,
-  onClearIndustries,
+  partnerLengths,
 }: {
   root: string;
   selectedIndustries: string[];
-  onToggleIndustry: (id: string) => void;
-  onClearIndustries: () => void;
+  partnerLengths: number[];
 }) {
   const analysis = useMemo(() => analyseRoot(root, selectedIndustries), [root, selectedIndustries]);
-  const recommendation = useMemo(() => recommendNamingStyles(root), [root]);
+
+  // Three worked examples of the naming rule, produced by the same scorer the generator uses.
+  const examples = useMemo(() => {
+    const word = analysis.root;
+    if (!word) return [];
+    return partnerWords({
+      lengths: partnerLengths.length > 0 ? partnerLengths : [3, 4, 5],
+      industries: selectedIndustries,
+      includeLibraries: true,
+    })
+      .filter((entry) => entry.word !== word && !entry.word.includes(word) && !word.includes(entry.word))
+      .slice(0, 40)
+      .map((entry) => {
+        const placement = evaluatePlacement(word, entry, { industries: selectedIndustries });
+        const components =
+          placement.preferred === "root-partner" ? [word, entry.word] : [entry.word, word];
+        return {
+          display: displayForm(components),
+          domain: `${components.join("")}.com`,
+          label: components.join(""),
+          score: placement.scores[placement.preferred],
+        };
+      })
+      // Strongest pairings first; the list is a demonstration of the rule, not a ranking.
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+  }, [analysis.root, partnerLengths, selectedIndustries]);
 
   if (!root.trim()) {
     return (
@@ -39,8 +66,8 @@ export function RootAnalysisPanel({
           <Info className="size-3" aria-hidden="true" /> Root analysis
         </h2>
         <p className="mt-1 text-[11px] leading-relaxed text-fg-muted">
-          Enter a root keyword to see how the engine reads it: whether it is a word, an abbreviation or a
-          coined form, what it is associated with, and which naming styles fit its shape.
+          Enter a root keyword to see how the engine reads it: whether it is a word, an abbreviation
+          or a coined form, what vocabulary it touches, and how a partner word would join it.
         </p>
       </section>
     );
@@ -84,7 +111,10 @@ export function RootAnalysisPanel({
             <p className="text-[11px] font-medium text-fg-muted">Related words used by the engine</p>
             <div className="flex flex-wrap gap-1">
               {analysis.synonyms.map((synonym) => (
-                <span key={synonym} className="rounded-full bg-surface-2 px-1.5 py-0.5 font-mono text-[10.5px] text-fg-muted">
+                <span
+                  key={synonym}
+                  className="rounded-full bg-surface-2 px-1.5 py-0.5 font-mono text-[10.5px] text-fg-muted"
+                >
                   {synonym}
                 </span>
               ))}
@@ -111,21 +141,13 @@ export function RootAnalysisPanel({
         ) : null}
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] font-medium text-fg-muted">Industries</p>
-            {selectedIndustries.length > 0 ? (
-              <button
-                type="button"
-                onClick={onClearIndustries}
-                className="text-[10.5px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
-              >
-                Use detected
-              </button>
-            ) : null}
-          </div>
+          <p className="text-[11px] font-medium text-fg-muted">
+            Industries{selectedIndustries.length > 0 ? " (your override)" : " (detected)"}
+          </p>
           {analysis.industries.length === 0 ? (
             <p className="text-[11px] text-fg-subtle">
-              No industry vocabulary matched this root. Pick one below to expand from its terms.
+              No industry vocabulary matched this root, so the general partner words are used. Pick
+              one in the Industry dropdown to expand from its terms.
             </p>
           ) : (
             <ul className="space-y-1">
@@ -137,54 +159,33 @@ export function RootAnalysisPanel({
               ))}
             </ul>
           )}
-          <div className="flex flex-wrap gap-1 pt-0.5">
-            {INDUSTRIES.filter((industry) => analysis.industries.some((match) => match.id === industry.id)).length ===
-            0
-              ? INDUSTRIES.slice(0, 6).map((industry) => (
-                  <button
-                    key={industry.id}
-                    type="button"
-                    onClick={() => onToggleIndustry(industry.id)}
-                    className={cn(
-                      "rounded-full border px-1.5 py-0.5 text-[10.5px]",
-                      selectedIndustries.includes(industry.id)
-                        ? "border-accent bg-accent-soft text-accent-soft-fg"
-                        : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
-                    )}
-                  >
-                    {industry.name}
-                  </button>
-                ))
-              : null}
-          </div>
           <p className="text-[10.5px] leading-relaxed text-fg-subtle">
             Match percentages come from the industry dictionaries; they are prompt material, not a market claim.
           </p>
         </div>
 
-        <div className="space-y-1 border-t border-border pt-2">
-          <p className="text-[11px] font-medium text-fg-muted">Suggested styles</p>
-          <div className="flex flex-wrap gap-1">
-            {recommendation.styles.map((id) => (
-              <span key={id} className="rounded-full bg-accent-soft px-1.5 py-0.5 text-[10.5px] text-accent-soft-fg">
-                {NAMING_STYLES.find((style) => style.id === id)?.label ?? id}
-              </span>
-            ))}
+        {examples.length > 0 ? (
+          <div className="space-y-1.5 border-t border-border pt-2">
+            <p className="text-[11px] font-medium text-fg-muted">How this root pairs</p>
+            <ul className="space-y-1">
+              {examples.map((example) => (
+                <li key={example.label} className="flex items-baseline justify-between gap-2 text-[11.5px]">
+                  <span className="font-semibold text-fg">{example.display}</span>
+                  <span className="font-mono text-[10.5px] text-fg-subtle">{example.domain}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[10.5px] leading-relaxed text-fg-subtle">
+              Examples from the engine's own scorer, not availability claims. Pairs where both orders
+              read well produce two names; the rest produce one.
+            </p>
           </div>
-          <p className="text-[10.5px] leading-relaxed text-fg-subtle">{recommendation.reason}</p>
-        </div>
+        ) : null}
 
         <div className="space-y-1">
-          <p className="text-[11px] font-medium text-fg-muted">Sector suitability</p>
+          <p className="text-[11px] font-medium text-fg-muted">Length</p>
           <p className="text-[11.5px] leading-relaxed text-fg-muted">{analysis.suitability}</p>
         </div>
-
-        {selectedIndustries.length > 0 ? (
-          <Callout tone="info" icon={<TriangleAlert className="size-3.5" />}>
-            Industry override active: expansion uses {selectedIndustries.length} selected{" "}
-            {selectedIndustries.length === 1 ? "industry" : "industries"} instead of the detected ones.
-          </Callout>
-        ) : null}
       </div>
     </section>
   );

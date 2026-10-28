@@ -236,7 +236,7 @@ on conflict (id, version) do nothing;
 insert into public.brandable_profiles (id, name, description, ideal_length_min, ideal_length_max, ideal_syllables_min, ideal_syllables_max, preferred_styles, originality_bias, enabled, display_order) values
 ${BRANDABLE_PROFILE_DEFINITIONS.map(
   (profile, index) =>
-    `  (${q(profile.id)}, ${q(profile.name)}, ${q(profile.description)}, ${profile.idealLength[0]}, ${profile.idealLength[1]}, ${profile.idealSyllables[0]}, ${profile.idealSyllables[1]}, ${arr(profile.preferredStyles)}, ${profile.originalityBias}, true, ${index * 10 + 10})`,
+    `  (${q(profile.id)}, ${q(profile.name)}, ${q(profile.description)}, ${profile.idealLength[0]}, ${profile.idealLength[1]}, ${profile.idealSyllables[0]}, ${profile.idealSyllables[1]}, ${arr([])}, 0.5, true, ${index * 10 + 10})`,
 ).join(",\n")}
 on conflict (id) do nothing;
 `);

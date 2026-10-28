@@ -19,7 +19,7 @@ function candidate(label: string, overrides: Partial<ExportCandidate> = {}): Exp
     root: "pay",
     length: label.length,
     syllables: 2,
-    strategy: "direct-combination",
+    strategy: "partner-combination",
     overall: 70,
     quality: { score: 72.5, factors: [], profileId: "quality-default", profileVersion: 1 },
     brandability: { score: 64, factors: [], profileId: "brandable-default", profileVersion: 1 },

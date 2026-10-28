@@ -9,6 +9,7 @@
 export * from "./types";
 export {
   createGenerationRequest,
+  displayForm,
   generate,
   type GenerationOptions,
 } from "./pipeline";
@@ -53,6 +54,20 @@ export {
   BANNED_FRAGMENTS,
   RESERVED_LABELS,
 } from "./dictionaries/words";
-export { GENERATION_STRATEGIES } from "./generate";
+export {
+  PARTNER_DATASETS,
+  PARTNER_INDEX,
+  PARTNER_LENGTH_CHOICES,
+  PARTNER_LEXICON,
+  SUPPORTED_PARTNER_LENGTHS,
+  buildPartnerIndex,
+  partnerWordLength,
+  partnerWords,
+  type PartnerDataset,
+  type PartnerRole,
+  type PartnerWord,
+} from "./partners";
+export { BOTH_PLACEMENTS_THRESHOLD, evaluatePlacement, junctionScore, primaryRole } from "./placement";
+export { buildPartnerCandidates, type PartnerCandidate, type PartnerRuleRejection } from "./partner-engine";
 export { TLD_DIRECTORY, DEFAULT_TLDS, tldRecord, checkabilityLabel } from "./tlds";
 export { createRng, hashString } from "./rng";

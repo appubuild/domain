@@ -7,34 +7,22 @@
  * breaking change for those three consumers — keep it additive.
  */
 
-export const ENGINE_VERSION = "1.0.0";
+/**
+ * Engine generation. Bumped to 2.0.0 when naming styles were removed: a candidate is now always
+ * the primary root plus exactly one partner root, in the order the placement scorer chose.
+ */
+export const ENGINE_VERSION = "2.0.0";
 
 /* ---------------------------------- inputs --------------------------------- */
 
-export type KeywordPosition = "prefix" | "suffix" | "both" | "exact" | "flexible";
-
-export type WordStyle =
-  | "standard"
-  | "natural-compound"
-  | "keyword-industry"
-  | "keyword-brand-prefix"
-  | "keyword-brand-suffix"
-  | "compound"
-  | "portmanteau"
-  | "invented"
-  | "pseudo-word"
-  | "short-abstract"
-  | "exact-combination"
-  | "ai-assisted";
-
-export type GrammarMode =
-  | "dictionary-only"
-  | "recognized"
-  | "natural"
-  | "industry"
-  | "creative"
-  | "invented"
-  | "unrestricted";
+/**
+ * Word order of a generated name.
+ *
+ * There are exactly two shapes, and no others: the primary root followed by one partner root, or
+ * one partner root followed by the primary root. The engine picks the order per partner — the user
+ * never chooses a "naming style".
+ */
+export type PlacementOrder = "root-partner" | "partner-root";
 
 export type BrandableProfileId =
   | "short-abstract"
@@ -95,30 +83,29 @@ export type GenerationConstraints = {
 export type ScoringWeights = Record<string, number>;
 
 export type GenerationRequest = {
-  /** Raw root keywords as typed by the user. */
+  /** Raw root keywords as typed by the user. The UI enforces exactly one. */
   roots: string[];
-  position: KeywordPosition;
-  styles: WordStyle[];
-  grammar: GrammarMode;
-  /** Industry ids from the industry dictionary; empty = all / no expansion. */
-  industries: string[];
-  /** Industry ids whose extra terms are expanded into the search space. */
-  expandIndustries: boolean;
-  /** Concrete prefix/suffix words the user selected, in addition to libraries. */
-  customPrefixes: string[];
-  customSuffixes: string[];
-  /** Library ids to pull auto prefixes/suffixes from. */
-  prefixLibraries: string[];
-  suffixLibraries: string[];
   /**
-   * Allowed alphabetic length of the *partner* word — the component added to the root — for
-   * every strategy. 2/3/4/5 are the UI's choices; an empty list means "any length".
+   * Industry ids the request expands from. Empty means "let the engine detect them from the root";
+   * a non-empty list is a manual override and is used verbatim.
+   */
+  industries: string[];
+  /** Industry ids whose extra terms are expanded into the partner pool. */
+  expandIndustries: boolean;
+  /** Partner words the user typed in; they join the pool regardless of the dictionaries. */
+  customPartners: string[];
+  /** Library ids to draw partner words from; empty means every shipped library. */
+  partnerLibraries: string[];
+  /**
+   * Allowed alphabetic length of the *partner* word — the single component added to the root.
+   * 2/3/4/5/6 are the UI's choices; an empty list means "any length".
    *
    * This is a length filter on the partner alone, not on the finished label: a 4-letter partner
-   * next to a 3-letter root produces a 7-letter name, and that is the intended reading.
+   * next to a 3-letter root produces a 7-letter name. The finished length is never a separate
+   * control; it is `root.length + partner.length`.
    */
   partnerLengths: number[];
-  /** When false, only custom prefixes/suffixes are used. */
+  /** When false, only custom and industry partner words are used (library words are skipped). */
   autoExpand: boolean;
   targetCount: number;
   constraints: GenerationConstraints;
@@ -136,28 +123,29 @@ export type GenerationRequest = {
 
 /* --------------------------------- outputs -------------------------------- */
 
-export type CandidateStrategy =
-  | "direct-combination"
-  | "semantic-combination"
-  | "phrase-template"
-  | "portmanteau"
-  | "invented"
-  | "pseudo-word"
-  | "short-abstract"
-  | "keyword-only"
-  | "exact-combination";
+/** One strategy remains: root + one partner root. */
+export type CandidateStrategy = "partner-combination";
 
 export type Candidate = {
   /** Lower-case domain label without dot/TLD, e.g. `paynest`. */
   label: string;
-  /** Display form with the original casing of components, e.g. `PayNest`. */
+  /** Readable CamelCase form, e.g. `PayNest`. Display only — never used in a lookup. */
   displayName: string;
   /** Root keyword this candidate was built from. */
   root: string;
-  /** Components in order, e.g. `["pay","nest"]`. */
+  /** The single partner root added to it. */
+  partner: string;
+  /** Word order the engine chose for this candidate. */
+  order: PlacementOrder;
+  /** Why that order won, with the score of both orders. */
+  placement: {
+    scores: Record<PlacementOrder, number>;
+    confidence: number;
+    reasons: string[];
+  };
+  /** Components in order, e.g. `["pay","nest"]`. Always exactly two. */
   components: string[];
   strategy: CandidateStrategy;
-  styles: WordStyle[];
   /** Matched industry ids (may be empty). */
   industries: string[];
   length: number;
@@ -212,8 +200,12 @@ export type GenerationDiagnostics = {
   /** Human-readable reasons the target was not reached. */
   reasons: string[];
   elapsedMs: number;
-  /** Estimated size of the search space before constraint filtering. */
+  /** Partner words the pool contained, before any validity check. */
+  partnerWords: number;
+  /** Estimated size of the search space: both orders of every usable partner word. */
   spaceEstimate: number;
+  /** How many returned names put the partner first / last. */
+  placementSplit: { "root-partner": number; "partner-root": number };
   strategiesRun: CandidateStrategy[];
   seed: number;
   engineVersion: string;

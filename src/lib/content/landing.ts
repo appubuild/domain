@@ -18,15 +18,15 @@ export const HOW_IT_WORKS: LandingStep[] = [
   },
   {
     title: "Analyse the root",
-    body: "The engine classifies it as a word, an abbreviation or a coined form, then reads meaning, variants, syllables and the industries it points at. Every conclusion is shown, and you can override the industry and the style.",
+    body: "The engine classifies it as a word, an abbreviation or a coined form, then reads meaning, variants, syllables and the industries it points at. Every conclusion is shown, and a detected industry can be overridden — it stays in force until you reset it or change the root.",
   },
   {
     title: "Expand semantically",
     body: "Dictionaries add industry vocabulary, synonyms and neutral concepts. Expansion can be disabled, and a manual override replaces the automatic read entirely.",
   },
   {
-    title: "Generate with the chosen styles",
-    body: "Root + partner, partner + root, prefix + root, root + suffix, three-part compounds and shortened or coined forms. Partner length is filtered on the partner word only, and 2, 3, 4 and 5 letters can be selected at the same time.",
+    title: "Place the partner root",
+    body: "Every name is your primary root plus exactly one partner root, in one of two orders: root first (HomeNest) or partner first (NestHome). The engine scores both readings and keeps the better one — a partner never appears on both sides, and the finished length is simply the two words added together. You control the partner's length: 2, 3, 4, 5 and 6 letters can be selected at once.",
   },
   {
     title: "Filter, de-duplicate, score",
@@ -47,12 +47,12 @@ export const FEATURES: LandingFeature[] = [
     body: "A single primary root, classified and expanded with dictionaries you can inspect — not a black box. Multiple roots are refused rather than silently merged.",
   },
   {
-    title: "Partner lengths 2 · 3 · 4 · 5",
-    body: "Filter the partner word by its own alphabetic length — 2, 3, 4 and 5 letters, with any combination of the four active at once. The length of the finished name stays a separate constraint.",
+    title: "Partner lengths 2 · 3 · 4 · 5 · 6",
+    body: "Filter the partner word by its own alphabetic length — 2 to 6 letters, with any combination active at once. The finished name is that plus your root; there is no separate total-length setting to keep in sync.",
   },
   {
-    title: "Six naming styles",
-    body: "Root + partner, partner + root, prefix + root, root + suffix, compounds and shortened or coined forms — each mapped to the strategies that produce it, with a recommendation based on your root.",
+    title: "The better order, chosen for you",
+    body: "You do not pick a naming style. For every partner word the engine tries both orders and scores them on role fit, how the two words join, pronounceability and industry relevance — then keeps the stronger reading, and keeps both only when both genuinely hold up.",
   },
   {
     title: "Exact quantities, honest failures",
@@ -93,7 +93,7 @@ export const LANDING_FAQ: LandingFaq[] = [
   {
     question: "Can I really get exactly 1,000 names?",
     answer:
-      "Yes, when your constraints leave at least 1,000 distinct valid candidates. If they do not, the engine returns everything it could build and tells you which constraint is limiting the count — adding partner lengths, enabling compounds or widening the length range raises it.",
+      "Sometimes. 1,000 names need 1,000 distinct valid two-part combinations, so a root with a large partner vocabulary can reach it and a small one cannot. When it cannot, the engine returns everything it could build and names the limit — usually the number of partner words at the lengths you selected. It never pads the list.",
   },
   {
     question: "Do I need an account?",

@@ -1,45 +1,41 @@
 /**
  * Generation pipeline.
  *
- *   normalise roots → semantic profiles → strategies → constraint filter → de-duplicate
- *   → score → rank → slice to the requested count
+ *   normalise root → partner pool → both word orders → naming rules → de-duplicate
+ *   → score → rank → take the requested count
  *
- * The pipeline is bounded three ways so a browser tab can never lock up: a hard attempt
- * cap, a wall-clock budget, and a server-side target cap. When it cannot reach the
- * requested count it says so — with the reasons — instead of padding the list.
+ * The shape of a candidate is fixed by `partner-engine.ts`: the primary root plus exactly one
+ * partner root. Everything this file does is decide *which* of those are worth returning and in
+ * what order.
+ *
+ * Bounds are deliberate — an attempt cap, a wall-clock budget and a scoring cap — so a browser tab
+ * cannot lock up on a large request. When the target cannot be reached the diagnostics say why,
+ * with the constraint that is actually the ceiling, instead of padding the list.
  */
 
-import { SANE_LIMITS, checkCandidate, normalizeConstraints, respectsPosition } from "./constraints";
-import {
-  compoundCombinations,
-  directCombinations,
-  externalCandidates,
-  inventedNames,
-  phraseTemplates,
-  portmanteaus,
-  semanticCombinations,
-  type RawCandidate,
-} from "./generate";
+import { SANE_LIMITS, checkCandidate, normalizeConstraints } from "./constraints";
 import { dedupeKey, normalizeKeyword, normalizeTld } from "./normalize";
-import { createRng } from "./rng";
-import { scoreCandidate, type ScoredCandidate } from "./score";
-import { buildSemanticProfile } from "./semantics";
+import { buildPartnerCandidates, type PartnerCandidate } from "./partner-engine";
+import { hashString } from "./rng";
+import { scoreCandidate } from "./score";
 import { DEFAULT_QUALITY_PROFILE, DEFAULT_BRANDABILITY_PROFILE } from "./scoring-profiles";
+import { buildSemanticProfile } from "./semantics";
 import {
   ENGINE_VERSION,
   type Candidate,
-  type CandidateStrategy,
+  type GenerationDiagnostics,
   type GenerationRequest,
   type GenerationResult,
-  type GenerationConstraints,
 } from "./types";
 
 const DEFAULT_MAX_ATTEMPTS = 60_000;
 const DEFAULT_BUDGET_MS = 2_500;
 
+/** How many candidates to score. Scoring is the expensive step, so it is bounded separately. */
+const SCORE_FLOOR = 4_000;
+const SCORE_PER_TARGET = 8;
+
 export type GenerationOptions = {
-  /** Names supplied by an external source (AI provider, import). Still fully validated. */
-  externalNames?: string[];
   /** Overrides for tests / API callers. */
   now?: () => number;
 };
@@ -47,24 +43,23 @@ export type GenerationOptions = {
 export function createGenerationRequest(partial: Partial<GenerationRequest> = {}): GenerationRequest {
   return {
     roots: partial.roots ?? [],
-    position: partial.position ?? "both",
-    styles: partial.styles ?? ["standard", "keyword-industry", "compound"],
-    grammar: partial.grammar ?? "recognized",
+    // Empty means "detect from the root"; the pipeline fills it in per root.
     industries: partial.industries ?? [],
     expandIndustries: partial.expandIndustries ?? true,
-    customPrefixes: partial.customPrefixes ?? [],
-    customSuffixes: partial.customSuffixes ?? [],
-    // Empty means "every library" (see `partnerPools`). A hard-coded pair here silently
-    // overrode the caller's choice and was the main reason large targets could not be met.
-    prefixLibraries: partial.prefixLibraries ?? [],
-    suffixLibraries: partial.suffixLibraries ?? [],
-    partnerLengths: (partial.partnerLengths ?? []).filter((length) => Number.isInteger(length) && length >= 2 && length <= 12),
+    customPartners: partial.customPartners ?? [],
+    // Empty means "every library" — a hard-coded subset here silently overrode the caller.
+    partnerLibraries: partial.partnerLibraries ?? [],
+    partnerLengths: (partial.partnerLengths ?? []).filter(
+      (length) => Number.isInteger(length) && length >= 2 && length <= 12,
+    ),
     autoExpand: partial.autoExpand ?? true,
     targetCount: clampTarget(partial.targetCount ?? 100),
     constraints: normalizeConstraints(partial.constraints),
     brandable: partial.brandable ?? false,
     brandableProfiles: partial.brandableProfiles ?? ["startup"],
-    tlds: (partial.tlds ?? ["com"]).map((tld) => normalizeTld(tld)).filter((tld): tld is string => Boolean(tld)),
+    tlds: (partial.tlds ?? ["com"])
+      .map((tld) => normalizeTld(tld))
+      .filter((tld): tld is string => Boolean(tld)),
     seed: partial.seed ?? 1,
     maxAttempts: partial.maxAttempts,
     budgetMs: partial.budgetMs,
@@ -76,19 +71,17 @@ function clampTarget(value: number): number {
   return Math.min(SANE_LIMITS.maxTarget, Math.max(1, Math.round(value)));
 }
 
-type RejectionCounts = Map<string, number>;
-
 export function generate(request: GenerationRequest, options: GenerationOptions = {}): GenerationResult {
   const now = options.now ?? (() => Date.now());
   const startedAt = now();
   const budgetMs = request.budgetMs ?? DEFAULT_BUDGET_MS;
   const maxAttempts = Math.min(request.maxAttempts ?? DEFAULT_MAX_ATTEMPTS, DEFAULT_MAX_ATTEMPTS * 4);
 
-  const constraints: GenerationConstraints = normalizeConstraints(request.constraints);
+  const constraints = normalizeConstraints(request.constraints);
   const target = clampTarget(request.targetCount);
   const reasons: string[] = [];
-  const rejections: RejectionCounts = new Map();
-  const strategiesRun = new Set<CandidateStrategy>();
+  const rejections = new Map<string, number>();
+  let budgetHit = false;
 
   const normalizedRoots = request.roots
     .map((root) => normalizeKeyword(root))
@@ -97,20 +90,7 @@ export function generate(request: GenerationRequest, options: GenerationOptions 
   if (normalizedRoots.length === 0) {
     return {
       candidates: [],
-      diagnostics: {
-        requested: target,
-        produced: 0,
-        considered: 0,
-        rejectedByConstraint: 0,
-        duplicatesRemoved: 0,
-        exhausted: true,
-        reasons: ["No valid root keyword was supplied."],
-        elapsedMs: 0,
-        spaceEstimate: 0,
-        strategiesRun: [],
-        seed: request.seed,
-        engineVersion: ENGINE_VERSION,
-      },
+      diagnostics: emptyDiagnostics(target, request.seed, "No valid root keyword was supplied."),
     };
   }
 
@@ -120,215 +100,195 @@ export function generate(request: GenerationRequest, options: GenerationOptions 
     );
   }
 
-  // ---- 1. gather raw candidates, grouped by strategy -----------------------
-  const byStrategy = new Map<CandidateStrategy, RawCandidate[]>();
-  let attempts = 0;
-  let spaceEstimate = 0;
-  let budgetHit = false;
+  /**
+   * The industries a root expands from.
+   *
+   * A manual choice wins verbatim; otherwise the top detected sectors are used, so the partner
+   * vocabulary matches the root without the user having to pick anything. Computed once per root —
+   * scoring needs the same list for every candidate of that root.
+   */
+  const industriesForRoot = new Map<string, string[]>();
+  for (const keyword of normalizedRoots) {
+    industriesForRoot.set(
+      keyword.ascii,
+      request.industries.length > 0
+        ? request.industries
+        : buildSemanticProfile(keyword.ascii, { industries: [], expandIndustries: false, limit: 3 })
+            .industries.slice(0, 3)
+            .map((match) => match.id),
+    );
+  }
 
-  const collect = (items: RawCandidate[]) => {
-    for (const item of items) {
-      attempts += 1;
-      spaceEstimate += 1;
-      if (attempts > maxAttempts) return;
-      const bucket = byStrategy.get(item.strategy) ?? [];
-      bucket.push(item);
-      byStrategy.set(item.strategy, bucket);
-      strategiesRun.add(item.strategy);
-    }
-  };
+  /* ---- 1. candidates: every partner in both orders, then the naming rules ---- */
+
+  const valid: PartnerCandidate[] = [];
+  const seen = new Set<string>();
+  let duplicatesRemoved = 0;
+  let rejectedByConstraint = 0;
+  let considered = 0;
+  let partnerPool = 0;
+  let partnerRuleRejections = 0;
 
   for (const keyword of normalizedRoots) {
-    if (budgetHit) break;
+    if (now() - startedAt > budgetMs) {
+      budgetHit = true;
+      break;
+    }
     const root = keyword.ascii;
-    const rng = createRng(`${request.seed}:${root}:${request.styles.join(",")}`);
-    const profile = buildSemanticProfile(root, {
-      industries: request.industries,
-      expandIndustries: request.expandIndustries,
-      limit: 160,
+    const industries = industriesForRoot.get(root) ?? [];
+
+    const built = buildPartnerCandidates(root, {
+      ...request,
+      industries: request.expandIndustries ? industries : [],
     });
-
-    collect(directCombinations(root, request, rng));
-    if (now() - startedAt > budgetMs) {
-      budgetHit = true;
-      break;
+    partnerPool += built.partnerPool;
+    partnerRuleRejections += built.rejections.length;
+    for (const rejection of built.rejections) {
+      rejections.set(rejection.rule, (rejections.get(rejection.rule) ?? 0) + 1);
     }
 
-    // Large targets need more raw material than prefixes and suffixes alone can supply; the
-    // compound pass only runs when the style asks for it, and its size scales with the request.
-    collect(compoundCombinations(root, request, rng, Math.max(1_200, target * 4)));
-    if (now() - startedAt > budgetMs) {
-      budgetHit = true;
-      break;
-    }
-
-    collect(semanticCombinations(root, profile, request));
-    collect(phraseTemplates(root, profile, request));
-    collect(portmanteaus(root, profile, request, rng));
-    collect(inventedNames(root, request, rng));
-
-    if (options.externalNames && options.externalNames.length > 0) {
-      collect(externalCandidates(options.externalNames, root, request));
-    }
-
-    if (now() - startedAt > budgetMs) {
-      budgetHit = true;
-      break;
-    }
-  }
-
-  // ---- 2. constraint filter ----------------------------------------------
-  const seen = new Set<string>();
-  const valid: RawCandidate[] = [];
-  let rejectedByConstraint = 0;
-  let duplicatesRemoved = 0;
-
-  const interleaved = interleave(byStrategy);
-  for (const candidate of interleaved) {
-    if (!respectsPosition(candidate.label, candidate.root, request.position)) {
-      rejectedByConstraint += 1;
-      rejections.set("position", (rejections.get("position") ?? 0) + 1);
-      continue;
-    }
-    const violations = checkCandidate(
-      { label: candidate.label, components: candidate.components, root: candidate.root },
-      constraints,
-    );
-    if (violations.length > 0) {
-      rejectedByConstraint += 1;
-      for (const violation of violations) {
-        rejections.set(violation.rule, (rejections.get(violation.rule) ?? 0) + 1);
+    for (const candidate of built.candidates) {
+      considered += 1;
+      if (considered > maxAttempts) {
+        budgetHit = true;
+        break;
       }
-      continue;
+      const violations = checkCandidate(
+        { label: candidate.label, components: candidate.components, root: candidate.root },
+        constraints,
+      );
+      if (violations.length > 0) {
+        rejectedByConstraint += 1;
+        for (const violation of violations) {
+          rejections.set(violation.rule, (rejections.get(violation.rule) ?? 0) + 1);
+        }
+        continue;
+      }
+      const key = `${candidate.root}:${dedupeKey(candidate.label)}`;
+      if (seen.has(key)) {
+        duplicatesRemoved += 1;
+        continue;
+      }
+      seen.add(key);
+      valid.push(candidate);
     }
-    const key = `${candidate.root}:${dedupeKey(candidate.label)}`;
-    if (seen.has(key)) {
-      duplicatesRemoved += 1;
-      continue;
-    }
-    seen.add(key);
-    valid.push(candidate);
   }
 
-  // ---- 3. score (bounded) -------------------------------------------------
-  // Scoring is the expensive step; cap it but keep representation from every strategy.
-  // Scoring is the expensive step, so it is capped — but generously enough that a 1000-name
-  // request still has several candidates per slot to rank and diversify. The wall-clock budget
-  // below is the real guard against a slow device.
-  const scoreLimit = Math.min(valid.length, Math.max(target * 6, 1_500));
-  const toScore = valid.slice(0, scoreLimit);
+  /* ---- 2. score, rank, cut ------------------------------------------------- */
 
-  const scored: Array<{ raw: RawCandidate; scored: ScoredCandidate }> = [];
-  for (const raw of toScore) {
+  const scoreLimit = Math.min(valid.length, Math.max(target * SCORE_PER_TARGET, SCORE_FLOOR));
+  const scored: Array<{ raw: PartnerCandidate; result: ReturnType<typeof scoreCandidate> }> = [];
+
+  for (const raw of valid.slice(0, scoreLimit)) {
     if (now() - startedAt > budgetMs * 3) {
       budgetHit = true;
       break;
     }
-    const profileForRoot = buildSemanticProfile(raw.root, {
-      industries: request.industries,
-      expandIndustries: false,
-      limit: 1,
-    });
-    const industries =
-      request.industries.length > 0
-        ? request.industries
-        : profileForRoot.industries.slice(0, 3).map((match) => match.id);
-
     const result = scoreCandidate({
       label: raw.label,
       root: raw.root,
       components: raw.components,
-      strategy: raw.strategy,
-      industries,
-      styles: raw.styles,
+      strategy: "partner-combination",
+      industries: industriesForRoot.get(raw.root) ?? [],
       constraints,
       brandableProfiles: request.brandableProfiles,
       qualityProfile: DEFAULT_QUALITY_PROFILE,
       brandabilityProfile: DEFAULT_BRANDABILITY_PROFILE,
     });
-    scored.push({ raw, scored: result });
+    scored.push({ raw, result });
   }
 
-  // ---- 4. rank ------------------------------------------------------------
-  const ranked = request.brandable
-    ? [...scored].sort(
-        (a, b) =>
-          b.scored.brandability.score - a.scored.brandability.score ||
-          b.scored.quality.score - a.scored.quality.score ||
-          a.raw.label.localeCompare(b.raw.label),
-      )
-    : [...scored].sort(
-        (a, b) =>
-          b.scored.overall - a.scored.overall ||
-          a.raw.label.length - b.raw.label.length ||
-          a.raw.label.localeCompare(b.raw.label),
+  // The seed decides the order of names that score identically — a real, reproducible effect and
+  // the only thing it does. It never changes which names exist for a given request.
+  const tieKey = (candidate: PartnerCandidate): string =>
+    `${hashString(`${request.seed}:${candidate.label}`)}:${candidate.label}`;
+
+  const ranked = [...scored].sort((a, b) => {
+    if (request.brandable) {
+      return (
+        b.result.brandability.score - a.result.brandability.score ||
+        b.result.quality.score - a.result.quality.score ||
+        tieKey(a.raw).localeCompare(tieKey(b.raw))
       );
-
-  const selected = diversify(ranked, target);
-
-  const tlds = request.tlds.length > 0 ? request.tlds : ["com"];
-  const candidates: Candidate[] = selected.map(({ raw, scored: result }) => {
-    const industries =
-      request.industries.length > 0
-        ? request.industries
-        : buildSemanticProfile(raw.root, { industries: [], expandIndustries: false, limit: 1 })
-            .industries.slice(0, 3)
-            .map((match) => match.id);
-    return {
-      label: raw.label,
-      displayName: displayForm(raw.components, raw.label),
-      root: raw.root,
-      components: raw.components,
-      strategy: raw.strategy,
-      styles: raw.styles,
-      industries,
-      length: raw.label.length,
-      syllables: result.syllables,
-      quality: result.quality,
-      brandability: result.brandability,
-      overall: result.overall,
-      domains: tlds.map((tld) => ({ tld, domain: `${raw.label}.${tld}` })),
-      preservesRoot: raw.components.includes(raw.root),
-      notes: result.notes,
-    };
+    }
+    return (
+      b.result.overall - a.result.overall ||
+      a.raw.label.length - b.raw.label.length ||
+      tieKey(a.raw).localeCompare(tieKey(b.raw))
+    );
   });
 
-  // ---- 5. diagnostics ----------------------------------------------------
-  const exhausted = valid.length <= target && !budgetHit;
+  const selected = ranked.slice(0, target);
+
+  const tlds = request.tlds.length > 0 ? request.tlds : ["com"];
+  const candidates: Candidate[] = selected.map(({ raw, result }) => ({
+    label: raw.label,
+    displayName: displayForm(raw.components),
+    root: raw.root,
+    partner: raw.partner,
+    order: raw.order,
+    placement: {
+      scores: raw.placement.scores,
+      confidence: raw.placement.confidence,
+      reasons: raw.placement.reasons,
+    },
+    components: raw.components,
+    strategy: "partner-combination",
+    industries: industriesForRoot.get(raw.root) ?? [],
+    length: raw.label.length,
+    syllables: result.syllables,
+    quality: result.quality,
+    brandability: result.brandability,
+    overall: result.overall,
+    domains: tlds.map((tld) => ({ tld, domain: `${raw.label}.${tld}` })),
+    preservesRoot: true,
+    notes: result.notes,
+  }));
+
+  /* ---- 3. diagnostics ------------------------------------------------------ */
+
+  const exhaustion = valid.length < target && !budgetHit;
+  const placementSplit = candidates.reduce(
+    (tally, candidate) => {
+      tally[candidate.order] += 1;
+      return tally;
+    },
+    { "root-partner": 0, "partner-root": 0 } as { "root-partner": number; "partner-root": number },
+  );
+
   if (candidates.length < target) {
     if (budgetHit) {
       reasons.push(
-        `Stopped after the ${Math.round(budgetMs)} ms budget to keep the interface responsive. Narrow the filters or lower the target to search faster.`,
+        `Stopped after the ${Math.round(budgetMs)} ms budget to keep the interface responsive. Ask for fewer names to search faster.`,
       );
     }
-    if (exhausted) {
+    if (exhaustion) {
       reasons.push(
-        `The search space produced ${valid.length} unique name${valid.length === 1 ? "" : "s"} that satisfy every active rule; no more combinations remain for this seed.`,
+        `This root and vocabulary can produce at most ${valid.length} unique two-part name${valid.length === 1 ? "" : "s"} under the active rules; no other combination exists.`,
       );
     }
-    // Name the active control that shrank the space most: a count that cannot be met is only
-    // useful advice if it says which setting to relax.
-    const partners = request.partnerLengths ?? [];
-    if (partners.length > 0) {
+    if (request.partnerLengths.length > 0) {
+      const lengths = [...request.partnerLengths].sort((a, b) => a - b);
       reasons.push(
-        `Only partner words of ${partners.sort((a, b) => a - b).join(", ")} letter${partners.length === 1 ? "" : "s"} were allowed; add another partner length or clear the filter to widen the space.`,
+        `Only partner roots of ${lengths.join(", ")} letters are allowed; a partner of another length is excluded before scoring. Add a length to widen the pool.`,
       );
     }
-    if (request.styles.includes("compound") && constraints.maxComponents < 3) {
+    if (!request.autoExpand) {
       reasons.push(
-        "The compound style builds three-part names, but the maximum component count is below three, so those combinations were never generated.",
+        "Dictionary partner words are switched off, so only your custom partners and industry vocabulary were available.",
       );
     }
-    if (!request.autoExpand && request.customPrefixes.length === 0 && request.customSuffixes.length === 0) {
+    if (partnerRuleRejections > 0) {
       reasons.push(
-        "Automatic expansion is off and no custom prefixes or suffixes were entered, so only semantic and invented strategies could run.",
+        `${partnerRuleRejections} partner word${partnerRuleRejections === 1 ? "" : "s"} were skipped because they repeat the root or are flagged as an awkward pairing.`,
       );
     }
-
-    const topRejection = [...rejections.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topRejection = [...rejections.entries()]
+      .filter(([rule]) => !["partner-is-root", "partner-contains-root", "awkward-pair"].includes(rule))
+      .sort((a, b) => b[1] - a[1])[0];
     if (topRejection) {
       reasons.push(
-        `Most rejected candidates failed the “${describeRule(topRejection[0])}” rule (${topRejection[1]} of ${rejectedByConstraint} rejections).`,
+        `Most rejected names failed the “${describeRule(topRejection[0])}” rule (${topRejection[1]} of ${rejectedByConstraint} rejections).`,
       );
     }
     if (request.targetCount > SANE_LIMITS.maxTarget) {
@@ -344,75 +304,52 @@ export function generate(request: GenerationRequest, options: GenerationOptions 
       considered: valid.length,
       rejectedByConstraint,
       duplicatesRemoved,
-      exhausted,
+      exhausted: exhaustion,
       reasons,
       elapsedMs: Math.max(0, Math.round(now() - startedAt)),
-      spaceEstimate,
-      strategiesRun: [...strategiesRun],
+      partnerWords: partnerPool,
+      spaceEstimate: partnerPool * 2,
+      placementSplit,
+      strategiesRun: ["partner-combination"],
       seed: request.seed,
       engineVersion: ENGINE_VERSION,
     },
   };
 }
 
-/** Round-robin across strategies so a single strategy cannot dominate the sample. */
-function interleave(byStrategy: Map<CandidateStrategy, RawCandidate[]>): RawCandidate[] {
-  const entries = [...byStrategy.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const output: RawCandidate[] = [];
-  let index = 0;
-  let remaining = entries.reduce((sum, [, items]) => sum + items.length, 0);
-  while (remaining > 0) {
-    for (const [, items] of entries) {
-      const item = items[index];
-      if (item) {
-        output.push(item);
-        remaining -= 1;
-      }
-    }
-    index += 1;
-    if (index > 100_000) break; // defensive bound
-  }
-  return output;
+function emptyDiagnostics(target: number, seed: number, reason: string): GenerationDiagnostics {
+  return {
+    requested: target,
+    produced: 0,
+    considered: 0,
+    rejectedByConstraint: 0,
+    duplicatesRemoved: 0,
+    exhausted: true,
+    reasons: [reason],
+    elapsedMs: 0,
+    partnerWords: 0,
+    spaceEstimate: 0,
+    placementSplit: { "root-partner": 0, "partner-root": 0 },
+    strategiesRun: [],
+    seed,
+    engineVersion: ENGINE_VERSION,
+  };
 }
 
 /**
- * Takes `target` items from a ranked list while keeping strategy variety: the list is
- * walked in ranked order, but no strategy may exceed `cap` selections until the others
- * have had their turn.
+ * CamelCase display form: `home` + `land` → `HomeLand`.
+ *
+ * Display only. The domain label stays lower-case everywhere it is used as a domain — see
+ * `Candidate.label` and `Candidate.domains`. Acronyms keep their capitals so `ai` + `labs` reads
+ * as `AILabs` rather than `AiLabs`.
  */
-function diversify<T extends { raw: RawCandidate }>(ranked: T[], target: number): T[] {
-  if (ranked.length <= target) return ranked;
-  const perStrategyCap = Math.max(3, Math.ceil(target / 4));
-  const counts = new Map<string, number>();
-  const chosen: T[] = [];
-  const overflow: T[] = [];
+const ACRONYMS = new Set(["ai", "hq", "io", "api", "ui", "ux", "ml", "seo", "crm", "nft", "gpt", "vr", "ar", "os", "db"]);
 
-  for (const item of ranked) {
-    if (chosen.length >= target) break;
-    const key = item.raw.strategy;
-    const used = counts.get(key) ?? 0;
-    if (used >= perStrategyCap) {
-      overflow.push(item);
-      continue;
-    }
-    counts.set(key, used + 1);
-    chosen.push(item);
-  }
-
-  for (const item of overflow) {
-    if (chosen.length >= target) break;
-    chosen.push(item);
-  }
-
-  return chosen;
-}
-
-function displayForm(components: string[], label: string): string {
-  if (components.length <= 1) return label;
+export function displayForm(components: string[]): string {
   return components
-    .map((component, index) => {
+    .map((component) => {
       const clean = component.toLowerCase();
-      if (index === 0) return clean.charAt(0).toUpperCase() + clean.slice(1);
+      if (ACRONYMS.has(clean)) return clean.toUpperCase();
       return clean.charAt(0).toUpperCase() + clean.slice(1);
     })
     .join("");
@@ -424,7 +361,7 @@ function describeRule(rule: string): string {
     reserved: "reserved name",
     banned: "blocked word",
     components: "component count",
-    "word-length": "word length",
+    "word-length": "partner length",
     "root-length": "root length",
     "repeated-root": "repeated root",
     "preserve-root": "root preservation",
@@ -436,7 +373,10 @@ function describeRule(rule: string): string {
     "vowel-ratio": "vowel ratio",
     "consonant-cluster": "consonant cluster",
     syllables: "syllable count",
-    position: "keyword position",
+    "partner-is-root": "partner equals the root",
+    "partner-contains-root": "partner repeats the root",
+    "awkward-pair": "awkward pairing",
+    "partner-length": "partner length",
   };
   return map[rule] ?? rule;
 }

@@ -45,7 +45,9 @@ export default async function HomePage() {
       tlds: [".com"],
       targetCount: 3,
       seed: PREVIEW_SEED,
-      styles: ["standard"],
+      // The landing preview pins nothing but the root, the seed and the count: the word order is
+      // the engine's decision now, so a change to the placement scorer shows up here too.
+      partnerLengths: [3, 4, 5],
     }),
     {},
   );

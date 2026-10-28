@@ -6,6 +6,7 @@ import {
   DEFAULT_CONSTRAINTS,
   generate,
   normalizeConstraints,
+  normalizeKeyword,
   type Candidate,
   type GenerationDiagnostics,
   type GenerationRequest,
@@ -41,33 +42,25 @@ import { RootAnalysisPanel } from "./root-analysis";
 /**
  * The form a first-time visitor sees.
  *
- * Every library is selected (an empty selection means "all" in the engine, but then the chips
- * would look unset), compounds are on with a three-part limit, and the quantity is 100 — the
- * combination that produces a full, varied list for almost any root.
+ * Every partner length is selected (2–6 letters), both .com and .io are priced, the industry is
+ * left on automatic so it follows the root, and the quantity is 100 — the combination that
+ * produces a full, varied list for almost any root without hiding any rule.
  */
-const EMPTY_FORM: GeneratorFormState = formStateFromRequest(
-  {
-    roots: [],
-    partnerLengths: [],
-    position: "both",
-    styles: ["standard", "compound", "natural-compound"],
-    grammar: "recognized",
-    industries: [],
-    expandIndustries: true,
-    customPrefixes: [],
-    customSuffixes: [],
-    prefixLibraries: PREFIX_LIBRARIES.map((library) => library.id),
-    suffixLibraries: SUFFIX_LIBRARIES.map((library) => library.id),
-    autoExpand: true,
-    targetCount: 100,
-    constraints: { ...DEFAULT_CONSTRAINTS, maxComponents: 3, maxLength: 16 },
-    brandable: false,
-    brandableProfiles: ["startup"],
-    tlds: ["com", "io"],
-    seed: 1,
-  },
-  "custom",
-);
+const EMPTY_FORM: GeneratorFormState = formStateFromRequest({
+  roots: [],
+  industries: [],
+  expandIndustries: true,
+  customPartners: [],
+  partnerLibraries: [...PREFIX_LIBRARIES, ...SUFFIX_LIBRARIES].map((library) => library.id),
+  partnerLengths: [2, 3, 4, 5, 6],
+  autoExpand: true,
+  targetCount: 100,
+  constraints: { ...DEFAULT_CONSTRAINTS, maxComponents: 2 },
+  brandable: false,
+  brandableProfiles: ["startup"],
+  tlds: ["com", "io"],
+  seed: 1,
+});
 
 export function GeneratorWorkspace() {
   const { push } = useToast();
@@ -111,7 +104,7 @@ export function GeneratorWorkspace() {
           tld: filters.tld || "any",
           minQuality: filters.minQuality,
           minBrandability: filters.minBrandability,
-          strategies: filters.strategies.length,
+          industry: filters.root || "any",
           search: filters.search ? "yes" : "no",
         },
       });
@@ -131,8 +124,8 @@ export function GeneratorWorkspace() {
 
     const params = new URLSearchParams(window.location.search);
     if (!params.toString()) return;
-    const { request, lengthPreset } = requestFromSearchParams(params);
-    const nextForm = formStateFromRequest(request, lengthPreset);
+    const { request } = requestFromSearchParams(params);
+    const nextForm = formStateFromRequest(request);
     setForm(nextForm);
     if (request.roots.length > 0) {
       runGeneration(request, nextForm);
@@ -289,10 +282,6 @@ export function GeneratorWorkspace() {
         setError("Add at least one root keyword to generate names.");
         return;
       }
-      if (form.minLength > form.maxLength) {
-        setError("Minimum length cannot be greater than the maximum length.");
-        return;
-      }
       if (form.tlds.length === 0) {
         setError("Select at least one extension.");
         return;
@@ -429,7 +418,7 @@ export function GeneratorWorkspace() {
   const activeRoots = useMemo(() => form.roots, [form.roots]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Domain generator</h1>
@@ -438,76 +427,55 @@ export function GeneratorWorkspace() {
             documented quality and brandability heuristics. Nothing here claims a domain is available.
           </p>
         </div>
-        <Badge tone="accent">Engine v1 · runs in your browser</Badge>
+        <Badge tone="accent">Engine v2 · runs in your browser</Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,23rem)_1fr] xl:grid-cols-[minmax(0,25rem)_1fr]">
-        <div className="lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pr-1 scroll-thin">
-          <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4">
-            <GeneratorControls
-              state={form}
-              onChange={setForm}
-              onGenerate={() => handleGenerate(false)}
-              onReset={() => {
-                setForm(EMPTY_FORM);
-                setCandidates([]);
-                setDiagnostics(null);
-                setSelected(new Set());
-                setError(null);
-                window.history.replaceState(null, "", "/generator/");
-              }}
-              busy={busy}
-              error={error}
-            />
-          </div>
+      {/*
+        One sticky control card, not a permanent side panel.
 
-          <div className="mt-3">
-            <RootAnalysisPanel
-              root={form.roots[0] ?? ""}
-              selectedIndustries={form.industries}
-              onToggleIndustry={(id) => setForm((current) => ({ ...current, industries: toggleValue(current.industries, id) }))}
-              onClearIndustries={() => setForm((current) => ({ ...current, industries: [] }))}
-            />
-          </div>
+        It is the only sticky element on the page and it sits directly under the site header
+        (`--site-header-h`), so it never covers the results or slides under the navigation. The
+        card itself is compact: the root field and the Generate button always show, and the
+        secondary controls collapse behind a toggle on small screens where a tall sticky card
+        would eat the viewport.
+      */}
+      <div className="sticky top-[var(--site-header-h)] z-20 -mx-4 border-y border-border bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:rounded-[var(--radius-lg)] lg:border lg:shadow-sm">
+        <GeneratorControls
+          state={form}
+          onChange={setForm}
+          onGenerate={() => handleGenerate(false)}
+          onReset={() => {
+            setForm(EMPTY_FORM);
+            setCandidates([]);
+            setDiagnostics(null);
+            setSelected(new Set());
+            setError(null);
+            window.history.replaceState(null, "", "/generator/");
+          }}
+          busy={busy}
+          error={error}
+        />
+      </div>
 
-          {recent.length > 0 ? (
-            <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                <History className="size-3" aria-hidden="true" /> Recent searches
-              </p>
-              <ul className="mt-1.5 space-y-1">
-                {recent.slice(0, 5).map((entry) => (
-                  <li key={entry.href}>
-                    <a
-                      href={entry.href}
-                      className="block truncate rounded px-1 py-0.5 text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg"
-                    >
-                      {entry.roots.join(", ")} · {entry.count} names
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
           {diagnostics ? (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-border bg-surface px-3 py-2 text-[11px] text-fg-subtle">
-              <span className="tnum">{diagnostics.considered.toLocaleString()} valid of {diagnostics.spaceEstimate.toLocaleString()} considered</span>
+              <span className="tnum">
+                {diagnostics.considered.toLocaleString()} valid of{" "}
+                {diagnostics.spaceEstimate.toLocaleString()} possible
+              </span>
+              <span aria-hidden="true">·</span>
+              <span className="tnum">{diagnostics.partnerWords.toLocaleString()} partner words</span>
+              <span aria-hidden="true">·</span>
+              <span className="tnum">
+                {diagnostics.placementSplit["root-partner"]} root-first /{" "}
+                {diagnostics.placementSplit["partner-root"]} partner-first
+              </span>
               <span aria-hidden="true">·</span>
               <span className="tnum">{diagnostics.duplicatesRemoved.toLocaleString()} duplicates removed</span>
               <span aria-hidden="true">·</span>
               <span className="tnum">{diagnostics.elapsedMs} ms</span>
-              <span aria-hidden="true">·</span>
-              <span>seed {diagnostics.seed}</span>
-              <span aria-hidden="true">·</span>
-              <span>{diagnostics.strategiesRun.length} strategies</span>
-              <div className="ml-auto flex gap-1">
-                <Button variant="ghost" size="sm" onClick={() => handleGenerate(true)} loading={busy}>
-                  Reshuffle
-                </Button>
-              </div>
             </div>
           ) : null}
 
@@ -521,7 +489,7 @@ export function GeneratorWorkspace() {
                   </h2>
                   <p className="text-[13px] leading-relaxed text-fg-muted">
                     {activeRoots.length === 0
-                      ? "Add a keyword such as pay, home or cloud in the panel on the left. The engine combines it with curated dictionaries, industry vocabulary and phonetic rules, then explains every score."
+                      ? "Add a keyword such as pay, home or cloud in the control bar above. Every name will be that root plus one partner word, in whichever order reads better; the engine explains every score."
                       : `Press Generate names to build candidates for ${activeRoots.join(", ")}. Results appear here with quality and brandability breakdowns.`}
                   </p>
                   <p className="text-[11px] text-fg-subtle">
@@ -567,12 +535,45 @@ export function GeneratorWorkspace() {
               advertising flag, the global settings and an enabled slot all agree. */}
           <AdSlot template="generator" placement="sidebar" className="mt-6" />
         </div>
+
+        <aside className="space-y-3">
+          <div className="xl:hidden">
+            <RootAnalysisPanel
+              root={form.roots[0] ?? ""}
+              selectedIndustries={form.industries}
+              partnerLengths={form.partnerLengths}
+            />
+          </div>
+
+          {recent.length > 0 ? (
+            <div className="rounded-[var(--radius)] border border-border bg-surface p-3">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                <History className="size-3" aria-hidden="true" /> Recent searches
+              </p>
+              <ul className="mt-1.5 space-y-1">
+                {recent.slice(0, 5).map((entry) => (
+                  <li key={entry.href}>
+                    <a
+                      href={entry.href}
+                      className="block truncate rounded px-1 py-0.5 text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    >
+                      {entry.roots.join(", ")} · {entry.count} names
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="hidden xl:block">
+            <RootAnalysisPanel
+              root={form.roots[0] ?? ""}
+              selectedIndustries={form.industries}
+              partnerLengths={form.partnerLengths}
+            />
+          </div>
+        </aside>
       </div>
     </div>
   );
-}
-
-/** Toggle helper for the industry override chips. */
-function toggleValue(list: string[], value: string): string[] {
-  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }

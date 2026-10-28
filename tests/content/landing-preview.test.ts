@@ -11,7 +11,7 @@ import { createGenerationRequest, generate } from "@/lib/brain";
 
 function preview(root = "pay", seed = 20260501, count = 3) {
   return generate(
-    createGenerationRequest({ roots: [root], tlds: [".com"], targetCount: count, seed, styles: ["standard"] }),
+    createGenerationRequest({ roots: [root], tlds: [".com"], targetCount: count, seed, partnerLengths: [3, 4, 5] }),
     {},
   );
 }

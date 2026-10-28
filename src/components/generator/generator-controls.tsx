@@ -4,9 +4,9 @@ import { useMemo, useState } from "react";
 import { ChevronDown, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 import {
   BRANDABLE_PROFILE_DEFINITIONS,
+  DEFAULT_CONSTRAINTS,
   DEFAULT_TLDS,
   INDUSTRIES,
-  LENGTH_PRESETS,
   PREFIX_LIBRARIES,
   SANE_LIMITS,
   SUFFIX_LIBRARIES,
@@ -14,149 +14,93 @@ import {
   normalizeKeyword,
   type BrandableProfileId,
   type GenerationRequest,
-  type KeywordPosition,
-  type LengthPreset,
-  type WordStyle,
 } from "@/lib/brain";
+import { PARTNER_LENGTH_CHOICES, partnerWordLength, partnerWords } from "@/lib/brain/partners";
 import { Badge, Button, Callout } from "@/components/ui/primitives";
-import {
-  NAMING_STYLES,
-  engineForNamingStyles,
-  namingStylesInState,
-  recommendNamingStyles,
-  type NamingStyleId,
-} from "@/lib/generator/naming-styles";
-import {
-  ChipGroup,
-  Field,
-  Input,
-  NumberInput,
-  SegmentedControl,
-  Select,
-  Switch,
-  TagInput,
-} from "@/components/ui/form";
+import { ChipGroup, Field, Input, NumberInput, Select, Switch, TagInput } from "@/components/ui/form";
+import { VALID_TARGETS } from "@/lib/generator/url-state";
+import { industryExamples, industryStateFor } from "@/lib/generator/industry";
 import { cn } from "@/lib/utils/format";
 
-const STYLE_OPTIONS: Array<{ value: WordStyle; label: string; title: string }> = [
-  { value: "standard", label: "Standard words", title: "Root combined with curated English words." },
-  { value: "natural-compound", label: "Natural compounds", title: "Reads like everyday English (PayNest, HomeRoom)." },
-  { value: "keyword-industry", label: "Industry terms", title: "Root plus vocabulary from the selected industries." },
-  { value: "keyword-brand-prefix", label: "Brand prefix", title: "Modifier first: NovaPay, CloudPay." },
-  { value: "keyword-brand-suffix", label: "Brand suffix", title: "Modifier last: PayNest, PayPilot." },
-  { value: "compound", label: "Compound words", title: "Two-word compounds built from the dictionaries." },
-  { value: "portmanteau", label: "Portmanteau", title: "Syllable-boundary blends that keep the root readable." },
-  { value: "invented", label: "Invented", title: "Phonetic construction around the root." },
-  { value: "pseudo-word", label: "Pseudo-words", title: "Pronounceable non-words with vowel structure." },
-  { value: "short-abstract", label: "Short abstract", title: "Four to six letter abstract forms." },
-  { value: "exact-combination", label: "Exact keyword", title: "The root verbatim, optionally with a short morpheme." },
-  { value: "ai-assisted", label: "AI-assisted", title: "Only runs when an AI provider is configured; results pass the same validation." },
-];
-
-const POSITION_OPTIONS: Array<{ value: KeywordPosition; label: string; title: string }> = [
-  { value: "prefix", label: "Prefix", title: "Modifier before the root: NovaPay" },
-  { value: "suffix", label: "Suffix", title: "Modifier after the root: PayNest" },
-  { value: "both", label: "Both", title: "Generate both directions" },
-  { value: "exact", label: "Exact", title: "The root on its own" },
-  { value: "flexible", label: "Flexible", title: "Allow blends and mixed placements" },
-];
-
-/** Partner-length choices offered by the UI. 2–5 letters cover the useful range in practice. */
-const PARTNER_LENGTHS = [2, 3, 4, 5] as const;
-
-/** An example partner word for the tooltip on each length chip. */
-function examplePartner(length: number): string {
-  const samples: Record<number, string> = { 2: "up, io", 3: "hub, neo", 4: "nova, wave", 5: "spark, orbit" };
-  return samples[length] ?? "";
-}
+/**
+ * The generator's controls.
+ *
+ * Five inputs decide a search, in the order they appear:
+ *
+ *   1. the primary root — one word, enforced;
+ *   2. the extensions each name is offered in;
+ *   3. the industry (auto-detected, manually overridable);
+ *   4. the partner-root length — the one length rule there is;
+ *   5. how many names to return.
+ *
+ * Everything else is a refinement and lives behind "Advanced". There is no naming-style picker and
+ * no total-name-length picker: the engine chooses the word order, and the finished length is the
+ * root plus the partner, computed rather than configured.
+ */
 
 export type GeneratorFormState = {
-  /** Exactly one root. A single keyword produces a coherent result list; several produce
-   *  interleaved lists where the quantity per root is impossible to reason about. */
+  /** Exactly one root. */
   roots: string[];
-  /** Allowed alphabetic length of the partner word (2/3/4/5). Empty = any length. */
-  partnerLengths: number[];
-  position: KeywordPosition;
-  styles: WordStyle[];
+  /**
+   * Industry override. Empty means "use what the root implies" — the control shows the detection
+   * separately so an empty list is never mistaken for "no industry".
+   */
   industries: string[];
-  customPrefixes: string[];
-  customSuffixes: string[];
-  prefixLibraries: string[];
-  suffixLibraries: string[];
-  autoExpand: boolean;
-  expandIndustries: boolean;
+  /** Allowed alphabetic lengths of the partner root (2–6 in the UI). Empty = any. */
+  partnerLengths: number[];
   targetCount: number;
   tlds: string[];
-  lengthPreset: LengthPreset;
-  minLength: number;
-  maxLength: number;
-  maxComponents: number;
-  allowHyphens: boolean;
-  allowNumbers: boolean;
+  customPartners: string[];
+  partnerLibraries: string[];
+  autoExpand: boolean;
+  expandIndustries: boolean;
+  brandable: boolean;
+  brandableProfiles: BrandableProfileId[];
+  /** Phonetic refinement; there is no total-length rule to configure. */
   minVowelRatio: number;
   maxConsonantCluster: number;
   maxSyllables: number;
   requiredSubstring: string;
   excludedSubstringInput: string;
   excludedWordsInput: string;
-  brandable: boolean;
-  brandableProfiles: BrandableProfileId[];
 };
 
-export function formStateFromRequest(request: GenerationRequest, preset: LengthPreset): GeneratorFormState {
+export function formStateFromRequest(request: GenerationRequest): GeneratorFormState {
   return {
     roots: request.roots,
-    partnerLengths: request.partnerLengths,
-    position: request.position,
-    styles: request.styles,
     industries: request.industries,
-    customPrefixes: request.customPrefixes,
-    customSuffixes: request.customSuffixes,
-    prefixLibraries: request.prefixLibraries,
-    suffixLibraries: request.suffixLibraries,
-    autoExpand: request.autoExpand,
-    expandIndustries: request.expandIndustries,
+    partnerLengths: request.partnerLengths,
     targetCount: request.targetCount,
     tlds: request.tlds,
-    lengthPreset: preset,
-    minLength: request.constraints.minLength,
-    maxLength: request.constraints.maxLength,
-    maxComponents: request.constraints.maxComponents,
-    allowHyphens: request.constraints.allowHyphens,
-    allowNumbers: request.constraints.allowNumbers,
+    customPartners: request.customPartners,
+    partnerLibraries: request.partnerLibraries,
+    autoExpand: request.autoExpand,
+    expandIndustries: request.expandIndustries,
+    brandable: request.brandable,
+    brandableProfiles: request.brandableProfiles,
     minVowelRatio: request.constraints.minVowelRatio,
     maxConsonantCluster: request.constraints.maxConsonantCluster,
     maxSyllables: request.constraints.maxSyllables,
     requiredSubstring: request.constraints.requiredSubstring ?? "",
     excludedSubstringInput: request.constraints.excludedSubstrings.join(", "),
     excludedWordsInput: request.constraints.excludedWords.join(", "),
-    brandable: request.brandable,
-    brandableProfiles: request.brandableProfiles,
   };
 }
 
 export function requestFromFormState(state: GeneratorFormState): GenerationRequest {
   return {
     roots: state.roots.slice(0, 1),
-    partnerLengths: state.partnerLengths,
-    position: state.position,
-    styles: state.styles.length > 0 ? state.styles : ["standard"],
-    grammar: "recognized",
     industries: state.industries,
     expandIndustries: state.expandIndustries,
-    customPrefixes: state.customPrefixes,
-    customSuffixes: state.customSuffixes,
-    prefixLibraries: state.prefixLibraries,
-    suffixLibraries: state.suffixLibraries,
+    customPartners: state.customPartners,
+    partnerLibraries: state.partnerLibraries,
+    partnerLengths: state.partnerLengths,
     autoExpand: state.autoExpand,
     targetCount: state.targetCount,
     constraints: {
-      minLength: state.minLength,
-      maxLength: state.maxLength,
-      maxWordLength: 12,
-      maxComponents: state.maxComponents,
-      allowHyphens: state.allowHyphens,
-      allowNumbers: state.allowNumbers,
+      ...DEFAULT_CONSTRAINTS,
+      // Two components, always: the naming rule decides the shape, not a control.
+      maxComponents: 2,
       minVowelRatio: state.minVowelRatio,
       maxConsonantCluster: state.maxConsonantCluster,
       maxSyllables: state.maxSyllables,
@@ -168,7 +112,7 @@ export function requestFromFormState(state: GeneratorFormState): GenerationReque
     },
     brandable: state.brandable,
     brandableProfiles: state.brandableProfiles,
-    tlds: state.tlds.length > 0 ? state.tlds : ["com"],
+    tlds: state.tlds.length > 0 ? state.tlds : [DEFAULT_TLDS[0] ?? "com"],
     seed: 1,
   };
 }
@@ -184,197 +128,217 @@ function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }
 
-export function GeneratorControls({
-  state,
-  onChange,
-  onGenerate,
-  onReset,
-  busy,
-  error,
-}: {
+/** A real partner word of this length, used to make the length chips concrete. */
+function examplePartners(length: number, industryId: string | null): string {
+  const words = partnerWords({
+    lengths: [length],
+    industries: industryId ? [industryId] : [],
+  })
+    .slice(0, 2)
+    .map((entry) => entry.word);
+  return words.length > 0 ? words.join(", ") : "—";
+}
+
+export type GeneratorControlsProps = {
   state: GeneratorFormState;
   onChange: (next: GeneratorFormState) => void;
   onGenerate: () => void;
   onReset: () => void;
   busy: boolean;
   error: string | null;
-}) {
+};
+
+export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, error }: GeneratorControlsProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // On a phone the sticky card keeps the root and Generate visible and folds the rest away, so
+  // the bar cannot eat the viewport. From `lg` up everything is shown.
+  const [setupOpen, setSetupOpen] = useState(false);
   const set = <K extends keyof GeneratorFormState>(key: K, value: GeneratorFormState[K]) =>
     onChange({ ...state, [key]: value });
 
-  const industryOptions = useMemo(
-    () => INDUSTRIES.map((industry) => ({ value: industry.id, label: industry.name, title: industry.description })),
-    [],
+  const root = state.roots[0] ?? "";
+  const industry = useMemo(() => industryStateFor(root, state.industries), [root, state.industries]);
+  const appliedIndustryId = industry.applied?.id ?? null;
+
+  const libraryIds = useMemo(() => {
+    const merged = new Map<string, { id: string; name: string; description: string }>();
+    for (const library of [...PREFIX_LIBRARIES, ...SUFFIX_LIBRARIES]) {
+      if (!merged.has(library.id)) {
+        merged.set(library.id, { id: library.id, name: library.name, description: library.description });
+      }
+    }
+    return Array.from(merged.values());
+  }, []);
+
+  const tldOptions = useMemo(
+    () =>
+      TLD_DIRECTORY.filter((record) => record.enabled || state.tlds.includes(record.tld)).map((record) => ({
+        value: record.tld,
+        label: record.displayName,
+        title: record.description,
+      })),
+    [state.tlds],
   );
 
-  const selectedTlds = TLD_DIRECTORY.filter((record) => state.tlds.includes(record.tld));
-
-  const lengthError =
-    state.minLength > state.maxLength
-      ? "Minimum length cannot be greater than the maximum."
-      : state.maxLength > 24
-        ? "Labels longer than 24 characters are not valid."
-        : null;
+  // The finished length is arithmetic, not a setting: show the arithmetic.
+  const rootLength = partnerWordLength(root);
+  const selectedLengths = [...state.partnerLengths].sort((a, b) => a - b);
+  const partnerRange = selectedLengths.length > 0 ? selectedLengths : [2, 6];
+  const minTotal = rootLength > 0 ? rootLength + (partnerRange[0] ?? 2) : 0;
+  const maxTotal = rootLength > 0 ? rootLength + (partnerRange.at(-1) ?? 6) : 0;
+  const totalLabel =
+    rootLength === 0
+      ? null
+      : minTotal === maxTotal
+        ? `${minTotal} letters`
+        : `${minTotal}–${maxTotal} letters`;
 
   return (
     <form
-      className="space-y-5"
+      className="space-y-2.5"
       onSubmit={(event) => {
         event.preventDefault();
         onGenerate();
       }}
     >
-      <RootField state={state} onChange={onChange} />
-
-      <NamingStyleField state={state} onChange={onChange} />
-
-      <Field
-        label="Partner root length"
-        description="How many letters the added word may have — the root itself is not counted. Select several to search them together; leave empty for any length."
-      >
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Partner root length">
-          {PARTNER_LENGTHS.map((length) => {
-            const active = state.partnerLengths.includes(length);
-            return (
-              <button
-                key={length}
-                type="button"
-                role="checkbox"
-                aria-checked={active}
-                onClick={() => set("partnerLengths", toggle(state.partnerLengths, length))}
-                title={`Partner words of exactly ${length} letters, e.g. ${examplePartner(length)}`}
-                className={cn(
-                  "h-8 min-w-11 rounded-[var(--radius-sm)] border px-2.5 text-xs font-medium tabular-nums transition-colors",
-                  active
-                    ? "border-accent bg-accent-soft text-accent-soft-fg"
-                    : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
-                )}
-              >
-                {length}
-              </button>
-            );
-          })}
-          {state.partnerLengths.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => set("partnerLengths", [])}
-              className="h-8 rounded-[var(--radius-sm)] px-2 text-[11px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
-            >
-              Any length
-            </button>
-          ) : null}
+      {/* Row 1 — always visible: the one input that matters and the button that runs it. */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <RootField
+            state={state}
+            onChange={onChange}
+            detectedIndustry={industry.applied ? { name: industry.applied.name, mode: industry.mode } : null}
+          />
         </div>
-      </Field>
+        <div className="flex items-center gap-2">
+          <Button type="submit" size="lg" loading={busy} loadingLabel="Generating…" className="flex-1 sm:flex-none">
+            <Sparkles className="size-4" aria-hidden="true" />
+            Generate names
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="lg:hidden"
+            aria-expanded={setupOpen}
+            aria-controls="generator-setup"
+            onClick={() => setSetupOpen((open) => !open)}
+          >
+            <Wand2 className="size-4" aria-hidden="true" />
+            Setup
+          </Button>
+        </div>
+      </div>
 
-      <Field
-        label="Industries"
-        description="Selecting industries limits semantic expansion to that vocabulary. Leave empty to let the engine detect industries from your keyword."
-      >
-        <ChipGroup
-          label="Industries"
-          options={industryOptions}
-          selected={state.industries}
-          onToggle={(value) => set("industries", toggle(state.industries, value))}
-        />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div id="generator-setup" className={cn("space-y-2.5", setupOpen ? "block" : "hidden", "lg:block")}>
+        {/* Row 2 — extensions sit high in the card: they apply to every name that follows. */}
         <Field
-          label="Name length"
-          description="Label length in characters — the dot and TLD are excluded."
-          error={lengthError}
+          label="Extensions"
+          description="Select several to price each name across them. Availability is checked later, per extension — never inferred here."
         >
-          <div className="space-y-2">
-            <div className="flex flex-wrap gap-1.5">
-              {LENGTH_PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() =>
-                    onChange({
-                      ...state,
-                      lengthPreset: preset.id,
-                      minLength: preset.min,
-                      maxLength: preset.max,
-                    })
-                  }
-                  className={cn(
-                    "rounded-[var(--radius-sm)] border px-2.5 py-1 text-xs font-medium",
-                    state.lengthPreset === preset.id
-                      ? "border-accent bg-accent-soft text-accent-soft-fg"
-                      : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
-                  )}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <NumberInput
-                label="Min"
-                value={state.minLength}
-                min={2}
-                max={24}
-                onChange={(value) => onChange({ ...state, minLength: value, lengthPreset: "custom" })}
-              />
-              <NumberInput
-                label="Max"
-                value={state.maxLength}
-                min={2}
-                max={24}
-                onChange={(value) => onChange({ ...state, maxLength: value, lengthPreset: "custom" })}
-              />
-            </div>
-          </div>
+          <ChipGroup
+            label="Extensions"
+            options={tldOptions}
+            selected={state.tlds}
+            onToggle={(value) => {
+              const next = toggle(state.tlds, value);
+              set("tlds", next.length > 0 ? next : [DEFAULT_TLDS[0] ?? "com"]);
+            }}
+          />
         </Field>
 
-        <div className="space-y-3">
-          <Field
-            label="Number of names"
-            description="The engine returns exactly this many when the active filters can supply them, and tells you why when they cannot."
-          >
+        {/* Row 3 — the rules that change what is generated, on one wrapping line. */}
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+          <Field label="Partner root length" className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Partner root length">
+              {PARTNER_LENGTH_CHOICES.map((length) => {
+                const active = state.partnerLengths.includes(length);
+                return (
+                  <button
+                    key={length}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={active}
+                    onClick={() => set("partnerLengths", toggle(state.partnerLengths, length))}
+                    title={`Partner words of exactly ${length} letters, e.g. ${examplePartners(length, appliedIndustryId)}`}
+                    className={cn(
+                      "h-8 min-w-9 rounded-[var(--radius-sm)] border px-2 text-xs font-medium tabular-nums transition-colors",
+                      active
+                        ? "border-accent bg-accent-soft text-accent-soft-fg"
+                        : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
+                    )}
+                  >
+                    {length}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => set("partnerLengths", [])}
+                title="Allow any partner length the dictionaries contain"
+                className={cn(
+                  "h-8 rounded-[var(--radius-sm)] border px-2 text-[11px]",
+                  state.partnerLengths.length === 0
+                    ? "border-accent bg-accent-soft text-accent-soft-fg"
+                    : "border-border text-fg-subtle hover:border-border-strong hover:text-fg",
+                )}
+              >
+                Any
+              </button>
+            </div>
+          </Field>
+
+          <div className="w-full sm:w-52">
+            <IndustryField
+              root={root}
+              state={state}
+              onChange={onChange}
+              industryScope={appliedIndustryId}
+              summary={industry.summary}
+              mode={industry.mode}
+              suggestions={industry.suggestions}
+            />
+          </div>
+
+          <Field label="How many names" className="w-32">
             <Select
               value={String(state.targetCount)}
               onChange={(event) => set("targetCount", Number(event.target.value))}
               aria-label="Target result count"
+              className="h-8 text-[13px]"
             >
-              {[25, 50, 100, 250, 500, 1000].map((count) => (
+              {VALID_TARGETS.map((count) => (
                 <option key={count} value={count}>
-                  {count} names
+                  {count}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field
-            label="Extensions"
-            description="Availability is checked separately and only for extensions with a working provider."
-          >
-            <ChipGroup
-              label="Extensions"
-              options={TLD_DIRECTORY.filter((record) => record.enabled || state.tlds.includes(record.tld)).map(
-                (record) => ({ value: record.tld, label: record.displayName, title: record.description }),
-              )}
-              selected={state.tlds}
-              onToggle={(value) => {
-                const next = toggle(state.tlds, value);
-                set("tlds", next.length > 0 ? next : ["com"]);
-              }}
-            />
-          </Field>
-        </div>
-      </div>
 
-      <div className="rounded-[var(--radius)] border border-border bg-surface-2/60 p-3">
-        <Switch
-          checked={state.brandable}
-          onChange={(value) => set("brandable", value)}
-          label="Brandable mode"
-          description="Re-ranks results on brandability (pronounceability, memorability, distinctiveness) instead of descriptive quality."
-        />
+          <div className="flex items-center gap-1.5 pb-0.5">
+            <Switch
+              checked={state.brandable}
+              onChange={(value) => set("brandable", value)}
+              label="Brandable ranking"
+              description="Rank by brandability rather than descriptive quality."
+            />
+          </div>
+        </div>
+
+        {rootLength > 0 ? (
+          <p className="text-[11px] leading-relaxed text-fg-subtle">
+            <span className="font-medium text-fg-muted">
+              {root.charAt(0).toUpperCase() + root.slice(1)}
+            </span>{" "}
+            ({rootLength} letters) + a {selectedLengths.length > 0 ? selectedLengths.join("/") : "2–6"}-letter
+            partner → <span className="font-medium text-fg-muted">{totalLabel}</span> before the dot. Examples:{" "}
+            {examplePartners(partnerRange[0] ?? 2, appliedIndustryId)}. Length is computed from the two
+            parts; there is no separate setting for it.
+          </p>
+        ) : null}
+
         {state.brandable ? (
-          <div className="mt-3 space-y-2 border-t border-border pt-3">
-            <p className="text-xs font-medium text-fg-muted">Brandable profiles</p>
+          <Field label="Brandable profile">
             <ChipGroup
               label="Brandable profiles"
               options={BRANDABLE_PROFILE_DEFINITIONS.map((profile) => ({
@@ -388,197 +352,156 @@ export function GeneratorControls({
                 set("brandableProfiles", next.length > 0 ? next : ["startup"]);
               }}
             />
-            <Callout tone="info" className="mt-2">
-              Brandability is a documented heuristic. It says nothing about availability, trademark
-              clearance or resale value.
-            </Callout>
-          </div>
+          </Field>
         ) : null}
-      </div>
 
-      <div className="rounded-[var(--radius)] border border-border">
-        <button
-          type="button"
-          onClick={() => setAdvancedOpen((open) => !open)}
-          aria-expanded={advancedOpen}
-          className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-[13px] font-medium text-fg"
-        >
-          <span className="flex items-center gap-2">
-            <Wand2 className="size-4 text-fg-subtle" aria-hidden="true" />
-            Advanced controls
-          </span>
-          <ChevronDown className={cn("size-4 text-fg-subtle transition-transform", advancedOpen && "rotate-180")} />
-        </button>
-        {advancedOpen ? (
-          <div className="space-y-4 border-t border-border p-3">
-            {/* The raw engine vocabulary lives here. The naming-style control above sets these
-                two fields for you; editing them directly is the escape hatch for a precise
-                combination the presets do not cover. */}
-            <Field label="Keyword position" description="Where the root keyword sits inside each generated name.">
-              <SegmentedControl
-                label="Keyword position"
-                value={state.position}
-                onChange={(value) => set("position", value)}
-                options={POSITION_OPTIONS}
-              />
-            </Field>
+        <div className="rounded-[var(--radius)] border border-border">
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen((open) => !open)}
+            aria-expanded={advancedOpen}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] font-medium text-fg"
+          >
+            <span className="flex items-center gap-2">
+              <Wand2 className="size-4 text-fg-subtle" aria-hidden="true" />
+              Advanced controls
+            </span>
+            <ChevronDown className={cn("size-4 text-fg-subtle transition-transform", advancedOpen && "rotate-180")} />
+          </button>
+          {advancedOpen ? (
+            <div className="space-y-4 border-t border-border p-3">
+              <Field
+                label="Custom partner words"
+                description="Added to the partner pool on top of the dictionaries. Lengths outside your selection are ignored."
+              >
+                <TagInput
+                  label="Custom partner words"
+                  value={state.customPartners}
+                  onChange={(next) => set("customPartners", next)}
+                  placeholder="nest, atlas…"
+                  max={SANE_LIMITS.maxCustomWords}
+                />
+              </Field>
 
-            <Field
-              label="Word styles"
-              description="Enable any combination. Styles that need an AI provider stay inactive until one is configured."
-            >
-              <ChipGroup
-                label="Word styles"
-                options={STYLE_OPTIONS}
-                selected={state.styles}
-                onToggle={(value) => set("styles", toggle(state.styles, value))}
-              />
-            </Field>
+              <Field label="Word libraries" description="Leave empty to draw on every shipped library.">
+                <ChipGroup
+                  label="Word libraries"
+                  options={libraryIds.map((library) => ({
+                    value: library.id,
+                    label: library.name,
+                    title: library.description,
+                  }))}
+                  selected={state.partnerLibraries}
+                  onToggle={(value) => set("partnerLibraries", toggle(state.partnerLibraries, value))}
+                />
+              </Field>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Components" description="Maximum word components in a label.">
-                <Select
-                  value={String(state.maxComponents)}
-                  onChange={(event) => set("maxComponents", Number(event.target.value))}
-                  aria-label="Maximum components"
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Switch
+                  checked={state.autoExpand}
+                  onChange={(value) => set("autoExpand", value)}
+                  label="Use dictionary words"
+                  description="Off: only your custom words and industry vocabulary are used."
+                />
+                <Switch
+                  checked={state.expandIndustries}
+                  onChange={(value) => set("expandIndustries", value)}
+                  label="Industry vocabulary"
+                  description="Pull the matched industry's words into the partner pool."
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Syllables" description="0 disables the check.">
+                  <NumberInput
+                    label="Max syllables"
+                    value={state.maxSyllables}
+                    min={0}
+                    max={8}
+                    onChange={(value) => set("maxSyllables", value)}
+                  />
+                </Field>
+                <Field label="Max consonant run" description="0 disables the check.">
+                  <NumberInput
+                    label="Max consonant run"
+                    value={state.maxConsonantCluster}
+                    min={0}
+                    max={6}
+                    onChange={(value) => set("maxConsonantCluster", value)}
+                  />
+                </Field>
+                <Field
+                  label="Minimum vowel share"
+                  description={`${Math.round(state.minVowelRatio * 100)}% — 0 disables the rule.`}
                 >
-                  {[1, 2, 3, 4].map((count) => (
-                    <option key={count} value={count}>
-                      {count} component{count === 1 ? "" : "s"}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label="Syllables" description="0 disables the check.">
-                <NumberInput
-                  label="Max"
-                  value={state.maxSyllables}
-                  min={0}
-                  max={8}
-                  onChange={(value) => set("maxSyllables", value)}
-                />
-              </Field>
-            </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={60}
+                    step={1}
+                    value={Math.round(state.minVowelRatio * 100)}
+                    onChange={(event) => set("minVowelRatio", Number(event.target.value) / 100)}
+                    aria-label="Minimum vowel ratio"
+                    className="w-full accent-[var(--accent)]"
+                  />
+                </Field>
+              </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Switch
-                checked={state.allowHyphens}
-                onChange={(value) => set("allowHyphens", value)}
-                label="Allow hyphens"
-                description="Off by default: hyphenated names are harder to say and type."
-              />
-              <Switch
-                checked={state.allowNumbers}
-                onChange={(value) => set("allowNumbers", value)}
-                label="Allow numbers"
-                description="Off by default."
-              />
-              <Switch
-                checked={state.autoExpand}
-                onChange={(value) => set("autoExpand", value)}
-                label="Auto-expand dictionaries"
-                description="When off, only your custom prefixes and suffixes are used."
-              />
-              <Switch
-                checked={state.expandIndustries}
-                onChange={(value) => set("expandIndustries", value)}
-                label="Semantic expansion"
-                description="Pull related industry vocabulary into the candidate pool."
-              />
-            </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Required text">
+                  <Input
+                    value={state.requiredSubstring}
+                    onChange={(event) => set("requiredSubstring", event.target.value)}
+                    placeholder="e.g. ly"
+                    aria-label="Required substring"
+                  />
+                </Field>
+                <Field label="Excluded text">
+                  <Input
+                    value={state.excludedSubstringInput}
+                    onChange={(event) => set("excludedSubstringInput", event.target.value)}
+                    placeholder="comma separated"
+                    aria-label="Excluded substrings"
+                  />
+                </Field>
+                <Field label="Excluded words">
+                  <Input
+                    value={state.excludedWordsInput}
+                    onChange={(event) => set("excludedWordsInput", event.target.value)}
+                    placeholder="comma separated"
+                    aria-label="Excluded words"
+                  />
+                </Field>
+              </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Minimum vowel ratio" description={`${Math.round(state.minVowelRatio * 100)}% — 0 disables the rule.`}>
-                <input
-                  type="range"
-                  min={0}
-                  max={60}
-                  step={1}
-                  value={Math.round(state.minVowelRatio * 100)}
-                  onChange={(event) => set("minVowelRatio", Number(event.target.value) / 100)}
-                  aria-label="Minimum vowel ratio"
-                  className="w-full accent-[var(--accent)]"
-                />
-              </Field>
-              <Field label="Max consonant run" description="0 disables the check.">
-                <NumberInput
-                  label="Max"
-                  value={state.maxConsonantCluster}
-                  min={0}
-                  max={6}
-                  onChange={(value) => set("maxConsonantCluster", value)}
-                />
-              </Field>
+              <Callout tone="info">
+                Custom words are checked by the same rules as dictionary words: letters only, no
+                repeat of the root, and they must match your partner length if you picked one.
+              </Callout>
             </div>
+          ) : null}
+        </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Custom prefixes" description="Added to the prefix pool.">
-                <TagInput
-                  label="Custom prefixes"
-                  value={state.customPrefixes}
-                  onChange={(next) => set("customPrefixes", next)}
-                  placeholder="velo, kira…"
-                  max={SANE_LIMITS.maxCustomWords}
-                />
-              </Field>
-              <Field label="Custom suffixes" description="Added to the suffix pool.">
-                <TagInput
-                  label="Custom suffixes"
-                  value={state.customSuffixes}
-                  onChange={(next) => set("customSuffixes", next)}
-                  placeholder="ly, ify…"
-                  max={SANE_LIMITS.maxCustomWords}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Prefix libraries">
-                <ChipGroup
-                  label="Prefix libraries"
-                  options={PREFIX_LIBRARIES.map((library) => ({ value: library.id, label: library.name, title: library.description }))}
-                  selected={state.prefixLibraries}
-                  onToggle={(value) => set("prefixLibraries", toggle(state.prefixLibraries, value))}
-                />
-              </Field>
-              <Field label="Suffix libraries">
-                <ChipGroup
-                  label="Suffix libraries"
-                  options={SUFFIX_LIBRARIES.map((library) => ({ value: library.id, label: library.name, title: library.description }))}
-                  selected={state.suffixLibraries}
-                  onToggle={(value) => set("suffixLibraries", toggle(state.suffixLibraries, value))}
-                />
-              </Field>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Field label="Required text">
-                <Input
-                  value={state.requiredSubstring}
-                  onChange={(event) => set("requiredSubstring", event.target.value)}
-                  placeholder="e.g. ly"
-                  aria-label="Required substring"
-                />
-              </Field>
-              <Field label="Excluded text">
-                <Input
-                  value={state.excludedSubstringInput}
-                  onChange={(event) => set("excludedSubstringInput", event.target.value)}
-                  placeholder="comma separated"
-                  aria-label="Excluded substrings"
-                />
-              </Field>
-              <Field label="Excluded words">
-                <Input
-                  value={state.excludedWordsInput}
-                  onChange={(event) => set("excludedWordsInput", event.target.value)}
-                  placeholder="comma separated"
-                  aria-label="Excluded words"
-                />
-              </Field>
-            </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+            <RotateCcw className="size-3.5" aria-hidden="true" />
+            Reset
+          </Button>
+          <div className="ml-auto flex items-center gap-1.5 text-xs text-fg-subtle">
+            <Badge tone="outline">
+              {state.tlds.length} TLD{state.tlds.length === 1 ? "" : "s"}
+            </Badge>
+            <Badge tone="outline">
+              {state.partnerLengths.length > 0 ? `${state.partnerLengths.length} lengths` : "any length"}
+            </Badge>
           </div>
-        ) : null}
+        </div>
+
+        <p className="text-[11px] leading-relaxed text-fg-subtle">
+          Every name is your root plus one partner word — never a partner on both sides. The engine
+          picks the order; the domain is always the lower-case label and the CamelCase form is for
+          reading only.
+        </p>
       </div>
 
       {error ? (
@@ -586,34 +509,6 @@ export function GeneratorControls({
           {error}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" size="lg" loading={busy} loadingLabel="Generating…" className="flex-1 sm:flex-none">
-          <Sparkles className="size-4" aria-hidden="true" />
-          Generate names
-        </Button>
-        <Button type="button" variant="ghost" size="lg" onClick={onReset}>
-          <RotateCcw className="size-4" aria-hidden="true" />
-          Reset
-        </Button>
-        <div className="ml-auto flex items-center gap-1.5 text-xs text-fg-subtle">
-          <Badge tone="outline">{state.tlds.length} TLD{state.tlds.length === 1 ? "" : "s"}</Badge>
-          <Badge tone="outline">
-            {state.styles.length} style{state.styles.length === 1 ? "" : "s"}
-          </Badge>
-        </div>
-      </div>
-      {selectedTlds.length > 0 ? (
-        <p className="text-[11px] leading-relaxed text-fg-subtle">
-          Checking capability:{" "}
-          {selectedTlds.map((record) => `${record.displayName} ${record.checkability === "rdap" ? "RDAP" : record.checkability}`).join(" · ")}.
-          Availability is never inferred from this list.
-        </p>
-      ) : null}
-      <p className="text-[11px] text-fg-subtle">
-        Default extensions: {DEFAULT_TLDS.slice(0, 4).map((tld) => `.${tld}`).join(" ")} · engine runs entirely in your
-        browser.
-      </p>
     </form>
   );
 }
@@ -625,17 +520,19 @@ export function GeneratorControls({
 /**
  * One root, enforced.
  *
- * The engine can process several roots, but a result list built from several keywords cannot
- * answer "how many good names does *this* word produce" — it interleaves lists, splits the
- * quantity between them and makes the partner-length filter meaningless. The field therefore
- * accepts exactly one keyword and says plainly what it did with the rest.
+ * Several roots interleave unrelated lists and make the quantity-per-root meaningless, so the
+ * field accepts exactly one keyword and says what it did with the rest. Changing the root also
+ * clears an industry override: a choice made for "pay" is not a choice for "home".
  */
 function RootField({
   state,
   onChange,
+  detectedIndustry,
 }: {
   state: GeneratorFormState;
   onChange: (next: GeneratorFormState) => void;
+  /** Name of the industry that will be used, or null. Full reasoning lives in the industry field. */
+  detectedIndustry: { name: string; mode: "auto" | "override" | "none" } | null;
 }) {
   const current = state.roots[0] ?? "";
   const [notice, setNotice] = useState<string | null>(null);
@@ -655,10 +552,16 @@ function RootField({
     const keyword = normalizeKeyword(tokens[0] ?? "");
     if (tokens.length === 1 && !keyword.valid) {
       setNotice(keyword.reason ?? "That is not a usable domain keyword.");
-      onChange({ ...state, roots: [tokens[0]!] });
+      onChange({ ...state, roots: [tokens[0]!], industries: [] });
       return;
     }
-    onChange({ ...state, roots: tokens.length > 0 ? [tokens[0]!] : [] });
+    const nextRoot = tokens[0] ?? "";
+    onChange({
+      ...state,
+      roots: nextRoot ? [nextRoot] : [],
+      // A manual industry belongs to the root it was chosen for.
+      industries: nextRoot === current ? state.industries : [],
+    });
   };
 
   const keyword = normalizeKeyword(current);
@@ -667,11 +570,11 @@ function RootField({
   return (
     <div className="space-y-1.5">
       <Field
-        label="Root keyword"
+        label="Primary root"
         htmlFor="root"
         required
         error={error}
-        description="The word the names are built around. One root produces a coherent list and an exact count."
+        description="The one word every name is built around."
       >
         <Input
           id="root"
@@ -683,7 +586,7 @@ function RootField({
           spellCheck={false}
           invalid={Boolean(error)}
           className="h-11 text-base"
-          aria-describedby={notice ? "root-notice" : undefined}
+          aria-describedby={notice ? "root-notice" : "root-industry-hint"}
         />
       </Field>
 
@@ -693,14 +596,20 @@ function RootField({
         </p>
       ) : null}
 
+      <p id="root-industry-hint" className="text-[11px] leading-relaxed text-fg-subtle">
+        {detectedIndustry
+          ? `${detectedIndustry.mode === "override" ? "Industry set by you" : "Detected industry"}: ${detectedIndustry.name}`
+          : "No industry matched — general partner words will be used."}
+      </p>
+
       <div className="flex flex-wrap gap-1.5">
-        {["pay", "home", "cloud", "ai", "shop", "stream"].map((example) => (
+        {["pay", "home", "cloud", "ai", "chat", "secure"].map((example) => (
           <button
             key={example}
             type="button"
             onClick={() => {
               setNotice(null);
-              onChange({ ...state, roots: [example] });
+              onChange({ ...state, roots: [example], industries: [] });
             }}
             className="rounded-full border border-dashed border-border-strong px-2 py-0.5 text-[11px] text-fg-subtle hover:border-accent hover:text-accent"
           >
@@ -713,94 +622,99 @@ function RootField({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Naming styles                                                              */
+/* Industry                                                                   */
 /* -------------------------------------------------------------------------- */
 
 /**
- * Naming styles, with a recommendation derived from the root's shape.
+ * The industry control: a compact select plus the detection behind it.
  *
- * The mapping into engine terms lives in `naming-styles.ts`: each chip sets real word styles and a
- * keyword position, and "compounds" raises the component limit to three because a compound is
- * three parts by definition. Selecting nothing is not allowed — an empty style list would make
- * the generator return only the bare root.
+ * It must never be a large permanent panel, so this is one line of interface with an explicit
+ * "Automatic" option. The applied value is always visible — "Automatic (Fintech & Payments)" —
+ * because an empty dropdown would look like no industry had been found.
+ *
+ * Keyboard, pointer and touch all work because the control is a native `<select>`; the ranked
+ * suggestion buttons are ordinary buttons, not hover-only affordances.
  */
-function NamingStyleField({
+function IndustryField({
+  root,
   state,
   onChange,
+  industryScope,
+  summary,
+  mode,
+  suggestions,
 }: {
+  root: string;
   state: GeneratorFormState;
   onChange: (next: GeneratorFormState) => void;
+  industryScope: string | null;
+  summary: string;
+  mode: "auto" | "override" | "none";
+  suggestions: Array<{ id: string; name: string; confidence: number }>;
 }) {
-  const root = state.roots[0] ?? "";
-  const recommendation = useMemo(() => recommendNamingStyles(root), [root]);
-  const selected = useMemo(() => namingStylesInState(state), [state]);
-
-  const apply = (ids: NamingStyleId[]) => {
-    const engine = engineForNamingStyles(ids);
-    onChange({
-      ...state,
-      styles: engine.styles,
-      position: engine.position,
-      // Never lower a limit the user raised by hand; only raise it for compounds.
-      maxComponents: Math.max(state.maxComponents, engine.maxComponents),
-    });
-  };
+  const autoLabel =
+    mode === "auto" && industryScope
+      ? `Automatic — ${INDUSTRIES.find((industry) => industry.id === industryScope)?.name ?? industryScope}`
+      : mode === "override"
+        ? "Automatic (detected again from the root)"
+        : "Automatic — no confident match";
 
   return (
     <Field
-      label="Naming styles"
-      description="How each name is assembled. The chips set the word styles and keyword position used by the engine."
-      labelAction={
-        root && recommendation.styles.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => apply(recommendation.styles)}
-            className="text-[11px] font-medium text-accent hover:underline"
-            title={recommendation.reason}
-          >
-            Use recommended
-          </button>
-        ) : null
-      }
+      label="Industry"
+      htmlFor="industry"
+      description="Sets the vocabulary partner words are drawn from. Automatic follows the root; choosing one overrides it until you reset or change the root."
     >
-      <div className="space-y-2">
-        <div className="grid gap-1.5 sm:grid-cols-2">
-          {NAMING_STYLES.map((style) => {
-            const active = selected.includes(style.id);
-            const recommended = recommendation.styles.includes(style.id);
-            return (
-              <button
-                key={style.id}
-                type="button"
-                role="checkbox"
-                aria-checked={active}
-                onClick={() => {
-                  const next = active ? selected.filter((id) => id !== style.id) : [...selected, style.id];
-                  apply(next.length > 0 ? next : [style.id]);
-                }}
-                className={cn(
-                  "rounded-[var(--radius)] border px-2.5 py-2 text-left transition-colors",
-                  active
-                    ? "border-accent bg-accent-soft/60 text-fg"
-                    : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
-                )}
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-medium">{style.label}</span>
-                  {recommended ? (
-                    <Badge tone="accent" className="text-[10px]">
-                      Suggested
-                    </Badge>
-                  ) : null}
-                </span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-fg-subtle">{style.description}</span>
-                <span className="mt-1 block font-mono text-[11px] text-fg-muted">{style.example(root || "root")}</span>
-              </button>
-            );
-          })}
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-1.5">
+          <Select
+            id="industry"
+            aria-label="Industry"
+            value={state.industries[0] ?? ""}
+            onChange={(event) => onChange({ ...state, industries: event.target.value ? [event.target.value] : [] })}
+            className="h-9 text-[13px]"
+          >
+            <option value="">{autoLabel}</option>
+            {INDUSTRIES.map((industry) => (
+              <option key={industry.id} value={industry.id}>
+                {industry.name}
+              </option>
+            ))}
+          </Select>
+          {state.industries.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => onChange({ ...state, industries: [] })}
+              className="shrink-0 rounded-[var(--radius-sm)] px-2 py-1 text-[11px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
+            >
+              Reset to auto
+            </button>
+          ) : null}
         </div>
-        {root && recommendation.reason ? (
-          <p className="text-[11px] leading-relaxed text-fg-subtle">{recommendation.reason}</p>
+
+        <p className="text-[11px] leading-relaxed text-fg-subtle">{summary}</p>
+
+        {industryScope ? (
+          <p className="text-[11px] text-fg-subtle">
+            Vocabulary: {industryExamples(industryScope).join(", ")}…
+          </p>
+        ) : null}
+
+        {suggestions.length > 1 ? (
+          <div className="flex flex-wrap items-center gap-1 pt-0.5">
+            <span className="text-[11px] text-fg-subtle">{root ? "Also matches:" : "Try:"}</span>
+            {suggestions.slice(1).map((match) => (
+              <button
+                key={match.id}
+                type="button"
+                onClick={() => onChange({ ...state, industries: [match.id] })}
+                className="rounded-full border border-border px-2 py-0.5 text-[11px] text-fg-muted hover:border-accent hover:text-accent"
+              >
+                {match.name}
+                <span className="ml-1 tabular-nums text-fg-subtle">{Math.round(match.confidence * 100)}%</span>
+              </button>
+            ))}
+          </div>
         ) : null}
       </div>
     </Field>

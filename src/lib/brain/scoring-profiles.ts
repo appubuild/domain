@@ -6,7 +6,7 @@
  * ranking change can always be traced back to a specific configuration.
  */
 
-import type { BrandableProfileId, WordStyle } from "./types";
+import type { BrandableProfileId } from "./types";
 
 export type ScoringFactorDefinition = {
   key: string;
@@ -79,26 +79,22 @@ export type BrandableProfileDefinition = {
   description: string;
   idealLength: [number, number];
   idealSyllables: [number, number];
-  /** Extra weight applied to stylistic preferences (0–1). */
-  preferredStyles: WordStyle[];
-  /** Bonus applied when the label is invented/blended rather than two dictionary words. */
-  originalityBias: number;
 };
 
 export const BRANDABLE_PROFILE_DEFINITIONS: BrandableProfileDefinition[] = [
-  { id: "short-abstract", name: "Short & abstract", description: "Four to six letters, no literal meaning.", idealLength: [4, 6], idealSyllables: [2, 2], preferredStyles: ["short-abstract", "invented"], originalityBias: 1 },
-  { id: "startup", name: "Startup", description: "Modern, product-ready, easy to say in a pitch.", idealLength: [5, 8], idealSyllables: [2, 3], preferredStyles: ["invented", "compound", "keyword-brand-suffix"], originalityBias: 0.8 },
-  { id: "professional", name: "Professional & corporate", description: "Restrained and credible for B2B buyers.", idealLength: [6, 10], idealSyllables: [2, 3], preferredStyles: ["standard", "natural-compound"], originalityBias: 0.35 },
-  { id: "friendly", name: "Friendly & approachable", description: "Warm, human and easy for consumers.", idealLength: [5, 8], idealSyllables: [2, 3], preferredStyles: ["natural-compound", "standard"], originalityBias: 0.3 },
-  { id: "premium", name: "Premium & sophisticated", description: "Quiet confidence with a longer, smoother sound.", idealLength: [6, 10], idealSyllables: [2, 4], preferredStyles: ["natural-compound", "invented"], originalityBias: 0.5 },
-  { id: "technology", name: "Technology-oriented", description: "Crisp, engineered, slightly technical.", idealLength: [5, 9], idealSyllables: [2, 3], preferredStyles: ["keyword-industry", "invented", "compound"], originalityBias: 0.7 },
-  { id: "fintech", name: "Fintech-oriented", description: "Trustworthy yet modern; money vocabulary helps.", idealLength: [5, 9], idealSyllables: [2, 3], preferredStyles: ["keyword-industry", "standard"], originalityBias: 0.5 },
-  { id: "ai", name: "AI-oriented", description: "Intelligent, forward-looking, comfortable with invented forms.", idealLength: [4, 8], idealSyllables: [2, 3], preferredStyles: ["invented", "pseudo-word", "short-abstract"], originalityBias: 0.9 },
-  { id: "developer", name: "Developer-oriented", description: "Short, typeable, no ambiguity on a CLI.", idealLength: [4, 7], idealSyllables: [2, 2], preferredStyles: ["short-abstract", "pseudo-word"], originalityBias: 0.8 },
-  { id: "ecommerce", name: "E-commerce-oriented", description: "Inviting and commercial, explainable at a glance.", idealLength: [5, 9], idealSyllables: [2, 3], preferredStyles: ["keyword-industry", "natural-compound"], originalityBias: 0.4 },
-  { id: "playful", name: "Creative & playful", description: "Unexpected sounds, memorable rhythm.", idealLength: [5, 8], idealSyllables: [2, 3], preferredStyles: ["portmanteau", "pseudo-word"], originalityBias: 0.85 },
-  { id: "root-preserving", name: "Root-preserving brandable", description: "Keeps the keyword fully readable inside the name.", idealLength: [5, 10], idealSyllables: [2, 3], preferredStyles: ["keyword-brand-prefix", "keyword-brand-suffix", "exact-combination"], originalityBias: 0.4 },
-  { id: "root-inspired", name: "Root-inspired invented", description: "Keeps only a fragment of the keyword, then invents.", idealLength: [4, 8], idealSyllables: [2, 3], preferredStyles: ["invented", "portmanteau", "pseudo-word"], originalityBias: 0.95 },
+  { id: "short-abstract", name: "Short & abstract", description: "Four to six letters, no literal meaning.", idealLength: [4, 6], idealSyllables: [2, 2] },
+  { id: "startup", name: "Startup", description: "Modern, product-ready, easy to say in a pitch.", idealLength: [5, 8], idealSyllables: [2, 3] },
+  { id: "professional", name: "Professional & corporate", description: "Restrained and credible for B2B buyers.", idealLength: [6, 10], idealSyllables: [2, 3] },
+  { id: "friendly", name: "Friendly & approachable", description: "Warm, human and easy for consumers.", idealLength: [5, 8], idealSyllables: [2, 3] },
+  { id: "premium", name: "Premium & sophisticated", description: "Quiet confidence with a longer, smoother sound.", idealLength: [6, 10], idealSyllables: [2, 4] },
+  { id: "technology", name: "Technology-oriented", description: "Crisp, engineered, slightly technical.", idealLength: [5, 9], idealSyllables: [2, 3] },
+  { id: "fintech", name: "Fintech-oriented", description: "Trustworthy yet modern; money vocabulary helps.", idealLength: [5, 9], idealSyllables: [2, 3] },
+  { id: "ai", name: "AI-oriented", description: "Intelligent, forward-looking, comfortable with invented forms.", idealLength: [4, 8], idealSyllables: [2, 3] },
+  { id: "developer", name: "Developer-oriented", description: "Short, typeable, no ambiguity on a CLI.", idealLength: [4, 7], idealSyllables: [2, 2] },
+  { id: "ecommerce", name: "E-commerce-oriented", description: "Inviting and commercial, explainable at a glance.", idealLength: [5, 9], idealSyllables: [2, 3] },
+  { id: "playful", name: "Creative & playful", description: "Unexpected sounds, memorable rhythm.", idealLength: [5, 8], idealSyllables: [2, 3] },
+  { id: "root-preserving", name: "Root-preserving brandable", description: "Keeps the keyword fully readable inside the name.", idealLength: [5, 10], idealSyllables: [2, 3] },
+  { id: "root-inspired", name: "Root-inspired invented", description: "Keeps only a fragment of the keyword, then invents.", idealLength: [4, 8], idealSyllables: [2, 3] },
 ];
 
 export const DEFAULT_QUALITY_PROFILE = QUALITY_PROFILES[0] as QualityProfile;

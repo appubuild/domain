@@ -4,15 +4,15 @@
  * A marketing page is the easiest place in a codebase to state something the software does not do,
  * and the hardest place to notice. These tests render the real page component (the same one the
  * static export runs) and pair that with checks that the copy still describes shipped behaviour:
- * six steps, six styles, the four partner lengths, the three quantities, and no availability
- * language that implies a lookup happened when it did not.
+ * six steps, both word orders and no style picker, the five partner lengths, the three quantities,
+ * and no availability language that implies a lookup happened when it did not.
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import HomePage from "@/app/page";
 import { FEATURES, HOW_IT_WORKS, LANDING_FAQ } from "@/lib/content/landing";
-import { NAMING_STYLES } from "@/lib/generator/naming-styles";
+import { PARTNER_LENGTH_CHOICES } from "@/lib/brain/partners";
 import { VALID_TARGETS } from "@/lib/generator/url-state";
 
 async function render(): Promise<string> {
@@ -27,16 +27,23 @@ describe("landing copy matches the engine", () => {
       "Normalise the root",
       "Analyse the root",
       "Expand semantically",
-      "Generate with the chosen styles",
+      "Place the partner root",
       "Filter, de-duplicate, score",
       "Check availability on request",
     ]);
   });
 
-  it("counts the naming styles it advertises", () => {
-    const claimed = FEATURES.find((feature) => feature.title === "Six naming styles");
+  it("describes the word-order rule instead of advertising a style picker", () => {
+    const claimed = FEATURES.find((feature) => feature.title === "The better order, chosen for you");
     expect(claimed).toBeDefined();
-    expect(NAMING_STYLES).toHaveLength(6);
+    expect(claimed?.body).toMatch(/both orders/i);
+    // No feature may claim a naming-style selector: the control was removed, not renamed.
+    for (const feature of FEATURES) {
+      expect(feature.title.toLowerCase()).not.toContain("naming styles");
+    }
+    const step = HOW_IT_WORKS.find((item) => item.title === "Place the partner root");
+    expect(step?.body).toMatch(/exactly one partner root/);
+    expect(step?.body).toMatch(/never appears on both sides/);
   });
 
   it("advertises the quantities the generator actually offers", () => {
@@ -45,9 +52,15 @@ describe("landing copy matches the engine", () => {
     expect(quantities?.body).toMatch(/100, 500 or 1,000/);
   });
 
-  it("names all four partner lengths", () => {
+  it("names every partner length the control offers", () => {
     const partner = FEATURES.find((feature) => feature.title.startsWith("Partner lengths"));
-    expect(partner?.body).toMatch(/2, 3, 4 and 5/);
+    expect(partner).toBeDefined();
+    // The claim and the chips must agree: 2–6 in both places, or neither.
+    expect(PARTNER_LENGTH_CHOICES).toEqual([2, 3, 4, 5, 6]);
+    expect(partner?.body).toMatch(/2 to 6 letters/);
+    expect(partner?.title).toContain("2 · 3 · 4 · 5 · 6");
+    // And the total length is arithmetic now, not a control.
+    expect(partner?.body).toMatch(/no separate total-length setting/);
   });
 
   it("never promises availability without a lookup", () => {

@@ -46,7 +46,7 @@ const ROOT_SEMANTICS: Record<
   pay: {
     synonyms: ["payment", "payments", "settle", "remit"],
     categories: ["payments", "wallets", "billing", "invoices", "transactions", "merchant services", "checkout", "remittance"],
-    industries: ["fintech"],
+    industries: ["fintech", "saas"],
   },
   home: {
     synonyms: ["house", "abode", "nest", "dwelling"],
@@ -71,7 +71,12 @@ const ROOT_SEMANTICS: Record<
   ai: {
     synonyms: ["artificial", "intelligence", "neural", "model"],
     categories: ["models", "agents", "inference", "assistants", "automation"],
-    industries: ["ai"],
+    industries: ["ai", "automation"],
+  },
+  chat: {
+    synonyms: ["message", "talk", "conversation"],
+    categories: ["messaging", "chat", "inbox", "voice", "video", "support"],
+    industries: ["communication", "saas"],
   },
   shop: {
     synonyms: ["store", "market", "boutique"],
@@ -111,7 +116,7 @@ const ROOT_SEMANTICS: Record<
   secure: {
     synonyms: ["security", "guard", "shield"],
     categories: ["identity", "compliance", "encryption", "monitoring"],
-    industries: ["security"],
+    industries: ["security", "saas"],
   },
   game: {
     synonyms: ["gaming", "play", "esports"],
@@ -145,44 +150,71 @@ export function detectIndustries(root: string, explicit: string[] = []): Industr
 
   const curated = ROOT_SEMANTICS[key];
   if (curated) {
-    for (const industryId of curated.industries) {
+    curated.industries.forEach((industryId, index) => {
       const industry = INDUSTRIES.find((item) => item.id === industryId);
-      if (!industry || matches.has(industry.id)) continue;
+      if (!industry || matches.has(industry.id)) return;
       matches.set(industry.id, {
         id: industry.id,
         name: industry.name,
-        confidence: 0.9,
-        reason: `“${key}” is a curated ${industry.name} root.`,
+        // The first sector in the curated entry is the primary one; the rest are "also fits".
+        confidence: index === 0 ? 0.95 : 0.75,
+        reason:
+          index === 0
+            ? `“${key}” is a curated ${industry.name} root.`
+            : `“${key}” also fits ${industry.name}.`,
       });
-    }
+    });
   }
 
   for (const industry of INDUSTRIES) {
     if (matches.has(industry.id)) continue;
-    const keywordHit = industry.keywords.find(
-      (keyword) => keyword === key || key.startsWith(keyword) || keyword.startsWith(key),
-    );
-    if (keywordHit) {
+
+    // Exact keyword first: "chat" is unambiguous. Prefix matching only applies to words of three
+    // letters or more, otherwise a two-letter root would match half the dictionary.
+    const exact = industry.keywords.find((keyword) => keyword === key);
+    if (exact) {
       matches.set(industry.id, {
         id: industry.id,
         name: industry.name,
-        confidence: keywordHit === key ? 0.75 : 0.55,
-        reason: `Keyword overlap with “${keywordHit}”.`,
+        confidence: 0.85,
+        reason: `“${exact}” is ${industry.name} vocabulary.`,
       });
       continue;
     }
+
+    const prefix =
+      key.length >= 3
+        ? industry.keywords.find(
+            (keyword) =>
+              keyword.length >= 3 && (key.startsWith(keyword) || keyword.startsWith(key)),
+          )
+        : undefined;
+    if (prefix) {
+      matches.set(industry.id, {
+        id: industry.id,
+        name: industry.name,
+        confidence: 0.6,
+        reason: `Keyword overlap with “${prefix}”.`,
+      });
+      continue;
+    }
+
     const relatedHit = industry.relatedTerms.find((term) => term === key);
     if (relatedHit) {
       matches.set(industry.id, {
         id: industry.id,
         name: industry.name,
-        confidence: 0.4,
+        confidence: 0.45,
         reason: `“${key}” appears in ${industry.name} vocabulary.`,
       });
     }
   }
 
-  return Array.from(matches.values()).sort((a, b) => b.confidence - a.confidence);
+  // Ranked, and deterministic: equal confidence falls back to the industry id, so the dropdown
+  // never reorders itself between two page loads.
+  return Array.from(matches.values()).sort(
+    (a, b) => b.confidence - a.confidence || a.id.localeCompare(b.id),
+  );
 }
 
 function lengthPenalty(word: string): number {

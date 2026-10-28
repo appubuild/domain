@@ -113,7 +113,7 @@ export function CandidateRow({
             <span aria-hidden="true">·</span>
             <span className="tnum">{candidate.syllables} syl</span>
             <span aria-hidden="true">·</span>
-            <span className="truncate" title={describeStrategy(candidate.strategy)}>
+            <span className="truncate" title={describePlacement(candidate)}>
               {humanStrategy(candidate.strategy)}
             </span>
           </div>
@@ -206,7 +206,9 @@ export function CandidateDetail({
           <h3 className="text-[13px] font-semibold text-fg">How this name was built</h3>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12.5px] sm:grid-cols-3">
             {[
-              ["Root", candidate.root],
+              ["Primary root", candidate.root],
+              ["Partner root", candidate.partner],
+              ["Order", humanOrder(candidate.order)],
               ["Components", candidate.components.join(" + ")],
               ["Strategy", humanStrategy(candidate.strategy)],
               ["Length", `${candidate.length} characters`],
@@ -395,21 +397,28 @@ function ScoreBreakdown({
   );
 }
 
-export function humanStrategy(strategy: Candidate["strategy"]): string {
-  const map: Record<string, string> = {
-    "direct-combination": "Direct combination",
-    "semantic-combination": "Semantic combination",
-    "phrase-template": "Phrase template",
-    portmanteau: "Portmanteau",
-    invented: "Invented",
-    "pseudo-word": "Pseudo-word",
-    "short-abstract": "Short abstract",
-    "keyword-only": "Keyword only",
-    "exact-combination": "Exact keyword",
-  };
-  return map[strategy] ?? strategy;
+/**
+ * One strategy remains, so this is a description of the rule rather than a lookup table of
+ * engine modes: the primary root plus exactly one partner root, in the better-reading order.
+ */
+export function humanStrategy(_strategy: Candidate["strategy"]): string {
+  return "Root + partner root";
 }
 
-function describeStrategy(strategy: Candidate["strategy"]): string {
-  return `${humanStrategy(strategy)} — see details for the full breakdown.`;
+/** Word order, in the words a person would use. */
+export function humanOrder(order: Candidate["order"]): string {
+  return order === "root-partner" ? "Root first" : "Partner first";
+}
+
+/**
+ * The tooltip behind the row's strategy text.
+ *
+ * It reports the score of both orders, because that is what decided the name: the engine tried
+ * `HomeLand` and `LandHome` and kept the one that scored higher.
+ */
+export function describePlacement(candidate: Candidate): string {
+  const chosen = candidate.placement.scores[candidate.order];
+  const other = candidate.placement.scores[candidate.order === "root-partner" ? "partner-root" : "root-partner"];
+  const reasons = candidate.placement.reasons.length > 0 ? ` ${candidate.placement.reasons.join("; ")}.` : "";
+  return `${humanOrder(candidate.order)} — scored ${chosen}/100 against ${other}/100 for the reverse order.${reasons}`;
 }

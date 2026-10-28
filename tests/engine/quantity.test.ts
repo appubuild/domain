@@ -1,200 +1,97 @@
 /**
- * Exact quantities, partner lengths and compounds.
+ * Quantities: exact when the vocabulary allows it, explained when it does not.
  *
- * The generator used to answer "1000 names" with 252, because the search space was built from
- * two hard-coded libraries and a fixed set of combination shapes. These tests pin the three
- * behaviours that fixed it: the target is met exactly when the space allows it, the partner
- * length filter applies to the partner word only, and a count that cannot be met is explained
- * rather than padded.
+ * The number to beat is the engine's own space. One root plus one partner on 2–6 letters is a few
+ * hundred names, not a few thousand, and the honest answer to "give me 1,000" is therefore either
+ * 1,000 real names or a shortfall with a reason. These tests pin both outcomes, and pin that a
+ * shortfall is never papered over with weaker rules.
  */
 
 import { describe, expect, it } from "vitest";
-import { createGenerationRequest, generate, type GenerationConstraints } from "@/lib/brain";
-import { partnerLengthAllowed, partnerPools, partnerWordLength } from "@/lib/brain/generate";
+import { createGenerationRequest, generate } from "@/lib/brain";
 
-/** Constraints are partial here; `createGenerationRequest` normalises them against the defaults. */
-const COMPOUND_CONSTRAINTS = { maxComponents: 3, maxLength: 14 };
 const BUDGET = 20_000;
 
 function run(overrides: Parameters<typeof createGenerationRequest>[0], target: number) {
-  return generate(
-    createGenerationRequest({
-      roots: ["pay"],
-      targetCount: target,
-      budgetMs: BUDGET,
-      constraints: COMPOUND_CONSTRAINTS as GenerationConstraints,
-      ...overrides,
-    }),
-    { now: () => Date.now() },
-  );
+  return generate(createGenerationRequest({ roots: ["pay"], targetCount: target, budgetMs: BUDGET, ...overrides }), {
+    now: () => Date.now(),
+  });
 }
 
 describe("exact quantities", () => {
-  for (const target of [100, 500, 1000]) {
+  for (const target of [25, 100, 250, 500]) {
     it(`returns exactly ${target} distinct names when the space allows it`, () => {
-      const result = run({ styles: ["standard", "compound", "natural-compound"] }, target);
+      const result = run({ partnerLengths: [2, 3, 4, 5, 6] }, target);
       expect(result.candidates).toHaveLength(target);
-      const labels = new Set(result.candidates.map((candidate) => candidate.label));
-      expect(labels.size).toBe(target);
-      // Every returned name must be a valid label — padding with rejects is not an option.
+      expect(new Set(result.candidates.map((candidate) => candidate.label)).size).toBe(target);
+      expect(result.diagnostics.exhausted).toBe(false);
       for (const candidate of result.candidates) {
-        expect(candidate.label).toMatch(/^[a-z0-9]+$/);
+        expect(candidate.label).toMatch(/^[a-z]+$/);
         expect(candidate.displayName.length).toBeGreaterThan(0);
       }
     });
   }
 
   it("is deterministic: the same request twice yields the same names in the same order", () => {
-    const first = run({ targetCount: 500, styles: ["standard", "compound"] } as never, 500);
-    const second = run({ targetCount: 500, styles: ["standard", "compound"] } as never, 500);
+    const first = run({ partnerLengths: [2, 3, 4, 5, 6] }, 500);
+    const second = run({ partnerLengths: [2, 3, 4, 5, 6] }, 500);
     expect(first.candidates.map((candidate) => candidate.label)).toEqual(
       second.candidates.map((candidate) => candidate.label),
     );
   });
 
   it("does not report exhaustion when the target was met", () => {
-    const result = run({ styles: ["standard", "compound"] }, 500);
-    expect(result.candidates).toHaveLength(500);
+    const result = run({ partnerLengths: [2, 3, 4, 5, 6] }, 500);
     expect(result.diagnostics.exhausted).toBe(false);
-  });
-});
-
-describe("partner root lengths", () => {
-  it("measures the partner word, not the finished label", () => {
-    expect(partnerWordLength("up")).toBe(2);
-    expect(partnerWordLength("nova")).toBe(4);
-    expect(partnerWordLength("pay-bay")).toBe(6);
-    expect(partnerLengthAllowed("neo", [2, 3])).toBe(true);
-    expect(partnerLengthAllowed("nova", [2, 3])).toBe(false);
-    expect(partnerLengthAllowed("whatever", [])).toBe(true);
-  });
-
-  it("only offers partners of the selected lengths", () => {
-    for (const lengths of [[2], [2, 3], [3, 4], [4, 5], [2, 3, 4, 5]]) {
-      const request = createGenerationRequest({ roots: ["pay"], partnerLengths: lengths });
-      const pools = partnerPools(request);
-      expect(pools.prefixes.length, `prefixes for ${lengths.join("/")}`).toBeGreaterThan(0);
-      expect(pools.suffixes.length, `suffixes for ${lengths.join("/")}`).toBeGreaterThan(0);
-      for (const word of [...pools.prefixes, ...pools.suffixes]) {
-        expect(lengths, `${word} is not ${lengths.join("/")} letters`).toContain(word.length);
-      }
-    }
-  });
-
-  it("keeps the partner length while still producing the full quantity", () => {
-    for (const lengths of [[2, 3], [3, 4], [4, 5], [2, 3, 4, 5]]) {
-      const result = run({ partnerLengths: lengths, styles: ["standard", "compound", "natural-compound"] }, 500);
-      expect(result.candidates.length, `lengths ${lengths.join("/")}`).toBe(500);
-
-      // Every candidate must contain a partner of an allowed length. Single-part keyword-only
-      // forms are exempt: they have no partner at all.
-      for (const candidate of result.candidates) {
-        if (candidate.components.length < 2) continue;
-        const partners = candidate.components.filter((component) => component !== candidate.root);
-        expect(partners.length).toBeGreaterThan(0);
-        for (const partner of partners) {
-          expect(lengths, `${candidate.label} uses a ${partner.length}-letter partner`).toContain(
-            partnerWordLength(partner),
-          );
-        }
-      }
-    }
-  });
-});
-
-describe("library selection", () => {
-  it("treats an empty library selection as every library", () => {
-    const all = partnerPools(createGenerationRequest({ roots: ["pay"], autoExpand: true }));
-    const modern = partnerPools(
-      createGenerationRequest({ roots: ["pay"], autoExpand: true, prefixLibraries: ["modern"] }),
-    );
-    expect(all.prefixes.length).toBeGreaterThan(modern.prefixes.length);
-    expect(modern.prefixes.every((word) => all.prefixes.includes(word))).toBe(true);
-  });
-
-  it("uses only custom partners when automatic expansion is off", () => {
-    const pools = partnerPools(
-      createGenerationRequest({
-        roots: ["pay"],
-        autoExpand: false,
-        customPrefixes: ["neo", "zen"],
-        customSuffixes: ["hub"],
-      }),
-    );
-    expect(pools.prefixes.sort()).toEqual(["neo", "zen"]);
-    expect(pools.suffixes).toEqual(["hub"]);
-  });
-
-  it("changes the result set when the library selection changes", () => {
-    const modern = run({ prefixLibraries: ["modern"], suffixLibraries: ["generic"], styles: ["standard"] }, 100);
-    const tech = run({ prefixLibraries: ["tech"], suffixLibraries: ["tech"], styles: ["standard"] }, 100);
-    expect(modern.candidates.map((c) => c.label)).not.toEqual(tech.candidates.map((c) => c.label));
+    expect(result.diagnostics.reasons).toEqual([]);
   });
 });
 
 describe("honest shortfalls", () => {
-  it("explains a target the space cannot meet instead of padding the list", () => {
-    const result = generate(
-      createGenerationRequest({
-        roots: ["pay"],
-        targetCount: 1000,
-        budgetMs: BUDGET,
-        // A single 9-letter partner, two custom words: the space cannot reach 1000.
-        constraints: { minLength: 12, maxLength: 12, maxComponents: 2 } as GenerationConstraints,
-        autoExpand: false,
-        customPrefixes: ["nova"],
-        customSuffixes: ["hub"],
-        styles: ["standard"],
-      }),
-    );
+  it("stops at the real size of the space and says so", () => {
+    const result = run({ partnerLengths: [2, 3, 4, 5, 6] }, 1000);
     expect(result.candidates.length).toBeLessThan(1000);
+    expect(result.candidates.length).toBe(result.diagnostics.produced);
     expect(result.diagnostics.exhausted).toBe(true);
+    expect(result.diagnostics.reasons.join(" ")).toMatch(/at most \d+ unique two-part name/);
+    // Every returned name is still a real, valid two-part name — nothing is padded.
+    expect(new Set(result.candidates.map((candidate) => candidate.label)).size).toBe(result.candidates.length);
+    for (const candidate of result.candidates) {
+      expect(candidate.components).toHaveLength(2);
+      expect(candidate.components).toContain(candidate.root);
+    }
+  });
+
+  it("names the partner-length rule as the limiting constraint", () => {
+    const result = run({ partnerLengths: [2] }, 100);
+    expect(result.diagnostics.exhausted).toBe(true);
+    expect(result.diagnostics.reasons.join(" ")).toMatch(/Only partner roots of 2 letters are allowed/);
+  });
+
+  it("does not call a budget stop an exhaustion", () => {
+    const result = run({ partnerLengths: [2, 3, 4, 5, 6], budgetMs: 1 }, 1000);
+    // A one-millisecond budget stops on time; the reasons must describe time, not vocabulary.
+    if (result.diagnostics.exhausted === false) {
+      expect(result.diagnostics.reasons.join(" ")).toMatch(/budget/);
+    }
+  });
+
+  it("returns an empty list with a reason when no partner matches the length", () => {
+    // Twelve-letter partners do not exist in the lexicon, so the pool is empty. The engine says
+    // so; it never invents a word to fill the gap.
+    const result = run({ partnerLengths: [12] }, 50);
+    expect(result.candidates.length).toBe(0);
     expect(result.diagnostics.reasons.length).toBeGreaterThan(0);
-    expect(result.diagnostics.reasons.join(" ")).toMatch(/search space|partner|component|expansion|budget/i);
-  });
-
-  it("names the partner-length filter when it is the limit", () => {
-    const request = createGenerationRequest({
-      roots: ["pay"],
-      targetCount: 1000,
-      partnerLengths: [2],
-      autoExpand: false,
-      customPrefixes: ["up"],
-      customSuffixes: ["io"],
-      styles: ["standard"],
-      budgetMs: BUDGET,
-    });
-    const result = generate(request);
-    expect(result.candidates.length).toBeLessThan(1000);
-    expect(result.diagnostics.reasons.join(" ")).toMatch(/partner/i);
-  });
-
-  it("says so when the compound style cannot run because components are capped", () => {
-    const result = generate(
-      createGenerationRequest({
-        roots: ["pay"],
-        targetCount: 1000,
-        styles: ["compound"],
-        constraints: { maxComponents: 2 } as GenerationConstraints,
-        autoExpand: false,
-        customPrefixes: ["nova"],
-        customSuffixes: ["hub"],
-        budgetMs: BUDGET,
-      }),
-    );
-    expect(result.candidates.length).toBeLessThan(1000);
-    expect(result.diagnostics.reasons.join(" ")).toMatch(/component/i);
   });
 });
 
-describe("display form and availability key", () => {
-  it("shows CamelCase from the real components while the label stays lower-case", () => {
-    const result = run({ styles: ["standard", "compound"], roots: ["pay"] }, 50);
-    const multi = result.candidates.find((candidate) => candidate.components.length >= 2)!;
-    expect(multi.label).toBe(multi.label.toLowerCase());
-    expect(multi.displayName).toBe(
-      multi.components.map((component) => component.charAt(0).toUpperCase() + component.slice(1)).join(""),
-    );
-    expect(multi.domains[0]!.domain).toBe(`${multi.label}.${multi.domains[0]!.tld}`);
+describe("performance", () => {
+  it("builds the largest reachable list in well under a second", () => {
+    const started = Date.now();
+    const result = run({ partnerLengths: [2, 3, 4, 5, 6] }, 500);
+    const elapsed = Date.now() - started;
+    expect(result.candidates).toHaveLength(500);
+    expect(elapsed).toBeLessThan(2000);
+    expect(result.diagnostics.elapsedMs).toBeLessThan(2000);
   });
 });

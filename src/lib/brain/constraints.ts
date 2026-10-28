@@ -31,9 +31,17 @@ export const LENGTH_PRESETS: Array<{ id: LengthPreset; label: string; min: numbe
 export const ABSOLUTE_MIN_LENGTH = 2;
 export const ABSOLUTE_MAX_LENGTH = 24;
 
+/**
+ * Defaults for a two-part name.
+ *
+ * `maxLength` is 18 because a name is now always `root + partner`: the longest partner the
+ * interface offers is six letters and a long root is twelve, so a lower ceiling would silently
+ * reject names the user asked for. There is no total-length control — the finished length is
+ * whatever the two chosen parts add up to.
+ */
 export const DEFAULT_CONSTRAINTS: GenerationConstraints = {
   minLength: 4,
-  maxLength: 12,
+  maxLength: 18,
   maxWordLength: 10,
   maxComponents: 2,
   allowHyphens: false,
@@ -235,37 +243,6 @@ export function checkCandidate(
   }
 
   return violations;
-}
-
-/**
- * Enforces the keyword-position control (Section 5.1 B).
- *
- *   prefix   → the root must end the label (NovaPay)
- *   suffix   → the root must start the label (PayNest)
- *   exact    → the label is the bare root (pay)
- *   both     → the root appears anywhere (default)
- *   flexible → the root appears anywhere, blends allowed
- *
- * Blends and invented names can put the root in the middle, so this check is applied to
- * every strategy — a "prefix only" request must never return mid-root blends.
- */
-export function respectsPosition(
-  label: string,
-  root: string,
-  position: import("./types").KeywordPosition,
-): boolean {
-  switch (position) {
-    case "prefix":
-      return label.endsWith(root);
-    case "suffix":
-      return label.startsWith(root);
-    case "exact":
-      return label === root;
-    case "both":
-    case "flexible":
-    default:
-      return label.includes(root);
-  }
 }
 
 /** Human summary of the active constraints, shown in the UI next to results. */

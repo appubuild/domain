@@ -74,7 +74,7 @@ export function HeroSearch({ autoFocus = false }: { autoFocus?: boolean }) {
           </p>
         ) : (
           <p className="text-xs text-fg-subtle">
-            One root is enough. Add a second word, styles, letter lengths and extensions once the
+            One root is enough. Add partner lengths, an industry and extensions once the
             generator opens — everything there is a real control, not a mock-up.
           </p>
         )}
