@@ -146,13 +146,26 @@ export type GeneratorControlsProps = {
   onReset: () => void;
   busy: boolean;
   error: string | null;
+  /**
+   * Render the submit button. False inside the mobile drawer, where the drawer's own pinned
+   * footer carries the action and the panel is free to be one column of inputs.
+   */
+  showActions?: boolean;
+  /** Prefix for element ids so two mounted instances cannot collide (desktop panel + drawer). */
+  idPrefix?: string;
 };
 
-export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, error }: GeneratorControlsProps) {
+export function GeneratorControls({
+  state,
+  onChange,
+  onGenerate,
+  onReset,
+  busy,
+  error,
+  showActions = true,
+  idPrefix = "",
+}: GeneratorControlsProps) {
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  // On a phone the sticky card keeps the root and Generate visible and folds the rest away, so
-  // the bar cannot eat the viewport. From `lg` up everything is shown.
-  const [setupOpen, setSetupOpen] = useState(false);
   const set = <K extends keyof GeneratorFormState>(key: K, value: GeneratorFormState[K]) =>
     onChange({ ...state, [key]: value });
 
@@ -201,36 +214,23 @@ export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, 
         onGenerate();
       }}
     >
-      {/* Row 1 — always visible: the one input that matters and the button that runs it. */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1">
-          <RootField
-            state={state}
-            onChange={onChange}
-            detectedIndustry={industry.applied ? { name: industry.applied.name, mode: industry.mode } : null}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button type="submit" size="lg" loading={busy} loadingLabel="Generating…" className="flex-1 sm:flex-none">
+      {/* Row 1 — the one input that matters, and the button that runs it. */}
+      <div className="flex flex-col gap-2">
+        <RootField
+          state={state}
+          onChange={onChange}
+          idPrefix={idPrefix}
+          detectedIndustry={industry.applied ? { name: industry.applied.name, mode: industry.mode } : null}
+        />
+        {showActions ? (
+          <Button type="submit" size="lg" loading={busy} loadingLabel="Generating…" className="w-full">
             <Sparkles className="size-4" aria-hidden="true" />
             Generate names
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="lg"
-            className="lg:hidden"
-            aria-expanded={setupOpen}
-            aria-controls="generator-setup"
-            onClick={() => setSetupOpen((open) => !open)}
-          >
-            <Wand2 className="size-4" aria-hidden="true" />
-            Setup
-          </Button>
-        </div>
+        ) : null}
       </div>
 
-      <div id="generator-setup" className={cn("space-y-2.5", setupOpen ? "block" : "hidden", "lg:block")}>
+      <div className="space-y-2.5">
         {/* Row 2 — extensions sit high in the card: they apply to every name that follows. */}
         <Field
           label="Extensions"
@@ -288,7 +288,7 @@ export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, 
             </div>
           </Field>
 
-          <IndustryField state={state} onChange={onChange} />
+          <IndustryField state={state} onChange={onChange} idPrefix={idPrefix} />
 
           <Field label="How many names" className="w-28">
             <Select
@@ -526,9 +526,11 @@ function RootField({
   state,
   onChange,
   detectedIndustry,
+  idPrefix = "",
 }: {
   state: GeneratorFormState;
   onChange: (next: GeneratorFormState) => void;
+  idPrefix?: string;
   /** Name of the industry that will be used, or null. Full reasoning lives in the industry field. */
   detectedIndustry: { name: string; mode: "auto" | "override" | "none" } | null;
 }) {
@@ -564,18 +566,21 @@ function RootField({
 
   const keyword = normalizeKeyword(current);
   const error = current && !keyword.valid ? (keyword.reason ?? "Not a usable keyword.") : null;
+  const rootId = `${idPrefix}root`;
+  const noticeId = `${idPrefix}root-notice`;
+  const hintId = `${idPrefix}root-industry-hint`;
 
   return (
     <div className="space-y-1.5">
       <Field
         label="Primary root"
-        htmlFor="root"
+        htmlFor={rootId}
         required
         error={error}
         description="The one word every name is built around."
       >
         <Input
-          id="root"
+          id={rootId}
           value={current}
           onChange={(event) => commit(event.target.value)}
           placeholder="pay"
@@ -584,17 +589,17 @@ function RootField({
           spellCheck={false}
           invalid={Boolean(error)}
           className="h-11 text-base"
-          aria-describedby={notice ? "root-notice" : "root-industry-hint"}
+          aria-describedby={notice ? noticeId : hintId}
         />
       </Field>
 
       {notice ? (
-        <p id="root-notice" role="status" className="text-xs font-medium text-warn">
+        <p id={noticeId} role="status" className="text-xs font-medium text-warn">
           {notice}
         </p>
       ) : null}
 
-      <p id="root-industry-hint" className="text-[11px] leading-relaxed text-fg-subtle">
+      <p id={hintId} className="text-[11px] leading-relaxed text-fg-subtle">
         {!current
           ? "Type a root and its industry is detected automatically."
           : detectedIndustry
@@ -637,10 +642,13 @@ function RootField({
 function IndustryField({
   state,
   onChange,
+  idPrefix = "",
 }: {
   state: GeneratorFormState;
   onChange: (next: GeneratorFormState) => void;
+  idPrefix?: string;
 }) {
+  const industryId = `${idPrefix}industry`;
   const root = state.roots[0] ?? "";
   const industry = industryStateFor(root, state.industries);
   const appliedId = industry.applied?.id ?? null;
@@ -654,10 +662,10 @@ function IndustryField({
         : "Automatic — no confident match";
 
   return (
-    <Field label="Industry" htmlFor="industry" className="min-w-0">
+    <Field label="Industry" htmlFor={industryId} className="min-w-0">
       <div className="flex items-center gap-1.5">
         <Select
-          id="industry"
+          id={industryId}
           aria-label="Industry"
           value={state.industries[0] ?? ""}
           onChange={(event) => onChange({ ...state, industries: event.target.value ? [event.target.value] : [] })}

@@ -18,7 +18,15 @@ import {
   requestFromFormState,
 } from "@/components/generator/generator-controls";
 
-function render(overrides: { root?: string; partnerLengths?: number[]; industries?: string[] } = {}) {
+function renderWith(
+  overrides: {
+    root?: string;
+    partnerLengths?: number[];
+    industries?: string[];
+    showActions?: boolean;
+    idPrefix?: string;
+  } = {},
+) {
   const request = createGenerationRequest({
     roots: overrides.root ? [overrides.root] : ["pay"],
     partnerLengths: overrides.partnerLengths ?? [2, 3, 4, 5, 6],
@@ -35,9 +43,14 @@ function render(overrides: { root?: string; partnerLengths?: number[]; industrie
       onReset={vi.fn()}
       busy={false}
       error={null}
+      showActions={overrides.showActions}
+      idPrefix={overrides.idPrefix}
     />,
   );
 }
+
+const render = (overrides: { root?: string; partnerLengths?: number[]; industries?: string[] } = {}) =>
+  renderWith(overrides);
 
 describe("generator controls", () => {
   it("offers the five inputs the naming rule needs, in that order", () => {
@@ -157,13 +170,6 @@ describe("layout contract", () => {
     "utf8",
   );
 
-  it("makes the control card sticky under the site header, and nothing else", () => {
-    expect(workspace).toContain("sticky top-[var(--site-header-h)]");
-    // The results column must not be sticky: only the generation controls are.
-    expect(workspace).not.toMatch(/className="[^"]*\bsticky\b[^"]*"[^>]*>\s*\{diagnostics/);
-    expect((workspace.match(/className="[^"]*\bsticky\b/g) ?? []).length).toBe(1);
-  });
-
   it("keeps the industry control on one line, with its explanation below the row", () => {
     const html = render({ root: "pay" });
     // One select, one label — the old control stacked a summary, a vocabulary line and chips
@@ -177,32 +183,50 @@ describe("layout contract", () => {
     expect(summary).toBeGreaterThan(quantity);
   });
 
-  it("collapses the secondary controls on a phone and shows them from `lg` up", () => {
-    const html = render({ root: "pay" });
-    // The Setup toggle is mobile-only; the panel it controls is closed on mobile, open on desktop.
-    expect(html).toMatch(/<button[^>]*lg:hidden[^>]*aria-controls="generator-setup"/);
-    expect(html).toMatch(/id="generator-setup" class="space-y-2\.5 hidden lg:block"/);
+  it("puts the configure panel in a left column and the results on the right", () => {
+    expect(workspace).toContain("lg:grid-cols-[20rem_minmax(0,1fr)]");
+    // The columns must stretch (no `items-start`): a sticky panel inside a shrink-to-fit grid item
+    // has no track to travel along and would scroll away with the page.
+    expect(workspace).toContain('<div className="grid gap-5 lg:grid-cols-[20rem');
+    expect(workspace).not.toContain("grid items-start gap-5 lg:grid-cols-[20rem");
+    // The panel comes first in source order, so it is the left column.
+    const panel = workspace.indexOf('aria-label="Generator configuration"');
+    const results = workspace.indexOf("<ResultsPanel");
+    expect(panel).toBeGreaterThan(-1);
+    expect(results).toBeGreaterThan(panel);
+    expect(workspace).toContain('<aside className="hidden lg:block">');
   });
 
-  it("keeps Generate in the always-visible row, before the fold-away panel", () => {
-    const html = render({ root: "pay" });
-    const generate = html.indexOf("Generate names");
-    const panel = html.indexOf('id="generator-setup"');
-    expect(generate).toBeGreaterThan(-1);
-    expect(generate).toBeLessThan(panel);
+  it("keeps the panel sticky under the header with its own scroll, never over the results", () => {
+    expect(workspace).toMatch(/sticky top-\[var\(--site-header-h\)\] max-h-\[calc\(100dvh/);
+    expect(workspace).toContain("overflow-y-auto scroll-thin");
+    // Only that one element is sticky.
+    expect((workspace.match(/className="[^"]*\bsticky\b/g) ?? []).length).toBe(1);
+    // It lives in the sidebar column, not inside the results column.
+    const sticky = workspace.indexOf("sticky top-[var(--site-header-h)]");
+    const results = workspace.indexOf("<ResultsPanel");
+    expect(results).toBeGreaterThan(sticky);
+    expect(workspace.slice(sticky, results)).toContain("<GeneratorControls");
   });
 
-  it("puts the sticky card directly around the controls, so the button scrolls with the page", () => {
-    const workspace = readFileSync(
-      path.join(process.cwd(), "src", "components", "generator", "generator-workspace.tsx"),
-      "utf8",
-    );
-    const sticky = workspace.indexOf('className="sticky top-[var(--site-header-h)]');
-    const controls = workspace.indexOf("<GeneratorControls", sticky);
-    expect(sticky).toBeGreaterThan(-1);
-    expect(controls).toBeGreaterThan(sticky);
-    // Nothing that renders results sits between the sticky card and its controls.
-    expect(workspace.slice(sticky, controls)).not.toContain("<ResultsPanel");
+  it("offers a floating Configure button on a phone that opens the panel as a left drawer", () => {
+    expect(workspace).toMatch(/fixed bottom-5 right-4[^"]*lg:hidden/);
+    expect(workspace).toContain('aria-controls="generator-config"');
+    expect(workspace).toMatch(/<Drawer[\s\S]{0,400}?side="left"/);
+    expect(workspace).toContain('title="Configure generator"');
+    // The drawer carries the action in its pinned footer, so the panel has no second submit.
+    expect(workspace).toContain("showActions={false}");
+    expect(workspace).toContain('idPrefix="drawer-"');
+  });
+
+  it("does not submit from inside the drawer panel — the footer does", () => {
+    const html = renderWith({ root: "pay", showActions: false, idPrefix: "drawer-" });
+    expect(html).not.toContain("Generate names");
+    expect(html).toContain('id="drawer-root"');
+    expect(html).toContain('id="drawer-industry"');
+    // No duplicate ids when both mount points are on the page.
+    expect(html).not.toContain('id="root"');
+    expect(html).not.toContain('id="industry"');
   });
 
   it("pages long result lists instead of rendering everything at once", () => {
@@ -215,9 +239,12 @@ describe("layout contract", () => {
     expect(panel).toMatch(/visible\.slice\(/);
   });
 
-  it("does not park the industry selector in a permanent side panel", () => {
-    // The panel is the root analysis, and it is a secondary column, not the industry control.
+  it("keeps the industry selector inside the panel, not in a separate permanent column", () => {
+    // The left column is the whole configure panel; the industry select is one control in it and
+    // the root analysis moved under the results.
     expect(workspace).toContain("<RootAnalysisPanel");
-    expect(workspace).not.toMatch(/Sidebar/);
+    const analysis = workspace.indexOf("<RootAnalysisPanel");
+    const results = workspace.indexOf("<ResultsPanel");
+    expect(analysis).toBeGreaterThan(results);
   });
 });

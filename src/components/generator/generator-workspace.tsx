@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, History } from "lucide-react";
+import { AlertTriangle, History, SlidersHorizontal } from "lucide-react";
 import {
   DEFAULT_CONSTRAINTS,
   generate,
@@ -36,7 +36,7 @@ import {
   type FavoriteRecord,
   type RecentSearch,
 } from "@/lib/storage/local";
-import { Badge, Button, Callout, useToast } from "@/components/ui";
+import { Badge, Button, Callout, Drawer, useToast } from "@/components/ui";
 import { cn } from "@/lib/utils/format";
 import { GeneratorControls, formStateFromRequest, requestFromFormState, type GeneratorFormState } from "./generator-controls";
 import { AdSlot } from "@/components/ads/ad-slot";
@@ -81,6 +81,8 @@ export function GeneratorWorkspace() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentSearch[]>([]);
+  // Phone layout: the configure panel is a left drawer opened by a floating button.
+  const [configOpen, setConfigOpen] = useState(false);
   const initialised = useRef(false);
   const lastFilterSignature = useRef<string | null>(null);
 
@@ -421,8 +423,38 @@ export function GeneratorWorkspace() {
 
   const activeRoots = useMemo(() => form.roots, [form.roots]);
 
+  /** Reset used by both mount points of the panel. */
+  const resetAll = useCallback(() => {
+    setForm(EMPTY_FORM);
+    setCandidates([]);
+    setDiagnostics(null);
+    setSelected(new Set());
+    setError(null);
+    window.history.replaceState(null, "", "/generator/");
+  }, []);
+
+  /**
+   * Recent searches, one row per visible search.
+   *
+   * Different links can describe the same search (same root, count and rules); the newest wins so
+   * the list stays a shortlist rather than a log.
+   */
+  const visibleRecent = useMemo(
+    () =>
+      recent
+        .filter(
+          (entry, index, all) =>
+            all.findIndex((other) => other.href === entry.href) === index &&
+            all.findIndex(
+              (other) => other.roots.join() === entry.roots.join() && other.count === entry.count,
+            ) === index,
+        )
+        .slice(0, 5),
+    [recent],
+  );
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-20 lg:pb-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Domain generator</h1>
@@ -435,34 +467,40 @@ export function GeneratorWorkspace() {
       </div>
 
       {/*
-        One sticky control card, not a permanent side panel.
+        Two columns from `lg` up: the configure panel on the left, the results on the right.
 
-        It is the only sticky element on the page and it sits directly under the site header
-        (`--site-header-h`), so it never covers the results or slides under the navigation. The
-        card itself is compact: the root field and the Generate button always show, and the
-        secondary controls collapse behind a toggle on small screens where a tall sticky card
-        would eat the viewport.
+        The panel is the page's only sticky element. It sticks under the site header
+        (`--site-header-h`) and scrolls internally if the viewport is short, so it is always
+        reachable while the results column scrolls past it — and it never covers the results,
+        because it occupies its own grid column rather than floating over them.
+
+        Below `lg` there is no room for a column: the results take the full width and the same
+        panel opens as a left drawer from a floating button.
       */}
-      <div className="sticky top-[var(--site-header-h)] z-20 -mx-4 border-y border-border bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:rounded-[var(--radius-lg)] lg:border lg:shadow-sm">
-        <GeneratorControls
-          state={form}
-          onChange={setForm}
-          onGenerate={() => handleGenerate(false)}
-          onReset={() => {
-            setForm(EMPTY_FORM);
-            setCandidates([]);
-            setDiagnostics(null);
-            setSelected(new Set());
-            setError(null);
-            window.history.replaceState(null, "", "/generator/");
-          }}
-          busy={busy}
-          error={error}
-        />
-      </div>
+      <div className="grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[21rem_minmax(0,1fr)]">
+        <aside className="hidden lg:block">
+          <div
+            className="sticky top-[var(--site-header-h)] max-h-[calc(100dvh-var(--site-header-h)-1.25rem)] overflow-y-auto scroll-thin rounded-[var(--radius-lg)] border border-border bg-surface p-3 shadow-sm"
+            aria-label="Generator configuration"
+          >
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                <SlidersHorizontal className="size-3" aria-hidden="true" /> Configure
+              </p>
+              <span className="text-[11px] text-fg-subtle">engine v2</span>
+            </div>
+            <GeneratorControls
+              state={form}
+              onChange={setForm}
+              onGenerate={() => handleGenerate(false)}
+              onReset={resetAll}
+              busy={busy}
+              error={error}
+            />
+          </div>
+        </aside>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-5">
           {diagnostics ? (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-border bg-surface px-3 py-2 text-[11px] text-fg-subtle">
               <span className="tnum">
@@ -493,7 +531,7 @@ export function GeneratorWorkspace() {
                   </h2>
                   <p className="text-[13px] leading-relaxed text-fg-muted">
                     {activeRoots.length === 0
-                      ? "Add a keyword such as pay, home or cloud in the control bar above. Every name will be that root plus one partner word, in whichever order reads better; the engine explains every score."
+                      ? "Add a keyword such as pay, home or cloud in the panel on the left — or behind Configure on a phone. Every name will be that root plus one partner word, in whichever order reads better; the engine explains every score."
                       : `Press Generate names to build candidates for ${activeRoots.join(", ")}. Results appear here with quality and brandability breakdowns.`}
                   </p>
                   <p className="text-[11px] text-fg-subtle">
@@ -538,56 +576,90 @@ export function GeneratorWorkspace() {
           {/* Ad placement for the generator template. Renders nothing at all unless the
               advertising flag, the global settings and an enabled slot all agree. */}
           <AdSlot template="generator" placement="sidebar" className="mt-6" />
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <RootAnalysisPanel
+              root={form.roots[0] ?? ""}
+              selectedIndustries={form.industries}
+              partnerLengths={form.partnerLengths}
+            />
+
+            {recent.length > 0 ? (
+              <div className="rounded-[var(--radius)] border border-border bg-surface p-3">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
+                  <History className="size-3" aria-hidden="true" /> Recent searches
+                </p>
+                <ul className="mt-1.5 space-y-1">
+                  {visibleRecent.map((entry) => (
+                    <li key={entry.href}>
+                      <a
+                        href={entry.href}
+                        className="block truncate rounded px-1 py-0.5 text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg"
+                      >
+                        {entry.roots.join(", ")} · {entry.count} names
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         </div>
-
-        <aside className="space-y-3">
-          <div className="xl:hidden">
-            <RootAnalysisPanel
-              root={form.roots[0] ?? ""}
-              selectedIndustries={form.industries}
-              partnerLengths={form.partnerLengths}
-            />
-          </div>
-
-          {recent.length > 0 ? (
-            <div className="rounded-[var(--radius)] border border-border bg-surface p-3">
-              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
-                <History className="size-3" aria-hidden="true" /> Recent searches
-              </p>
-              <ul className="mt-1.5 space-y-1">
-                {recent
-                  .filter(
-                    (entry, index, all) =>
-                      all.findIndex((other) => other.href === entry.href) === index &&
-                      // Different links can describe the same visible search (same root, count and
-                      // rules); show it once, keeping the newest, so the list is not noise.
-                      all.findIndex((other) => other.roots.join() === entry.roots.join() && other.count === entry.count) ===
-                        index,
-                  )
-                  .slice(0, 5)
-                  .map((entry) => (
-                  <li key={entry.href}>
-                    <a
-                      href={entry.href}
-                      className="block truncate rounded px-1 py-0.5 text-[12px] text-fg-muted hover:bg-surface-2 hover:text-fg"
-                    >
-                      {entry.roots.join(", ")} · {entry.count} names
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          <div className="hidden xl:block">
-            <RootAnalysisPanel
-              root={form.roots[0] ?? ""}
-              selectedIndustries={form.industries}
-              partnerLengths={form.partnerLengths}
-            />
-          </div>
-        </aside>
       </div>
+
+      {/*
+        Phones get the same panel as a left drawer. The button is the only floating element on
+        the page: it sits above the results, below the header and below the drawer itself, and it
+        disappears the moment there is room for the column.
+      */}
+      <button
+        type="button"
+        onClick={() => setConfigOpen(true)}
+        aria-expanded={configOpen}
+        aria-controls="generator-config"
+        className="fixed bottom-5 right-4 z-30 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-3 text-[13px] font-semibold text-accent-fg shadow-lg transition-transform active:scale-[0.98] lg:hidden"
+      >
+        <SlidersHorizontal className="size-4" aria-hidden="true" />
+        Configure
+      </button>
+
+      <Drawer
+        open={configOpen}
+        onClose={() => setConfigOpen(false)}
+        title="Configure generator"
+        side="left"
+        footer={
+          <Button
+            type="button"
+            size="lg"
+            loading={busy}
+            loadingLabel="Generating…"
+            className="w-full"
+            onClick={() => {
+              setConfigOpen(false);
+              handleGenerate(false);
+            }}
+          >
+            Generate names
+          </Button>
+        }
+      >
+        <div id="generator-config">
+          <GeneratorControls
+            state={form}
+            onChange={setForm}
+            onGenerate={() => {
+              setConfigOpen(false);
+              handleGenerate(false);
+            }}
+            onReset={resetAll}
+            busy={busy}
+            error={error}
+            showActions={false}
+            idPrefix="drawer-"
+          />
+        </div>
+      </Drawer>
     </div>
   );
 }
