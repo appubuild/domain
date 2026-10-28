@@ -170,25 +170,38 @@ describe("layout contract", () => {
     "utf8",
   );
 
-  it("keeps the industry control on one line, with its explanation below the row", () => {
+  it("stacks its rules for a narrow panel instead of squeezing columns into it", () => {
     const html = render({ root: "pay" });
-    // One select, one label — the old control stacked a summary, a vocabulary line and chips
-    // inside a 13rem column, which is what made it look like a panel again.
     expect((html.match(/id="industry"/g) ?? []).length).toBe(1);
-    expect(html).not.toContain("w-full sm:w-52");
-    expect(html).toContain("lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]");
-    // The detection prose sits after the quantity control, i.e. under the whole rules row.
+    // No multi-column rules row: down a 21rem sidebar the old grid collapsed into overlapping
+    // columns (partner-length chips one per line, "Industry" running into "How many names").
+    expect(html).not.toContain("lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]");
+    expect(html).not.toContain("sm:grid-cols-2 lg:grid-cols");
+    expect(html).toContain("flex flex-col gap-3");
+    // Nothing shares a row: every rule is full width inside the panel.
+    expect(html).not.toContain("grid grid-cols-2 items-end");
+    // The detection prose sits after the quantity control.
     const quantity = html.indexOf("How many names");
     const summary = html.indexOf("Detected from “pay”");
     expect(summary).toBeGreaterThan(quantity);
   });
 
+  it("keeps every partner-length chip in one wrapping group", () => {
+    const html = render({ root: "pay" });
+    const group = html.slice(html.indexOf('role="group" aria-label="Partner root length"'));
+    const end = group.indexOf("</div>");
+    for (const length of PARTNER_LENGTH_CHOICES) {
+      expect(group.slice(0, end)).toContain(`>${length}</button>`);
+    }
+    expect(group.slice(0, end)).toContain(">Any</button>");
+  });
+
   it("puts the configure panel in a left column and the results on the right", () => {
-    expect(workspace).toContain("lg:grid-cols-[20rem_minmax(0,1fr)]");
+    expect(workspace).toContain("lg:grid-cols-[21rem_minmax(0,1fr)]");
     // The columns must stretch (no `items-start`): a sticky panel inside a shrink-to-fit grid item
     // has no track to travel along and would scroll away with the page.
-    expect(workspace).toContain('<div className="grid gap-5 lg:grid-cols-[20rem');
-    expect(workspace).not.toContain("grid items-start gap-5 lg:grid-cols-[20rem");
+    expect(workspace).toContain('<div className="grid gap-5 lg:grid-cols-[21rem');
+    expect(workspace).not.toContain("grid items-start gap-5 lg:grid-cols-");
     // The panel comes first in source order, so it is the left column.
     const panel = workspace.indexOf('aria-label="Generator configuration"');
     const results = workspace.indexOf("<ResultsPanel");

@@ -234,7 +234,7 @@ export function GeneratorControls({
         {/* Row 2 — extensions sit high in the card: they apply to every name that follows. */}
         <Field
           label="Extensions"
-          description="Select several to price each name across them. Availability is checked later, per extension — never inferred here."
+          description="Availability is checked per extension later — never inferred here."
         >
           <ChipGroup
             label="Extensions"
@@ -247,8 +247,15 @@ export function GeneratorControls({
           />
         </Field>
 
-        {/* Row 3 — the numeric rules, aligned on one line so nothing becomes a tall side column. */}
-        <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]">
+        {/*
+          The rules, stacked.
+
+          This panel is ~20rem wide on a desktop and the full width of a phone drawer, so the
+          multi-column rules row it used to have collapsed into overlapping columns: the partner
+          chips stacked one per line and "Industry" ran into "How many names". One column, full
+          width fields, and only the two short controls sharing a row.
+        */}
+        <div className="flex flex-col gap-3">
           <Field label="Partner root length" className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Partner root length">
               {PARTNER_LENGTH_CHOICES.map((length) => {
@@ -290,28 +297,30 @@ export function GeneratorControls({
 
           <IndustryField state={state} onChange={onChange} idPrefix={idPrefix} />
 
-          <Field label="How many names" className="w-28">
-            <Select
-              value={String(state.targetCount)}
-              onChange={(event) => set("targetCount", Number(event.target.value))}
-              aria-label="Target result count"
-              className="h-8 text-[13px]"
-            >
-              {VALID_TARGETS.map((count) => (
-                <option key={count} value={count}>
-                  {count}
-                </option>
-              ))}
-            </Select>
-          </Field>
+          <div className="flex flex-col gap-3">
+            <Field label="How many names" className="min-w-0">
+              <Select
+                value={String(state.targetCount)}
+                onChange={(event) => set("targetCount", Number(event.target.value))}
+                aria-label="Target result count"
+                className="h-8 text-[13px]"
+              >
+                {VALID_TARGETS.map((count) => (
+                  <option key={count} value={count}>
+                    {count}
+                  </option>
+                ))}
+              </Select>
+            </Field>
 
-          <div className="pb-1">
-            <Switch
-              checked={state.brandable}
-              onChange={(value) => set("brandable", value)}
-              label="Brandable"
-              description="Rank by brandability instead of descriptive quality."
-            />
+            <div className="min-w-0">
+              <Switch
+                checked={state.brandable}
+                onChange={(value) => set("brandable", value)}
+                label="Brandable"
+                description="Rank by brandability, not descriptive quality."
+              />
+            </div>
           </div>
         </div>
 
@@ -394,7 +403,7 @@ export function GeneratorControls({
                 />
               </Field>
 
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
                 <Switch
                   checked={state.autoExpand}
                   onChange={(value) => set("autoExpand", value)}
@@ -409,7 +418,7 @@ export function GeneratorControls({
                 />
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-3">
                 <Field label="Syllables" description="0 disables the check.">
                   <NumberInput
                     label="Max syllables"
@@ -445,7 +454,7 @@ export function GeneratorControls({
                 </Field>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-3">
                 <Field label="Required text">
                   <Input
                     value={state.requiredSubstring}

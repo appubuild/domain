@@ -87,7 +87,7 @@ export function RootAnalysisPanel({
       </h2>
 
       <div className="space-y-3 p-3">
-        <dl className="grid grid-cols-3 gap-2 text-center">
+        <dl className="grid grid-cols-3 gap-2 text-center [&>*]:min-w-0">
           {[
             { label: "Letters", value: analysis.letters },
             { label: "Syllables", value: analysis.syllables },

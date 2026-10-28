@@ -477,7 +477,7 @@ export function GeneratorWorkspace() {
         Below `lg` there is no room for a column: the results take the full width and the same
         panel opens as a left drawer from a floating button.
       */}
-      <div className="grid gap-5 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[21rem_minmax(0,1fr)]">
+      <div className="grid gap-5 lg:grid-cols-[21rem_minmax(0,1fr)] xl:grid-cols-[23rem_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <div
             className="sticky top-[var(--site-header-h)] max-h-[calc(100dvh-var(--site-header-h)-1.25rem)] overflow-y-auto scroll-thin rounded-[var(--radius-lg)] border border-border bg-surface p-3 shadow-sm"
@@ -500,7 +500,7 @@ export function GeneratorWorkspace() {
           </div>
         </aside>
 
-        <div className="min-w-0 space-y-5">
+        <div className="min-w-0 max-w-full space-y-5">
           {diagnostics ? (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-[var(--radius)] border border-border bg-surface px-3 py-2 text-[11px] text-fg-subtle">
               <span className="tnum">
@@ -577,7 +577,9 @@ export function GeneratorWorkspace() {
               advertising flag, the global settings and an enabled slot all agree. */}
           <AdSlot template="generator" placement="sidebar" className="mt-6" />
 
-          <div className="grid gap-3 md:grid-cols-2">
+          {/* Full width until there is genuinely room for two cards — at `md` the results column
+              is only ~630px, which squeezed the root analysis and clipped its neighbour. */}
+          <div className="grid gap-3 [&>*]:min-w-0 xl:grid-cols-2">
             <RootAnalysisPanel
               root={form.roots[0] ?? ""}
               selectedIndustries={form.industries}
