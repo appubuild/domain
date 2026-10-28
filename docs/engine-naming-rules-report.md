@@ -5,7 +5,7 @@ design system, same auth. Nothing was rebuilt from scratch, and nothing that alr
 removed except the two selectors the brief asked to delete.
 
 Branch: `arena/b181432b-domain` · commit `00597b8` · production deployment
-`dpl_J8hofRNVVPZ98XPTcWot1hcEChsX` (commit `84f5c2b`) → `https://domainfits.vercel.app/`.
+`dpl_5Z3g9kaf9248uCMACswFcMin97UJ` (commit `0b1b7c0`) → `https://domainfits.vercel.app/`.
 
 ---
 
@@ -89,29 +89,37 @@ Evidence from the current dictionaries: `home+land` 98/49 (root first), `home+st
 
 ## 5. Controls and layout
 
-One sticky card, directly under the site header (`sticky top-[var(--site-header-h)] z-20`), and it
-is the only sticky element on the page. Order of controls:
+The generator uses a **two-column workspace**, not a control band across the top.
 
-1. **Primary root** (one word, enforced — extra words are reported, not silently accepted) with the
-   detected industry underneath, and **Generate** beside it.
-2. **Extensions** (multi-select chips) — high in the card, above the numeric rules.
-3. **One rules row** (`lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]`): **partner root length**
-   (2/3/4/5/6 multi-select plus "Any", with a real example word per length in the tooltip),
-   **Industry** (a single native `<select>` — "Automatic — Fintech & Payments" or an override),
-   **How many names**, **Brandable**. The industry `Field` holds only the select, so the row stays
-   one line high.
-4. **Detection notes** — the summary, the vocabulary sample and the runner-up chips sit on one
-   wrapping line *under* the rules row (`IndustryNotes`), never stacked inside a column. A column of
-   three paragraphs is what made the control look like a side panel again in the first pass.
-5. The computed total-length sentence
-   ("Pay (3 letters) + a 2/3/4/5/6-letter partner → 5–9 letters before the dot").
-6. **Advanced** (collapsed): custom partner words, word libraries, dictionary/industry switches,
-   syllables, consonant run, vowel share, required/excluded text.
+**Desktop (`lg` and up).** A grid of `20rem / minmax(0,1fr)` (21rem on `xl`): the configure panel
+on the left, the results on the right.
 
-On a phone the card collapses to row 1 (root + Generate) and the rest sits behind a **Setup** toggle
-(`aria-expanded`/`aria-controls`); from `lg` up everything is visible. Generate is disabled only for
-a real validation failure or while a request is running, where it shows "Generating…" and a progress
-row rather than a fake percentage.
+- The panel is the page's **only sticky element**. It is pinned under the site header
+  (`sticky top-[var(--site-header-h)]`), capped at the viewport
+  (`max-h-[calc(100dvh-var(--site-header-h)-1.25rem)]`) and scrolls internally, so it stays
+  reachable while the results column scrolls past it. It cannot cover the results — it owns a grid
+  column instead of floating over one.
+- The grid deliberately has **no `items-start`**: a shrink-to-fit column gives a sticky child no
+  track to travel along, so the panel would simply scroll away. A test pins that.
+- Order inside the panel: **Primary root** (one word, enforced, with the detected industry under
+  it) → **Generate names** → **Extensions** (multi-select chips, high in the panel) → one rules row
+  (**partner root length** 2/3/4/5/6 + "Any", **Industry** select, **How many names**, **Brandable**)
+  → the detection notes on one wrapping line → the computed total length → **Advanced**
+  (custom partners, libraries, dictionary switches, syllables, consonant run, vowel share,
+  required/excluded text) → Reset and the TLD/length badges.
+- `GeneratorControls` no longer carries a Setup toggle: it is a plain panel. It takes
+  `showActions` (the drawer's footer supplies the button instead) and `idPrefix`, so the desktop
+  panel and the drawer can never collide on element ids.
+
+**Phone / narrow.** The results take the full width and a **floating Configure button**
+(`fixed bottom-5 right-4 z-30 lg:hidden`, above the results, below the header and below the drawer)
+opens the same panel as a **left drawer** (`Drawer side="left"`, focus trap, Escape to close, body
+scroll lock, a pinned **Generate names** footer). The page keeps `pb-20` so the button never covers
+the last row. Because both mount points read the same form state, a change in the drawer is already
+applied when it closes.
+
+The previous right-hand rail is gone: **Root analysis** and **Recent searches** are now a two-up
+footer under the results, where they cannot compete with the results for width.
 
 ## 6. Filtering and sorting
 
@@ -201,11 +209,14 @@ The fifteen regressions from the brief map to:
 | Large quantities and limits | `quantity.test.ts` (1000 → 596 with `exhausted`), `generate.test.ts` |
 | Desktop and mobile | `controls.test.tsx` "collapses the secondary controls on a phone and shows them from `lg` up" |
 | Industry control stays compact | `controls.test.tsx` "keeps the industry control on one line, with its explanation below the row" |
+| Left panel, right results | `controls.test.tsx` "puts the configure panel in a left column and the results on the right" |
+| Panel stays reachable while scrolling | `controls.test.tsx` "keeps the panel sticky under the header with its own scroll, never over the results" |
+| Floating button → left drawer on a phone | `controls.test.tsx` "offers a floating Configure button on a phone that opens the panel as a left drawer" + "does not submit from inside the drawer panel" |
 | Lint / type-check / build unchanged | `tsc --noEmit` and `npm run build` above; the repo ships no ESLint config, so type-check + build is the gate |
 
 ## 10. Deployment
 
-- Push `84f5c2b` → production deployment `dpl_J8hofRNVVPZ98XPTcWot1hcEChsX`, alias
+- Push `0b1b7c0` → production deployment `dpl_5Z3g9kaf9248uCMACswFcMin97UJ`, alias
   `domainfits.vercel.app` (READY, PROMOTED).
 - Live checks: `/generator/` renders the new control card in the compact rules-row layout,
   `/industries/communication/` renders the new industry page, `/` and `/blog/` unchanged.
