@@ -11,7 +11,11 @@ import {
   type GenerationDiagnostics,
   type GenerationRequest,
 } from "@/lib/brain";
-import { requestFromSearchParams, searchParamsFromRequest } from "@/lib/generator/url-state";
+import {
+  DEFAULT_EXTENSIONS,
+  requestFromSearchParams,
+  searchParamsFromRequest,
+} from "@/lib/generator/url-state";
 import { PREFIX_LIBRARIES, SUFFIX_LIBRARIES } from "@/lib/brain";
 import {
   DEFAULT_FILTERS,
@@ -58,7 +62,7 @@ const EMPTY_FORM: GeneratorFormState = formStateFromRequest({
   constraints: { ...DEFAULT_CONSTRAINTS, maxComponents: 2 },
   brandable: false,
   brandableProfiles: ["startup"],
-  tlds: ["com", "io"],
+  tlds: [...DEFAULT_EXTENSIONS],
   seed: 1,
 });
 
@@ -551,7 +555,17 @@ export function GeneratorWorkspace() {
                 <History className="size-3" aria-hidden="true" /> Recent searches
               </p>
               <ul className="mt-1.5 space-y-1">
-                {recent.slice(0, 5).map((entry) => (
+                {recent
+                  .filter(
+                    (entry, index, all) =>
+                      all.findIndex((other) => other.href === entry.href) === index &&
+                      // Different links can describe the same visible search (same root, count and
+                      // rules); show it once, keeping the newest, so the list is not noise.
+                      all.findIndex((other) => other.roots.join() === entry.roots.join() && other.count === entry.count) ===
+                        index,
+                  )
+                  .slice(0, 5)
+                  .map((entry) => (
                   <li key={entry.href}>
                     <a
                       href={entry.href}

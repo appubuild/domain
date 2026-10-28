@@ -30,6 +30,12 @@ export const VALID_TARGETS = [25, 50, 100, 250, 500, 1000] as const;
 
 const DEFAULT_TARGET = 100;
 
+/**
+ * Extensions every new search starts with. Shared by the URL parser and the empty form so a link
+ * without `tlds` and a freshly loaded page agree — the badge and the chips must not disagree.
+ */
+export const DEFAULT_EXTENSIONS = ["com", "io"] as const;
+
 export type GeneratorUrlState = {
   request: GenerationRequest;
 };
@@ -80,7 +86,7 @@ export function requestFromSearchParams(search: URLSearchParams): GeneratorUrlSt
     industries,
     targetCount: normalizeTarget(Number(search.get("n"))),
     seed: Number.isFinite(seedParam) && seedParam > 0 ? Math.floor(seedParam) : 1,
-    tlds: tlds.length > 0 ? tlds : ["com"],
+    tlds: tlds.length > 0 ? tlds : [...DEFAULT_EXTENSIONS],
     brandable,
     brandableProfiles: profiles.length > 0 ? profiles : ["startup"],
     constraints: normalizeConstraints({ ...DEFAULT_CONSTRAINTS }),

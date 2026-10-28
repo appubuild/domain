@@ -247,8 +247,8 @@ export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, 
           />
         </Field>
 
-        {/* Row 3 — the rules that change what is generated, on one wrapping line. */}
-        <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+        {/* Row 3 — the numeric rules, aligned on one line so nothing becomes a tall side column. */}
+        <div className="grid items-end gap-x-4 gap-y-3 sm:grid-cols-2 lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]">
           <Field label="Partner root length" className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Partner root length">
               {PARTNER_LENGTH_CHOICES.map((length) => {
@@ -288,19 +288,9 @@ export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, 
             </div>
           </Field>
 
-          <div className="w-full sm:w-52">
-            <IndustryField
-              root={root}
-              state={state}
-              onChange={onChange}
-              industryScope={appliedIndustryId}
-              summary={industry.summary}
-              mode={industry.mode}
-              suggestions={industry.suggestions}
-            />
-          </div>
+          <IndustryField state={state} onChange={onChange} />
 
-          <Field label="How many names" className="w-32">
+          <Field label="How many names" className="w-28">
             <Select
               value={String(state.targetCount)}
               onChange={(event) => set("targetCount", Number(event.target.value))}
@@ -315,15 +305,23 @@ export function GeneratorControls({ state, onChange, onGenerate, onReset, busy, 
             </Select>
           </Field>
 
-          <div className="flex items-center gap-1.5 pb-0.5">
+          <div className="pb-1">
             <Switch
               checked={state.brandable}
               onChange={(value) => set("brandable", value)}
-              label="Brandable ranking"
-              description="Rank by brandability rather than descriptive quality."
+              label="Brandable"
+              description="Rank by brandability instead of descriptive quality."
             />
           </div>
         </div>
+
+        <IndustryNotes
+          root={root}
+          industryScope={appliedIndustryId}
+          summary={industry.summary}
+          mode={industry.mode}
+          suggestions={industry.suggestions}
+        />
 
         {rootLength > 0 ? (
           <p className="text-[11px] leading-relaxed text-fg-subtle">
@@ -597,9 +595,11 @@ function RootField({
       ) : null}
 
       <p id="root-industry-hint" className="text-[11px] leading-relaxed text-fg-subtle">
-        {detectedIndustry
-          ? `${detectedIndustry.mode === "override" ? "Industry set by you" : "Detected industry"}: ${detectedIndustry.name}`
-          : "No industry matched — general partner words will be used."}
+        {!current
+          ? "Type a root and its industry is detected automatically."
+          : detectedIndustry
+            ? `${detectedIndustry.mode === "override" ? "Industry set by you" : "Detected industry"}: ${detectedIndustry.name}`
+            : "No industry matched — general partner words will be used."}
       </p>
 
       <div className="flex flex-wrap gap-1.5">
@@ -626,97 +626,110 @@ function RootField({
 /* -------------------------------------------------------------------------- */
 
 /**
- * The industry control: a compact select plus the detection behind it.
+ * The industry control: one compact select.
  *
- * It must never be a large permanent panel, so this is one line of interface with an explicit
- * "Automatic" option. The applied value is always visible — "Automatic (Fintech & Payments)" —
- * because an empty dropdown would look like no industry had been found.
+ * It must never be a large permanent panel, and it must not become a tall column either: the
+ * select is a single line, and everything the detection has to say lives in `IndustryNotes` on the
+ * line below the rules row, where it cannot stretch the layout.
  *
- * Keyboard, pointer and touch all work because the control is a native `<select>`; the ranked
- * suggestion buttons are ordinary buttons, not hover-only affordances.
+ * Keyboard, pointer and touch all work because the control is a native `<select>`.
  */
 function IndustryField({
-  root,
   state,
   onChange,
+}: {
+  state: GeneratorFormState;
+  onChange: (next: GeneratorFormState) => void;
+}) {
+  const root = state.roots[0] ?? "";
+  const industry = industryStateFor(root, state.industries);
+  const appliedId = industry.applied?.id ?? null;
+
+  const autoLabel = !root
+    ? "Automatic"
+    : industry.mode === "auto" && appliedId
+      ? `Automatic — ${INDUSTRIES.find((entry) => entry.id === appliedId)?.name ?? appliedId}`
+      : industry.mode === "override"
+        ? "Automatic (re-detected from the root)"
+        : "Automatic — no confident match";
+
+  return (
+    <Field label="Industry" htmlFor="industry" className="min-w-0">
+      <div className="flex items-center gap-1.5">
+        <Select
+          id="industry"
+          aria-label="Industry"
+          value={state.industries[0] ?? ""}
+          onChange={(event) => onChange({ ...state, industries: event.target.value ? [event.target.value] : [] })}
+          className="h-8 min-w-0 text-[13px]"
+        >
+          <option value="">{autoLabel}</option>
+          {INDUSTRIES.map((entry) => (
+            <option key={entry.id} value={entry.id}>
+              {entry.name}
+            </option>
+          ))}
+        </Select>
+        {state.industries.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => onChange({ ...state, industries: [] })}
+            title="Go back to the industry detected from the root"
+            className="shrink-0 rounded-[var(--radius-sm)] px-1.5 py-1 text-[11px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
+          >
+            Reset to auto
+          </button>
+        ) : null}
+      </div>
+    </Field>
+  );
+}
+
+/**
+ * What the industry control detected, said in one line.
+ *
+ * The summary, the vocabulary sample and the runner-up chips were three stacked paragraphs inside
+ * the select's column, which is what made the control look like a side panel again. They are one
+ * wrapping line here, under the whole rules row, so the columns above stay aligned and short.
+ */
+function IndustryNotes({
+  root,
   industryScope,
   summary,
   mode,
   suggestions,
 }: {
   root: string;
-  state: GeneratorFormState;
-  onChange: (next: GeneratorFormState) => void;
   industryScope: string | null;
   summary: string;
   mode: "auto" | "override" | "none";
   suggestions: Array<{ id: string; name: string; confidence: number }>;
 }) {
-  const autoLabel =
-    mode === "auto" && industryScope
-      ? `Automatic — ${INDUSTRIES.find((industry) => industry.id === industryScope)?.name ?? industryScope}`
-      : mode === "override"
-        ? "Automatic (detected again from the root)"
-        : "Automatic — no confident match";
+  const vocabulary = industryScope ? industryExamples(industryScope) : [];
 
   return (
-    <Field
-      label="Industry"
-      htmlFor="industry"
-      description="Sets the vocabulary partner words are drawn from. Automatic follows the root; choosing one overrides it until you reset or change the root."
-    >
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <Select
-            id="industry"
-            aria-label="Industry"
-            value={state.industries[0] ?? ""}
-            onChange={(event) => onChange({ ...state, industries: event.target.value ? [event.target.value] : [] })}
-            className="h-9 text-[13px]"
-          >
-            <option value="">{autoLabel}</option>
-            {INDUSTRIES.map((industry) => (
-              <option key={industry.id} value={industry.id}>
-                {industry.name}
-              </option>
-            ))}
-          </Select>
-          {state.industries.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => onChange({ ...state, industries: [] })}
-              className="shrink-0 rounded-[var(--radius-sm)] px-2 py-1 text-[11px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
-            >
-              Reset to auto
-            </button>
-          ) : null}
-        </div>
-
-        <p className="text-[11px] leading-relaxed text-fg-subtle">{summary}</p>
-
-        {industryScope ? (
-          <p className="text-[11px] text-fg-subtle">
-            Vocabulary: {industryExamples(industryScope).join(", ")}…
-          </p>
-        ) : null}
-
-        {suggestions.length > 1 ? (
-          <div className="flex flex-wrap items-center gap-1 pt-0.5">
-            <span className="text-[11px] text-fg-subtle">{root ? "Also matches:" : "Try:"}</span>
-            {suggestions.slice(1).map((match) => (
-              <button
-                key={match.id}
-                type="button"
-                onClick={() => onChange({ ...state, industries: [match.id] })}
-                className="rounded-full border border-border px-2 py-0.5 text-[11px] text-fg-muted hover:border-accent hover:text-accent"
-              >
-                {match.name}
-                <span className="ml-1 tabular-nums text-fg-subtle">{Math.round(match.confidence * 100)}%</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </Field>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-relaxed text-fg-subtle">
+      <span>{summary}</span>
+      {vocabulary.length > 0 ? (
+        <span className="text-fg-subtle">Vocabulary: {vocabulary.join(", ")}…</span>
+      ) : null}
+      {suggestions.length > 1 ? (
+        <span className="flex flex-wrap items-center gap-1">
+          <span>{root ? "Also matches:" : "Try:"}</span>
+          {suggestions.slice(1).map((match) => (
+            <span key={match.id} className="rounded-full border border-border px-1.5 py-0.5 text-fg-muted">
+              {match.name} · {Math.round(match.confidence * 100)}%
+            </span>
+          ))}
+        </span>
+      ) : null}
+      {mode === "auto" ? null : (
+        <span className="text-fg-subtle">
+          {mode === "override"
+            ? "Your choice is used until you reset or change the root."
+            : "General partner words are used when nothing matches."}
+        </span>
+      )}
+    </div>
   );
 }

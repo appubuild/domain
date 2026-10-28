@@ -164,6 +164,19 @@ describe("layout contract", () => {
     expect((workspace.match(/className="[^"]*\bsticky\b/g) ?? []).length).toBe(1);
   });
 
+  it("keeps the industry control on one line, with its explanation below the row", () => {
+    const html = render({ root: "pay" });
+    // One select, one label — the old control stacked a summary, a vocabulary line and chips
+    // inside a 13rem column, which is what made it look like a panel again.
+    expect((html.match(/id="industry"/g) ?? []).length).toBe(1);
+    expect(html).not.toContain("w-full sm:w-52");
+    expect(html).toContain("lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]");
+    // The detection prose sits after the quantity control, i.e. under the whole rules row.
+    const quantity = html.indexOf("How many names");
+    const summary = html.indexOf("Detected from “pay”");
+    expect(summary).toBeGreaterThan(quantity);
+  });
+
   it("collapses the secondary controls on a phone and shows them from `lg` up", () => {
     const html = render({ root: "pay" });
     // The Setup toggle is mobile-only; the panel it controls is closed on mobile, open on desktop.
