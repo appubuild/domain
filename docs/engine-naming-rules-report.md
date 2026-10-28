@@ -5,7 +5,7 @@ design system, same auth. Nothing was rebuilt from scratch, and nothing that alr
 removed except the two selectors the brief asked to delete.
 
 Branch: `arena/b181432b-domain` · commit `00597b8` · production deployment
-`dpl_9rZxqTA1Po3Pea8dq9kLfsXxgXTG` → `https://domainfits.vercel.app/`.
+`dpl_J8hofRNVVPZ98XPTcWot1hcEChsX` (commit `84f5c2b`) → `https://domainfits.vercel.app/`.
 
 ---
 
@@ -95,12 +95,15 @@ is the only sticky element on the page. Order of controls:
 1. **Primary root** (one word, enforced — extra words are reported, not silently accepted) with the
    detected industry underneath, and **Generate** beside it.
 2. **Extensions** (multi-select chips) — high in the card, above the numeric rules.
-3. **Partner root length** — a 2/3/4/5/6 multi-select plus "Any", with a real example word per
-   length in the tooltip.
-4. **Industry** — a compact native `<select>` ("Automatic — Fintech & Payments" / override), the
-   detection sentence, the vocabulary sample and runner-up chips. Compact, keyboard- and
-   touch-operable, never a permanent side panel.
-5. **How many names**, **Brandable ranking**, then the computed total-length sentence
+3. **One rules row** (`lg:grid-cols-[auto_minmax(0,15rem)_7.5rem_auto]`): **partner root length**
+   (2/3/4/5/6 multi-select plus "Any", with a real example word per length in the tooltip),
+   **Industry** (a single native `<select>` — "Automatic — Fintech & Payments" or an override),
+   **How many names**, **Brandable**. The industry `Field` holds only the select, so the row stays
+   one line high.
+4. **Detection notes** — the summary, the vocabulary sample and the runner-up chips sit on one
+   wrapping line *under* the rules row (`IndustryNotes`), never stacked inside a column. A column of
+   three paragraphs is what made the control look like a side panel again in the first pass.
+5. The computed total-length sentence
    ("Pay (3 letters) + a 2/3/4/5/6-letter partner → 5–9 letters before the dot").
 6. **Advanced** (collapsed): custom partner words, word libraries, dictionary/industry switches,
    syllables, consonant run, vowel share, required/excluded text.
@@ -173,7 +176,7 @@ explain itself. Scores are never described as availability or market value.
 
 | Gate | Result |
 | --- | --- |
-| `npx vitest run` | **963 passed / 46 files** (was 897 / 42) |
+| `npx vitest run` | **964 passed / 46 files** (was 897 / 42) |
 | `npx vitest run tests/engine tests/generator tests/ui` | **174 passed / 12 files** |
 | `npx tsc --noEmit` | **0 errors** |
 | `npm run build` | **exit 0** — static export, 19 industry pages, `/generator` 47.7 kB |
@@ -197,14 +200,17 @@ The fifteen regressions from the brief map to:
 | Combined filters, clearing, dedupe, counts | `filters.test.ts` "combines filters with AND", "restores every name", "returns unique labels only" |
 | Large quantities and limits | `quantity.test.ts` (1000 → 596 with `exhausted`), `generate.test.ts` |
 | Desktop and mobile | `controls.test.tsx` "collapses the secondary controls on a phone and shows them from `lg` up" |
+| Industry control stays compact | `controls.test.tsx` "keeps the industry control on one line, with its explanation below the row" |
 | Lint / type-check / build unchanged | `tsc --noEmit` and `npm run build` above; the repo ships no ESLint config, so type-check + build is the gate |
 
 ## 10. Deployment
 
-- Push `00597b8` → branch deployment, then a production deployment created for the same commit
-  (`dpl_9rZxqTA1Po3Pea8dq9kLfsXxgXTG`), alias `domainfits.vercel.app`.
-- Live checks: `/generator/` renders the new control card, `/generator/?q=pay&pl=3,4&n=50` renders
-  results, `/`, `/industries/`, `/blog/` unchanged.
+- Push `84f5c2b` → production deployment `dpl_J8hofRNVVPZ98XPTcWot1hcEChsX`, alias
+  `domainfits.vercel.app` (READY, PROMOTED).
+- Live checks: `/generator/` renders the new control card in the compact rules-row layout,
+  `/industries/communication/` renders the new industry page, `/` and `/blog/` unchanged.
+- One regression was caught only after looking at the deployed page: the industry control had grown
+  into a tall narrow column, which is fixed in `84f5c2b` and pinned by a test.
 
 ## 11. Remaining limitations and decisions needing input
 
