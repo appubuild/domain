@@ -461,8 +461,32 @@ belongs to the owner. Each is written so it can be executed without reading any 
 | 6 | AdSense publisher ID + consent | Requires an approved account; ads stay off until both exist | Set `adsense_client`/`adsense_slot` in `ad_settings`, add a consent banner, then rebuild — the CSP picks up ad origins automatically once `global_enabled` is true |
 | 7 | Promote the report-only CSP | Requires watching a real browser console, which this environment cannot do | Open the live site with DevTools → Console, look for `Content-Security-Policy` reports for a week, then move the `Content-Security-Policy-Report-Only` value in `vercel.json` into `Content-Security-Policy` and keep the §6 enforcing subset |
 | 8 | Search Console / analytics of record | Account-owned | Submit `sitemap.xml`, verify the property (see §9 step 8) |
-| 9 | Redeploy `availability` after the observation-store change | The function source changed (`recordObservation`), the deployed version does not have it, and this environment has no Deno CLI and no outbound network | `supabase functions deploy availability --no-verify-jwt`. Until then the cache path still works exactly as before; only the history rows in `availability_checks` are missing. Migration 0011 (retention + daily prune) is already applied to the live project. |
 
-Two items that were on this list and are now **done**, recorded so they are not re-opened: the
-first admin user exists with the `owner` grant (`auth.users` = 1 row, `role_grants` = 1), and the
-availability service is deployed and wired into the build (`redirects.json → build.integrations`).
+Four items that were on this list and are now **done**, recorded so they are not re-opened:
+
+1. The first admin user exists with the `owner` grant (`auth.users` = 1 row, `role_grants` = 1).
+2. The `availability` service is deployed and wired into the build
+   (`redirects.json → build.integrations`).
+3. **`availability` v6 is deployed with the observation store** (2026-10-28). The source in
+   `supabase/functions/availability/index.ts` was pushed as-is (it is self-contained, no imports)
+   with `verify_jwt: false`. Verified against the live project: a lookup for an unregistered name
+   returned `available_verified` (`httpStatus: 404`, answered by `rdap.verisign.com`) and appended
+   exactly **one** row to `availability_checks`; a second lookup of the same name was served from
+   `availability_cache` (`cached: true`) and appended **no** second row, which is the dedupe rule
+   working. Re-deploy with `supabase functions deploy availability --no-verify-jwt` after any
+   future edit.
+4. A production deployment is live at `https://domainfits.vercel.app` (commit `b360359` at the time
+   of writing) with the six-phase upgrade applied.
+
+### Optional starter content
+
+`supabase/seed/first-post.sql` publishes one article. It is **not** part of `seed.sql`: an empty
+blog is a valid state, and the site renders an explicit "No published articles yet" panel rather
+than filler copy. Run it only when you want that article to exist as editable CMS content:
+
+```bash
+psql "$DATABASE_URL" -f supabase/seed/first-post.sql
+```
+
+It is idempotent (matched on `posts.slug`), so re-running it updates the same row instead of
+creating a duplicate.

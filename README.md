@@ -20,7 +20,7 @@ Build and verify:
 
 ```bash
 npm run typecheck              # tsc --noEmit, strict
-npm test                       # 894 tests (engine, DB/RLS, availability, admin, content, a11y, security)
+npm test                       # 897 tests (engine, DB/RLS, availability, admin, content, a11y, security)
 npm run build                  # → out/ + .htaccess, _headers, _redirects (refuses if dev is running)
 npm run test:a11y              # axe over every built page; run after a build
 npm run audit:size             # first-load weight per route, against budgets

@@ -94,6 +94,24 @@ function wordCount(html: string): number {
   return html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
 }
 
+/**
+ * Tag slugs for one post row, read through the `post_tags_map` junction.
+ *
+ * The embed is one level deeper than the category one (`post_tags_map(post_tags(...))`),
+ * and a row with no tags comes back as `[]` — never as `undefined`, so the card can say
+ * "No tags" without special-casing the source.
+ */
+function tagSlugs(row: Record<string, unknown>): string[] {
+  const links = row.post_tags_map;
+  if (!Array.isArray(links)) return [];
+  return links
+    .map((link) => {
+      const tag = (link as { post_tags?: { slug?: unknown; name?: unknown } | null } | null)?.post_tags ?? null;
+      return tag ? str(tag.slug) || str(tag.name) : "";
+    })
+    .filter((tag) => tag.length > 0);
+}
+
 function withReadingTime(post: DefaultPost): PostView {
   return { ...post, readingMinutes: Math.max(1, Math.round(wordCount(post.body) / 220)) };
 }
@@ -203,7 +221,27 @@ export function resetContentCache(): void {
   contentPromise = null;
 }
 
+/**
+ * Wraps the loader so a production build writes one line naming the source it actually used.
+ *
+ * The docstring above promises this, and it matters: a build that quietly fell back to the
+ * offline pack renders copy that is not in the database, and the only place that is visible
+ * before a visitor sees it is the build log. `posts` is counted separately because an empty
+ * blog is now a legitimate result rather than a symptom.
+ */
 async function loadSiteContentUncached(): Promise<SiteContent> {
+  const content = await loadSourceContent();
+  if (process.env.NODE_ENV === "production") {
+    console.info(
+      `[content] source=${content.source} pages=${content.pages.length} posts=${content.posts.length} ` +
+        `industries=${content.industries.length} tlds=${content.tlds.length}` +
+        (content.warning ? ` warning="${content.warning}"` : ""),
+    );
+  }
+  return content;
+}
+
+async function loadSourceContent(): Promise<SiteContent> {
   const fallback = defaultContent();
   if (!PUBLIC_ENV.supabaseUrl || !PUBLIC_ENV.supabaseAnonKey) {
     return fallback;
@@ -214,7 +252,7 @@ async function loadSiteContentUncached(): Promise<SiteContent> {
       restGet("pages", "select=slug,title,excerpt,body,seo_title,meta_description,canonical_url,noindex,published_at,updated_at&status=eq.published&order=slug.asc"),
       restGet(
         "posts",
-        "select=slug,title,excerpt,body,author_name,published_at,seo_title,meta_description,cover_image_url,cover_image_alt,faq,category_id,post_categories(name,slug)&status=eq.published&order=published_at.desc&limit=100",
+        "select=slug,title,excerpt,body,author_name,published_at,seo_title,meta_description,cover_image_url,cover_image_alt,faq,category_id,post_categories(name,slug),post_tags_map(post_tags(slug,name))&status=eq.published&order=published_at.desc&limit=100",
       ),
       restGet("industries", "select=id,name,slug,description,intro,enabled&enabled=eq.true&order=display_order.asc"),
       restGet("tlds", "select=tld,display_name,description,category,enabled,checkability,note&order=display_order.asc"),
@@ -278,34 +316,45 @@ async function loadSiteContentUncached(): Promise<SiteContent> {
           }))
         : fallback.pages;
 
-    const posts: PostView[] =
-      (rows.posts?.length ?? 0) > 0
-        ? (rows.posts ?? [])
-            .filter((row) => str(row.slug) && str(row.title))
-            .map((row) =>
-              withReadingTime({
-                slug: str(row.slug),
-                title: str(row.title),
-                excerpt: str(row.excerpt),
-                body: str(row.body),
-                // The category name comes from the embedded join, so the blog card shows the real
-                // grouping rather than the literal word "Post".
-                category: str((row.post_categories as { name?: string } | null)?.name, "Post"),
-                tags: [],
-                authorName: str(row.author_name, settings.brand.name),
-                publishedAt: str(row.published_at, new Date().toISOString()),
-                coverImageUrl: str((row as Record<string, unknown>).cover_image_url) || undefined,
-                coverImageAlt: str((row as Record<string, unknown>).cover_image_alt) || undefined,
-                seoTitle: str(row.seo_title, str(row.title)),
-                metaDescription: str(row.meta_description, str(row.excerpt)),
-                faq: Array.isArray(row.faq)
-                  ? (row.faq as Array<{ question?: string; answer?: string }>)
-                      .map((item) => ({ question: str(item.question), answer: str(item.answer) }))
-                      .filter((item) => item.question && item.answer)
-                  : [],
-              }),
-            )
-        : fallback.posts;
+    /**
+     * Posts deliberately have **no** offline fallback once the CMS has answered.
+     *
+     * Every other collection falls back when its table is empty, because a missing page,
+     * industry or TLD would leave a structural hole in the site. Posts are different: an empty
+     * `posts` table is a real answer — "nothing is published" — and the offline pack's sample
+     * article is not in the database, so an editor could neither edit nor delete it while the
+     * blog, the landing page and the sitemap all claimed it existed. The pack remains in use
+     * only when Supabase is unconfigured (`defaultContent`), where the site genuinely has no
+     * backend. RLS already restricts the anon read to `status = 'published' and published_at
+     * <= now()`, so "non-future-dated" here is enforced by the database, not by this filter.
+     */
+    const posts: PostView[] = (rows.posts ?? [])
+      .filter((row) => str(row.slug) && str(row.title))
+      .map((row) =>
+        withReadingTime({
+          slug: str(row.slug),
+          title: str(row.title),
+          excerpt: str(row.excerpt),
+          body: str(row.body),
+          // The category name comes from the embedded join, so the blog card shows the real
+          // grouping rather than the literal word "Post".
+          category: str((row.post_categories as { name?: string } | null)?.name, "Post"),
+          // Tags arrive through the junction table so a card shows what an editor actually
+          // attached; the slug is what the pack stores and what the card renders.
+          tags: tagSlugs(row),
+          authorName: str(row.author_name, settings.brand.name),
+          publishedAt: str(row.published_at, new Date().toISOString()),
+          coverImageUrl: str((row as Record<string, unknown>).cover_image_url) || undefined,
+          coverImageAlt: str((row as Record<string, unknown>).cover_image_alt) || undefined,
+          seoTitle: str(row.seo_title, str(row.title)),
+          metaDescription: str(row.meta_description, str(row.excerpt)),
+          faq: Array.isArray(row.faq)
+            ? (row.faq as Array<{ question?: string; answer?: string }>)
+                .map((item) => ({ question: str(item.question), answer: str(item.answer) }))
+                .filter((item) => item.question && item.answer)
+            : [],
+        }),
+      );
 
     const industries: IndustryView[] =
       (rows.industries?.length ?? 0) > 0

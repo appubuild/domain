@@ -156,6 +156,139 @@ describe("supabase read path", () => {
     expect(content.navigation.primary.map((item) => item.label)).toEqual(["Generator"]);
   });
 
+  /**
+   * A reachable CMS with no published posts is an answer, not a failure. Substituting the
+   * offline pack's sample article here would publish copy that is not in the database — it
+   * cannot be edited or deleted in the CMS, and it defeats the "no published articles yet"
+   * empty state the blog and landing page are written to show.
+   */
+  it("shows an empty blog when the CMS is reachable but has no published posts", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-for-test";
+    vi.resetModules();
+
+    const payloads: Record<string, unknown[]> = {
+      pages: [
+        {
+          slug: "from-cms",
+          title: "Served from the CMS",
+          excerpt: "A page that only exists in the database.",
+          body: "<p>Hello.</p>",
+          seo_title: null,
+          meta_description: null,
+          canonical_url: null,
+          noindex: false,
+          published_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-02T00:00:00.000Z",
+        },
+      ],
+      posts: [],
+      site_settings: [],
+      nav_menus: [{ id: "primary", name: "Primary navigation", location: "primary", position: 10, enabled: true }],
+      nav_items: [
+        { menu_id: "primary", label: "Generator", href: "/generator", description: "", position: 10, enabled: true, parent_id: null },
+      ],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        const table = Object.keys(payloads).find((key) => url.includes(`/rest/v1/${key}`));
+        return { ok: true, status: 200, json: async () => (table ? payloads[table] : []) } as unknown as Response;
+      }),
+    );
+
+    const { loadSiteContent, resetContentCache } = await import("@/lib/content/source");
+    resetContentCache();
+    const content = await loadSiteContent();
+
+    expect(content.source).toBe("supabase");
+    expect(content.warning).toBeNull();
+    expect(content.posts).toEqual([]);
+  });
+
+  it("maps a CMS post's category and tags through the embedded joins", async () => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-for-test";
+    vi.resetModules();
+
+    const payloads: Record<string, unknown[]> = {
+      pages: [
+        {
+          slug: "from-cms",
+          title: "Served from the CMS",
+          excerpt: "A page that only exists in the database.",
+          body: "<p>Hello.</p>",
+          seo_title: null,
+          meta_description: null,
+          canonical_url: null,
+          noindex: false,
+          published_at: "2026-01-01T00:00:00.000Z",
+          updated_at: "2026-01-02T00:00:00.000Z",
+        },
+      ],
+      posts: [
+        {
+          slug: "a-cms-post",
+          title: "A post that only exists in the database",
+          excerpt: "Written in the admin editor.",
+          body: "<p>Body.</p>",
+          author_name: "Editor",
+          published_at: "2026-01-03T00:00:00.000Z",
+          seo_title: null,
+          meta_description: null,
+          cover_image_url: null,
+          cover_image_alt: null,
+          faq: [],
+          category_id: "00000000-0000-0000-0000-000000000001",
+          post_categories: { name: "Naming", slug: "naming" },
+          post_tags_map: [
+            { post_tags: { slug: "brandability", name: "Brandability" } },
+            { post_tags: { slug: "scoring", name: "Scoring" } },
+          ],
+        },
+      ],
+      site_settings: [],
+      nav_menus: [{ id: "primary", name: "Primary navigation", location: "primary", position: 10, enabled: true }],
+      nav_items: [
+        { menu_id: "primary", label: "Generator", href: "/generator", description: "", position: 10, enabled: true, parent_id: null },
+      ],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL) => {
+        const url = String(input);
+        const table = Object.keys(payloads).find((key) => url.includes(`/rest/v1/${key}`));
+        return { ok: true, status: 200, json: async () => (table ? payloads[table] : []) } as unknown as Response;
+      }),
+    );
+
+    const { loadSiteContent, resetContentCache } = await import("@/lib/content/source");
+    resetContentCache();
+    const content = await loadSiteContent();
+
+    expect(content.source).toBe("supabase");
+    expect(content.posts.map((post) => post.slug)).toEqual(["a-cms-post"]);
+    const [post] = content.posts;
+    expect(post?.category).toBe("Naming");
+    expect(post?.tags).toEqual(["brandability", "scoring"]);
+    expect(post?.readingMinutes).toBeGreaterThanOrEqual(1);
+    // The article body is the CMS HTML, not the offline pack's copy.
+    expect(post?.body).toBe("<p>Body.</p>");
+  });
+
+  it("still serves the sample article when no CMS is configured", async () => {
+    // The offline pack is the whole content set for a build without Supabase, so the sample
+    // article stays — this is the counterpart to the empty-CMS case above.
+    const { loadSiteContent } = await import("@/lib/content/source");
+    const content = await loadSiteContent();
+
+    expect(content.source).toBe("defaults");
+    expect(content.posts.map((post) => post.slug)).toContain("how-to-judge-a-domain-name");
+  });
+
   it("warns when the database has content but no navigation rows", async () => {
     process.env.NEXT_PUBLIC_SUPABASE_URL = "https://project.supabase.co";
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-for-test";
