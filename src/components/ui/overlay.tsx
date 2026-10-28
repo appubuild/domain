@@ -77,6 +77,15 @@ function useFocusTrap(open: boolean, onClose: () => void, containerRef: React.Re
  * Dialog (modal) — used for confirmations, details and admin forms.
  * ---------------------------------------------------------------------------------- */
 
+/**
+ * Centered modal.
+ *
+ * Always centered, at every breakpoint: the previous bottom-sheet behaviour on narrow screens
+ * matched a native share sheet, which is wrong for a form — the fields sat at the bottom edge,
+ * the on-screen keyboard covered the footer, and the panel looked unrelated to the row that
+ * opened it. The panel is capped at 90dvh with its own scroll area, so it can never be pushed
+ * off-screen by long content, and `p-3` on small screens keeps it off the viewport edges.
+ */
 export function Dialog({
   open,
   onClose,
@@ -86,6 +95,7 @@ export function Dialog({
   footer,
   size = "md",
   dismissible = true,
+  bodyClassName,
 }: {
   open: boolean;
   onClose: () => void;
@@ -93,8 +103,10 @@ export function Dialog({
   description?: string;
   children?: React.ReactNode;
   footer?: React.ReactNode;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   dismissible?: boolean;
+  /** Extra classes for the scrolling body, e.g. to widen a form into columns. */
+  bodyClassName?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -106,11 +118,11 @@ export function Dialog({
 
   if (!mounted || !open) return null;
 
-  const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" }[size];
+  const width = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl" }[size];
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-3 sm:p-6"
       role="presentation"
     >
       <div
@@ -126,11 +138,11 @@ export function Dialog({
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
         className={cn(
-          "relative z-10 w-full rounded-t-[var(--radius-xl)] border border-border bg-surface shadow-lg sm:rounded-[var(--radius-xl)]",
+          "relative z-10 flex max-h-[90dvh] w-full flex-col rounded-[var(--radius-xl)] border border-border bg-surface shadow-lg",
           width,
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div className="min-w-0 space-y-1">
             <h2 id={titleId} className="text-base font-semibold text-fg">
               {title}
@@ -152,9 +164,11 @@ export function Dialog({
             </button>
           ) : null}
         </div>
-        {children ? <div className="max-h-[65dvh] overflow-y-auto px-5 py-4">{children}</div> : null}
+        {children ? (
+          <div className={cn("scroll-thin min-h-0 flex-1 overflow-y-auto px-5 py-4", bodyClassName)}>{children}</div>
+        ) : null}
         {footer ? (
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface-2/60 px-5 py-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border bg-surface-2/60 px-5 py-3">
             {footer}
           </div>
         ) : null}

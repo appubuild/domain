@@ -19,12 +19,14 @@ import {
   ALL_PREFIX_WORDS,
   ALL_SUFFIX_WORDS,
   BRAND_SUFFIX_MORPHEMES,
+  NEUTRAL_WORDS,
   PHONETIC_CODAS,
   PHONETIC_NUCLEI,
   PHONETIC_ONSETS,
   wordsForPrefixLibraries,
   wordsForSuffixLibraries,
 } from "./dictionaries/words";
+import { PREFIX_LIBRARIES, SUFFIX_LIBRARIES } from "./dictionaries/words";
 import { composeInventedWord } from "./phonetics";
 import type { Rng } from "./rng";
 import type { SemanticProfile } from "./semantics";
@@ -45,6 +47,10 @@ export type RawCandidate = {
 
 const VOWELS = "aeiou";
 
+/** Ids of every shipped library, used when the request names none. */
+const PREFIX_LIBRARY_IDS = PREFIX_LIBRARIES.map((library) => library.id);
+const SUFFIX_LIBRARY_IDS = SUFFIX_LIBRARIES.map((library) => library.id);
+
 function allowsPrefix(position: KeywordPosition): boolean {
   return position === "prefix" || position === "both" || position === "flexible";
 }
@@ -57,6 +63,23 @@ function allowsExact(position: KeywordPosition): boolean {
   return position === "exact" || position === "flexible" || position === "both";
 }
 
+/** Alphabetic length of a partner word: hyphens, digits and spaces do not count. */
+export function partnerWordLength(word: string): number {
+  return word.replace(/[^a-z]/gi, "").length;
+}
+
+/**
+ * Length gate for the added component.
+ *
+ * An empty selection means "no restriction" — the generator is allowed to pick any partner.
+ * Anything else must match exactly, because "3–4 letters" is a design constraint, not a range
+ * the engine may widen for volume.
+ */
+export function partnerLengthAllowed(word: string, lengths: number[] | undefined): boolean {
+  if (!lengths || lengths.length === 0) return true;
+  return lengths.includes(partnerWordLength(word));
+}
+
 function uniqWords(words: Array<string | undefined>): string[] {
   return Array.from(
     new Set(
@@ -66,6 +89,28 @@ function uniqWords(words: Array<string | undefined>): string[] {
         .filter((word) => word.length > 0),
     ),
   );
+}
+
+/**
+ * The prefix and suffix pools for a request.
+ *
+ * No selected library means *every* library, not two hard-coded ones: the previous default
+ * silently ignored the user's choice and cut the search space to a fraction of what the
+ * dictionaries hold, which is why a request for 500 names returned 252.
+ */
+export function partnerPools(request: GenerationRequest): { prefixes: string[]; suffixes: string[] } {
+  const libraryPrefixes = request.autoExpand
+    ? wordsForPrefixLibraries(request.prefixLibraries.length > 0 ? request.prefixLibraries : PREFIX_LIBRARY_IDS)
+    : [];
+  const librarySuffixes = request.autoExpand
+    ? wordsForSuffixLibraries(request.suffixLibraries.length > 0 ? request.suffixLibraries : SUFFIX_LIBRARY_IDS)
+    : [];
+
+  const allowed = (word: string) => partnerLengthAllowed(word, request.partnerLengths);
+  return {
+    prefixes: uniqWords([...request.customPrefixes, ...libraryPrefixes]).filter(allowed),
+    suffixes: uniqWords([...request.customSuffixes, ...librarySuffixes]).filter(allowed),
+  };
 }
 
 /* ------------------------------ A. direct ------------------------------ */
@@ -86,15 +131,7 @@ export function directCombinations(
     styles.includes("keyword-brand-suffix") ||
     styles.includes("compound");
 
-  const libraryPrefixes = request.autoExpand
-    ? wordsForPrefixLibraries(request.prefixLibraries.length > 0 ? request.prefixLibraries : ["modern", "tech"])
-    : [];
-  const librarySuffixes = request.autoExpand
-    ? wordsForSuffixLibraries(request.suffixLibraries.length > 0 ? request.suffixLibraries : ["generic", "descriptive"])
-    : [];
-
-  const prefixes = uniqWords([...request.customPrefixes, ...libraryPrefixes]);
-  const suffixes = uniqWords([...request.customSuffixes, ...librarySuffixes]);
+  const { prefixes, suffixes } = partnerPools(request);
 
   if (allowsPrefix(positionOf(request)) && wantsPrefixStyle) {
     for (const word of rng.shuffle(prefixes)) {
@@ -132,6 +169,7 @@ export function directCombinations(
     // Two-word exact combinations keep the root verbatim and add a short morpheme.
     if (styles.includes("exact-combination")) {
       for (const morpheme of rng.shuffle(BRAND_SUFFIX_MORPHEMES)) {
+        if (!partnerLengthAllowed(morpheme, request.partnerLengths)) continue;
         out.push({
           label: `${root}${morpheme}`,
           components: [root, morpheme],
@@ -150,6 +188,51 @@ function positionOf(request: GenerationRequest): KeywordPosition {
   return request.position;
 }
 
+/* --------------------------- A2. compounds ----------------------------- */
+
+/**
+ * `prefix + root + suffix` — the shape that keeps a large request honest.
+ *
+ * A single root can only combine with so many words before the list is exhausted: prefixes and
+ * suffixes alone run out at a few hundred names. Wrapping the root in both at once multiplies the
+ * space into the thousands, and the constraint filter plus ranking decide whether the result is
+ * any good. `limit` keeps the browser bounded; pairs are walked in a seeded order so the same
+ * request always yields the same names.
+ */
+export function compoundCombinations(
+  root: string,
+  request: GenerationRequest,
+  rng: Rng,
+  limit = 2_400,
+): RawCandidate[] {
+  const wantsCompound = request.styles.includes("compound") || request.styles.includes("standard");
+  if (!wantsCompound) return [];
+  if (request.constraints.maxComponents < 3) return [];
+
+  const { prefixes, suffixes } = partnerPools(request);
+  if (prefixes.length === 0 || suffixes.length === 0) return [];
+
+  const out: RawCandidate[] = [];
+  const heads = rng.shuffle(prefixes);
+  const tails = rng.shuffle(suffixes);
+
+  for (const head of heads) {
+    for (const tail of tails) {
+      if (out.length >= limit) return out;
+      // "paypay", "paypay" style repeats and identical partners read as a mistake.
+      if (head === tail || head === root || tail === root) continue;
+      out.push({
+        label: `${head}${root}${tail}`,
+        components: [head, root, tail],
+        root,
+        strategy: "direct-combination",
+        styles: ["compound"],
+      });
+    }
+  }
+  return out;
+}
+
 /* ----------------------------- B. semantic ----------------------------- */
 
 export function semanticCombinations(
@@ -166,8 +249,9 @@ export function semanticCombinations(
     styles.includes("compound");
   if (!wantsSemantic) return out;
 
-  const terms = profile.relatedTerms.filter((term) => term.source !== "neutral");
-  const neutral = profile.relatedTerms.filter((term) => term.source === "neutral");
+  const allowed = (word: string) => partnerLengthAllowed(word, request.partnerLengths);
+  const terms = profile.relatedTerms.filter((term) => term.source !== "neutral" && allowed(term.word));
+  const neutral = profile.relatedTerms.filter((term) => term.source === "neutral" && allowed(term.word));
 
   const push = (word: string, direction: "prefix" | "suffix") => {
     out.push({
@@ -198,7 +282,14 @@ export function phraseTemplates(
   profile: SemanticProfile,
   request: GenerationRequest,
 ): RawCandidate[] {
-  if (!request.styles.includes("natural-compound")) return [];
+  // Phrase templates are the "root + everyday word" style. They used to run only for the
+  // natural-compound style, which made the style picker feel decorative; compound and standard
+  // also describe this shape, so they opt in too.
+  const wantsPhrases =
+    request.styles.includes("natural-compound") ||
+    request.styles.includes("compound") ||
+    request.styles.includes("standard");
+  if (!wantsPhrases) return [];
   const out: RawCandidate[] = [];
   const industryIds = request.industries.length > 0
     ? request.industries
@@ -208,6 +299,9 @@ export function phraseTemplates(
     { words: ACTION_WORDS, direction: "suffix" },
     { words: AUDIENCE_WORDS, direction: "suffix" },
     { words: PRODUCT_WORDS, direction: "suffix" },
+    { words: NEUTRAL_WORDS, direction: "suffix" },
+    // Neutral words in front as well: "smartpay", "quickpay" and "payhq" all read as names.
+    { words: NEUTRAL_WORDS, direction: "prefix" },
   ];
 
   for (const industry of INDUSTRIES) {
@@ -223,12 +317,13 @@ export function phraseTemplates(
     for (const word of pool.words) {
       const clean = word.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (!clean) continue;
+      if (!partnerLengthAllowed(clean, request.partnerLengths)) continue;
       out.push({
         label: pool.direction === "prefix" ? `${clean}${root}` : `${root}${clean}`,
         components: pool.direction === "prefix" ? [clean, root] : [root, clean],
         root,
         strategy: "phrase-template",
-        styles: ["natural-compound"],
+        styles: [request.styles.includes("natural-compound") ? "natural-compound" : "compound"],
       });
     }
   }

@@ -20,6 +20,13 @@ import {
 } from "@/lib/brain";
 import { Badge, Button, Callout } from "@/components/ui/primitives";
 import {
+  NAMING_STYLES,
+  engineForNamingStyles,
+  namingStylesInState,
+  recommendNamingStyles,
+  type NamingStyleId,
+} from "@/lib/generator/naming-styles";
+import {
   ChipGroup,
   Field,
   Input,
@@ -54,8 +61,21 @@ const POSITION_OPTIONS: Array<{ value: KeywordPosition; label: string; title: st
   { value: "flexible", label: "Flexible", title: "Allow blends and mixed placements" },
 ];
 
+/** Partner-length choices offered by the UI. 2–5 letters cover the useful range in practice. */
+const PARTNER_LENGTHS = [2, 3, 4, 5] as const;
+
+/** An example partner word for the tooltip on each length chip. */
+function examplePartner(length: number): string {
+  const samples: Record<number, string> = { 2: "up, io", 3: "hub, neo", 4: "nova, wave", 5: "spark, orbit" };
+  return samples[length] ?? "";
+}
+
 export type GeneratorFormState = {
+  /** Exactly one root. A single keyword produces a coherent result list; several produce
+   *  interleaved lists where the quantity per root is impossible to reason about. */
   roots: string[];
+  /** Allowed alphabetic length of the partner word (2/3/4/5). Empty = any length. */
+  partnerLengths: number[];
   position: KeywordPosition;
   styles: WordStyle[];
   industries: string[];
@@ -86,6 +106,7 @@ export type GeneratorFormState = {
 export function formStateFromRequest(request: GenerationRequest, preset: LengthPreset): GeneratorFormState {
   return {
     roots: request.roots,
+    partnerLengths: request.partnerLengths,
     position: request.position,
     styles: request.styles,
     industries: request.industries,
@@ -116,7 +137,8 @@ export function formStateFromRequest(request: GenerationRequest, preset: LengthP
 
 export function requestFromFormState(state: GeneratorFormState): GenerationRequest {
   return {
-    roots: state.roots,
+    roots: state.roots.slice(0, 1),
+    partnerLengths: state.partnerLengths,
     position: state.position,
     styles: state.styles.length > 0 ? state.styles : ["standard"],
     grammar: "recognized",
@@ -203,63 +225,46 @@ export function GeneratorControls({
         onGenerate();
       }}
     >
-      <div className="space-y-1.5">
-        <Field
-          label="Root keywords"
-          htmlFor="roots"
-          description="One to twelve keywords. Each is processed independently and combined with the selected word styles."
-          required
-        >
-          <TagInput
-            id="roots"
-            label="Root keywords"
-            value={state.roots}
-            onChange={(next) => set("roots", next.slice(0, SANE_LIMITS.maxRoots))}
-            placeholder="pay, home, cloud…"
-            max={SANE_LIMITS.maxRoots}
-            maxLength={40}
-            validate={(raw) => {
-              const keyword = normalizeKeyword(raw);
-              return keyword.valid ? null : (keyword.reason ?? "Not a usable keyword.");
-            }}
-          />
-        </Field>
-        <div className="flex flex-wrap gap-1.5">
-          {["pay", "home", "cloud", "ai", "shop", "stream"].map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => {
-                if (state.roots.includes(example) || state.roots.length >= SANE_LIMITS.maxRoots) return;
-                set("roots", [...state.roots, example]);
-              }}
-              className="rounded-full border border-dashed border-border-strong px-2 py-0.5 text-[11px] text-fg-subtle hover:border-accent hover:text-accent"
-            >
-              + {example}
-            </button>
-          ))}
-        </div>
-      </div>
+      <RootField state={state} onChange={onChange} />
 
-      <Field label="Keyword position" description="Where the root keyword sits inside each generated name.">
-        <SegmentedControl
-          label="Keyword position"
-          value={state.position}
-          onChange={(value) => set("position", value)}
-          options={POSITION_OPTIONS}
-        />
-      </Field>
+      <NamingStyleField state={state} onChange={onChange} />
 
       <Field
-        label="Word styles"
-        description="Enable any combination. Styles that need an AI provider stay inactive until one is configured."
+        label="Partner root length"
+        description="How many letters the added word may have — the root itself is not counted. Select several to search them together; leave empty for any length."
       >
-        <ChipGroup
-          label="Word styles"
-          options={STYLE_OPTIONS}
-          selected={state.styles}
-          onToggle={(value) => set("styles", toggle(state.styles, value))}
-        />
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Partner root length">
+          {PARTNER_LENGTHS.map((length) => {
+            const active = state.partnerLengths.includes(length);
+            return (
+              <button
+                key={length}
+                type="button"
+                role="checkbox"
+                aria-checked={active}
+                onClick={() => set("partnerLengths", toggle(state.partnerLengths, length))}
+                title={`Partner words of exactly ${length} letters, e.g. ${examplePartner(length)}`}
+                className={cn(
+                  "h-8 min-w-11 rounded-[var(--radius-sm)] border px-2.5 text-xs font-medium tabular-nums transition-colors",
+                  active
+                    ? "border-accent bg-accent-soft text-accent-soft-fg"
+                    : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
+                )}
+              >
+                {length}
+              </button>
+            );
+          })}
+          {state.partnerLengths.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => set("partnerLengths", [])}
+              className="h-8 rounded-[var(--radius-sm)] px-2 text-[11px] text-fg-subtle underline-offset-2 hover:text-fg hover:underline"
+            >
+              Any length
+            </button>
+          ) : null}
+        </div>
       </Field>
 
       <Field
@@ -325,7 +330,10 @@ export function GeneratorControls({
         </Field>
 
         <div className="space-y-3">
-          <Field label="Results" description={`Server-side cap of ${SANE_LIMITS.maxTarget.toLocaleString()} names per request.`}>
+          <Field
+            label="Number of names"
+            description="The engine returns exactly this many when the active filters can supply them, and tells you why when they cannot."
+          >
             <Select
               value={String(state.targetCount)}
               onChange={(event) => set("targetCount", Number(event.target.value))}
@@ -403,6 +411,30 @@ export function GeneratorControls({
         </button>
         {advancedOpen ? (
           <div className="space-y-4 border-t border-border p-3">
+            {/* The raw engine vocabulary lives here. The naming-style control above sets these
+                two fields for you; editing them directly is the escape hatch for a precise
+                combination the presets do not cover. */}
+            <Field label="Keyword position" description="Where the root keyword sits inside each generated name.">
+              <SegmentedControl
+                label="Keyword position"
+                value={state.position}
+                onChange={(value) => set("position", value)}
+                options={POSITION_OPTIONS}
+              />
+            </Field>
+
+            <Field
+              label="Word styles"
+              description="Enable any combination. Styles that need an AI provider stay inactive until one is configured."
+            >
+              <ChipGroup
+                label="Word styles"
+                options={STYLE_OPTIONS}
+                selected={state.styles}
+                onToggle={(value) => set("styles", toggle(state.styles, value))}
+              />
+            </Field>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Components" description="Maximum word components in a label.">
                 <Select
@@ -583,5 +615,194 @@ export function GeneratorControls({
         browser.
       </p>
     </form>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Root keyword                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * One root, enforced.
+ *
+ * The engine can process several roots, but a result list built from several keywords cannot
+ * answer "how many good names does *this* word produce" — it interleaves lists, splits the
+ * quantity between them and makes the partner-length filter meaningless. The field therefore
+ * accepts exactly one keyword and says plainly what it did with the rest.
+ */
+function RootField({
+  state,
+  onChange,
+}: {
+  state: GeneratorFormState;
+  onChange: (next: GeneratorFormState) => void;
+}) {
+  const current = state.roots[0] ?? "";
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const commit = (raw: string) => {
+    const tokens = raw
+      .split(/[,\s]+/)
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    if (tokens.length > 1) {
+      setNotice(`One root keyword at a time — using “${tokens[0]!}” and ignoring the rest.`);
+    } else {
+      setNotice(null);
+    }
+
+    const keyword = normalizeKeyword(tokens[0] ?? "");
+    if (tokens.length === 1 && !keyword.valid) {
+      setNotice(keyword.reason ?? "That is not a usable domain keyword.");
+      onChange({ ...state, roots: [tokens[0]!] });
+      return;
+    }
+    onChange({ ...state, roots: tokens.length > 0 ? [tokens[0]!] : [] });
+  };
+
+  const keyword = normalizeKeyword(current);
+  const error = current && !keyword.valid ? (keyword.reason ?? "Not a usable keyword.") : null;
+
+  return (
+    <div className="space-y-1.5">
+      <Field
+        label="Root keyword"
+        htmlFor="root"
+        required
+        error={error}
+        description="The word the names are built around. One root produces a coherent list and an exact count."
+      >
+        <Input
+          id="root"
+          value={current}
+          onChange={(event) => commit(event.target.value)}
+          placeholder="pay"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          invalid={Boolean(error)}
+          className="h-11 text-base"
+          aria-describedby={notice ? "root-notice" : undefined}
+        />
+      </Field>
+
+      {notice ? (
+        <p id="root-notice" role="status" className="text-xs font-medium text-warn">
+          {notice}
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-1.5">
+        {["pay", "home", "cloud", "ai", "shop", "stream"].map((example) => (
+          <button
+            key={example}
+            type="button"
+            onClick={() => {
+              setNotice(null);
+              onChange({ ...state, roots: [example] });
+            }}
+            className="rounded-full border border-dashed border-border-strong px-2 py-0.5 text-[11px] text-fg-subtle hover:border-accent hover:text-accent"
+          >
+            {example}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Naming styles                                                              */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Naming styles, with a recommendation derived from the root's shape.
+ *
+ * The mapping into engine terms lives in `naming-styles.ts`: each chip sets real word styles and a
+ * keyword position, and "compounds" raises the component limit to three because a compound is
+ * three parts by definition. Selecting nothing is not allowed — an empty style list would make
+ * the generator return only the bare root.
+ */
+function NamingStyleField({
+  state,
+  onChange,
+}: {
+  state: GeneratorFormState;
+  onChange: (next: GeneratorFormState) => void;
+}) {
+  const root = state.roots[0] ?? "";
+  const recommendation = useMemo(() => recommendNamingStyles(root), [root]);
+  const selected = useMemo(() => namingStylesInState(state), [state]);
+
+  const apply = (ids: NamingStyleId[]) => {
+    const engine = engineForNamingStyles(ids);
+    onChange({
+      ...state,
+      styles: engine.styles,
+      position: engine.position,
+      // Never lower a limit the user raised by hand; only raise it for compounds.
+      maxComponents: Math.max(state.maxComponents, engine.maxComponents),
+    });
+  };
+
+  return (
+    <Field
+      label="Naming styles"
+      description="How each name is assembled. The chips set the word styles and keyword position used by the engine."
+      labelAction={
+        root && recommendation.styles.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => apply(recommendation.styles)}
+            className="text-[11px] font-medium text-accent hover:underline"
+            title={recommendation.reason}
+          >
+            Use recommended
+          </button>
+        ) : null
+      }
+    >
+      <div className="space-y-2">
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          {NAMING_STYLES.map((style) => {
+            const active = selected.includes(style.id);
+            const recommended = recommendation.styles.includes(style.id);
+            return (
+              <button
+                key={style.id}
+                type="button"
+                role="checkbox"
+                aria-checked={active}
+                onClick={() => {
+                  const next = active ? selected.filter((id) => id !== style.id) : [...selected, style.id];
+                  apply(next.length > 0 ? next : [style.id]);
+                }}
+                className={cn(
+                  "rounded-[var(--radius)] border px-2.5 py-2 text-left transition-colors",
+                  active
+                    ? "border-accent bg-accent-soft/60 text-fg"
+                    : "border-border text-fg-muted hover:border-border-strong hover:text-fg",
+                )}
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium">{style.label}</span>
+                  {recommended ? (
+                    <Badge tone="accent" className="text-[10px]">
+                      Suggested
+                    </Badge>
+                  ) : null}
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-fg-subtle">{style.description}</span>
+                <span className="mt-1 block font-mono text-[11px] text-fg-muted">{style.example(root || "root")}</span>
+              </button>
+            );
+          })}
+        </div>
+        {root && recommendation.reason ? (
+          <p className="text-[11px] leading-relaxed text-fg-subtle">{recommendation.reason}</p>
+        ) : null}
+      </div>
+    </Field>
   );
 }

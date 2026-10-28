@@ -10,7 +10,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
-import { BUDGETS, measureRoutes, overBudget, type RouteWeight } from "../../scripts/audit-bundle";
+import { BUDGETS, BUDGET_OVERRIDES, budgetFor, measureRoutes, overBudget, type RouteWeight } from "../../scripts/audit-bundle";
 
 const hasBuild = await stat(path.resolve("out/index.html")).then(
   () => true,
@@ -33,6 +33,17 @@ describe.skipIf(!hasBuild)("first-load weight", () => {
   it("keeps every route inside its budget", () => {
     const breaches = routes.flatMap((route) => overBudget(route).map((reason) => `${route.route}: ${reason}`));
     expect(breaches, breaches.join("\n")).toHaveLength(0);
+  });
+
+  it("grants exceptions only where a documented feature requires one", () => {
+    // An override with no reason, or one that applies to a route that no longer exists, is a
+    // budget quietly widened by accident. Both are failures here.
+    const built = new Set(routes.map((route) => route.route));
+    for (const [route, override] of Object.entries(BUDGET_OVERRIDES)) {
+      expect(built.has(route), `${route} has a budget override but is not built`).toBe(true);
+      expect(override.reason.length, `${route} must explain why it needs a bigger budget`).toBeGreaterThan(20);
+      expect(budgetFor(route).firstLoadJs).toBeGreaterThan(BUDGETS.firstLoadJs);
+    }
   });
 
   it("keeps the CSS payload small enough to be shared by every route", () => {

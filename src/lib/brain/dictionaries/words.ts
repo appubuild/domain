@@ -102,6 +102,25 @@ export const PREFIX_LIBRARIES: WordLibrary[] = [
       "solus", "terra", "unus", "velox", "brevis", "citius", "duo", "firma", "grandis", "liber",
     ],
   },
+  {
+    /**
+     * Two- and three-letter modifiers.
+     *
+     * These exist because "partner length 2/3" was otherwise a control with nothing behind it:
+     * the longer libraries hold almost no two-letter words, so selecting the shortest partner
+     * lengths returned a handful of names. Every entry is a real English word, preposition or
+     * established morpheme — the list is short words, not invented filler.
+     */
+    id: "short",
+    name: "Short (2–3 letters)",
+    description: "Compact English modifiers and morphemes for very short names.",
+    words: [
+      "up", "go", "re", "co", "ex", "bi", "un", "in", "on", "by", "we", "my", "do",
+      "pro", "max", "top", "key", "net", "web", "app", "hub", "lab", "arc", "neo", "uni", "tri",
+      "dig", "bit", "new", "one", "all", "big", "sky", "sun", "sea", "air", "eco", "fit", "fin",
+      "tax", "log", "opt", "ram", "sol", "spa", "syn", "via", "zen", "zip",
+    ],
+  },
 ];
 
 export const SUFFIX_LIBRARIES: WordLibrary[] = [
@@ -157,6 +176,19 @@ export const SUFFIX_LIBRARIES: WordLibrary[] = [
     words: [
       "a", "eo", "ia", "io", "is", "ix", "on", "ora", "ova", "ux",
       "ara", "ella", "eno", "era", "essa", "ika", "ino", "ista", "ola", "ova",
+    ],
+  },
+  {
+    // Counterpart to the short prefix library: without it, "partner length 2/3" had almost no
+    // suffixes to draw on and the control produced single-digit result counts.
+    id: "short",
+    name: "Short (2–3 letters)",
+    description: "Compact place, tool and morpheme suffixes for very short names.",
+    words: [
+      "ly", "io", "fy", "er", "ex", "on", "up", "ai", "iq", "it", "os", "us", "co", "go",
+      "hub", "lab", "app", "pro", "max", "neo", "zen", "bit", "box", "bay", "kit", "pod", "run",
+      "sky", "day", "joy", "way", "top", "net", "web", "inn", "den", "yard", "loop", "map", "key",
+      "zip", "ram", "sol", "arc", "orb", "eco", "fit", "fin", "tax", "log", "sync", "wave", "wire",
     ],
   },
 ];

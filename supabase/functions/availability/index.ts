@@ -69,6 +69,36 @@ export const DEFINITIVE: ReadonlySet<AvailabilityStatus> = new Set<AvailabilityS
   "premium_or_special_pricing",
 ]);
 
+/* -------------------------------------------------------------------------- */
+/* Observation store                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Density of the append-only history in `availability_checks`.
+ *
+ * The cache tells the next visitor what to display; the history tells the operator what the
+ * registries have been saying over time (and how often a TLD answers at all). Written naively,
+ * history is a row per visitor per name — unbounded and useless. One row per domain+status per
+ * day is enough to answer "did this name change state, and when", and keeps a busy run to a
+ * handful of writes. `prune_availability_observations()` (migration 0011) trims anything older
+ * than the retention window.
+ */
+export const OBSERVATION_DEDUPE_HOURS = 24;
+export const OBSERVATION_WINDOW_MS = OBSERVATION_DEDUPE_HOURS * 60 * 60 * 1000;
+
+/**
+ * Whether an observation is worth appending.
+ *
+ * Pure on purpose: the write path needs a database round-trip to know `lastCheckedAt`, and the
+ * rule that decides is the part worth testing.
+ */
+export function shouldRecordObservation(lastCheckedAt: string | null, now = Date.now()): boolean {
+  if (!lastCheckedAt) return true;
+  const parsed = Date.parse(lastCheckedAt);
+  if (Number.isNaN(parsed)) return true;
+  return now - parsed >= OBSERVATION_WINDOW_MS;
+}
+
 /** Seconds a result may be served from cache, or `null` when it must not be stored. */
 export function cacheTtlSeconds(status: AvailabilityStatus): number | null {
   if (!CACHEABLE.has(status)) return null;
@@ -389,6 +419,48 @@ async function writeCache(result: Result): Promise<boolean> {
   return Boolean(response?.ok);
 }
 
+/**
+ * Appends a row to `availability_checks` when the last one for this domain+status is older than
+ * the dedupe window.
+ *
+ * A cached answer is skipped: it describes an earlier lookup, and copying it into history every
+ * time someone loads the page would make the table a log of traffic rather than of registries.
+ * A failure to write is never allowed to change the answer the caller receives — the store is
+ * diagnostics, not the source of truth.
+ */
+async function recordObservation(result: Result, now = Date.now()): Promise<boolean> {
+  if (result.cached) return false;
+  const existing = await db(
+    `availability_checks?domain=eq.${encodeURIComponent(result.domain)}` +
+      `&status=eq.${encodeURIComponent(result.status)}` +
+      `&checked_at=gt.${new Date(now - OBSERVATION_WINDOW_MS).toISOString()}` +
+      `&select=checked_at&limit=1`,
+  );
+  if (existing?.ok) {
+    const rows = (await existing.json()) as Array<{ checked_at?: string }>;
+    if (!shouldRecordObservation(rows?.[0]?.checked_at ?? null, now)) return false;
+  }
+
+  const response = await db("availability_checks", {
+    method: "POST",
+    body: JSON.stringify({
+      domain: result.domain,
+      tld: result.tld,
+      status: result.status,
+      provider_id: null,
+      provider_kind: result.providerKind ?? "rdap",
+      checked_at: result.checkedAt,
+      expires_at: null,
+      cached: false,
+      confirmed: result.confirmed,
+      http_status: result.httpStatus ?? null,
+      latency_ms: result.latencyMs ?? null,
+      error: result.errorCode ?? null,
+    }),
+  });
+  return Boolean(response?.ok);
+}
+
 /* -------------------------------------------------------------------------- */
 /* Lookup                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -531,6 +603,7 @@ async function checkOne(input: string): Promise<Result> {
   const task = (async () => {
     const result = await lookup(domain);
     await writeCache(result);
+    await recordObservation(result);
     return result;
   })().finally(() => inFlight.delete(domain));
 

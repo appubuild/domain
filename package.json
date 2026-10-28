@@ -2,7 +2,7 @@
   "name": "domainfits",
   "version": "0.1.0",
   "private": true,
-  "description": "DomainFits \u2014 domain discovery, brandable naming and domain intelligence platform (static frontend + Supabase)",
+  "description": "DomainFits — domain discovery, brandable naming and domain intelligence platform (static frontend + Supabase)",
   "engines": {
     "node": ">=20"
   },
@@ -32,6 +32,10 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.5.12",
     "@supabase/supabase-js": "^2.118.0",
+    "@tiptap/extension-character-count": "^3.32.0",
+    "@tiptap/extension-placeholder": "^3.32.0",
+    "@tiptap/react": "^3.32.0",
+    "@tiptap/starter-kit": "^3.32.0",
     "lucide-react": "^1.61.0",
     "next": "15.5.28",
     "react": "^19.2.9",

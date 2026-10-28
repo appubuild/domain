@@ -110,6 +110,14 @@ export type GenerationRequest = {
   /** Library ids to pull auto prefixes/suffixes from. */
   prefixLibraries: string[];
   suffixLibraries: string[];
+  /**
+   * Allowed alphabetic length of the *partner* word — the component added to the root — for
+   * every strategy. 2/3/4/5 are the UI's choices; an empty list means "any length".
+   *
+   * This is a length filter on the partner alone, not on the finished label: a 4-letter partner
+   * next to a 3-letter root produces a 7-letter name, and that is the intended reading.
+   */
+  partnerLengths: number[];
   /** When false, only custom prefixes/suffixes are used. */
   autoExpand: boolean;
   targetCount: number;

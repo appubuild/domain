@@ -18,6 +18,21 @@ export type AvailabilityProgress = {
   tally: Partial<Record<AvailabilityStatus, number>>;
 };
 
+/**
+ * What one `run()` did.
+ *
+ * `requested` and `skipped` exist because the hook caps a run at `MAX_DOMAINS_PER_RUN`; without
+ * them a 1,000-row result set would report "200 names checked" and quietly leave 800 unasked,
+ * which the UI would then have to explain by guessing.
+ */
+export type AvailabilityRun = {
+  results: AvailabilityResult[];
+  requested: number;
+  checked: number;
+  skipped: number;
+  cancelled: boolean;
+};
+
 export type AvailabilityApi = {
   /** Precise results keyed by full domain. */
   byDomain: Map<string, AvailabilityResult>;
@@ -25,7 +40,7 @@ export type AvailabilityApi = {
   progress: AvailabilityProgress | null;
   mode: AvailabilityMode;
   note: string;
-  run: (domains: string[], options?: { force?: boolean }) => Promise<AvailabilityResult[]>;
+  run: (domains: string[], options?: { force?: boolean }) => Promise<AvailabilityRun>;
   cancel: () => void;
   clear: () => void;
 };
@@ -77,7 +92,12 @@ export function useAvailability(): AvailabilityApi {
         0,
         MAX_DOMAINS_PER_RUN,
       );
-      if (domains.length === 0) return [];
+      const requested = Array.from(
+        new Set(input.map((domain) => domain.trim().toLowerCase()).filter(Boolean)),
+      ).length;
+      const skipped = Math.max(0, requested - domains.length);
+      const empty: AvailabilityRun = { results: [], requested, checked: 0, skipped, cancelled: false };
+      if (domains.length === 0) return empty;
       if (engine.mode === "none") {
         // Nothing can be checked. Report the truth per domain rather than silently doing nothing.
         const results = domains.map<AvailabilityResult>((domain) => ({
@@ -97,7 +117,7 @@ export function useAvailability(): AvailabilityApi {
           for (const result of results) next.set(result.domain, result);
           return next;
         });
-        return results;
+        return { results, requested, checked: results.length, skipped, cancelled: false };
       }
 
       abortRef.current?.abort();
@@ -145,7 +165,10 @@ export function useAvailability(): AvailabilityApi {
         }
       }
 
-      if (runIdRef.current !== runId) return collected;
+      const cancelled = runIdRef.current !== runId || controller.signal.aborted;
+      if (cancelled) {
+        return { results: collected, requested, checked: collected.length, skipped, cancelled: true };
+      }
 
       const actionable = collected.filter((result) => isReportable(result.status));
       const failures = collected.filter(
@@ -171,7 +194,7 @@ export function useAvailability(): AvailabilityApi {
         });
       }
 
-      return collected;
+      return { results: collected, requested, checked: collected.length, skipped, cancelled: false };
     },
     [engine],
   );

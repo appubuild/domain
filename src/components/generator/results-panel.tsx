@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Download, Filter, ListFilter, ShieldCheck, X } from "lucide-react";
 import type { Candidate, CandidateStrategy, GenerationDiagnostics } from "@/lib/brain/types";
 import { Badge, Button, Callout, Drawer, EmptyState, ProgressBar, Select } from "@/components/ui";
@@ -22,6 +22,9 @@ import type { AvailabilityProgress } from "@/lib/availability/use-availability";
 import { CandidateRow, humanStrategy } from "./candidate-row";
 
 export type ExportScope = "visible" | "selected";
+
+/** Rows per page. Exported so the test can prove the page boundary without guessing. */
+export const PAGE_SIZE = 50;
 
 const AVAILABILITY_STATUS_ORDER: AvailabilityStatus[] = [
   "available_verified",
@@ -101,7 +104,22 @@ export function ResultsPanel({
     [candidates, filters, sort, favorites, availability],
   );
 
+  const [page, setPage] = useState(0);
+
   const visible = outcome.visible;
+
+  // A thousand rows is more than a phone can lay out comfortably and more than anyone reads in
+  // one pass. The list is paginated rather than virtualised: the row is a link-heavy component
+  // with images and tooltips, and pagination keeps select-all/export semantics obvious.
+  const pageCount = Math.max(1, Math.ceil(visible.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageStart = currentPage * PAGE_SIZE;
+  const pageItems = visible.slice(pageStart, pageStart + PAGE_SIZE);
+
+  useEffect(() => {
+    // Filters or a new generation change what "page 3" means; start from the top.
+    setPage(0);
+  }, [filters, sort, candidates]);
   const visibleSelectedCount = visible.filter((candidate) => selected.has(candidate.label)).length;
   const allVisibleSelected = visible.length > 0 && visibleSelectedCount === visible.length;
   const activeFilterCount = countActiveFilters(filters);
@@ -471,11 +489,11 @@ export function ResultsPanel({
             />
           ) : (
             <ul className="overflow-hidden rounded-[var(--radius-lg)] border border-border bg-surface">
-              {visible.map((candidate, index) => (
+              {pageItems.map((candidate, index) => (
                 <CandidateRow
                   key={`${candidate.root}-${candidate.label}`}
                   candidate={candidate}
-                  index={index}
+                  index={pageStart + index}
                   selected={selected.has(candidate.label)}
                   favorite={favorites.has(candidate.label)}
                   availability={availability.get(candidate.label)}
@@ -487,6 +505,39 @@ export function ResultsPanel({
               ))}
             </ul>
           )}
+
+          {visible.length > PAGE_SIZE ? (
+            <nav
+              aria-label="Result pages"
+              className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius)] border border-border bg-surface px-2.5 py-2"
+            >
+              <p className="text-[11px] text-fg-subtle">
+                Showing {(pageStart + 1).toLocaleString()}–{(pageStart + pageItems.length).toLocaleString()} of{" "}
+                {visible.length.toLocaleString()}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((value) => Math.max(0, value - 1))}
+                  disabled={currentPage === 0}
+                >
+                  Previous
+                </Button>
+                <span className="px-1 text-[11px] tabular-nums text-fg-muted">
+                  {currentPage + 1} / {pageCount}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPage((value) => Math.min(pageCount - 1, value + 1))}
+                  disabled={currentPage >= pageCount - 1}
+                >
+                  Next
+                </Button>
+              </div>
+            </nav>
+          ) : null}
 
           {visible.length > 0 ? (
             <p className="mt-2 text-[11px] leading-relaxed text-fg-subtle">

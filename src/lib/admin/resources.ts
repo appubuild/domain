@@ -112,6 +112,15 @@ export type AdminResource = {
   readonlyKeys?: string[];
   /** Extra warning shown in the editor. */
   warning?: string;
+  /**
+   * When set, this resource is edited in a dedicated full-page screen instead of a modal.
+   *
+   * Content is the case that matters: a post or page needs a writing surface, a publishing
+   * sidebar and SEO fields side by side, which a modal cannot give without becoming a page
+   * inside a box. Small configuration rows keep the modal, because a centred dialog is the
+   * right size for six fields and a save button.
+   */
+  editor?: { route: string; type: "post" | "page" };
 };
 
 const STATUS_OPTIONS = [
@@ -119,6 +128,20 @@ const STATUS_OPTIONS = [
   { value: "published", label: "Published" },
   { value: "archived", label: "Archived" },
 ];
+
+/**
+ * Which nav item, if any, owns the current screen.
+ *
+ * The content editor lives at `/admin/editor/`, not under the list it was opened from, so the
+ * generic prefix match would highlight nothing. `?type=` says which list the author came from and
+ * keeps the sidebar pointing at it while the record is open.
+ */
+export function activeNavHref(pathname: string, editorType: string | null): string | null {
+  if (pathname.startsWith("/admin/editor")) {
+    return editorType === "page" ? "/admin/pages/" : "/admin/posts/";
+  }
+  return null;
+}
 
 export const ADMIN_RESOURCES: AdminResource[] = [
   {
@@ -154,6 +177,7 @@ export const ADMIN_RESOURCES: AdminResource[] = [
     searchColumns: ["title", "slug"],
     orderBy: { column: "updated_at", ascending: false },
     readonlyKeys: ["updated_at", "created_at"],
+    editor: { route: "/admin/editor/", type: "page" },
     warning: "Publishing changes the database, but static hosting serves the content baked at build time — rebuild to publish.",
   },
   {
@@ -215,6 +239,27 @@ export const ADMIN_RESOURCES: AdminResource[] = [
     searchColumns: ["title", "slug"],
     orderBy: { column: "published_at", ascending: false },
     readonlyKeys: ["created_at", "updated_at"],
+    editor: { route: "/admin/editor/", type: "post" },
+  },
+  {
+    key: "post-tags",
+    table: "post_tags",
+    label: "Blog tags",
+    singular: "tag",
+    description: "Free-form labels attached to posts through post_tags_map. Tags are created here or on the fly in the post editor.",
+    listColumns: [
+      { key: "name", label: "Name" },
+      { key: "slug", label: "Slug", mono: true },
+      { key: "created_at", label: "Created" },
+    ],
+    fields: [
+      { key: "name", label: "Name", type: "text", required: true, maxLength: 40 },
+      { key: "slug", label: "Slug", type: "text", required: true, maxLength: 40 },
+    ],
+    identityKeys: ["id"],
+    searchColumns: ["name", "slug"],
+    orderBy: { column: "name", ascending: true },
+    readonlyKeys: ["created_at"],
   },
   {
     key: "industries",
@@ -750,19 +795,22 @@ export const ADMIN_RESOURCES: AdminResource[] = [
     table: "post_categories",
     label: "Blog categories",
     singular: "category",
-    description: "Categories used to group blog posts.",
+    description:
+      "Grouping for blog posts. The category is what the post editor's picker offers and what the public post page shows as its badge.",
     listColumns: [
       { key: "name", label: "Name" },
       { key: "slug", label: "Slug", mono: true },
+      { key: "description", label: "Description" },
     ],
     fields: [
-      { key: "id", label: "ID", type: "text", immutable: true, help: "Leave blank to let the database generate one." },
-      { key: "slug", label: "Slug", type: "text", required: true, immutable: true },
-      { key: "name", label: "Name", type: "text", required: true },
-      { key: "description", label: "Description", type: "textarea" },
+      { key: "name", label: "Name", type: "text", required: true, maxLength: 60 },
+      { key: "slug", label: "Slug", type: "text", required: true, maxLength: 60, immutable: true, help: "Lower-case, hyphen-separated. Immutable once created: posts reference the category, and the slug is part of the category URL." },
+      { key: "description", label: "Description", type: "textarea", maxLength: 240 },
     ],
+    identityKeys: ["id"],
     searchColumns: ["name", "slug"],
     orderBy: { column: "name", ascending: true },
+    readonlyKeys: ["created_at"],
   },
   {
     key: "ad-settings",
@@ -921,6 +969,7 @@ export const ADMIN_NAV: Array<{ heading: string; items: Array<{ label: string; h
       { label: "Media library", href: "/admin/media/" },
       { label: "Blog posts", href: "/admin/posts/", resource: "posts" },
       { label: "Blog categories", href: "/admin/post-categories/", resource: "post-categories" },
+      { label: "Blog tags", href: "/admin/post-tags/", resource: "post-tags" },
       { label: "AI studio", href: "/admin/studio/" },
       { label: "Redirects", href: "/admin/redirects/", resource: "redirects" },
     ],

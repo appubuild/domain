@@ -11,6 +11,7 @@
 
 import { SANE_LIMITS, checkCandidate, normalizeConstraints, respectsPosition } from "./constraints";
 import {
+  compoundCombinations,
   directCombinations,
   externalCandidates,
   inventedNames,
@@ -53,8 +54,11 @@ export function createGenerationRequest(partial: Partial<GenerationRequest> = {}
     expandIndustries: partial.expandIndustries ?? true,
     customPrefixes: partial.customPrefixes ?? [],
     customSuffixes: partial.customSuffixes ?? [],
-    prefixLibraries: partial.prefixLibraries ?? ["modern", "tech"],
-    suffixLibraries: partial.suffixLibraries ?? ["generic", "descriptive"],
+    // Empty means "every library" (see `partnerPools`). A hard-coded pair here silently
+    // overrode the caller's choice and was the main reason large targets could not be met.
+    prefixLibraries: partial.prefixLibraries ?? [],
+    suffixLibraries: partial.suffixLibraries ?? [],
+    partnerLengths: (partial.partnerLengths ?? []).filter((length) => Number.isInteger(length) && length >= 2 && length <= 12),
     autoExpand: partial.autoExpand ?? true,
     targetCount: clampTarget(partial.targetCount ?? 100),
     constraints: normalizeConstraints(partial.constraints),
@@ -150,6 +154,14 @@ export function generate(request: GenerationRequest, options: GenerationOptions 
       break;
     }
 
+    // Large targets need more raw material than prefixes and suffixes alone can supply; the
+    // compound pass only runs when the style asks for it, and its size scales with the request.
+    collect(compoundCombinations(root, request, rng, Math.max(1_200, target * 4)));
+    if (now() - startedAt > budgetMs) {
+      budgetHit = true;
+      break;
+    }
+
     collect(semanticCombinations(root, profile, request));
     collect(phraseTemplates(root, profile, request));
     collect(portmanteaus(root, profile, request, rng));
@@ -200,7 +212,10 @@ export function generate(request: GenerationRequest, options: GenerationOptions 
 
   // ---- 3. score (bounded) -------------------------------------------------
   // Scoring is the expensive step; cap it but keep representation from every strategy.
-  const scoreLimit = Math.min(valid.length, Math.max(target * 10, 1200));
+  // Scoring is the expensive step, so it is capped — but generously enough that a 1000-name
+  // request still has several candidates per slot to rank and diversify. The wall-clock budget
+  // below is the real guard against a slow device.
+  const scoreLimit = Math.min(valid.length, Math.max(target * 6, 1_500));
   const toScore = valid.slice(0, scoreLimit);
 
   const scored: Array<{ raw: RawCandidate; scored: ScoredCandidate }> = [];
@@ -291,6 +306,25 @@ export function generate(request: GenerationRequest, options: GenerationOptions 
         `The search space produced ${valid.length} unique name${valid.length === 1 ? "" : "s"} that satisfy every active rule; no more combinations remain for this seed.`,
       );
     }
+    // Name the active control that shrank the space most: a count that cannot be met is only
+    // useful advice if it says which setting to relax.
+    const partners = request.partnerLengths ?? [];
+    if (partners.length > 0) {
+      reasons.push(
+        `Only partner words of ${partners.sort((a, b) => a - b).join(", ")} letter${partners.length === 1 ? "" : "s"} were allowed; add another partner length or clear the filter to widen the space.`,
+      );
+    }
+    if (request.styles.includes("compound") && constraints.maxComponents < 3) {
+      reasons.push(
+        "The compound style builds three-part names, but the maximum component count is below three, so those combinations were never generated.",
+      );
+    }
+    if (!request.autoExpand && request.customPrefixes.length === 0 && request.customSuffixes.length === 0) {
+      reasons.push(
+        "Automatic expansion is off and no custom prefixes or suffixes were entered, so only semantic and invented strategies could run.",
+      );
+    }
+
     const topRejection = [...rejections.entries()].sort((a, b) => b[1] - a[1])[0];
     if (topRejection) {
       reasons.push(

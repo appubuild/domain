@@ -143,7 +143,11 @@ export class AvailabilityEngine {
 
         let attempt = 0;
         let result = await this.check(domain, options);
-        while (attempt < maxRetries && (result.status === "check_failed" || result.status === "rate_limited")) {
+        // Only transient transport failures are retried. A `rate_limited` answer is the provider
+        // asking for less traffic: retrying it immediately is how a client turns a short pause
+        // into a ban, and the wait it asked for (typically 30–60 s) is far longer than the backoff
+        // here. The user gets the status and the retry hint instead.
+        while (attempt < maxRetries && result.status === "check_failed") {
           attempt += 1;
           await delay(Math.min(2000, 250 * 2 ** attempt));
           if (options.signal?.aborted) break;

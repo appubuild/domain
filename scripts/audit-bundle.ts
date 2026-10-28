@@ -21,12 +21,38 @@ const OUT_DIR = path.resolve("out");
  * (an accidentally imported server library, a second icon set), not to demand a rewrite.
  */
 export const BUDGETS = {
-  /** Raw bytes of JS a single route loads before interaction (today's heaviest: 687 kB). */
-  firstLoadJs: 720_000,
-  /** gzip of the same, which is closer to what crosses the wire (today's heaviest: 199 kB). */
-  firstLoadJsGzip: 210_000,
+  /**
+   * Raw bytes of JS a single route loads before interaction.
+   *
+   * The heaviest non-exempt route is `/admin/monetization/` at ~711 kB raw / 206 kB gzip, and it
+   * is heavy for one reason: the admin screens load `@supabase/supabase-js` plus the signing-in
+   * shell, and Next puts shared modules used by the public pages into the same chunk those screens
+   * fetch. The number therefore tracks the public site a little as well as the admin. 760 kB keeps
+   * roughly 45 kB of headroom over today (about one extra icon set or a small library) while still
+   * failing long before a second framework, a charting bundle or a duplicate date library lands.
+   */
+  firstLoadJs: 760_000,
+  /** gzip of the same, which is closer to what crosses the wire (~206 kB today). */
+  firstLoadJsGzip: 222_000,
   /** Raw bytes of CSS a single route loads. */
   css: 90_000,
+};
+
+/**
+ * Per-route exceptions, with the reason attached.
+ *
+ * There is exactly one today: the content editor loads Tiptap (ProseMirror) to provide a real
+ * writing surface. Shipping a rich-text engine costs roughly 430 kB raw / 135 kB gzip on top of
+ * the admin shell, and no amount of tree-shaking removes it — the alternative is a plain
+ * textarea, which is what the editor replaced. The exception is scoped to the route, so a heavy
+ * import anywhere else — especially on a public page — still fails the check.
+ */
+export const BUDGET_OVERRIDES: Record<string, Partial<typeof BUDGETS> & { reason: string }> = {
+  "/admin/editor/": {
+    firstLoadJs: 1_200_000,
+    firstLoadJsGzip: 360_000,
+    reason: "Tiptap rich-text editor — the only route that ships a ProseMirror bundle.",
+  },
 };
 
 export type RouteWeight = {
@@ -110,11 +136,21 @@ export async function measureRoutes(): Promise<RouteWeight[]> {
   return routes.sort((a, b) => b.js - a.js || a.route.localeCompare(b.route));
 }
 
+export function budgetFor(route: string): { firstLoadJs: number; firstLoadJsGzip: number; css: number } {
+  const override = BUDGET_OVERRIDES[route];
+  return {
+    firstLoadJs: override?.firstLoadJs ?? BUDGETS.firstLoadJs,
+    firstLoadJsGzip: override?.firstLoadJsGzip ?? BUDGETS.firstLoadJsGzip,
+    css: override?.css ?? BUDGETS.css,
+  };
+}
+
 export function overBudget(route: RouteWeight): string[] {
+  const limit = budgetFor(route.route);
   const failures: string[] = [];
-  if (route.js > BUDGETS.firstLoadJs) failures.push(`js ${route.js} > ${BUDGETS.firstLoadJs}`);
-  if (route.jsGzip > BUDGETS.firstLoadJsGzip) failures.push(`js gzip ${route.jsGzip} > ${BUDGETS.firstLoadJsGzip}`);
-  if (route.css > BUDGETS.css) failures.push(`css ${route.css} > ${BUDGETS.css}`);
+  if (route.js > limit.firstLoadJs) failures.push(`js ${route.js} > ${limit.firstLoadJs}`);
+  if (route.jsGzip > limit.firstLoadJsGzip) failures.push(`js gzip ${route.jsGzip} > ${limit.firstLoadJsGzip}`);
+  if (route.css > limit.css) failures.push(`css ${route.css} > ${limit.css}`);
   return failures;
 }
 

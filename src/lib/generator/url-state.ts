@@ -79,6 +79,13 @@ export function requestFromSearchParams(search: URLSearchParams): GeneratorUrlSt
 
   const tlds = list(search.get("tlds")).map((tld) => normalizeTld(tld)).filter((tld): tld is string => Boolean(tld));
 
+  // Partner lengths travel with the link: they change which names are possible, so a shared
+  // search that dropped them would not reproduce the same list.
+  const partnerLengths = list(search.get("pl"))
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value >= 2 && value <= 12);
+  const maxComponentsParam = Number(search.get("mc"));
+
   const brandable = search.get("brand") === "1";
   const profiles = list(search.get("prof")).filter((id) =>
     ["short-abstract", "startup", "professional", "friendly", "premium", "technology", "fintech", "ai", "developer", "ecommerce", "playful", "root-preserving", "root-inspired"].includes(id),
@@ -89,6 +96,7 @@ export function requestFromSearchParams(search: URLSearchParams): GeneratorUrlSt
 
   const request = createGenerationRequest({
     roots,
+    partnerLengths,
     position,
     styles,
     industries,
@@ -101,6 +109,10 @@ export function requestFromSearchParams(search: URLSearchParams): GeneratorUrlSt
       ...DEFAULT_CONSTRAINTS,
       minLength: Number.isFinite(minLength) && minLength > 0 ? minLength : DEFAULT_CONSTRAINTS.minLength,
       maxLength: Number.isFinite(maxLength) && maxLength > 0 ? maxLength : DEFAULT_CONSTRAINTS.maxLength,
+      maxComponents:
+        Number.isFinite(maxComponentsParam) && maxComponentsParam >= 1
+          ? maxComponentsParam
+          : DEFAULT_CONSTRAINTS.maxComponents,
     }),
     expandIndustries: search.get("expand") !== "0",
     autoExpand: search.get("auto") !== "0",
@@ -118,9 +130,11 @@ export function searchParamsFromRequest(
   if (request.position !== "both") params.set("pos", request.position);
   params.set("styles", request.styles.join(","));
   if (request.industries.length > 0) params.set("ind", request.industries.join(","));
+  if (request.partnerLengths.length > 0) params.set("pl", request.partnerLengths.join(","));
   params.set("n", String(request.targetCount));
   params.set("min", String(request.constraints.minLength));
   params.set("max", String(request.constraints.maxLength));
+  params.set("mc", String(request.constraints.maxComponents));
   if (request.tlds.length > 0) params.set("tlds", request.tlds.join(","));
   if (request.brandable) {
     params.set("brand", "1");

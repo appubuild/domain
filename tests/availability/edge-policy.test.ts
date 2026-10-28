@@ -28,6 +28,9 @@ import {
   parseAllowedOrigins,
   parseDomainList,
   parseRateLimit,
+  OBSERVATION_DEDUPE_HOURS,
+  OBSERVATION_WINDOW_MS,
+  shouldRecordObservation,
   takeRateToken,
   type RateWindow,
 } from "../../supabase/functions/availability/index";
@@ -235,5 +238,31 @@ describe("edge function handler", () => {
     const response = await handleRequest(get(`?domains=${many}`, { ip: ip("203") }));
     const body = (await response.json()) as { results: unknown[] };
     expect(body.results).toHaveLength(MAX_NAMES_PER_REQUEST);
+  });
+});
+
+describe("observation store", () => {
+  const now = Date.parse("2026-05-01T12:00:00.000Z");
+
+  it("appends the first observation for a name", () => {
+    expect(shouldRecordObservation(null, now)).toBe(true);
+  });
+
+  it("dedupes within the window and appends once it has passed", () => {
+    const recent = new Date(now - 60 * 60 * 1000).toISOString();
+    const old = new Date(now - (OBSERVATION_DEDUPE_HOURS + 1) * 60 * 60 * 1000).toISOString();
+    expect(shouldRecordObservation(recent, now)).toBe(false);
+    expect(shouldRecordObservation(old, now)).toBe(true);
+  });
+
+  it("treats an unparsable timestamp as missing rather than as recent", () => {
+    // A corrupt row must not be able to silence the history for a name forever.
+    expect(shouldRecordObservation("not-a-date", now)).toBe(true);
+  });
+
+  it("keeps the window long enough to be a history and short enough to stay small", () => {
+    expect(OBSERVATION_WINDOW_MS).toBe(OBSERVATION_DEDUPE_HOURS * 60 * 60 * 1000);
+    expect(OBSERVATION_DEDUPE_HOURS).toBeGreaterThanOrEqual(1);
+    expect(OBSERVATION_DEDUPE_HOURS).toBeLessThanOrEqual(72);
   });
 });

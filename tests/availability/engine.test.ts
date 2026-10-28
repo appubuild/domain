@@ -244,6 +244,16 @@ describe("batch checking", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(3);
   });
 
+  it("does not retry a rate limit", async () => {
+    // Retrying into a rate limiter is what turns a pause into a ban; the status and the
+    // retry-after hint are the answer, not another request.
+    const fetchImpl = vi.fn(async () => jsonResponse(429, {}, { "retry-after": "30" }));
+    const engine = engineWith(fetchImpl as unknown as typeof fetch);
+    const results = await engine.checkMany(["slow.com"], { maxRetries: 2, concurrency: 1 });
+    expect(results[0]?.status).toBe("rate_limited");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
   it("stops when the caller aborts", async () => {
     const controller = new AbortController();
     const fetchImpl = async () => {

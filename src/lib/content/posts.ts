@@ -15,6 +15,9 @@ export type DefaultPost = {
   tags: string[];
   authorName: string;
   publishedAt: string;
+  /** Optional cover image from the CMS; absent for the built-in offline pack. */
+  coverImageUrl?: string;
+  coverImageAlt?: string;
   seoTitle: string;
   metaDescription: string;
   faq: Array<{ question: string; answer: string }>;

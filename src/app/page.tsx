@@ -1,78 +1,118 @@
-import { ArrowRight, CircleCheck, Compass, Gauge, Layers } from "lucide-react";
-import { ButtonLink, Badge, Card, SectionHeading } from "@/components/ui/primitives";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { ArrowRight, Check, Compass, Layers, ShieldCheck } from "lucide-react";
+import { loadSiteContent } from "@/lib/content/source";
+import { buildMetadata, faqJsonLd, websiteJsonLd } from "@/lib/content/seo";
+import { FEATURES, HOW_IT_WORKS, LANDING_FAQ } from "@/lib/content/landing";
+import { createGenerationRequest, generate } from "@/lib/brain";
+import { Badge, ButtonLink, Card, EmptyState, SectionHeading } from "@/components/ui";
+import { JsonLd } from "@/components/seo/json-ld";
 import { AdSlot } from "@/components/ads/ad-slot";
-import { BRAND_DEFAULTS } from "@/lib/config/site";
+import { HeroSearch } from "@/components/marketing/hero-search";
+import { ResultPreview } from "@/components/marketing/result-preview";
+import { formatDate } from "@/lib/utils/format";
 
-const principles = [
-  {
-    icon: <Layers className="size-4.5" aria-hidden="true" />,
-    title: "Deterministic first",
-    body: "Every candidate comes from documented rules — dictionaries, templates, phonetic blends and length constraints — not from a random string generator.",
-  },
-  {
-    icon: <Gauge className="size-4.5" aria-hidden="true" />,
-    title: "Explained scores",
-    body: "Quality and brandability are broken into named factors with visible weights, so you can see why a name ranks where it does.",
-  },
-  {
-    icon: <CircleCheck className="size-4.5" aria-hidden="true" />,
-    title: "Honest availability",
-    body: "A missing record is labelled unknown, never “available”. Every status carries its provider, timestamp and cache state.",
-  },
-  {
-    icon: <Compass className="size-4.5" aria-hidden="true" />,
-    title: "Built to be deployed",
-    body: "A static frontend you can upload anywhere, with Postgres-backed content, auth and admin managed through Supabase.",
-  },
-];
+/**
+ * Landing page.
+ *
+ * Everything here is served from the static export and every claim maps to behaviour that exists:
+ * the hero form is the generator's own entry point, the preview is real engine output rendered by
+ * the product's availability chip, the blog strip is the same content the blog index renders (or
+ * an explicit empty state), and the FAQ is the same array the structured data is built from.
+ */
 
-export default function HomePage() {
+const PREVIEW_ROOT = "pay";
+const PREVIEW_SEED = 20260501;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const content = await loadSiteContent();
+  return buildMetadata({
+    title: `${content.settings.brand.name} — deterministic domain name generator`,
+    titleSuffix: content.settings.seo.defaultTitleSuffix,
+    description: content.settings.seo.defaultDescription,
+    path: "/",
+  });
+}
+
+export default async function HomePage() {
+  const content = await loadSiteContent();
+
+  // Real engine output, computed during the static build with a fixed seed, so the page shows the
+  // product instead of a screenshot of it. If the engine changes, the preview changes with it.
+  const preview = generate(
+    createGenerationRequest({
+      roots: [PREVIEW_ROOT],
+      tlds: [".com"],
+      targetCount: 3,
+      seed: PREVIEW_SEED,
+      styles: ["standard"],
+    }),
+    {},
+  );
+
+  const posts = [...content.posts]
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
+    .slice(0, 3);
+
+  const faq = faqJsonLd(LANDING_FAQ);
+
   return (
     <>
+      <JsonLd data={websiteJsonLd(content)} />
+      {faq ? <JsonLd data={faq} /> : null}
+
+      {/* ------------------------------------------------------------------ hero */}
       <section className="border-b border-border bg-surface">
-        <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.15fr_0.85fr] lg:py-20">
-          <div className="max-w-2xl space-y-5">
-            <Badge tone="accent">Deterministic naming · live availability</Badge>
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-              {BRAND_DEFAULTS.tagline}
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:py-16">
+          <div className="space-y-5">
+            <Badge tone="accent">Deterministic naming · real availability checks</Badge>
+            <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl lg:text-5xl">
+              {content.settings.brand.tagline}
             </h1>
-            <p className="text-[15px] leading-relaxed text-fg-muted sm:text-base">
-              {BRAND_DEFAULTS.name} builds domain candidates from real naming rules, scores them
-              with documented heuristics, and reports availability exactly as the registry said it —
-              including when it said nothing at all.
+            <p className="max-w-xl text-[15px] leading-relaxed text-fg-muted sm:text-base">
+              Give the generator one root word. It analyses what that word is and means, builds
+              names from rules you can read, scores them from named factors, and checks availability
+              only when a registry actually answers.
             </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <ButtonLink href="/generator" size="lg">
-                Open the generator
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </ButtonLink>
-              <ButtonLink href="/how-it-works" size="lg" variant="secondary">
-                How the engine works
-              </ButtonLink>
+
+            <HeroSearch />
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 text-xs text-fg-subtle">
+              <span className="inline-flex items-center gap-1.5">
+                <Check className="size-3.5 text-success" aria-hidden="true" />
+                No account needed
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Check className="size-3.5 text-success" aria-hidden="true" />
+                100 · 500 · 1,000 names per run
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Check className="size-3.5 text-success" aria-hidden="true" />
+                CSV, TXT and JSON export
+              </span>
             </div>
           </div>
 
-          <Card className="self-start p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-fg-subtle">
-              What the generator gives you
+          <Card className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
+                  Engine output, not a mock-up
+                </p>
+                <p className="text-[13px] text-fg-muted">
+                  {preview.candidates.length} of {preview.diagnostics.requested} names for “{PREVIEW_ROOT}”
+                </p>
+              </div>
+              <Badge tone="neutral" className="font-mono">
+                seed {PREVIEW_SEED}
+              </Badge>
+            </div>
+            <ResultPreview candidates={preview.candidates.slice(0, 3)} query={PREVIEW_ROOT} />
+            <p className="border-t border-border bg-surface-2/40 px-3.5 py-2 text-[11px] leading-relaxed text-fg-subtle">
+              Availability is shown as <strong className="text-fg-muted">not checked</strong> until a
+              registry lookup runs. That is the whole rule: no answer is never displayed as a
+              positive one.
             </p>
-            <p className="mt-1 text-sm text-fg-muted">
-              Type what the name is for. Every run is reproducible from the same seed, and every
-              status is the registry&rsquo;s own answer — or an explicit unknown.
-            </p>
-            <dl className="mt-4 space-y-2.5 text-sm">
-              {[
-                ["Candidates", "Rules, templates and phonetic blends"],
-                ["Scores", "Named factors with visible weights"],
-                ["Availability", "Checked per TLD, cached and dated"],
-                ["Exports", "CSV, TXT and JSON"],
-              ].map(([term, value]) => (
-                <div key={term} className="flex items-baseline justify-between gap-4 border-t border-border pt-2.5">
-                  <dt className="text-fg-subtle">{term}</dt>
-                  <dd className="text-right font-medium text-fg">{value}</dd>
-                </div>
-              ))}
-            </dl>
           </Card>
         </div>
       </section>
@@ -82,23 +122,189 @@ export default function HomePage() {
         <AdSlot template="home" placement="after-intro" className="mt-8" />
       </div>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6">
+      {/* ----------------------------------------------------------- how it works */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6" aria-labelledby="how-it-works">
         <SectionHeading
-          eyebrow="Principles"
-          title="What makes this platform different"
-          description="The product is judged on correctness and honesty, not on how many buttons it renders."
+          id="how-it-works"
+          eyebrow="How it works"
+          title="Six stages, each one inspectable"
+          description="The pipeline is fixed and documented. Nothing is generated by sampling a language model in the background."
+          action={
+            <ButtonLink href="/how-it-works/" variant="secondary" size="sm">
+              Read the full walkthrough
+            </ButtonLink>
+          }
         />
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {principles.map((item) => (
-            <Card key={item.title} className="p-5">
-              <span className="inline-flex size-9 items-center justify-center rounded-[var(--radius)] bg-accent-soft text-accent-soft-fg">
-                {item.icon}
-              </span>
-              <h3 className="mt-3 text-sm font-semibold text-fg">{item.title}</h3>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{item.body}</p>
-            </Card>
+        <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {HOW_IT_WORKS.map((step, index) => (
+            <li key={step.title}>
+              <Card as="div" className="h-full p-4">
+                <span className="inline-flex size-7 items-center justify-center rounded-full bg-accent-soft text-[12px] font-semibold text-accent-soft-fg">
+                  {index + 1}
+                </span>
+                <h3 className="mt-2.5 text-sm font-semibold text-fg">{step.title}</h3>
+                <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">{step.body}</p>
+              </Card>
+            </li>
           ))}
+        </ol>
+      </section>
+
+      {/* ------------------------------------------------------------- features */}
+      <section className="border-y border-border bg-surface" aria-labelledby="features">
+        <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6">
+          <SectionHeading
+            id="features"
+            eyebrow="What is actually in the product"
+            title="Controls that change the output"
+            description="Every item below is wired to the engine. There are no
+            placeholder buttons on this site — a control that does nothing would be reported as a bug."
+          />
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((feature) => (
+              <Card key={feature.title} className="h-full p-4">
+                <h3 className="flex items-start gap-2 text-sm font-semibold text-fg">
+                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+                  {feature.title}
+                </h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-fg-muted">{feature.body}</p>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <ButtonLink href="/generator/" size="lg">
+              Open the generator
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </ButtonLink>
+            <ButtonLink href="/extensions/" variant="secondary" size="lg">
+              Browse extensions
+            </ButtonLink>
+            <span className="inline-flex items-center gap-1.5 text-xs text-fg-subtle">
+              <Compass className="size-3.5" aria-hidden="true" />
+              Start from an industry or an extension if you have no root yet.
+            </span>
+          </div>
         </div>
+      </section>
+
+      {/* ----------------------------------------------------------------- blog */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6" aria-labelledby="recent-posts">
+        <SectionHeading
+          id="recent-posts"
+          eyebrow="From the blog"
+          title="Recent writing"
+          description="Published articles from the CMS. Only published, non-future-dated posts appear here."
+          action={
+            <ButtonLink href="/blog/" variant="secondary" size="sm">
+              All articles
+            </ButtonLink>
+          }
+        />
+        {posts.length === 0 ? (
+          <EmptyState
+            className="mt-8"
+            title="No published articles yet"
+            description="Nothing has been published from the CMS yet. When a post is published and the site is rebuilt, it appears here."
+          />
+        ) : (
+          <ul className="mt-8 grid gap-4 md:grid-cols-3">
+            {posts.map((post) => (
+              <li key={post.slug}>
+                <Card as="article" className="flex h-full flex-col overflow-hidden">
+                  {post.coverImageUrl ? (
+                    // Fixed aspect ratio so the card does not shift when the image loads.
+                    <img
+                      src={post.coverImageUrl}
+                      alt={post.coverImageAlt ?? ""}
+                      loading="lazy"
+                      decoding="async"
+                      className="aspect-[16/9] w-full object-cover"
+                    />
+                  ) : (
+                    <div
+                      aria-hidden="true"
+                      className="flex aspect-[16/9] w-full items-center justify-center bg-surface-2 text-fg-subtle"
+                    >
+                      <Layers className="size-6" />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col gap-2 p-4">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-fg-subtle">
+                      <Badge tone="neutral">{post.category || "Post"}</Badge>
+                      <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+                      <span aria-hidden="true">·</span>
+                      <span>{post.readingMinutes} min read</span>
+                    </div>
+                    <h3 className="text-sm font-semibold leading-snug text-fg">
+                      <Link href={`/blog/${post.slug}/`} className="hover:text-accent">
+                        {post.title}
+                      </Link>
+                    </h3>
+                    <p className="line-clamp-3 text-[13px] leading-relaxed text-fg-muted">{post.excerpt}</p>
+                    <Link
+                      href={`/blog/${post.slug}/`}
+                      className="mt-auto inline-flex items-center gap-1 pt-1 text-xs font-medium text-accent hover:underline"
+                    >
+                      Read the article
+                      <ArrowRight className="size-3" aria-hidden="true" />
+                    </Link>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* ------------------------------------------------------------------ faq */}
+      <section className="border-t border-border bg-surface" aria-labelledby="faq">
+        <div className="mx-auto w-full max-w-3xl px-4 py-14 sm:px-6">
+          <SectionHeading
+            id="faq"
+            eyebrow="Questions"
+            title="Short, direct answers"
+            description="If an answer here stops being true, it is removed — the FAQ is part of the product, not marketing copy."
+          />
+          <div className="mt-6 divide-y divide-border rounded-[var(--radius-lg)] border border-border bg-bg">
+            {LANDING_FAQ.map((item) => (
+              <details key={item.question} className="group px-4 py-3">
+                <summary className="flex cursor-pointer items-center justify-between gap-3 text-sm font-medium text-fg marker:content-['']">
+                  {item.question}
+                  <span
+                    aria-hidden="true"
+                    className="shrink-0 text-fg-subtle transition-transform group-open:rotate-45"
+                  >
+                    +
+                  </span>
+                </summary>
+                <p className="mt-2 text-[13px] leading-relaxed text-fg-muted">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------ final CTA */}
+      <section className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6">
+        <Card className="flex flex-wrap items-center justify-between gap-4 p-6">
+          <div className="max-w-xl">
+            <h2 className="text-xl font-semibold tracking-tight text-fg">Start with one word</h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+              You can see the whole pipeline working before you decide anything: scores, factors,
+              constraints and availability are all on the same screen.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/generator/" size="lg">
+              Generate names
+              <ArrowRight className="size-4" aria-hidden="true" />
+            </ButtonLink>
+            <ButtonLink href="/how-it-works/" variant="secondary" size="lg">
+              How it works
+            </ButtonLink>
+          </div>
+        </Card>
       </section>
     </>
   );

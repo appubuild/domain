@@ -212,7 +212,10 @@ async function loadSiteContentUncached(): Promise<SiteContent> {
   try {
     const [pageRows, postRows, industryRows, tldRows, settingRows, menuRows, itemRows] = await Promise.all([
       restGet("pages", "select=slug,title,excerpt,body,seo_title,meta_description,canonical_url,noindex,published_at,updated_at&status=eq.published&order=slug.asc"),
-      restGet("posts", "select=slug,title,excerpt,body,author_name,published_at,seo_title,meta_description,cover_image_url,cover_image_alt,faq,category_id&status=eq.published&order=published_at.desc&limit=100"),
+      restGet(
+        "posts",
+        "select=slug,title,excerpt,body,author_name,published_at,seo_title,meta_description,cover_image_url,cover_image_alt,faq,category_id,post_categories(name,slug)&status=eq.published&order=published_at.desc&limit=100",
+      ),
       restGet("industries", "select=id,name,slug,description,intro,enabled&enabled=eq.true&order=display_order.asc"),
       restGet("tlds", "select=tld,display_name,description,category,enabled,checkability,note&order=display_order.asc"),
       restGet("site_settings", "select=key,value&is_public=eq.true"),
@@ -285,10 +288,14 @@ async function loadSiteContentUncached(): Promise<SiteContent> {
                 title: str(row.title),
                 excerpt: str(row.excerpt),
                 body: str(row.body),
-                category: "Post",
+                // The category name comes from the embedded join, so the blog card shows the real
+                // grouping rather than the literal word "Post".
+                category: str((row.post_categories as { name?: string } | null)?.name, "Post"),
                 tags: [],
                 authorName: str(row.author_name, settings.brand.name),
                 publishedAt: str(row.published_at, new Date().toISOString()),
+                coverImageUrl: str((row as Record<string, unknown>).cover_image_url) || undefined,
+                coverImageAlt: str((row as Record<string, unknown>).cover_image_alt) || undefined,
                 seoTitle: str(row.seo_title, str(row.title)),
                 metaDescription: str(row.meta_description, str(row.excerpt)),
                 faq: Array.isArray(row.faq)

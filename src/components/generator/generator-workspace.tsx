@@ -11,6 +11,7 @@ import {
   type GenerationRequest,
 } from "@/lib/brain";
 import { requestFromSearchParams, searchParamsFromRequest } from "@/lib/generator/url-state";
+import { PREFIX_LIBRARIES, SUFFIX_LIBRARIES } from "@/lib/brain";
 import {
   DEFAULT_FILTERS,
   applyFilters,
@@ -35,22 +36,31 @@ import { cn } from "@/lib/utils/format";
 import { GeneratorControls, formStateFromRequest, requestFromFormState, type GeneratorFormState } from "./generator-controls";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { ResultsPanel, type ExportScope } from "./results-panel";
+import { RootAnalysisPanel } from "./root-analysis";
 
+/**
+ * The form a first-time visitor sees.
+ *
+ * Every library is selected (an empty selection means "all" in the engine, but then the chips
+ * would look unset), compounds are on with a three-part limit, and the quantity is 100 — the
+ * combination that produces a full, varied list for almost any root.
+ */
 const EMPTY_FORM: GeneratorFormState = formStateFromRequest(
   {
     roots: [],
+    partnerLengths: [],
     position: "both",
-    styles: ["standard", "keyword-industry", "compound"],
+    styles: ["standard", "compound", "natural-compound"],
     grammar: "recognized",
     industries: [],
     expandIndustries: true,
     customPrefixes: [],
     customSuffixes: [],
-    prefixLibraries: ["modern", "tech"],
-    suffixLibraries: ["generic", "descriptive"],
+    prefixLibraries: PREFIX_LIBRARIES.map((library) => library.id),
+    suffixLibraries: SUFFIX_LIBRARIES.map((library) => library.id),
     autoExpand: true,
     targetCount: 100,
-    constraints: DEFAULT_CONSTRAINTS,
+    constraints: { ...DEFAULT_CONSTRAINTS, maxComponents: 3, maxLength: 16 },
     brandable: false,
     brandableProfiles: ["startup"],
     tlds: ["com", "io"],
@@ -158,23 +168,37 @@ export function GeneratorWorkspace() {
         push({ tone: "warn", title: "No domains to check", description: "Refresh the results and try again." });
         return;
       }
-      const results = await availabilityApi.run(domains);
-      if (results.length === 0) {
-        push({ tone: "info", title: "Check cancelled" });
+      const run = await availabilityApi.run(domains);
+      if (run.cancelled) {
+        push({
+          tone: "info",
+          title: "Check cancelled",
+          description:
+            run.checked > 0 ? `${run.checked} of ${run.requested} names were checked before you cancelled.` : undefined,
+        });
         return;
       }
-      const summary = summarizeResults(results);
+      if (run.results.length === 0) {
+        push({ tone: "warn", title: "Nothing was checked", description: "No result came back from the provider." });
+        return;
+      }
+      const summary = summarizeResults(run.results);
       const available = summary.find((entry) => entry.status === "available_verified")?.count ?? 0;
-      const failed = results.filter(
+      const failed = run.results.filter(
         (result) => result.status === "check_failed" || result.status === "rate_limited" || result.status === "unknown",
       ).length;
 
       push({
         tone: available > 0 ? "success" : failed > 0 ? "warn" : "info",
-        title: `${results.length} name${results.length === 1 ? "" : "s"} checked`,
+        title: `${run.checked} name${run.checked === 1 ? "" : "s"} checked`,
         description:
           `${summary.map((entry) => `${entry.count} ${entry.status.replace(/_/g, " ")}`).join(" · ")}.` +
-          (failed > 0 ? " Failed checks are not evidence of availability." : ""),
+          (failed > 0 ? " Failed checks are not evidence of availability." : "") +
+          // The per-run cap is a protection against hammering registries, not a hidden limit: say
+          // so, and say how to continue, rather than pretending the rest were checked.
+          (run.skipped > 0
+            ? ` ${run.skipped} more were not sent — a single run is capped at 200 domains to stay inside registry rate limits. Narrow the filters or check a selection to cover them.`
+            : ""),
       });
     },
     [availabilityApi, candidates, lastRequest?.tlds, push, selected, visibleCandidates],
@@ -192,7 +216,13 @@ export function GeneratorWorkspace() {
       setBusy(true);
       setError(null);
       try {
-        const result = generate(request, {});
+        // Large targets need more room than the engine's 2.5 s default. The budget is a wall-clock
+        // guard, not a quantity cap: measured runs of 1000 names take ~250 ms, so this only
+        // matters on slow devices — and when it does bite, the diagnostics say so.
+        const result = generate(
+          { ...request, budgetMs: request.targetCount >= 500 ? 8_000 : 4_000 },
+          {},
+        );
         setCandidates(result.candidates);
         setDiagnostics(result.diagnostics);
         setLastRequest(request);
@@ -431,6 +461,15 @@ export function GeneratorWorkspace() {
             />
           </div>
 
+          <div className="mt-3">
+            <RootAnalysisPanel
+              root={form.roots[0] ?? ""}
+              selectedIndustries={form.industries}
+              onToggleIndustry={(id) => setForm((current) => ({ ...current, industries: toggleValue(current.industries, id) }))}
+              onClearIndustries={() => setForm((current) => ({ ...current, industries: [] }))}
+            />
+          </div>
+
           {recent.length > 0 ? (
             <div className="mt-3 rounded-[var(--radius)] border border-border bg-surface p-3">
               <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-fg-subtle">
@@ -531,4 +570,9 @@ export function GeneratorWorkspace() {
       </div>
     </div>
   );
+}
+
+/** Toggle helper for the industry override chips. */
+function toggleValue(list: string[], value: string): string[] {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
 }

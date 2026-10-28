@@ -87,11 +87,9 @@ export function websiteJsonLd(content: SiteContent): JsonLd {
     name: content.settings.brand.name,
     ...(url ? { url } : {}),
     description: content.settings.seo.defaultDescription,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${url ?? ""}/blog/?q={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
+    // No `potentialAction`/SearchAction: the blog index has no search endpoint, and declaring a
+    // sitelinks search box that does not exist is exactly the kind of markup Google reports as
+    // an error. Add it back here if a `/blog/?q=` filter is ever shipped.
   };
 }
 

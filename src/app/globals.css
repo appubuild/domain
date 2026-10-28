@@ -63,6 +63,10 @@
 
   /* focus ring */
   --ring: #067a68;
+
+  /* Height of the sticky site header (h-14 + 1px border). The admin shell uses it to fill
+     exactly the viewport below the header instead of guessing a padding. */
+  --site-header-h: calc(3.5rem + 1px);
 }
 
 [data-theme="dark"] {
@@ -143,6 +147,7 @@
   --radius-DEFAULT: var(--radius);
   --radius-lg: var(--radius-lg);
   --radius-xl: var(--radius-xl);
+  --spacing-header: var(--site-header-h);
 
   --shadow-xs: var(--shadow-xs);
   --shadow-sm: var(--shadow-sm);
