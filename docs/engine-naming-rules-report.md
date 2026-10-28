@@ -5,7 +5,7 @@ design system, same auth. Nothing was rebuilt from scratch, and nothing that alr
 removed except the two selectors the brief asked to delete.
 
 Branch: `arena/b181432b-domain` · commit `00597b8` · production deployment
-`dpl_5Z3g9kaf9248uCMACswFcMin97UJ` (commit `0b1b7c0`) → `https://domainfits.vercel.app/`.
+`dpl_5DnqxM7YVGi6VUU42AfRwDDokh9W` (commit `578ed2b`) → `https://domainfits.vercel.app/`.
 
 ---
 
@@ -94,6 +94,7 @@ The generator uses a **two-column workspace**, not a control band across the top
 **Desktop (`lg` and up).** A grid of `20rem / minmax(0,1fr)` (21rem on `xl`): the configure panel
 on the left, the results on the right.
 
+- Panel width: 21rem at `lg`, 23rem at `xl` — enough for a chip row and a full sentence.
 - The panel is the page's **only sticky element**. It is pinned under the site header
   (`sticky top-[var(--site-header-h)]`), capped at the viewport
   (`max-h-[calc(100dvh-var(--site-header-h)-1.25rem)]`) and scrolls internally, so it stays
@@ -102,11 +103,16 @@ on the left, the results on the right.
 - The grid deliberately has **no `items-start`**: a shrink-to-fit column gives a sticky child no
   track to travel along, so the panel would simply scroll away. A test pins that.
 - Order inside the panel: **Primary root** (one word, enforced, with the detected industry under
-  it) → **Generate names** → **Extensions** (multi-select chips, high in the panel) → one rules row
-  (**partner root length** 2/3/4/5/6 + "Any", **Industry** select, **How many names**, **Brandable**)
-  → the detection notes on one wrapping line → the computed total length → **Advanced**
-  (custom partners, libraries, dictionary switches, syllables, consonant run, vowel share,
-  required/excluded text) → Reset and the TLD/length badges.
+  it) → **Generate names** → **Extensions** (multi-select chips, high in the panel) → the rules
+  **stacked in one column** (**partner root length** 2/3/4/5/6 + "Any", **Industry** select,
+  **How many names**, **Brandable**) → the detection notes on one wrapping line → the computed
+  total length → **Advanced** (custom partners, libraries, dictionary switches, syllables,
+  consonant run, vowel share, required/excluded text) → Reset and the TLD/length badges.
+- That stack is not cosmetic: the first pass kept the multi-column rules row from the old
+  full-width band, and down a 21rem column it collapsed into overlapping cells — partner chips one
+  per line, "Industry" running into "How many names", the "Any" chip clipped. Every rule is now
+  full width, and the Advanced panel's switches and numeric groups stack too (the `sm:` breakpoints
+  there measure the viewport, not the column).
 - `GeneratorControls` no longer carries a Setup toggle: it is a plain panel. It takes
   `showActions` (the drawer's footer supplies the button instead) and `idPrefix`, so the desktop
   panel and the drawer can never collide on element ids.
@@ -184,7 +190,7 @@ explain itself. Scores are never described as availability or market value.
 
 | Gate | Result |
 | --- | --- |
-| `npx vitest run` | **964 passed / 46 files** (was 897 / 42) |
+| `npx vitest run` | **965 passed / 46 files** (was 897 / 42) |
 | `npx vitest run tests/engine tests/generator tests/ui` | **174 passed / 12 files** |
 | `npx tsc --noEmit` | **0 errors** |
 | `npm run build` | **exit 0** — static export, 19 industry pages, `/generator` 47.7 kB |
@@ -208,7 +214,8 @@ The fifteen regressions from the brief map to:
 | Combined filters, clearing, dedupe, counts | `filters.test.ts` "combines filters with AND", "restores every name", "returns unique labels only" |
 | Large quantities and limits | `quantity.test.ts` (1000 → 596 with `exhausted`), `generate.test.ts` |
 | Desktop and mobile | `controls.test.tsx` "collapses the secondary controls on a phone and shows them from `lg` up" |
-| Industry control stays compact | `controls.test.tsx` "keeps the industry control on one line, with its explanation below the row" |
+| Industry control stays compact | `controls.test.tsx` "stacks its rules for a narrow panel instead of squeezing columns into it" |
+| Partner chips stay on one row | `controls.test.tsx` "keeps every partner-length chip in one wrapping group" |
 | Left panel, right results | `controls.test.tsx` "puts the configure panel in a left column and the results on the right" |
 | Panel stays reachable while scrolling | `controls.test.tsx` "keeps the panel sticky under the header with its own scroll, never over the results" |
 | Floating button → left drawer on a phone | `controls.test.tsx` "offers a floating Configure button on a phone that opens the panel as a left drawer" + "does not submit from inside the drawer panel" |
@@ -216,7 +223,7 @@ The fifteen regressions from the brief map to:
 
 ## 10. Deployment
 
-- Push `0b1b7c0` → production deployment `dpl_5Z3g9kaf9248uCMACswFcMin97UJ`, alias
+- Push `578ed2b` → production deployment `dpl_5DnqxM7YVGi6VUU42AfRwDDokh9W`, alias
   `domainfits.vercel.app` (READY, PROMOTED).
 - Live checks: `/generator/` renders the new control card in the compact rules-row layout,
   `/industries/communication/` renders the new industry page, `/` and `/blog/` unchanged.
