@@ -20,7 +20,7 @@ Build and verify:
 
 ```bash
 npm run typecheck              # tsc --noEmit, strict
-npm test                       # 747 tests (engine, DB/RLS, availability, content, a11y, security)
+npm test                       # 894 tests (engine, DB/RLS, availability, admin, content, a11y, security)
 npm run build                  # → out/ + .htaccess, _headers, _redirects (refuses if dev is running)
 npm run test:a11y              # axe over every built page; run after a build
 npm run audit:size             # first-load weight per route, against budgets
@@ -36,6 +36,10 @@ npm run verify                 # all of the above, in the order that makes them 
    `out/_redirects` and `out/_headers` instead.
 
 Full instructions: [`docs/deployment.md`](docs/deployment.md).
+
+The most recent work — admin panel, dedicated post/page editor, generator engine, availability
+audit and landing page, with the verification behind each — is summarised in
+[`docs/ui-ux-upgrade-report.md`](docs/ui-ux-upgrade-report.md).
 
 ## What is inside
 
