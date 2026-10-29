@@ -50,6 +50,13 @@ jobs:
         run: npm run build:electron
       - name: Sync Android shell
         run: npm run android:sync
+      - name: Build Android debug APK
+        working-directory: android
+        run: |
+          export JAVA_HOME="$JAVA_HOME_17_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          ./gradlew --no-daemon assembleDebug
       - name: Audit dependencies
         run: npm audit --audit-level=low
       - name: Run full test suite
