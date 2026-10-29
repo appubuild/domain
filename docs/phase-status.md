@@ -1,6 +1,6 @@
 # Phase status
 
-Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 has started following the user’s NEXT; Phases 4–6 remain partial. None of these phases is production-ready.
+Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phase 8 administration foundation has now started at the user’s direction. Phases 4–7 remain partial. None of these phases is production-ready.
 
 ## Phase index
 
@@ -14,7 +14,7 @@ Last checked: 2026-10-29. This checklist records verified repository state, not 
 | 5 | Map catalog | **Started; partial.** Experimental opt-in OpenStreetMap layer and offline grid. |
 | 6 | GPS and georeferencing | **Started; partial.** One-time device location and temporary north-up reference image. |
 | 7 | Accounts and cloud | Not started. |
-| 8 | Administration | Not started. |
+| 8 | Administration | **Started; partial.** Tenant/RLS schema, role/audit RPCs and a basic bilingual tenant panel implemented; no live Supabase deployment or full admin console. See [tenant administration](architecture/tenant-administration.md). |
 | 9 | Licensing | Not started. |
 | 10 | Electron | Not started. |
 | 11 | Android | Not started. |
@@ -69,7 +69,15 @@ An optional Supabase integration accepts only a configured HTTPS project URL and
 
 Tests use a **mocked** Supabase API: no live authentication, RLS or provider-specific behavior is verified. Mocked flows cover sign-in, upload of real readable local projects (verified the backup JSON contains the expected geometry), conflict-safe restore (restore to a device with the same ID rejected), restore after local deletion, deletion, sign-out and signed-out persistence. Accessibility scans cover the configured account controls at 320 and 1366 px in both languages. Real Supabase authentication, email confirmation flow, RLS enforcement under concurrent clients, cross-device restore, password recovery, other identity providers, rate limiting, provider outage recovery, and physical mobile devices remain unverified. Phase 7 is not production-ready.
 
-Phase 8 multi-tenant administration and licensing has not started. Entry requires role modelling, plan enforcement, audit logging and cross-tenant isolation verification; no automatic progression.
+## Phase 8 — multi-tenant administration (started, partial)
+
+Added a security-oriented but not-live Supabase migration for tenant records, tenant memberships and roles (`owner`, `admin`, `surveyor`, `viewer`), plan/license schema, a separately provisioned platform-admin registry, and scoped audit events. Authenticated users can create a tenant and become its owner, rename it as tenant manager, and owners can change the roles of existing non-owner members. License assignment is restricted to platform admins inserted by a trusted operator; self-promotion and direct client table writes are denied. Plan catalog is empty by design until commercial plan values are approved. Audit entries are appended through authorized RPC operations; managers see their own tenant's audit and platform admins may review all tenants' logs. The Phase 7 backup data remains user-owned and has not been migrated to tenant ownership.
+
+`apps/web/src/cloud/tenants.test.ts` executes the actual migration using PGlite with minimal stand-ins for Supabase auth and roles. **6/6 database tests passed** for atomic tenant creation, cross-tenant row visibility, role-specific audit reads, direct-write denial, owner-only role management, platform-admin-only license changes and self-promotion denial. This is local PostgreSQL-engine evidence, not a live Supabase/PostgREST/RLS test or an independent security review. `apps/web/src/cloud/TenantPanel.test.tsx` has **2/2 UI interaction tests passed** with a mocked Supabase client.
+
+A bilingual tenant panel now provides basic organization listing, create/rename controls, role display and informational license status after Supabase sign-in. No full admin console, invitations, acceptance, member removal, ownership transfer, plan rows/pricing/billing, quota or feature enforcement, tenant switching, account-to-tenant cloud backup migration, lifecycle/deletion, or rate limiting exists. The schema's plan limits do not enforce application usage. Migration is not applied to a live project and no platform-admin account was provisioned. Phase 8 is not production-ready; see [tenant administration](architecture/tenant-administration.md) for limitations and prerequisites.
+
+UI/responsive status: the bilingual tenant panel has a narrow-screen CSS layout and component interaction coverage, but its layout at 320, 375, 430, 768, 1024, 1366 and 1920 pixels and landscape was not visually or browser-tested this turn because Chromium is unavailable. Final Playwright smoke attempts for both the main suite (`--max-failures=1`) and cloud suite (`--max-failures=1`) stopped at the first browser launch because the Playwright Chromium executable is absent in this sandbox; no browser assertions ran for the current tenant panel. The earlier 70/70 main and 5/5 cloud pass belongs to a previous environment and predates this panel. Persistence/security: new records live in the proposed Supabase schema only; none has been applied to a live database. Local project data remains IndexedDB-backed and separate. No credentials or service-role key were introduced. `npm run typecheck`, `npm run build`, and `npm audit` passed (0 vulnerabilities). `npm test -- --reporter=dot` reported 95 passed and 2 failed; the failures are the existing deferred Bengali PDF extraction regressions. `npm run test:e2e -- --reporter=line --max-failures=1` and `npm run test:e2e:cloud -- --reporter=line --max-failures=1` could not launch Chromium because `/home/user/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell` is missing; these are environment-blocked runs, not passing tests.
 
 ## Deployment
 

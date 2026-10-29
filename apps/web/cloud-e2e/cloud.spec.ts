@@ -13,6 +13,9 @@ async function mockCloud(page: Page) {
     if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers });
     if (url.pathname === '/auth/v1/token') return route.fulfill({ status: 200, headers, json: { access_token: token, refresh_token: 'test-refresh', token_type: 'bearer', expires_in: 3600, user: { id: owner, aud: 'authenticated', role: 'authenticated', email: 'owner@example.com', app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' } } });
     if (url.pathname === '/auth/v1/logout') return route.fulfill({ status: 204, headers });
+    if (['/rest/v1/land_expert_tenants', '/rest/v1/land_expert_tenant_memberships', '/rest/v1/land_expert_tenant_licenses'].includes(url.pathname)) {
+      return route.fulfill({ status: 200, headers, json: [] });
+    }
     if (url.pathname === '/rest/v1/land_expert_cloud_backups') {
       if (request.headers().authorization !== `Bearer ${token}`) return route.fulfill({ status: 401, headers, json: { message: 'Unauthorized' } });
       if (request.method() === 'POST') {

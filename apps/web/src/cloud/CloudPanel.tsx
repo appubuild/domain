@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getCloudClient } from '../../../../packages/cloud/src/client';
 import { openProjectRepository } from '../../../../packages/storage/src/projects';
 import { createBackup, parseBackup } from '../../../../packages/storage/src/transfer';
+import { TenantPanel } from './TenantPanel';
 import './cloud.css';
 
 const metadata = z.array(z.object({ id: z.string().uuid(), created_at: z.string().datetime({ offset: true }) }).strict()).max(50);
@@ -118,6 +119,7 @@ export function CloudPanel() {
       <div className="cloud-actions"><button type="button" disabled={busy} onClick={() => { void upload(); }}>{t('cloudUpload')}</button><button type="button" disabled={busy} onClick={() => { void refresh(); }}>{t('cloudRefresh')}</button><button type="button" disabled={busy} onClick={() => { void signOut(); }}>{t('cloudSignOut')}</button></div>
       <p>{t('cloudSnapshotHint')}</p>
       {rows.length > 0 && <ul>{rows.map(row => <li key={row.id}><span>{new Intl.DateTimeFormat(i18n.resolvedLanguage === 'bn' ? 'bn-BD' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(row.created_at))} <small>{row.id}</small></span><div className="cloud-actions"><button type="button" disabled={busy} onClick={() => { void restore(row); }} aria-label={t('cloudRestoreNamed', { id: row.id })}>{t('cloudRestore')}</button><button type="button" disabled={busy} onClick={() => { void remove(row); }} aria-label={t('cloudDeleteNamed', { id: row.id })}>{t('cloudDelete')}</button></div></li>)}</ul>}
+      <TenantPanel key={session.user.id} client={client} userId={session.user.id} />
     </>}
     {busy && <p role="status">{t('cloudWorking')}</p>}
     {message && <p role={message.kind === 'error' ? 'alert' : 'status'} className={message.kind === 'error' ? 'cloud-error' : 'cloud-success'}>{t(message.key)}</p>}
