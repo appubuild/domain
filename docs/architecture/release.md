@@ -4,6 +4,7 @@
 
 - `vercel.json` applies `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, and a narrowly scoped `Permissions-Policy` that permits same-origin geolocation but disables camera and microphone.
 - `package.json` declares Node `>=22 <25`, covering the locally tested Node 22 and the connected Vercel project's configured Node 24, as well as Android/Capacitor tooling. A static-only `npm run release:check-config` verifies the Node declaration, Vercel build/output paths, SPA fallback and these required headers. It does **not** perform a deploy, inspect Vercel environment variables, or verify headers delivered from the edge.
+- `.github/workflows/release-gate.yml` runs the static preflight, typecheck, web/Electron builds, Android sync, dependency audit and full test suite on PRs, pushes to this session branch, or manual dispatch. It does not publish or promote deployments. The full test step is intentionally a hard gate and will fail on the two currently deferred Bengali extraction regressions; they are not skipped or weakened.
 - The Vercel project has an existing production alias `https://landexpert.vercel.app`. On 2026-10-29, Vercel reported its current ready production deployment at commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, earlier than the current branch head. The project settings reported Git-provider deployment creation disabled. Repository changes are not deployed to that production alias.
 
 ## Verification
@@ -12,7 +13,7 @@
 
 No UI layout or persistence code changed in this phase. Viewport widths 320, 375, 430, 768, 1024, 1366 and 1920 px, and landscape, were not re-tested in this infrastructure-only phase; this is not an accessibility or responsive acceptance result. Security changes apply to future Vercel responses; no live database, auth, licensing enforcement or native-device security behavior was tested.
 
-Changed files: `vercel.json` (security response headers), `package.json`/`package-lock.json` (supported Node range and check command), `scripts/release-config-check.mjs`, `README.md`, `docs/phase-status.md`, and this release note.
+Changed files: `.github/workflows/release-gate.yml`; `vercel.json`; `package.json`/`package-lock.json`; `scripts/release-config-check.mjs`; `README.md`; `docs/phase-status.md`; and this release note.
 
 ## Production blockers
 
