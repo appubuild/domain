@@ -2,9 +2,6 @@ name: Release gate
 
 on:
   pull_request:
-  push:
-    branches:
-      - arena/998ea3ff-domain
   workflow_dispatch:
 
 permissions:
