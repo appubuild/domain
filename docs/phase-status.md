@@ -1,0 +1,76 @@
+# Phase status
+
+Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 has started following the user’s NEXT; Phases 4–6 remain partial. None of these phases is production-ready.
+
+## Phase index
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| 0 | Architecture | Initial architecture delivered; later requirements and platform decisions still need review. |
+| 1 | Foundation | Foundation implemented; production and platform acceptance not established. |
+| 2 | Workspace | Workspace implemented; broader device and accessibility acceptance not established. |
+| 3 | Drawing and measurements | Partial. Core editor exists; broader geometry, touch, measurement and device verification remain. See [survey engine](architecture/survey-engine.md). |
+| 4 | Local projects, transfer and reports | **Partial; current phase.** See checklist below. |
+| 5 | Map catalog | **Started; partial.** Experimental opt-in OpenStreetMap layer and offline grid. |
+| 6 | GPS and georeferencing | **Started; partial.** One-time device location and temporary north-up reference image. |
+| 7 | Accounts and cloud | Not started. |
+| 8 | Administration | Not started. |
+| 9 | Licensing | Not started. |
+| 10 | Electron | Not started. |
+| 11 | Android | Not started. |
+| 12 | Release | Not started. |
+
+The scope labels identify the roadmap only; they do not certify that earlier incomplete phases have met their acceptance criteria.
+
+## Phase 4 requirements and status
+
+- [x] Validated IndexedDB local project copies, safe add, stale-snapshot checks for rename/delete/duplicate, and English/Bengali controls.
+- [x] Open, GeoJSON export, single-copy backup and PDF actions check the displayed snapshot against the current record before proceeding. The check is a point-in-time read, not a lock on future changes. All-copy backup reads the database afresh.
+- [x] Bounded GeoJSON import/export and transactional, conflict-rejecting backup restore; separate validation and conflict preview. Transfer files are decoded as strict UTF-8, without silent replacement of malformed bytes. Noncanonical stored or backup names are rejected and retained rather than silently trimmed; user-entered names are trimmed before creation or rename. CRS origin remains the user's responsibility; a per-file confirmation is required and resets on file change or successful import.
+- [x] Preserve schema-invalid records, allow readable copies to be individually backed up, and offer a bounded, non-restorable diagnostic when the unreadable data can be represented losslessly as JSON.
+- [x] Experimental English PDF for ASCII project names and up to 5,000 coordinates. Horizontal and vertical line diagrams now use the available space; 150-coordinate English output was visually inspected with MuPDF and extracted successfully. A synthetic maximum-size PDF was generated in Node and downloaded in headless Chromium; all 5,000 coordinates extracted in order using PDF.js. A 5,001-coordinate download was rejected.
+- [ ] Bengali PDF: **deferred at user request**, not fixed; exact logical Unicode extraction fails. Downloads remain disabled; the original failing regression and a new strict seven-case shaping corpus regression are retained. Rendering, copy/paste, embedding and pagination in supported viewers also need verification. `bangla-pdf` and `jspdf-fontkit` independent probes both failed the exact extraction corpus; neither was integrated. See [report diagnosis and reproduction](architecture/local-projects.md#bengali-pdf-candidate-evaluation).
+- [ ] Agree and implement required plot names, attachments and richer project metadata, if required by the original Phase 4 specification; these are not present in schema version 1. A forward migration and recovery plan is documented, but no migration or repair tool is implemented.
+- [ ] Verify PDF visual pagination/diagrams and maximum-size performance on physical mobile devices, real quota/private-mode behavior and recovery, broader accessibility, other browsers and physical devices. Electron and Android storage/transfer remain unverified.
+- [ ] Complete Phase 3 dependencies needed for production drawing, including touch vertex deletion, broader geometry editing and independent measurement verification. Coordinates are approximate, not cadastral; the experimental online basemap is not a boundary source.
+
+A simulated second-write quota error is covered by a real Chromium transaction rollback/retry test; actual quota exhaustion is unverified. An attempt to force quota exhaustion using Chromium DevTools `Storage.overrideQuotaForOrigin` did not cause the IndexedDB restore to fail in this sandbox, so it does not count as quota enforcement evidence. An isolated Chromium context retained a project across reload and recovered a backup in a new context; this does not establish private-mode behavior across browsers. A practical recovery runbook is documented in [local projects](architecture/local-projects.md#practical-backup-and-recovery-guidance). Local data and backups are unencrypted and can be evicted or lost; independent secure backups and a recovery plan are required. Snapshot comparisons cannot detect a full-record ABA change. A downloaded file is not proof of retained backup. No server, accounts or credentialed API is required for the current local implementation.
+
+## Latest verification
+
+On 2026-10-29 in the sandbox:
+
+- `npm run typecheck`: passed.
+- `npm run build`: passed.
+- `npm audit`: 0 vulnerabilities with the locked dependencies.
+- `npm test`: 87 passed, 2 failed (Bengali PDF logical-text extraction and the new seven-case shaping corpus).
+- `PLAYWRIGHT_EXECUTABLE_PATH=/tmp/chromium LD_LIBRARY_PATH=/tmp/land-chromium-libs/lib npm run test:e2e -- --reporter=line`: 70 passed in headless Chromium. A separate `npm run test:e2e:cloud` run exercises a mock Supabase API with 5 passed (upload, conflict-safe restore, recovery, delete, and signed-out persistence, plus 4 accessibility checks at 320 and 1366 px in both languages). Tests include English/Bengali layouts at 320, 375, 430, 768, 1024, 1366 and 1920 pixels, simulated portrait/landscape touch, persistence, per-file CRS confirmation, strict UTF-8 and noncanonical-name rejection, simulated quota rollback/retry, isolated-context reload and backup recovery, a 5,000-coordinate browser PDF download, import/export and stale-tab workflows. Four axe-core checks covered saved-project and rename views, four covered the online-map view, and four covered GPS/reference controls, at 320 and 1366 pixels in both languages; these do not establish overall accessibility conformance. These tests do not replace physical-device or other-browser checks. Chromium and NSS libraries are temporary sandbox artifacts, not repository dependencies.
+- `npm test -- apps/web/src/survey/report.test.ts -t 'maximum-size English report'`: 1 passed; 5 unrelated tests skipped by the filter (run before adding the new corpus test).
+- Research-only `node scripts/evaluate-jspdf-bengali.mjs` with a temporary optional package: exited 1, six of seven strings not exact.
+- MuPDF 1.28.5 / PyMuPDF 2.0 independently inspected rendered three-page, 150-coordinate English and Bengali report fixtures; the English fixture was regenerated and its first page visually inspected after fixing horizontal line diagram scaling. A separate English fixture with a 120-character name, polygon and point was visually inspected and no out-of-page text boxes were detected. English checks passed; Bengali logical title/name/reference checks failed, despite all coordinate and embedded-font checks passing. The HarfBuzz candidate independently failed PDF.js and MuPDF exact-text checks. Details and reproducible scripts: [local projects](architecture/local-projects.md#independent-pdf-inspection-2026-10-29). `npm ci` restored locked dependencies after temporary trials.
+
+These results do not meet the requirement that all relevant tests pass. Bengali PDF extraction is an unresolved engineering compatibility problem, not a credential issue; the lack of physical devices and other installed viewers limits platform verification. Neither is a reason to claim Phase 4 complete.
+
+## Phase 5 — map catalog (started, partial)
+
+At the user's explicit request, development started before Phase 4 acceptance; its outstanding limitations remain above. The catalog has an offline grid (default), an opt-in experimental OpenStreetMap standard tile layer and a validated deployment-owned public configuration for additional raster providers. It preserves editor features when switching, visibly attributes OpenStreetMap, warns of network/IP disclosure, and allows returning to grid after tile errors without disabling drawing. No key, proxy, offline tile download or bulk prefetch is supplied. State resets to grid on reload. Invalid, oversized, inaccessible or timed-out configuration fails closed to the grid.
+
+Chromium tests use **mocked** tile images and failures: no live OpenStreetMap availability or policy compliance was verified. They check no default tile requests, opt-in requests, attribution, geometry preservation, failure recovery, an offline transition returning to the grid without losing work, administrator configuration and switching providers during an in-progress drawing, both languages at widths 320, 375, 430, 768, 1024, 1366 and 1920, two landscape sizes, and automated accessibility at 320 and 1366. Other browsers, physical devices, live provider availability, caching/Referer deployment behavior and native platforms remain unverified. The community tile endpoint is best-effort and **not approved for production**; review its terms and choose/configure an appropriate licensed, scalable provider before release. See [map catalog](architecture/map-catalog.md).
+
+## Phase 6 — GPS and georeferencing (started, partial)
+
+A one-shot browser geolocation request is initiated only by the user. It shows latitude, longitude, device-reported accuracy and time; permission denied, unavailable, timeout, invalid and stale results have explicit states. Centering is separately requested and disabled for stale or unsupported map latitudes. Cancel ignores a late callback; location is not persisted. Tests use simulated browser coordinates and permissions, not physical GPS.
+
+A local PNG/JPEG can be placed temporarily over the map using manually entered north-up WGS84 west/east/south/north bounds. The image signature, declared dimensions and input size are checked before decode, and dimensions rechecked after decoding. The overlay can be removed, remains above a selected basemap, and is explicitly not part of the saved project, backup, GeoJSON or PDF. No control-point fitting, rotation, distortion correction, GeoTIFF support or durable overlay storage exists. The placement is approximate and not a legal survey. PNG/JPEG behavior, actual raster pixels and overlay stacking were tested in headless Chromium with synthetic images; physical device memory limits, other browsers, real coordinates and independent georeferencing accuracy were not verified. See [GPS and reference images](architecture/gps-georeferencing.md).
+
+Phase 7 accounts and cloud backups (started, partial)
+
+An optional Supabase integration accepts only a configured HTTPS project URL and a publishable client key (`sb_publishable_...` or legacy `anon`-role JWT); a service-role key is rejected. The user must explicitly sign in with email and password; the session is kept in memory only, is lost on reload and is never persisted to a cookie. Signing up requires email confirmation; password recovery is not available. After sign-in, the user can **explicitly** upload all readable local projects as a single snapshot backup, list up to 50 of their own most recent backups, restore one (rejected when any project ID already exists locally), and delete their own backup. No automatic sync, no overwrite and no silent merge: a backup upload reads the local database fresh, restore rejects on duplicate IDs and deletion requires a separate confirmation. The cloud client and UI exclude unsaved drawings, temporary reference images and the current session from the data written to the cloud. The upload is bounded by the same 10 MiB / 100-project / strict-UTF-8 limits as a local backup. A row-level-security migration is provided; **the migration has not been applied to a live project** and RLS has not been independently reviewed. Data stored in the cloud is not end-to-end encrypted. See [accounts and cloud backups](architecture/accounts-cloud.md).
+
+Tests use a **mocked** Supabase API: no live authentication, RLS or provider-specific behavior is verified. Mocked flows cover sign-in, upload of real readable local projects (verified the backup JSON contains the expected geometry), conflict-safe restore (restore to a device with the same ID rejected), restore after local deletion, deletion, sign-out and signed-out persistence. Accessibility scans cover the configured account controls at 320 and 1366 px in both languages. Real Supabase authentication, email confirmation flow, RLS enforcement under concurrent clients, cross-device restore, password recovery, other identity providers, rate limiting, provider outage recovery, and physical mobile devices remain unverified. Phase 7 is not production-ready.
+
+Phase 8 multi-tenant administration and licensing has not started. Entry requires role modelling, plan enforcement, audit logging and cross-tenant isolation verification; no automatic progression.
+
+## Deployment
+
+The previously reported production deployment at `https://landexpert.vercel.app` predates subsequent local work. The changes in this workspace are not asserted to be deployed.

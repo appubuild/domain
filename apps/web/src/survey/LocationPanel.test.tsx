@@ -1,0 +1,41 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import '../../../../packages/localization/src';
+import { LocationPanel } from './LocationPanel';
+import type { Map as MapInstance } from 'maplibre-gl';
+
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+it('requests location only on click, shows accuracy and centers only when asked', async () => {
+  const request = vi.fn((success: PositionCallback) => success({ coords: { latitude: 23.8, longitude: 90.4, accuracy: 12 }, timestamp: Date.now() } as GeolocationPosition));
+  vi.stubGlobal('navigator', { geolocation: { getCurrentPosition: request } });
+  const easeTo = vi.fn();
+  const user = userEvent.setup();
+  render(<LocationPanel ready getMap={() => ({ easeTo }) as unknown as MapInstance} />);
+  expect(request).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'Get current location' }));
+  expect(await screen.findByText(/23.8°, 90.4°/)).toBeInTheDocument();
+  expect(screen.getByText(/Reported accuracy: ±12 m/)).toBeInTheDocument();
+  expect(easeTo).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'Center map on location' }));
+  expect(easeTo).toHaveBeenCalledWith({ center: [90.4, 23.8], zoom: 15 });
+  await user.click(screen.getByRole('button', { name: 'Clear location' }));
+  expect(screen.queryByText(/23.8°, 90.4°/)).not.toBeInTheDocument();
+});
+it('discards cancelled callbacks and rejects invalid and stale positions', async () => {
+  let callback: PositionCallback = () => {};
+  vi.stubGlobal('navigator', { geolocation: { getCurrentPosition: (success: PositionCallback) => { callback = success; } } });
+  const user = userEvent.setup();
+  render(<LocationPanel ready getMap={() => null} />);
+  await user.click(screen.getByRole('button', { name: 'Get current location' }));
+  await user.click(screen.getByRole('button', { name: 'Cancel request' }));
+  callback({ coords: { latitude: 23.8, longitude: 90.4, accuracy: 12 }, timestamp: Date.now() } as GeolocationPosition);
+  expect(screen.queryByText(/23.8°, 90.4°/)).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Get current location' }));
+  callback({ coords: { latitude: 91, longitude: 90.4, accuracy: 12 }, timestamp: Date.now() } as GeolocationPosition);
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('invalid location'));
+  await user.click(screen.getByRole('button', { name: 'Get current location' }));
+  callback({ coords: { latitude: 23.8, longitude: 90.4, accuracy: 12 }, timestamp: Date.now() - 61000 } as GeolocationPosition);
+  await waitFor(() => expect(screen.getByText(/over 60 seconds old/)).toBeInTheDocument());
+  expect(screen.getByRole('button', { name: 'Center map on location' })).toBeDisabled();
+});
