@@ -93,7 +93,7 @@ admin_header($pdo, $admin, $id ? 'Edit page' : 'New page', ['vendor/quill/quill-
       <section class="admin-card admin-card--editor">
         <div class="section-heading section-heading--admin"><div><p class="admin-card-eyebrow">Rich content</p><h2>Page body</h2></div><span class="editor-status" data-editor-status role="status">Loading local editor…</span></div>
         <div class="field rich-field" data-rich-field>
-          <div class="editor-toolbar" data-quill-toolbar aria-label="Page formatting toolbar">
+          <div class="editor-toolbar" data-quill-toolbar aria-label="Page formatting toolbar" hidden>
             <span class="ql-formats"><select class="ql-header" aria-label="Heading level"><option selected></option><option value="1">H1</option><option value="2">H2</option><option value="3">H3</option><option value="4">H4</option></select></span>
             <span class="ql-formats"><button class="ql-bold" type="button" aria-label="Bold">B</button><button class="ql-italic" type="button" aria-label="Italic">I</button><button class="ql-underline" type="button" aria-label="Underline">U</button><button class="ql-strike" type="button" aria-label="Strikethrough">S</button></span>
             <span class="ql-formats"><button class="ql-blockquote" type="button" aria-label="Blockquote">Quote</button><button class="ql-code-block" type="button" aria-label="Code block">Code</button><select class="ql-list" aria-label="List style"><option value="ordered">Numbered</option><option value="bullet">Bulleted</option></select></span>
@@ -101,7 +101,7 @@ admin_header($pdo, $admin, $id ? 'Edit page' : 'New page', ['vendor/quill/quill-
             <span class="ql-formats"><button type="button" data-editor-action="undo" aria-label="Undo">Undo</button><button type="button" data-editor-action="redo" aria-label="Redo">Redo</button></span>
           </div>
           <div class="quill-editor" data-quill-editor hidden></div>
-          <textarea id="content_html" name="content_html" class="code-input rich-source-fallback" rows="22" required data-quill-source><?= e(sanitize_rich_html((string) $page['content_html'])) ?></textarea>
+          <textarea id="content_html" name="content_html" class="code-input rich-source-fallback" rows="22" hidden data-quill-source><?= e(sanitize_rich_html((string) $page['content_html'])) ?></textarea>
           <small>H1–H4, code blocks, blockquotes, tables and inline image upload/paste are available. Saved content is sanitized server-side; scripts, iframes and unsafe URLs are removed.</small>
         </div>
       </section>
@@ -116,4 +116,20 @@ admin_header($pdo, $admin, $id ? 'Edit page' : 'New page', ['vendor/quill/quill-
 </form>
 <script src="<?= e(asset_url('vendor/quill/quill-2.0.3.js')) ?>" defer></script>
 <script src="<?= e(asset_url('js/admin-editor.js')) ?>" defer></script>
+<script>
+window.setTimeout(function () {
+  document.querySelectorAll('[data-rich-field]').forEach(function (field) {
+    var status = field.closest('form')?.querySelector('[data-editor-status]');
+    if (!status || status.textContent.trim() !== 'Loading local editor…') return;
+    status.textContent = 'Editor scripts did not initialize. Verify the local Quill and admin-editor.js assets are uploaded; the HTML fallback is open below.';
+    status.dataset.state = 'error';
+    var source = field.querySelector('[data-quill-source]');
+    var toolbar = field.querySelector('[data-quill-toolbar]');
+    var host = field.querySelector('[data-quill-editor]');
+    if (source) { source.hidden = false; source.required = true; }
+    if (toolbar) toolbar.hidden = true;
+    if (host) host.hidden = true;
+  });
+}, 8000);
+</script>
 <?php admin_footer(); ?>

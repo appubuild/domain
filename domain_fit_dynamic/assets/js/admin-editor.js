@@ -182,14 +182,18 @@
   });
 
   document.querySelectorAll('[data-rich-field]').forEach((field) => {
+    const form = field.closest('form');
     const source = field.querySelector('[data-quill-source]');
     const host = field.querySelector('[data-quill-editor]');
-    const toolbar = field.querySelector('[data-quill-toolbar]');
-    const form = field.closest('form');
+    const toolbar = field.querySelector('[data-quill-toolbar]') || form?.querySelector('[data-quill-toolbar]');
     const status = form?.querySelector('[data-editor-status]');
     if (!source || !host || !toolbar || !form) return;
     if (typeof window.Quill !== 'function') {
-      if (status) { status.textContent = 'Editor unavailable; HTML fallback is active.'; status.dataset.state = 'error'; }
+      if (status) { status.textContent = 'The local editor library did not load. Check that the Quill JS asset is uploaded; the HTML fallback is open below.'; status.dataset.state = 'error'; }
+      source.hidden = false;
+      source.required = true;
+      toolbar.hidden = true;
+      host.hidden = true;
       return;
     }
     try {

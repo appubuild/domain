@@ -6,12 +6,34 @@ require_once dirname(__DIR__) . '/config/db.php';
 function app_base_path(): string
 {
     static $base = null;
-    if ($base === null) {
-        $value = getenv('APP_BASE_PATH');
-        $base = $value === false ? '/domain_fit_dynamic' : '/' . trim($value, '/');
-        if ($base === '/') {
-            $base = '';
+    if ($base !== null) {
+        return $base;
+    }
+
+    $value = getenv('APP_BASE_PATH');
+    if ($value === false) {
+        // Infer the public subdirectory from the real CMS and document-root paths.
+        // APP_BASE_PATH, when explicitly configured, always takes precedence.
+        $appRoot = realpath(dirname(__DIR__));
+        $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+        if ($appRoot !== false && $documentRoot !== false) {
+            $documentRoot = rtrim($documentRoot, DIRECTORY_SEPARATOR);
+            if ($appRoot === $documentRoot) {
+                $value = '';
+            } else {
+                $documentPrefix = $documentRoot . DIRECTORY_SEPARATOR;
+                $value = str_starts_with($appRoot, $documentPrefix)
+                    ? '/' . str_replace(DIRECTORY_SEPARATOR, '/', substr($appRoot, strlen($documentPrefix)))
+                    : '/domain_fit_dynamic';
+            }
+        } else {
+            $value = '/domain_fit_dynamic';
         }
+    }
+
+    $base = '/' . trim((string) $value, '/');
+    if ($base === '/') {
+        $base = '';
     }
     return $base;
 }
@@ -68,7 +90,20 @@ function app_url(string $path = ''): string
 
 function asset_url(string $path): string
 {
-    return app_url('assets/' . ltrim($path, '/'));
+    static $assetVersions = [];
+    $relativePath = 'assets/' . ltrim($path, '/');
+    $url = app_url($relativePath);
+    $diskPath = dirname(__DIR__) . '/' . $relativePath;
+    if (is_file($diskPath)) {
+        if (!array_key_exists($relativePath, $assetVersions)) {
+            $digest = @hash_file('sha256', $diskPath);
+            $assetVersions[$relativePath] = is_string($digest) ? substr($digest, 0, 16) : '';
+        }
+        if ($assetVersions[$relativePath] !== '') {
+            $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . rawurlencode($assetVersions[$relativePath]);
+        }
+    }
+    return $url;
 }
 
 function e(mixed $value): string
