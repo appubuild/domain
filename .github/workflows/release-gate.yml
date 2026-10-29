@@ -2,6 +2,18 @@ name: Release gate
 
 on:
   pull_request:
+    paths:
+      - '.github/workflows/release-gate.yml'
+      - 'apps/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'supabase/**'
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vercel.json'
   workflow_dispatch:
 
 permissions:

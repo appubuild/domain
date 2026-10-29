@@ -25,7 +25,7 @@ The scope labels identify the roadmap only; they do not certify that earlier inc
 ## Current verification snapshot — Phase 12 release work (2026-10-29)
 
 - `npm run release:check-config`, `npm run typecheck`, `npm run build`, `npm run build:electron`, `npm run android:sync`: passed; `npm audit`: 0 vulnerabilities. GitHub Actions run on `286512a` passed all config/build/sync/audit steps.
-- The latest GitHub Actions run on commit `04cb64b` passed config, typecheck, web/Electron builds, Android sync, and audit, then failed only at the full-test gate. Local `npm test -- --reporter=dot`: **110 passed, 2 failed**, the unchanged, explicitly deferred Bengali PDF extraction regressions.
+- The latest completed GitHub Actions release-gate run passed config, typecheck, web/Electron builds, Android sync, and audit, then failed only at the full-test gate. Local `npm test -- --reporter=dot`: **110 passed, 2 failed**, the unchanged, explicitly deferred Bengali PDF extraction regressions.
 - Vercel reports `https://landexpert.vercel.app` currently points to a ready production deployment from commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, predating the current branch head. A non-production Vercel preview for current commit `cd9b41fa08ba60308413b7ca34d39596b6c21875` completed **READY** at `https://landexpert-63aqv52eg-md-sobur-alis-projects-c5b69b29.vercel.app`; it is account-protected and is not a production release. Vercel project settings report automatic Git-provider deployment creation disabled.
 - New Vercel response-header config has static validation only; deployed/edge headers have not been verified. No UI changed; widths 320, 375, 430, 768, 1024, 1366 and 1920 px and landscape were not retested for this infrastructure-only work.
 
