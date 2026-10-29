@@ -10,16 +10,16 @@
 
 ## Verification and boundaries
 
-`npm run android:sync` passed in the sandbox. A static smoke check verified the generated HTML CSP, copied `map-catalog.json`, geolocation plugin registration, location permission declarations, HTTPS scheme, cleartext disabled and backup disabled. This is a web bundle + Capacitor sync check only; it is not a Gradle build, APK, installation, emulator test or device test. The sandbox had no `java`, Android SDK environment variables, or `adb`; native Gradle compilation and runtime testing could not be performed.
+`npm run android:sync` passed in the sandbox. A static smoke check verified the generated HTML CSP, copied `map-catalog.json`, geolocation plugin registration, location permission declarations, HTTPS scheme, cleartext disabled and backup disabled. The local sandbox has no `java`, Android SDK environment variables or `adb`. As an independent CI check, release-gate run `40927423685` passed `./gradlew --no-daemon --console=plain assembleDebug --stacktrace` using JDK 21 on Ubuntu 24.04 with its Android SDK 36 image. This verifies compilation of a debug APK, not installation, emulator startup or device behavior; the artifact is not retained.
 
 Unit tests exercise the permission flow (first grant, approximate grant, denial), native/browser error mapping and the UI boundary that allows sign-in while disabling native sign-up. They do not emulate Android system permission dialogs, actual GPS, permission revocation/settings, WebView behavior, or file handling. WebView IndexedDB persistence, retention, quota and restore; chooser, downloads and imports; lifecycle/resume; orientation/keyboard behavior; browser history/back handling; accessibility; and physical device/browser compatibility all need native verification. No Android viewport screenshots were taken at 320, 375, 430, 768, 1024, 1366 or 1920 px, or in landscape.
 
 ## Not configured / not production-ready
 
-- No final package id decision, custom launcher/splash assets, versioning policy, release build, APK/AAB, signing key, Play App Signing, store listing, automated release, crash reporting or update process.
+- No final package id decision, custom launcher/splash assets, versioning policy, signed/release APK/AAB artifact (CI produces only a temporary debug APK), signing key, Play App Signing, store listing, automated release, crash reporting or update process.
 - No Android App Links / email confirmation callback, OAuth redirect handling, password recovery, secure token-storage design or native authentication lifecycle.
 - No policy/data-safety review, privacy disclosures, backup/recovery acceptance or determination of supported devices/API versions. System backup is disabled, but local data is not encrypted by this work.
 - No offline basemap cache or promise of offline cloud/GPS features. The default grid is local; online maps and Supabase require network access.
 - No Play Store policy, target SDK, accessibility, keyboard, performance, thermal/battery, location accuracy or multi-device testing.
 
-Phase 11 remains partial until native builds and the device acceptance matrix are exercised. See [`phase-status.md`](../phase-status.md) for the exact verification, test results, viewport coverage and next acceptance criteria.
+Phase 11 remains partial until the CI-built debug APK is installed and the device acceptance matrix is exercised. See [`phase-status.md`](../phase-status.md) for the exact verification, test results, viewport coverage and next acceptance criteria.
