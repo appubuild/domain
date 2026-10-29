@@ -53,4 +53,15 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=low
       - name: Run full test suite
-        run: npm test -- --reporter=dot
+        shell: bash
+        run: |
+          set +e
+          npm test -- --reporter=dot 2>&1 | tee "$RUNNER_TEMP/full-test.log"
+          test_status=${PIPESTATUS[0]}
+          {
+            printf '## Full test suite result\n\n'
+            printf '%s\n' '```text'
+            tail -n 80 "$RUNNER_TEMP/full-test.log"
+            printf '\n%s\n' '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$test_status"
