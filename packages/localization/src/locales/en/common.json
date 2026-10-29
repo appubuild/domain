@@ -270,5 +270,6 @@
   "tenantLicense_active": "Active",
   "tenantLicense_past_due": "Payment overdue",
   "tenantLicense_suspended": "Suspended",
-  "tenantLicense_cancelled": "Cancelled"
+  "tenantLicense_cancelled": "Cancelled",
+  "cloudSignupDesktopHint": "Create the account in the web app first; desktop sign-up confirmation links are not configured in this preview."
 }

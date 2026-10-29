@@ -1,6 +1,6 @@
 # Phase status
 
-Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phase 8 administration and Phase 9 licensing foundations have now started at the user’s direction. Phases 4–9 remain partial. None of these phases is production-ready.
+Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phase 8 administration, Phase 9 licensing and Phase 10 Electron foundations have now started at the user’s direction. Phases 4–10 remain partial. None of these phases is production-ready.
 
 ## Phase index
 
@@ -16,7 +16,7 @@ Last checked: 2026-10-29. This checklist records verified repository state, not 
 | 7 | Accounts and cloud | **Started; partial.** Optional Supabase sign-in and manual cloud backups; live auth/RLS unverified. See [accounts and cloud backups](architecture/accounts-cloud.md). |
 | 8 | Administration | **Started; partial.** Tenant/RLS schema, role/audit RPCs and a basic bilingual tenant panel implemented; no live Supabase deployment or full admin console. See [tenant administration](architecture/tenant-administration.md). |
 | 9 | Licensing | **Started; partial.** Validity-window schema and fail-closed feature entitlement RPC; no commercial plans, billing, or app-wide enforcement. See [licensing](architecture/licensing.md). |
-| 10 | Electron | Not started. |
+| 10 | Electron | **Started; partial.** Hardened desktop shell and build scripts; native runtime/OS verification and packaging remain. See [Electron](architecture/electron.md). |
 | 11 | Android | Not started. |
 | 12 | Release | Not started. |
 
@@ -86,6 +86,14 @@ Added a migration to store explicit feature flags and validity windows on Phase 
 `apps/web/src/cloud/license-entitlements.test.ts` runs both tenant and licensing migrations in PGlite with minimal Supabase auth stand-ins. Six tests check default denial, old RPC revocation, platform-admin assignment, explicit feature grants, validity boundaries/status, cross-tenant denial and plan immutability. Combined with Phase 8, **12/12 database migration tests passed**. The full `npm test -- --reporter=dot` run reported **101 passed and 2 failed** (the same deferred Bengali PDF extraction regressions). `npm run typecheck`, `npm run build` and `npm audit` passed (0 vulnerabilities; build emits existing large-chunk and dependency annotation warnings). These do not verify live Supabase/PostgREST, payment providers, device clocks or independent security review.
 
 Phase 9 has **no user-facing UI**; viewports 320, 375, 430, 768, 1024, 1366, 1920 and landscape are not applicable to these database-only changes. Persistence/security remains only in proposed migration files, not a live database. The feature-check function is not yet called by the application's data operations, so it does not enforce any feature or quota. No payment/billing, license-key activation, plan rows/prices, seat/project limits, cloud backup tenant migration, grace-period policy, local/offline activation or customer self-service licensing exists. Perpetual validity is structurally representable; product policy on it is undecided. Phase 9 is not production-ready and depends on Phase 8 tenant/data ownership decisions.
+
+## Phase 10 — Electron desktop shell (started, partial)
+
+Added a hardened Electron main process, secure `landexpert://app` renderer protocol, relative-asset/hash-router Electron build, CSP, loopback-only development origin, strict navigation/popup policy, and default-deny permission handlers with a narrow main-frame geolocation allowance. BrowserWindow keeps Node integration disabled, context isolation and sandbox enabled, and exposes no preload/IPC bridge. Electron cloud-account creation is disabled until confirmation deep links exist; existing users may sign in. See [Electron](architecture/electron.md).
+
+`apps/electron/src/security.test.ts`: **4/4** URL/origin policy unit tests passed. `npm run typecheck` includes Electron main code and passed; `npm run build` passed; `npm audit` reported 0 vulnerabilities. The full `npm test -- --reporter=dot` run reported **105 passed and 2 failed** (the deferred Bengali PDF extraction regressions). `npm run build:electron` passed; an output smoke check confirmed relative renderer assets, CSP metadata and a nonempty main bundle. Vite emits the existing large-chunk and dependency annotation warnings. Browser E2E was not run for this database-free desktop-shell change; the most recent Playwright attempts remain blocked by missing Chromium. No Electron runtime binary is present (`ELECTRON_SKIP_BINARY_DOWNLOAD=1` during dependency install), so the desktop process itself was not launched. Native window, custom protocol behavior, local IndexedDB persistence, GPS, file chooser/download, and OS permission UX are unverified. No visual desktop testing was possible; the renderer is the existing bilingual responsive UI with no new layout. Standard browser-width/landscape suites are not applicable to the native shell, and no desktop viewport screenshots or physical desktop checks were performed.
+
+No installers, code-signing/notarization, auto-updates, crash telemetry, icons or release workflow are configured. Cross-platform package builds, Windows/macOS/Linux behavior, DPI/multi-display, accessibility, deep-link account confirmation, secure store integration, and release platform support remain open. Phase 10 is not production-ready.
 
 ## Deployment
 

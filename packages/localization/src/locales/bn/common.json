@@ -270,5 +270,6 @@
   "tenantLicense_active": "সক্রিয়",
   "tenantLicense_past_due": "পেমেন্ট বকেয়া",
   "tenantLicense_suspended": "স্থগিত",
-  "tenantLicense_cancelled": "বাতিল"
+  "tenantLicense_cancelled": "বাতিল",
+  "cloudSignupDesktopHint": "প্রথমে ওয়েব অ্যাপে অ্যাকাউন্ট তৈরি করুন; এই প্রিভিউতে ডেস্কটপ সাইন-আপ নিশ্চিতকরণ লিংক চালু নেই।"
 }

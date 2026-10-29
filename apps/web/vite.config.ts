@@ -3,11 +3,20 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 
+const electronBuild = process.env.VITE_ELECTRON === 'true';
+const electronCsp = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'";
+
 export default defineConfig({
   root: fileURLToPath(new URL('.', import.meta.url)),
-  plugins: [react(), tailwindcss()],
+  base: electronBuild ? './' : '/',
+  plugins: [react(), tailwindcss(), ...(electronBuild ? [{
+    name: 'electron-content-security-policy',
+    transformIndexHtml(html: string) {
+      return html.replace('</head>', `<meta http-equiv="Content-Security-Policy" content="${electronCsp}"></head>`);
+    },
+  }] : [])],
   optimizeDeps: { exclude: ['maplibre-gl'] },
   server: { host: '0.0.0.0', allowedHosts: ['.e2b.app'] },
   build: { outDir: 'dist', emptyOutDir: true },
-  test: { environment: 'jsdom', setupFiles: ['./src/test-setup.ts'], include: ['src/**/*.test.{ts,tsx}'] },
+  test: { environment: 'jsdom', setupFiles: ['./src/test-setup.ts'], include: ['src/**/*.test.{ts,tsx}', '../electron/src/**/*.test.ts'] },
 });
