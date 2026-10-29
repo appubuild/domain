@@ -47,6 +47,13 @@ it('restores a validated backup and rejects restoring duplicate IDs without chan
   expect(confirm).toHaveBeenCalledTimes(2);
 });
 
+it('keeps Bengali PDF generation disabled until extraction is verified', async () => {
+  render(<ProjectsPanel features={[]} inProgress={false} ready areaUnit="m2" lengthUnit="m" openProject={vi.fn()} />);
+  const selector = await screen.findByLabelText('Report language');
+  expect(selector).toHaveValue('en');
+  expect(screen.getByRole('option', { name: 'বাংলা' })).toBeDisabled();
+});
+
 it('offers backup and GeoJSON downloads from saved copies', async () => {
   const user = userEvent.setup();
   const createURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
