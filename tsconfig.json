@@ -26,6 +26,7 @@
     "apps/web/vite.config.ts",
     "apps/web/playwright.config.ts",
     "packages",
-    "apps/electron/src/**/*.ts"
+    "apps/electron/src/**/*.ts",
+    "capacitor.config.ts"
   ]
 }

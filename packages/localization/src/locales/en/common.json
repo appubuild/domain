@@ -271,5 +271,6 @@
   "tenantLicense_past_due": "Payment overdue",
   "tenantLicense_suspended": "Suspended",
   "tenantLicense_cancelled": "Cancelled",
-  "cloudSignupDesktopHint": "Create the account in the web app first; desktop sign-up confirmation links are not configured in this preview."
+  "cloudSignupDesktopHint": "Create the account in the web app first; desktop sign-up confirmation links are not configured in this preview.",
+  "cloudSignupMobileHint": "Create the account in the web app first; Android sign-up confirmation links are not configured yet."
 }

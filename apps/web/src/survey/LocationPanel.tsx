@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Map as MapInstance } from 'maplibre-gl';
+import { classifyLocationFailure, requestCurrentLocation, type LocationFailure } from './current-location';
 
 const MAX_AGE_MS = 60_000;
 const MERCATOR_LIMIT = 85.05112878;
 type Fix = { latitude: number; longitude: number; accuracy: number; timestamp: number };
-type LocationError = 'unsupported' | 'denied' | 'unavailable' | 'timeout' | 'invalid';
+type LocationError = LocationFailure | 'invalid';
 
 export function LocationPanel({ getMap, ready }: { getMap: () => MapInstance | null; ready: boolean }) {
   const { t, i18n } = useTranslation();
@@ -23,24 +24,19 @@ export function LocationPanel({ getMap, ready }: { getMap: () => MapInstance | n
   const locate = () => {
     if (pending) return;
     setError(null); setFix(null);
-    if (!navigator.geolocation) { setError('unsupported'); return; }
     const request = ++generation.current;
     setPending(true);
-    try {
-      navigator.geolocation.getCurrentPosition(position => {
-        if (request !== generation.current) return;
-        const { latitude, longitude, accuracy } = position.coords;
-        const timestamp = position.timestamp;
-        if (![latitude, longitude, accuracy, timestamp].every(Number.isFinite) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || accuracy < 0 || timestamp <= 0 || timestamp > Date.now() + 5000) {
-          setError('invalid');
-        } else { setFix({ latitude, longitude, accuracy, timestamp }); setNow(Date.now()); }
-        setPending(false);
-      }, failure => {
-        if (request !== generation.current) return;
-        setError(failure.code === 1 ? 'denied' : failure.code === 3 ? 'timeout' : 'unavailable');
-        setPending(false);
-      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-    } catch { if (request === generation.current) { setPending(false); setError('unavailable'); } }
+    void requestCurrentLocation().then(position => {
+      if (request !== generation.current) return;
+      const { latitude, longitude, accuracy, timestamp } = position;
+      if (![latitude, longitude, accuracy, timestamp].every(Number.isFinite) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || accuracy < 0 || timestamp <= 0 || timestamp > Date.now() + 5000) {
+        setError('invalid');
+      } else { setFix({ latitude, longitude, accuracy, timestamp }); setNow(Date.now()); }
+    }).catch(failure => {
+      if (request === generation.current) setError(classifyLocationFailure(failure));
+    }).finally(() => {
+      if (request === generation.current) setPending(false);
+    });
   };
   const clear = () => { generation.current++; setPending(false); setFix(null); setError(null); };
   const stale = fix !== null && now - fix.timestamp > MAX_AGE_MS;

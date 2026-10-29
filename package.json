@@ -16,9 +16,15 @@
     "test:e2e:cloud": "playwright test --config apps/web/playwright.cloud.config.ts",
     "build:electron": "node scripts/build-electron.mjs",
     "electron": "electron .",
-    "electron:dev": "npm run build:electron && node scripts/dev-electron.mjs"
+    "electron:dev": "npm run build:electron && node scripts/dev-electron.mjs",
+    "android:sync": "node scripts/build-android.mjs",
+    "android:open": "cap open android",
+    "android:run": "cap run android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/geolocation": "^8.2.4",
     "@supabase/supabase-js": "^2.118.0",
     "@tailwindcss/vite": "^4.1.0",
     "@turf/area": "^7.4.0",
@@ -42,6 +48,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
+    "@capacitor/cli": "^8.6.0",
     "@electric-sql/pglite": "^0.5.13",
     "@playwright/test": "^1.51.0",
     "@testing-library/jest-dom": "^6.6.0",

@@ -1,6 +1,6 @@
 # Phase status
 
-Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phase 8 administration, Phase 9 licensing and Phase 10 Electron foundations have now started at the user’s direction. Phases 4–10 remain partial. None of these phases is production-ready.
+Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phases 8–11 (administration, licensing, Electron and Android foundations) have since started at the user’s direction. Phases 4–11 remain partial. None of these phases is production-ready.
 
 ## Phase index
 
@@ -17,10 +17,18 @@ Last checked: 2026-10-29. This checklist records verified repository state, not 
 | 8 | Administration | **Started; partial.** Tenant/RLS schema, role/audit RPCs and a basic bilingual tenant panel implemented; no live Supabase deployment or full admin console. See [tenant administration](architecture/tenant-administration.md). |
 | 9 | Licensing | **Started; partial.** Validity-window schema and fail-closed feature entitlement RPC; no commercial plans, billing, or app-wide enforcement. See [licensing](architecture/licensing.md). |
 | 10 | Electron | **Started; partial.** Hardened desktop shell and build scripts; native runtime/OS verification and packaging remain. See [Electron](architecture/electron.md). |
-| 11 | Android | Not started. |
+| 11 | Android | **Started; partial.** Capacitor Android shell, secure-origin configuration, explicit location permission flow, and build/sync script; no native build or runtime verification. See [Android](architecture/android.md).
 | 12 | Release | Not started. |
 
 The scope labels identify the roadmap only; they do not certify that earlier incomplete phases have met their acceptance criteria.
+
+## Current verification snapshot — Phase 11 work (2026-10-29)
+
+- `npm run typecheck`, `npm run build`, `npm run build:electron`, `npm run android:sync`: passed. Android bundle static smoke checks passed; the Android Gradle project was not built because Java and the Android SDK are absent.
+- `npm audit`: 0 vulnerabilities. Focused Android provider/account-gating tests: **5/5 passed**.
+- Full `npm test -- --reporter=dot`: **110 passed, 2 failed**, both the unchanged, explicitly deferred Bengali PDF extraction regressions.
+- No native Android run or current-turn browser E2E/viewport run. Chromium, Java, Android SDK environment and `adb` are absent. Earlier browser results below are historical and are not Android acceptance evidence.
+- Generated native package id remains provisional; Android local IndexedDB persistence, permissions, GPS, file integration and the seven requested widths/orientation have not been device-tested.
 
 ## Phase 4 requirements and status
 
@@ -36,9 +44,9 @@ The scope labels identify the roadmap only; they do not certify that earlier inc
 
 A simulated second-write quota error is covered by a real Chromium transaction rollback/retry test; actual quota exhaustion is unverified. An attempt to force quota exhaustion using Chromium DevTools `Storage.overrideQuotaForOrigin` did not cause the IndexedDB restore to fail in this sandbox, so it does not count as quota enforcement evidence. An isolated Chromium context retained a project across reload and recovered a backup in a new context; this does not establish private-mode behavior across browsers. A practical recovery runbook is documented in [local projects](architecture/local-projects.md#practical-backup-and-recovery-guidance). Local data and backups are unencrypted and can be evicted or lost; independent secure backups and a recovery plan are required. Snapshot comparisons cannot detect a full-record ABA change. A downloaded file is not proof of retained backup. No server, accounts or credentialed API is required for the current local implementation.
 
-## Latest verification
+## Earlier Phase 4 verification snapshot (2026-10-29)
 
-On 2026-10-29 in the sandbox:
+The following detailed browser/PDF checks were recorded before later Phase 5–11 changes and are historical, not current-turn Android evidence. On 2026-10-29 in the sandbox:
 
 - `npm run typecheck`: passed.
 - `npm run build`: passed.
@@ -94,6 +102,20 @@ Added a hardened Electron main process, secure `landexpert://app` renderer proto
 `apps/electron/src/security.test.ts`: **4/4** URL/origin policy unit tests passed. `npm run typecheck` includes Electron main code and passed; `npm run build` passed; `npm audit` reported 0 vulnerabilities. The full `npm test -- --reporter=dot` run reported **105 passed and 2 failed** (the deferred Bengali PDF extraction regressions). `npm run build:electron` passed; an output smoke check confirmed relative renderer assets, CSP metadata and a nonempty main bundle. Vite emits the existing large-chunk and dependency annotation warnings. Browser E2E was not run for this database-free desktop-shell change; the most recent Playwright attempts remain blocked by missing Chromium. No Electron runtime binary is present (`ELECTRON_SKIP_BINARY_DOWNLOAD=1` during dependency install), so the desktop process itself was not launched. Native window, custom protocol behavior, local IndexedDB persistence, GPS, file chooser/download, and OS permission UX are unverified. No visual desktop testing was possible; the renderer is the existing bilingual responsive UI with no new layout. Widths 320, 375, 430, 768, 1024, 1366 and 1920 px, plus landscape, were not tested in Electron; browser-width suites do not substitute for native-window checks. No desktop viewport screenshots or physical desktop checks were performed. Phase 10 changed `apps/electron/src/{main.ts,security.ts,security.test.ts}`, `apps/web/{src/main.tsx,src/cloud/CloudPanel.tsx,vite.config.ts}`, `packages/localization/src/locales/{en,bn}/common.json`, `scripts/{build-electron.mjs,dev-electron.mjs}`, `package.json`, `package-lock.json`, `tsconfig.json`, `README.md`, `docs/architecture/electron.md`, and `docs/phase-status.md`.
 
 No installers, code-signing/notarization, auto-updates, crash telemetry, icons or release workflow are configured. Cross-platform package builds, Windows/macOS/Linux behavior, DPI/multi-display, accessibility, deep-link account confirmation, secure store integration, and release platform support remain open. Phase 10 is not production-ready.
+
+## Phase 11 — Android shell (started, partial)
+
+Added a Capacitor 8 Android project (`@capacitor/core`/`android` 8.6.0, CLI 8.6.0, Geolocation plugin 8.2.4), using the existing bilingual renderer. `capacitor.config.ts` points to the web build and uses an HTTPS Android app origin with cleartext disabled. The native Vite build adds a restrictive CSP while preserving root-relative assets; `npm run android:sync` compiles the web UI and syncs it and the plugin into the generated Android project. The app id `com.appubuild.landexpert` is provisional and must be confirmed before release.
+
+GPS remains user-initiated. Android uses the Capacitor Geolocation plugin, checks granted fine/coarse permission before acquiring a fix, requests permission only from the existing locate action, and accepts approximate permission when available. The manifest declares coarse and fine location, disables cleartext traffic, and sets `android:allowBackup="false"` to opt out of standard Android app backup; OEM/device-to-device behavior still needs verification. No background location permission is declared. Android cloud account creation is disabled until app-link confirmation callbacks are configured; existing account sign-in remains available. Both languages have the notice.
+
+Verification on 2026-10-29: `npm run android:sync` passed and synced the generated project and one plugin. A static output smoke check confirmed CSP, `map-catalog.json`, plugin registration, location manifest declarations, HTTPS scheme, cleartext disabled and app backup disabled. `npm run typecheck`, `npm run build`, `npm run build:electron` passed; `npm audit` found 0 vulnerabilities. The new Android location and sign-up UI tests passed **5/5**. Full `npm test -- --reporter=dot`: **110 passed, 2 failed**; both are the unchanged, explicitly deferred Bengali PDF text-extraction regressions. Builds retain existing Zod annotation and large-chunk warnings.
+
+The native Android Gradle project was not compiled or launched: this sandbox has no Java executable, Android SDK/SDK variables or `adb`. No emulator or connected device was available. Native permissions, device GPS, route serving, WebView IndexedDB persistence, file picker/download/import-export, lifecycle, rotation, keyboard, and app-link auth remain unverified. No Android E2E ran because Chromium is also absent. The renderer layout is unchanged, but Android screenshots were not captured at 320, 375, 430, 768, 1024, 1366 or 1920 px, nor landscape; those widths and orientation require native-device/emulator verification. This does not claim that browser tests passed at these sizes for this turn.
+
+Changed files: `android/` native project and manifest; `capacitor.config.ts`; `scripts/build-android.mjs`; root `package.json`/lockfile and `tsconfig.json`; `apps/web/vite.config.ts`; `apps/web/src/survey/{LocationPanel.tsx,current-location.ts,current-location.test.ts}`; `apps/web/src/cloud/{CloudPanel.tsx,CloudPanel.test.tsx}`; EN/BN locale files; `README.md`; `docs/phase-status.md`; and `docs/architecture/android.md`.
+
+No Android APK/AAB, release signing, store listing, privacy declaration/data-safety review, native icons/branding, update strategy, or Play Store policy verification exists. Android is not production-ready. Before Phase 11 acceptance, build and install on a supported emulator and representative physical devices; verify permission grant/approximate/deny/permanently-denied and system-location-off paths, local persistence/recovery, static asset routing, file flows, cold start/resume and orientation, accessibility and responsive layouts in EN/BN, and secure auth deep links. Confirm app id, target-device/API support, branding and release/privacy requirements. Phase 12 (release) remains not started.
 
 ## Deployment
 

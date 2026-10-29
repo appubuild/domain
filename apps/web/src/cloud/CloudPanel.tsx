@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useTranslation } from 'react-i18next';
 import type { Session } from '@supabase/supabase-js';
 import { z } from 'zod';
@@ -16,6 +17,8 @@ export function CloudPanel() {
   const { t, i18n } = useTranslation();
   const client = getCloudClient();
   const desktopShell = import.meta.env.VITE_ELECTRON === 'true';
+  const mobileShell = Capacitor.isNativePlatform();
+  const signUpUnavailable = desktopShell || mobileShell;
   const [session, setSession] = useState<Session | null>(null);
   const [authLoading, setAuthLoading] = useState(Boolean(client));
   const [busy, setBusy] = useState(false);
@@ -113,8 +116,8 @@ export function CloudPanel() {
       <form onSubmit={event => { event.preventDefault(); void authenticate('signIn'); }}>
         <label htmlFor="cloud-email">{t('cloudEmail')}</label><input id="cloud-email" type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} required maxLength={254} />
         <label htmlFor="cloud-password">{t('cloudPassword')}</label><input id="cloud-password" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6} maxLength={128} />
-        <div className="cloud-actions"><button disabled={busy} type="submit">{t('cloudSignIn')}</button><button disabled={busy || desktopShell || !email.trim() || password.length < 6} type="button" onClick={() => { void authenticate('signUp'); }}>{t('cloudSignUp')}</button></div>
-      </form><p>{t('cloudSessionHint')}</p>{desktopShell && <p>{t('cloudSignupDesktopHint')}</p>}
+        <div className="cloud-actions"><button disabled={busy} type="submit">{t('cloudSignIn')}</button><button disabled={busy || signUpUnavailable || !email.trim() || password.length < 6} type="button" onClick={() => { void authenticate('signUp'); }}>{t('cloudSignUp')}</button></div>
+      </form><p>{t('cloudSessionHint')}</p>{signUpUnavailable && <p>{t(desktopShell ? 'cloudSignupDesktopHint' : 'cloudSignupMobileHint')}</p>}
     </> : <>
       <p>{t('cloudSignedIn', { email: session.user.email ?? '' })}</p>
       <div className="cloud-actions"><button type="button" disabled={busy} onClick={() => { void upload(); }}>{t('cloudUpload')}</button><button type="button" disabled={busy} onClick={() => { void refresh(); }}>{t('cloudRefresh')}</button><button type="button" disabled={busy} onClick={() => { void signOut(); }}>{t('cloudSignOut')}</button></div>
