@@ -1,6 +1,6 @@
 # Phase status
 
-Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phases 8–11 (administration, licensing, Electron and Android foundations) have since started at the user’s direction. Phases 4–11 remain partial. None of these phases is production-ready.
+Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phases 8–11 (administration, licensing, Electron and Android foundations) have since started at the user’s direction. Phases 4–12 remain partial. None of these phases is production-ready.
 
 ## Phase index
 
@@ -17,12 +17,19 @@ Last checked: 2026-10-29. This checklist records verified repository state, not 
 | 8 | Administration | **Started; partial.** Tenant/RLS schema, role/audit RPCs and a basic bilingual tenant panel implemented; no live Supabase deployment or full admin console. See [tenant administration](architecture/tenant-administration.md). |
 | 9 | Licensing | **Started; partial.** Validity-window schema and fail-closed feature entitlement RPC; no commercial plans, billing, or app-wide enforcement. See [licensing](architecture/licensing.md). |
 | 10 | Electron | **Started; partial.** Hardened desktop shell and build scripts; native runtime/OS verification and packaging remain. See [Electron](architecture/electron.md). |
-| 11 | Android | **Started; partial.** Capacitor Android shell, secure-origin configuration, explicit location permission flow, and build/sync script; no native build or runtime verification. See [Android](architecture/android.md).
-| 12 | Release | Not started. |
+| 11 | Android | **Started; partial.** Capacitor Android shell, secure-origin configuration, explicit location permission flow, and build/sync script; no native build or runtime verification. See [Android](architecture/android.md). |
+| 12 | Release | **Started; blocked.** Vercel response-header rules and static release-config check added; production remains intentionally undeployed because of failing tests and incomplete upstream platform/security acceptance. See [release readiness](architecture/release.md). |
 
 The scope labels identify the roadmap only; they do not certify that earlier incomplete phases have met their acceptance criteria.
 
-## Current verification snapshot — Phase 11 work (2026-10-29)
+## Current verification snapshot — Phase 12 release work (2026-10-29)
+
+- `npm run release:check-config`, `npm run typecheck`, `npm run build`: passed; `npm audit`: 0 vulnerabilities.
+- `npm test -- --reporter=dot`: **110 passed, 2 failed**, the unchanged, explicitly deferred Bengali PDF extraction regressions.
+- Vercel reports `https://landexpert.vercel.app` currently points to a ready production deployment from commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, predating the current branch head. No current-branch production release was created. Vercel project settings report Git-provider deployment creation disabled.
+- New Vercel response-header config has static validation only; deployed/edge headers have not been verified. No UI changed; widths 320, 375, 430, 768, 1024, 1366 and 1920 px and landscape were not retested for this infrastructure-only work.
+
+## Phase 11 verification snapshot (2026-10-29)
 
 - `npm run typecheck`, `npm run build`, `npm run build:electron`, `npm run android:sync`: passed. Android bundle static smoke checks passed; the Android Gradle project was not built because Java and the Android SDK are absent.
 - `npm audit`: 0 vulnerabilities. Focused Android provider/account-gating tests: **5/5 passed**.
@@ -115,8 +122,16 @@ The native Android Gradle project was not compiled or launched: this sandbox has
 
 Changed files: `android/` native project and manifest; `capacitor.config.ts`; `scripts/build-android.mjs`; root `package.json`/lockfile and `tsconfig.json`; `apps/web/vite.config.ts`; `apps/web/src/survey/{LocationPanel.tsx,current-location.ts,current-location.test.ts}`; `apps/web/src/cloud/{CloudPanel.tsx,CloudPanel.test.tsx}`; EN/BN locale files; `README.md`; `docs/phase-status.md`; and `docs/architecture/android.md`.
 
-No Android APK/AAB, release signing, store listing, privacy declaration/data-safety review, native icons/branding, update strategy, or Play Store policy verification exists. Android is not production-ready. Before Phase 11 acceptance, build and install on a supported emulator and representative physical devices; verify permission grant/approximate/deny/permanently-denied and system-location-off paths, local persistence/recovery, static asset routing, file flows, cold start/resume and orientation, accessibility and responsive layouts in EN/BN, and secure auth deep links. Confirm app id, target-device/API support, branding and release/privacy requirements. Phase 12 (release) remains not started.
+No Android APK/AAB, release signing, store listing, privacy declaration/data-safety review, native icons/branding, update strategy, or Play Store policy verification exists. Android is not production-ready. Before Phase 11 acceptance, build and install on a supported emulator and representative physical devices; verify permission grant/approximate/deny/permanently-denied and system-location-off paths, local persistence/recovery, static asset routing, file flows, cold start/resume and orientation, accessibility and responsive layouts in EN/BN, and secure auth deep links. Confirm app id, target-device/API support, branding and release/privacy requirements. Phase 12 has started, but the release gate below blocks production.
+
+## Phase 12 — release readiness (started, blocked)
+
+Release hardening adds Vercel response headers (`nosniff`, strict-origin referrer handling, frame denial, and same-origin geolocation only), declares the compatible Node range `>=22 <25`, and adds `npm run release:check-config` for static validation of the Vercel build/output/SPA settings and headers. This check does not deploy or validate edge responses. See [release readiness](architecture/release.md).
+
+The Vercel project is `landexpert`; its existing production alias is `https://landexpert.vercel.app`. Vercel reports its ready deployment at commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, which is behind current branch changes; Git-provider deployment creation is disabled in project settings. No current-head production deployment was created. The Phase 11 native gaps, open Bengali PDF regressions, unverified live backend/security, and incomplete product/privacy/release decisions make a production release unsafe. Full tests remain **110 passed, 2 failed** (the deferred Bengali PDF extractions); do not weaken or reclassify them. The web UI has not changed in this phase, and widths 320, 375, 430, 768, 1024, 1366, 1920 px and landscape were not re-tested. No native persistence or security result is newly established.
+
+Phase 12 acceptance criteria: green full test suite without weakening the deferred PDF criteria; accepted Phase 3–11 platform and security requirements; confirm final app identity, supported platform/API matrix, privacy/data retention and map-provider terms; complete live Supabase/RLS and independent security review; verify Vercel edge headers and runtime behaviors; establish tested rollback, support/incident and recovery runbooks; then create and post-deploy verify a production release. No production deployment or public release is authorized by this phase note.
 
 ## Deployment
 
-The previously reported production deployment at `https://landexpert.vercel.app` predates subsequent local work. The changes in this workspace are not asserted to be deployed.
+Vercel currently reports the production alias `https://landexpert.vercel.app` on ready deployment commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, which predates the current branch head. No current-head deployment is asserted to be production or otherwise released. The current Vercel project reports Git-provider deployment creation disabled; see [release readiness](architecture/release.md).

@@ -19,7 +19,8 @@
     "electron:dev": "npm run build:electron && node scripts/dev-electron.mjs",
     "android:sync": "node scripts/build-android.mjs",
     "android:open": "cap open android",
-    "android:run": "cap run android"
+    "android:run": "cap run android",
+    "release:check-config": "node scripts/release-config-check.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.6.0",
@@ -68,5 +69,8 @@
     "vite": "^6.1.0",
     "vitest": "^5.0.5"
   },
-  "main": "dist/electron/main.js"
+  "main": "dist/electron/main.js",
+  "engines": {
+    "node": ">=22 <25"
+  }
 }
