@@ -1,6 +1,6 @@
 # Land Expert
 
-A professional land surveying and land management workspace, under phased development. Phases 4–7 remain partial; Phase 8 tenant administration has started. This is not a complete survey application.
+A professional land surveying and land management workspace, under phased development. Phases 4–7 remain partial; Phases 8–9 tenant administration and licensing foundations have started. This is not a complete survey application.
 
 ## Development
 

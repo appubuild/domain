@@ -1,6 +1,6 @@
 # Phase status
 
-Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phase 8 administration foundation has now started at the user’s direction. Phases 4–7 remain partial. None of these phases is production-ready.
+Last checked: 2026-10-29. This checklist records verified repository state, not a claim of production readiness. Phase 7 was started following the user’s NEXT; Phase 8 administration and Phase 9 licensing foundations have now started at the user’s direction. Phases 4–9 remain partial. None of these phases is production-ready.
 
 ## Phase index
 
@@ -10,12 +10,12 @@ Last checked: 2026-10-29. This checklist records verified repository state, not 
 | 1 | Foundation | Foundation implemented; production and platform acceptance not established. |
 | 2 | Workspace | Workspace implemented; broader device and accessibility acceptance not established. |
 | 3 | Drawing and measurements | Partial. Core editor exists; broader geometry, touch, measurement and device verification remain. See [survey engine](architecture/survey-engine.md). |
-| 4 | Local projects, transfer and reports | **Partial; current phase.** See checklist below. |
+| 4 | Local projects, transfer and reports | **Partial.** Bengali PDF is deferred; metadata, device and broader recovery acceptance remain. See checklist below. |
 | 5 | Map catalog | **Started; partial.** Experimental opt-in OpenStreetMap layer and offline grid. |
 | 6 | GPS and georeferencing | **Started; partial.** One-time device location and temporary north-up reference image. |
-| 7 | Accounts and cloud | Not started. |
+| 7 | Accounts and cloud | **Started; partial.** Optional Supabase sign-in and manual cloud backups; live auth/RLS unverified. See [accounts and cloud backups](architecture/accounts-cloud.md). |
 | 8 | Administration | **Started; partial.** Tenant/RLS schema, role/audit RPCs and a basic bilingual tenant panel implemented; no live Supabase deployment or full admin console. See [tenant administration](architecture/tenant-administration.md). |
-| 9 | Licensing | Not started. |
+| 9 | Licensing | **Started; partial.** Validity-window schema and fail-closed feature entitlement RPC; no commercial plans, billing, or app-wide enforcement. See [licensing](architecture/licensing.md). |
 | 10 | Electron | Not started. |
 | 11 | Android | Not started. |
 | 12 | Release | Not started. |
@@ -78,6 +78,14 @@ Added a security-oriented but not-live Supabase migration for tenant records, te
 A bilingual tenant panel now provides basic organization listing, create/rename controls, role display and informational license status after Supabase sign-in. No full admin console, invitations, acceptance, member removal, ownership transfer, plan rows/pricing/billing, quota or feature enforcement, tenant switching, account-to-tenant cloud backup migration, lifecycle/deletion, or rate limiting exists. The schema's plan limits do not enforce application usage. Migration is not applied to a live project and no platform-admin account was provisioned. Phase 8 is not production-ready; see [tenant administration](architecture/tenant-administration.md) for limitations and prerequisites.
 
 UI/responsive status: the bilingual tenant panel has a narrow-screen CSS layout and component interaction coverage, but its layout at 320, 375, 430, 768, 1024, 1366 and 1920 pixels and landscape was not visually or browser-tested this turn because Chromium is unavailable. Final Playwright smoke attempts for both the main suite (`--max-failures=1`) and cloud suite (`--max-failures=1`) stopped at the first browser launch because the Playwright Chromium executable is absent in this sandbox; no browser assertions ran for the current tenant panel. The earlier 70/70 main and 5/5 cloud pass belongs to a previous environment and predates this panel. Persistence/security: new records live in the proposed Supabase schema only; none has been applied to a live database. Local project data remains IndexedDB-backed and separate. No credentials or service-role key were introduced. `npm run typecheck`, `npm run build`, and `npm audit` passed (0 vulnerabilities). `npm test -- --reporter=dot` reported 95 passed and 2 failed; the failures are the existing deferred Bengali PDF extraction regressions. `npm run test:e2e -- --reporter=line --max-failures=1` and `npm run test:e2e:cloud -- --reporter=line --max-failures=1` could not launch Chromium because `/home/user/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell` is missing; these are environment-blocked runs, not passing tests.
+
+## Phase 9 — licensing (started, partial)
+
+Added a migration to store explicit feature flags and validity windows on Phase 8 plans/licenses. A platform-admin-only RPC assigns a plan/status with an explicit start and optional end time, validates status/window/enabled-plan, and records the assignment in the tenant audit log. The old unbounded assignment RPC is revoked. The new `land_expert_can_use_feature` database primitive returns true only for a tenant member with an enabled plan, explicitly granted feature, `trial`/`active` status and current validity window; unknown features and nonmembers fail closed. Issued plan definitions cannot be edited in place. No commercial plan values are seeded. See [licensing](architecture/licensing.md).
+
+`apps/web/src/cloud/license-entitlements.test.ts` runs both tenant and licensing migrations in PGlite with minimal Supabase auth stand-ins. Six tests check default denial, old RPC revocation, platform-admin assignment, explicit feature grants, validity boundaries/status, cross-tenant denial and plan immutability. Combined with Phase 8, **12/12 database migration tests passed**. The full `npm test -- --reporter=dot` run reported **101 passed and 2 failed** (the same deferred Bengali PDF extraction regressions). `npm run typecheck`, `npm run build` and `npm audit` passed (0 vulnerabilities; build emits existing large-chunk and dependency annotation warnings). These do not verify live Supabase/PostgREST, payment providers, device clocks or independent security review.
+
+Phase 9 has **no user-facing UI**; viewports 320, 375, 430, 768, 1024, 1366, 1920 and landscape are not applicable to these database-only changes. Persistence/security remains only in proposed migration files, not a live database. The feature-check function is not yet called by the application's data operations, so it does not enforce any feature or quota. No payment/billing, license-key activation, plan rows/prices, seat/project limits, cloud backup tenant migration, grace-period policy, local/offline activation or customer self-service licensing exists. Perpetual validity is structurally representable; product policy on it is undecided. Phase 9 is not production-ready and depends on Phase 8 tenant/data ownership decisions.
 
 ## Deployment
 
