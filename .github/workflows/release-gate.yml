@@ -58,7 +58,7 @@ jobs:
           export PATH="$JAVA_HOME/bin:$PATH"
           java -version
           set +e
-          ./gradlew --no-daemon assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/android-gradle.log"
+          ./gradlew --no-daemon --console=plain assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/android-gradle.log"
           build_status=${PIPESTATUS[0]}
           if [ "$build_status" -ne 0 ]; then
             {
@@ -66,7 +66,8 @@ jobs:
               tail -n 50 "$RUNNER_TEMP/android-gradle.log"
               printf '\n```\n'
             } >> "$GITHUB_STEP_SUMMARY"
-            failure_summary="$(tail -n 12 "$RUNNER_TEMP/android-gradle.log" | tr '\n' ' ' | sed 's/%/%25/g; s/::/%3A%3A/g' | cut -c 1-1500)"
+            failure_summary="$(grep -A 18 -m 1 '^FAILURE: Build failed with an exception' "$RUNNER_TEMP/android-gradle.log" || tail -n 12 "$RUNNER_TEMP/android-gradle.log")"
+            failure_summary="$(printf '%s' "$failure_summary" | tr '\n' ' ' | sed 's/%/%25/g; s/::/%3A%3A/g' | cut -c 1-1500)"
             echo "::error title=Android APK build failed::$failure_summary"
           fi
           exit "$build_status"
