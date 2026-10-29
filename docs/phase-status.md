@@ -26,7 +26,7 @@ The scope labels identify the roadmap only; they do not certify that earlier inc
 
 - `npm run release:check-config`, `npm run typecheck`, `npm run build`: passed; `npm audit`: 0 vulnerabilities.
 - `npm test -- --reporter=dot`: **110 passed, 2 failed**, the unchanged, explicitly deferred Bengali PDF extraction regressions.
-- Vercel reports `https://landexpert.vercel.app` currently points to a ready production deployment from commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, predating the current branch head. No current-branch production release was created. Vercel project settings report Git-provider deployment creation disabled.
+- Vercel reports `https://landexpert.vercel.app` currently points to a ready production deployment from commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, predating the current branch head. A non-production Vercel preview for current commit `cd9b41fa08ba60308413b7ca34d39596b6c21875` completed **READY** at `https://landexpert-63aqv52eg-md-sobur-alis-projects-c5b69b29.vercel.app`; it is account-protected and is not a production release. Vercel project settings report automatic Git-provider deployment creation disabled.
 - New Vercel response-header config has static validation only; deployed/edge headers have not been verified. No UI changed; widths 320, 375, 430, 768, 1024, 1366 and 1920 px and landscape were not retested for this infrastructure-only work.
 
 ## Phase 11 verification snapshot (2026-10-29)
@@ -134,4 +134,4 @@ Phase 12 acceptance criteria: green full test suite without weakening the deferr
 
 ## Deployment
 
-Vercel currently reports the production alias `https://landexpert.vercel.app` on ready deployment commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, which predates the current branch head. No current-head deployment is asserted to be production or otherwise released. The current Vercel project reports Git-provider deployment creation disabled; see [release readiness](architecture/release.md).
+Vercel currently reports the production alias `https://landexpert.vercel.app` on ready deployment commit `bde220184b0c651b0bc4a89aca064215ec4637d2`, which predates the current branch head. No current-head production deployment or public release is asserted. A manually requested non-production Vercel preview from commit `cd9b41fa08ba60308413b7ca34d39596b6c21875` is ready but account-protected; its browser/runtime behavior has not been independently tested. The current Vercel project reports Git-provider deployment creation disabled; see [release readiness](architecture/release.md).
