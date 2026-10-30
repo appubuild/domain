@@ -1,0 +1,95 @@
+name: Release gate
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-gate.yml'
+      - 'apps/**'
+      - 'packages/**'
+      - 'scripts/**'
+      - 'supabase/**'
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'vercel.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Build and full test gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22.x'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Validate release configuration
+        run: npm run release:check-config
+      - name: Type-check
+        run: npm run typecheck
+      - name: Build web app
+        run: npm run build
+      - name: Build Electron shell
+        run: npm run build:electron
+      - name: Sync Android shell
+        run: npm run android:sync
+      - name: Build Android debug APK
+        shell: bash
+        working-directory: android
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          java -version
+          set +e
+          ./gradlew --no-daemon --console=plain assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/android-gradle.log"
+          build_status=${PIPESTATUS[0]}
+          if [ "$build_status" -ne 0 ]; then
+            {
+              printf '## Android APK build failure\n\n```text\n'
+              tail -n 50 "$RUNNER_TEMP/android-gradle.log"
+              printf '\n```\n'
+            } >> "$GITHUB_STEP_SUMMARY"
+            failure_summary="$(grep -A 18 -m 1 '^FAILURE: Build failed with an exception' "$RUNNER_TEMP/android-gradle.log" || tail -n 12 "$RUNNER_TEMP/android-gradle.log")"
+            failure_summary="$(printf '%s' "$failure_summary" | tr '\n' ' ' | sed 's/%/%25/g; s/::/%3A%3A/g' | cut -c 1-1500)"
+            echo "::error title=Android APK build failed::$failure_summary"
+          fi
+          exit "$build_status"
+      - name: Upload Android debug APK for device testing
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: landexpert-android-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Audit dependencies
+        run: npm audit --audit-level=low
+      - name: Run full test suite
+        shell: bash
+        run: |
+          set +e
+          npm test -- --reporter=dot 2>&1 | tee "$RUNNER_TEMP/full-test.log"
+          test_status=${PIPESTATUS[0]}
+          {
+            printf '## Full test suite result\n\n'
+            printf '%s\n' '```text'
+            tail -n 80 "$RUNNER_TEMP/full-test.log"
+            printf '\n%s\n' '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$test_status"

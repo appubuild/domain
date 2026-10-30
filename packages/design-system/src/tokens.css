@@ -1,0 +1,9 @@
+:root {
+  font-family: "Noto Sans Bengali", "Nirmala UI", "Segoe UI", sans-serif;
+  color: #22352c; background: #f5f7f4; font-synthesis: none;
+  --ink: #22352c; --muted: #64746b; --deep: #183b2e; --accent: #b2cf77;
+  --surface: #fff; --line: #dde5de; --page: #f5f7f4;
+  --radius-sm: 8px; --radius-md: 14px; --radius-lg: 20px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px;
+  --focus: #386f52; --control-height: 44px; --content-width: 1180px;
+}
