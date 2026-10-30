@@ -5,7 +5,7 @@ import { classifySnapshot } from './drawing-state';
 import { ProjectsPanel } from './ProjectsPanel';
 import { LocationPanel } from './LocationPanel';
 import { GeoReferencePanel } from './GeoReferencePanel';
-import { readMapCatalog } from './read-map-catalog';
+import { loadMapCatalog } from './read-map-catalog';
 import { osmProvider, type MapProvider } from '../../../../packages/map-catalog/src';
 import type { LocalProject } from '../../../../packages/storage/src/projects';
 import { CircleDot, MousePointer2, Pentagon, Redo2, Square, Spline, Trash2, Undo2, X } from 'lucide-react';
@@ -47,8 +47,7 @@ export function SurveyPage() {
     }, 8000);
     void (async () => {
       try {
-        const response = await fetch(`${import.meta.env.BASE_URL}map-catalog.json`, { signal: controller.signal, credentials: 'omit', cache: 'no-cache' });
-        const config = await readMapCatalog(response);
+        const config = await loadMapCatalog(import.meta.env.BASE_URL, controller.signal);
         if (!controller.signal.aborted) {
           setProviders([...(config.allowCommunityOsm ? [osmProvider] : []), ...config.providers]);
           setCatalogState('ready');
