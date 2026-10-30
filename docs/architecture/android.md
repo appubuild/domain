@@ -22,4 +22,4 @@ Unit tests exercise the permission flow (first grant, approximate grant, denial)
 - No offline basemap cache or promise of offline cloud/GPS features. The default grid is local; online maps and Supabase require network access.
 - No Play Store policy, target SDK, accessibility, keyboard, performance, thermal/battery, location accuracy or multi-device testing.
 
-Phase 11 remains partial until the CI-built debug APK is installed and the device acceptance matrix is exercised. See [`phase-status.md`](../phase-status.md) for the exact verification, test results, viewport coverage and next acceptance criteria.
+Phase 11 remains partial until the CI-built debug APK is installed and the device acceptance matrix is exercised. Follow the [Android device-acceptance runbook](../runbooks/android-device-acceptance.md). See [`phase-status.md`](../phase-status.md) for the exact verification, test results, viewport coverage and next acceptance criteria.
