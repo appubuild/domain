@@ -146,7 +146,7 @@ test('downloads an English PDF for a saved ASCII-named project', async ({ page }
   await document.cleanup();
 });
 
-for (const width of [320, 375, 430, 768, 1024, 1366, 1920]) {
+for (const width of [320, 375, 430, 768, 1024, 1290, 1366, 1920]) {
   test(`survey controls fit at ${width}px in English and Bengali`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.goto('/survey');
@@ -157,6 +157,18 @@ for (const width of [320, 375, 430, 768, 1024, 1366, 1920]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+test('measurement panel stays within the viewport at 1290px with the application sidebar', async ({ page }) => {
+  await page.setViewportSize({ width: 1290, height: 900 });
+  await page.goto('/survey');
+  const panel = page.locator('.survey-panel');
+  await expect(panel).toBeVisible();
+  const bounds = await panel.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.x).toBeGreaterThanOrEqual(0);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1290);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 
 test('touch interaction creates and selects a point on a small phone', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true });
@@ -351,7 +363,7 @@ test('saved project backup controls fit at supported widths in both languages', 
   await page.getByLabel('I verified this file uses WGS84 longitude and latitude. The app cannot verify the source CRS.').check();
   await page.getByRole('button', { name: 'Import as new copy' }).click();
   await expect(page.getByRole('button', { name: 'Back up Test plot' })).toBeVisible();
-  for (const width of [320, 375, 430, 768, 1024, 1366, 1920]) {
+  for (const width of [320, 375, 430, 768, 1024, 1290, 1366, 1920]) {
     await page.setViewportSize({ width, height: 800 });
     await page.locator('#header-language').selectOption('en');
     await expect(page.getByRole('button', { name: 'Back up Test plot' })).toBeVisible();
@@ -947,7 +959,7 @@ test('map catalog controls and attribution fit supported viewport sizes in both 
   await page.locator('#basemap-select').selectOption('osm');
   for (const language of ['en', 'bn']) {
     await page.locator('#header-language').selectOption(language);
-    for (const width of [320, 375, 430, 768, 1024, 1366, 1920]) {
+    for (const width of [320, 375, 430, 768, 1024, 1290, 1366, 1920]) {
       await page.setViewportSize({ width, height: 800 });
       await expect(page.locator('#basemap-select')).toBeVisible();
       await expect(page.getByRole('link', { name: 'OpenStreetMap', exact: true })).toBeVisible();
