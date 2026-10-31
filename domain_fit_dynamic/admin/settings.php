@@ -9,7 +9,22 @@ $errorMessage='';
 $customHeadCode = (string) private_setting($pdo,'custom_head_code','');
 $customFooterCode = (string) private_setting($pdo,'custom_footer_code','');
 if ($_SERVER['REQUEST_METHOD']==='POST') {
-    verify_csrf();
+    // Keep submitted values visible if validation or a database/upload error occurs.
+    $customHeadCode = request_string($_POST,'custom_head_code',$customHeadCode);
+    $customFooterCode = request_string($_POST,'custom_footer_code',$customFooterCode);
+    $postLength = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+    if (empty($_POST) && $postLength > 0) {
+        error_log('Site settings form body was empty; received content length=' . $postLength . '. Check PHP post_max_size/upload limits.');
+        $errorMessage='The server did not receive the settings form. Check PHP post_max_size and upload limits, then retry.';
+    } else {
+        verify_csrf();
+        $expectedFields=['site_title','site_description','site_author','google_site_verification','theme_mode','primary_color','accent_color','hero_title','hero_subtitle','hero_cta','hero_secondary','footer_text','copyright_text','generator_controls_mode','custom_head_code','custom_footer_code','gemini_api_key'];
+        $missingFields=[];
+        foreach($expectedFields as $fieldName){if(!array_key_exists($fieldName,$_POST)||!is_scalar($_POST[$fieldName]))$missingFields[]=$fieldName;}
+        if($missingFields){
+            error_log('Site settings payload missing fields: ' . implode(',', $missingFields));
+            $errorMessage='Some settings fields did not reach the server. No values were changed; refresh the page and try again.';
+        } else {
     try {
         $siteTitle=trim(substr(strip_tags(request_string($_POST, 'site_title', '')),0,120));
         $siteDescription=trim(substr(strip_tags(request_string($_POST, 'site_description', '')),0,320));
@@ -57,6 +72,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         save_setting($pdo,'custom_footer_code',$customFooterCode,(int)$admin['id'],false);
         if($encryptedGeminiApiKey!==null) save_setting($pdo,'gemini_api_key',$encryptedGeminiApiKey,(int)$admin['id'],false);
         elseif($clearGeminiApiKey) save_setting($pdo,'gemini_api_key','',(int)$admin['id'],false);
+        $verificationValues=$values+['custom_head_code'=>$customHeadCode,'custom_footer_code'=>$customFooterCode];
+        if($encryptedGeminiApiKey!==null)$verificationValues['gemini_api_key']=$encryptedGeminiApiKey;
+        elseif($clearGeminiApiKey)$verificationValues['gemini_api_key']='';
+        $verifySetting=$pdo->prepare('SELECT value_json FROM site_settings WHERE setting_key=:key LIMIT 1');
+        foreach($verificationValues as $key=>$expectedValue){
+            $verifySetting->execute(['key'=>$key]);
+            $storedJson=$verifySetting->fetchColumn();
+            if($storedJson===false){throw new RuntimeException('A setting could not be verified in the database. No changes were committed.');}
+            try{$storedValue=json_decode((string)$storedJson,true,512,JSON_THROW_ON_ERROR);}catch(Throwable $decodeError){throw new RuntimeException('The database returned an invalid settings value. No changes were committed.');}
+            if($storedValue!==$expectedValue){throw new RuntimeException('A setting failed the database save check. No changes were committed; verify the site_settings JSON column and database permissions.');}
+        }
         audit_log($pdo,(int)$admin['id'],'settings.updated','site_settings','public','Site identity, code injection and integration settings updated.');
         $pdo->commit();
         cache_clear_all();
@@ -66,6 +92,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         if($pdo->inTransaction())$pdo->rollBack();
         error_log('Site settings: '.$error->getMessage());
         $errorMessage=$error instanceof RuntimeException?$error->getMessage():'Settings could not be saved. Check uploaded image files and configuration.';
+    }
+        }
     }
 }
 $keys=['site_title','site_description','site_author','google_site_verification','theme_mode','primary_color','accent_color','logo_path','hero_image_path','hero_title','hero_subtitle','hero_cta','hero_secondary','footer_text','copyright_text','generator_controls_mode','site_analytics_enabled'];
@@ -83,11 +111,24 @@ $settings['hero_cta']=$settings['hero_cta']?:'';$settings['hero_secondary']=$set
 $settings['footer_text']=$settings['footer_text']?:'';$settings['copyright_text']=$settings['copyright_text']?:'';
 $settings['generator_controls_mode']=$settings['generator_controls_mode']?:'drawer';
 $settings['site_analytics_enabled']=(bool)$settings['site_analytics_enabled'];
+if($errorMessage!==''&&$_SERVER['REQUEST_METHOD']==='POST'){
+    $postedSettingMap=[
+        'site_title'=>'site_title','site_description'=>'site_description','site_author'=>'site_author',
+        'google_site_verification'=>'google_site_verification','theme_mode'=>'theme_mode','primary_color'=>'primary_color',
+        'accent_color'=>'accent_color','hero_title'=>'hero_title','hero_subtitle'=>'hero_subtitle',
+        'hero_cta'=>'hero_cta','hero_secondary'=>'hero_secondary','footer_text'=>'footer_text',
+        'copyright_text'=>'copyright_text','generator_controls_mode'=>'generator_controls_mode'
+    ];
+    foreach($postedSettingMap as $fieldName=>$settingKey){
+        if(array_key_exists($fieldName,$_POST)&&is_scalar($_POST[$fieldName]))$settings[$settingKey]=(string)$_POST[$fieldName];
+    }
+    $settings['site_analytics_enabled']=isset($_POST['site_analytics_enabled']);
+}
 $geminiKeyConfigured=gemini_api_key_configured($pdo);
 admin_header($pdo,$admin,'Site settings');
 ?>
 <?php if($errorMessage!==''):?><div class="notice notice-error" role="alert"><?=e($errorMessage)?></div><?php endif;?>
-<form class="admin-form" method="post" enctype="multipart/form-data"><?=csrf_field()?>
+<form class="admin-form" method="post" action="<?=e(app_url('admin/site-settings'))?>" enctype="multipart/form-data"><?=csrf_field()?>
 <section class="admin-card"><h2>Identity &amp; search metadata</h2><div class="form-row"><div class="field"><label for="site_title">Site title</label><input id="site_title" name="site_title" maxlength="120" required value="<?=e($settings['site_title'])?>"></div><div class="field"><label for="site_author">Structured-data author name</label><input id="site_author" name="site_author" maxlength="120" value="<?=e($settings['site_author'])?>"></div></div><div class="field"><label for="site_description">Default meta description</label><textarea id="site_description" name="site_description" maxlength="320" rows="3"><?=e($settings['site_description'])?></textarea></div><div class="field"><label for="google_site_verification">Search Console verification token</label><input id="google_site_verification" name="google_site_verification" maxlength="200" value="<?=e($settings['google_site_verification']??'')?>"><small>Blank unless a token was issued for your verified domain.</small></div></section>
 <section class="admin-card"><h2>Brand, theme &amp; homepage</h2><div class="form-row three"><div class="field"><label for="theme_mode">Default theme</label><select id="theme_mode" name="theme_mode"><option value="light" <?=$settings['theme_mode']==='light'?'selected':''?>>Light</option><option value="dark" <?=$settings['theme_mode']==='dark'?'selected':''?>>Dark</option></select></div><div class="field"><label for="primary_color">Primary color</label><input id="primary_color" name="primary_color" type="color" value="<?=e($settings['primary_color'])?>"></div><div class="field"><label for="accent_color">Accent color</label><input id="accent_color" name="accent_color" type="color" value="<?=e($settings['accent_color'])?>"></div></div><div class="form-row"><div class="field"><label for="logo_file">Logo upload (JPEG, PNG or WebP · max 5 MB)</label><?php if($settings['logo_path']):?><small>Current logo: <?=e($settings['logo_path'])?></small><?php endif;?><input id="logo_file" type="file" name="logo_file" accept="image/jpeg,image/png,image/webp"></div><div class="field"><label for="hero_image_file">Homepage hero image (optional)</label><?php if($settings['hero_image_path']):?><small>Current hero image: <?=e($settings['hero_image_path'])?></small><?php endif;?><input id="hero_image_file" type="file" name="hero_image_file" accept="image/jpeg,image/png,image/webp"></div></div><div class="field"><label for="hero_title">Hero heading</label><input id="hero_title" name="hero_title" maxlength="180" required value="<?=e($settings['hero_title'])?>"></div><div class="field"><label for="hero_subtitle">Hero description</label><textarea id="hero_subtitle" name="hero_subtitle" maxlength="500" rows="3" required><?=e($settings['hero_subtitle'])?></textarea></div><div class="form-row"><div class="field"><label for="hero_cta">Primary button label</label><input id="hero_cta" name="hero_cta" maxlength="80" value="<?=e($settings['hero_cta'])?>"></div><div class="field"><label for="hero_secondary">Secondary link label</label><input id="hero_secondary" name="hero_secondary" maxlength="80" value="<?=e($settings['hero_secondary'])?>"></div></div><div class="form-row"><div class="field"><label for="footer_text">Footer description</label><input id="footer_text" name="footer_text" maxlength="240" value="<?=e($settings['footer_text'])?>"></div><div class="field"><label for="copyright_text">Copyright line (optional)</label><input id="copyright_text" name="copyright_text" maxlength="200" value="<?=e($settings['copyright_text'])?>"></div></div></section>
 <section class="admin-card"><h2>Generator &amp; first-party analytics</h2><div class="field"><label for="generator_controls_mode">Generator settings on mobile</label><select id="generator_controls_mode" name="generator_controls_mode"><option value="drawer" <?=$settings['generator_controls_mode']==='drawer'?'selected':''?>>Mobile drawer (desktop remains inline)</option><option value="accordion" <?=$settings['generator_controls_mode']==='accordion'?'selected':''?>>Mobile accordion (desktop remains inline)</option></select></div><label class="inline-check"><input type="checkbox" name="site_analytics_enabled" value="1" <?=$settings['site_analytics_enabled']?'checked':''?>><span>Enable privacy-aware first-party page-view and generator-run counts</span></label><p>First-party analytics is off by default. When enabled, the site stores event type and page path; it stores no raw IP address and does not track AdSense clicks. Configure a unique ANALYTICS_SALT environment variable if you need daily approximate unique counts, and update your privacy information before enabling.</p></section>

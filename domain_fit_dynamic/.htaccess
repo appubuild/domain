@@ -16,7 +16,7 @@ ServerSignature Off
 RewriteEngine On
 
 # Keep private application code, configuration, and runtime data inaccessible.
-RewriteRule ^(?:config|includes|scripts|storage)(?:/|$) - [F,L,NC]
+RewriteRule ^(?:config|includes|scripts|storage|migrations|plugin-starters)(?:/|$) - [F,L,NC]
 RewriteRule ^(?:database\.sql|\.env(?:\..*)?)$ - [F,L,NC]
 
 # Canonicalize common legacy PHP entry points for browser-safe GET/HEAD requests.
@@ -97,6 +97,7 @@ RewriteRule ^admin/login/?$ admin/index.php [QSA,L,NC]
 RewriteRule ^admin/dashboard/?$ admin/dashboard.php [QSA,L,NC]
 RewriteRule ^admin/site-settings/?$ admin/settings.php [QSA,L,NC]
 RewriteRule ^admin/settings/?$ admin/settings.php [QSA,L,NC]
+RewriteRule ^admin/extensions/?$ admin/extensions.php [QSA,L,NC]
 RewriteRule ^admin/posts/?$ admin/posts/index.php [QSA,L,NC]
 RewriteRule ^admin/pages/?$ admin/pages/index.php [QSA,L,NC]
 RewriteRule ^admin/domain-brain/?$ admin/domain-brain/index.php [QSA,L,NC]
@@ -112,6 +113,7 @@ RewriteRule ^blog/([a-z0-9-]+)/?$ blog/post.php?slug=$1 [QSA,L,NC]
 
 # Affiliate redirect and first-party JSON API. The alias supports older clients.
 RewriteRule ^go/([a-z0-9-]+)/?$ go.php?slug=$1 [QSA,L,NC]
+RewriteRule ^optimizer-asset/?$ optimizer-asset.php [QSA,L,NC]
 RewriteRule ^api/generate-words/?$ api/generate.php [QSA,L,NC]
 RewriteRule ^api/([a-z0-9-]+)\.(?:json|js)$ api/$1.php [QSA,L,NC]
 RewriteRule ^api/([a-z0-9-]+)/?$ api/$1.php [QSA,L,NC]

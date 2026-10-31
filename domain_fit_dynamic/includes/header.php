@@ -85,8 +85,10 @@ $themeHex = $themeMode === 'dark' ? '#10121b' : '#f7f8fc';
   <script src="<?= e(asset_url('js/main.js')) ?>" defer></script>
   <script src="<?= e(asset_url('js/dynamic-cms.js')) ?>" defer></script>
   <?php if ($customHeadCode !== ''): ?><?= $customHeadCode ?><?php endif; ?>
+  <?php if (function_exists('df_do_action')) df_do_action('public.head', $pdo, ['title' => $pageTitle, 'canonical_url' => $canonicalUrl]); ?>
 </head>
 <body id="top">
+<?php if (function_exists('df_do_action')) df_do_action('public.body.start', $pdo); ?>
 <?php if ($gtmEnabled): ?><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=<?= e($gtmId) ?>" height="0" width="0" style="display:none;visibility:hidden" title="Tag Manager"></iframe></noscript><?php endif; ?>
 <a class="skip-link" href="#main-content">Skip to content</a>
 <header class="site-header"><div class="container header-inner">

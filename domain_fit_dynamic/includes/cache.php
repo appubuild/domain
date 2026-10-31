@@ -53,10 +53,12 @@ function cache_delete(string $key): void
 function cache_clear_all(): void
 {
     $directory = dirname(__DIR__) . '/storage/cache';
-    if (!is_dir($directory)) {
-        return;
+    if (is_dir($directory)) {
+        foreach (glob($directory . '/*.json') ?: [] as $file) {
+            @unlink($file);
+        }
     }
-    foreach (glob($directory . '/*.json') ?: [] as $file) {
-        @unlink($file);
+    if (function_exists('df_do_action')) {
+        df_do_action('cache.clearing');
     }
 }

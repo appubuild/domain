@@ -4,7 +4,7 @@
 
 ## প্রয়োজনীয় পরিবেশ
 
-- PHP 8.1 বা পরবর্তী সংস্করণ; `PDO`, `pdo_mysql`, `fileinfo` চালু থাকতে হবে। `ext-dom` rich-text ও custom ad markup-এর safe sanitization-এর জন্য দরকার; rich content sanitizer না পেলে নিরাপদে plain-text fallback করে। Gemini key Admin থেকে encrypted করে রাখতে `openssl` extension ও কমপক্ষে ৩২ অক্ষরের `APP_SECRET` দরকার; environment variable দিয়ে key দিলে DB encryption দরকার হয় না।
+- PHP 8.1 বা পরবর্তী সংস্করণ; `PDO`, `pdo_mysql`, `fileinfo` চালু থাকতে হবে। `ext-dom` rich-text ও custom ad markup-এর safe sanitization-এর জন্য দরকার; rich content sanitizer না পেলে নিরাপদে plain-text fallback করে। Gemini key Admin থেকে encrypted করে রাখতে `openssl` extension ও কমপক্ষে ৩২ অক্ষরের `APP_SECRET` দরকার; environment variable দিয়ে key দিলে DB encryption দরকার হয় না। Optional Plugin/Extension ZIP installer-এ `ZipArchive`, WebP conversion-এ GD + `imagewebp()`, এবং Gzip toggle-এ zlib লাগে; এগুলো hosting panel-এ আলাদাভাবে enable/verify করতে হতে পারে।
 - MySQL 8 অথবা MariaDB 10.6 বা পরবর্তী সংস্করণ।
 - Apache `mod_rewrite` ও `.htaccess` override অনুমোদিত; HTTPS ব্যবহার করুন।
 - কোনো Composer, Tailwind CDN বা Font Awesome CDN runtime dependency নেই। সব UI asset স্থানীয় `assets/` কপি থেকে লোড হয়।
@@ -80,3 +80,4 @@ PHP error log: Hosting File Manager-এ CMS folder → `storage/` → `logs/` �
 - Public wordbank, homepage/blog data ও sitemap file cache ব্যবহার করে; content/settings update করলে CMS cache invalidate করে। Cache folder web থেকে blocked।
 - CMS code ও assets এই সাবডিরেক্টরির বাইরে লেখে না। Static fallback ও native app bundle আলাদা। Native app-এর offline copy CMS website update-এ স্বয়ংক্রিয়ভাবে বদলায় না; native app-এ update আনতে আলাদা build/release প্রয়োজন।
 - Hostinger বা target environment-এ deploy করার পর PHP lint, `database.sql` import, admin login, form submit/export, post publish/draft gate, clean URL, sitemap, upload permission এবং valid configured ad slot পরীক্ষা করুন। এই development sandbox-এ PHP/MySQL runtime নেই; তাই live PHP lint ও database integration test এখানে চালানো সম্ভব হয়নি।
+- Internal PHP extensions ও settings save diagnosis-এর package, hook API, safe ZIP installer এবং Speed Optimizer starter-এর deployment guide: [`EXTENSIONS-ARCHITECTURE-BN.md`](EXTENSIONS-ARCHITECTURE-BN.md)। Existing database-এ plugin registry লাগলে phpMyAdmin দিয়ে `migrations/20261030_extensions.sql` একবার Import করুন।

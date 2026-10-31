@@ -103,6 +103,12 @@ function asset_url(string $path): string
             $url .= (str_contains($url, '?') ? '&' : '?') . 'v=' . rawurlencode($assetVersions[$relativePath]);
         }
     }
+    if (function_exists('df_apply_filters')) {
+        $filtered = df_apply_filters('asset.url', $url, $relativePath, $diskPath);
+        if (is_string($filtered) && $filtered !== '') {
+            $url = $filtered;
+        }
+    }
     return $url;
 }
 
@@ -184,19 +190,19 @@ function redirect_to(string $path, int $status = 303): never
 
 function setting(PDO $pdo, string $key, mixed $default = null): mixed
 {
-    static $cache = [];
     $connectionId = spl_object_id($pdo);
-    if (!isset($cache[$connectionId])) {
-        $cache[$connectionId] = [];
+    $GLOBALS['_df_public_settings_cache'] ??= [];
+    if (!isset($GLOBALS['_df_public_settings_cache'][$connectionId])) {
+        $GLOBALS['_df_public_settings_cache'][$connectionId] = [];
         try {
             foreach ($pdo->query('SELECT setting_key, value_json FROM site_settings WHERE is_public = 1') as $row) {
-                $cache[$connectionId][$row['setting_key']] = json_decode((string) $row['value_json'], true);
+                $GLOBALS['_df_public_settings_cache'][$connectionId][$row['setting_key']] = json_decode((string) $row['value_json'], true);
             }
         } catch (Throwable $error) {
             error_log('Public site settings unavailable; rendering defaults: ' . $error->getMessage());
         }
     }
-    return $cache[$connectionId][$key] ?? $default;
+    return $GLOBALS['_df_public_settings_cache'][$connectionId][$key] ?? $default;
 }
 
 function private_setting(PDO $pdo, string $key, mixed $default = null): mixed
@@ -224,6 +230,7 @@ function save_setting(PDO $pdo, string $key, mixed $value, ?int $adminId = null,
         . 'ON DUPLICATE KEY UPDATE value_json = VALUES(value_json), is_public = VALUES(is_public), updated_by = VALUES(updated_by)'
     );
     $statement->execute(['key' => $key, 'value' => $json, 'public' => $isPublic ? 1 : 0, 'admin' => $adminId]);
+    unset($GLOBALS['_df_public_settings_cache'][spl_object_id($pdo)]);
 }
 
 function site_href(string $href): string
@@ -390,6 +397,14 @@ function save_uploaded_image(string $field, string $targetDirectory = 'uploads')
     if (!move_uploaded_file((string) $file['tmp_name'], $destination)) {
         throw new RuntimeException('Could not store the uploaded image.');
     }
+    if (function_exists('df_do_action')) {
+        try {
+            df_do_action('image.uploaded', $destination, $mime, $relativeDirectory);
+        } catch (Throwable $error) {
+            // A failed optional extension must not discard a successfully validated upload.
+            error_log('Image upload extension hook failed: ' . $error->getMessage());
+        }
+    }
     return app_url($relativeDirectory . '/' . $filename);
 }
 
@@ -420,3 +435,6 @@ function require_permission(PDO $pdo, array $admin, string $permission): void
         exit('You do not have permission to perform this action.');
     }
 }
+
+require_once __DIR__ . '/hooks.php';
+require_once __DIR__ . '/extensions.php';

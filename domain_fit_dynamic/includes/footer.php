@@ -53,6 +53,7 @@ $customFooterCode = is_string($customFooterCode) && strlen($customFooterCode) <=
     <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
   </div>
 </footer>
+<?php if (function_exists('df_do_action')) df_do_action('public.footer', $pdo); ?>
 <?php if ($customFooterCode !== ''): ?><?= $customFooterCode ?><?php endif; ?>
 </body>
 </html>

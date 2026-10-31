@@ -1,0 +1,8 @@
+{
+  "slug": "speed-optimizer",
+  "name": "Speed & Performance Optimizer",
+  "version": "1.0.0",
+  "api_version": 1,
+  "entry": "plugin.php",
+  "description": "Optional, conservative HTML, CSS, JavaScript, image and file-cache optimizations for the DomainFits PHP CMS."
+}

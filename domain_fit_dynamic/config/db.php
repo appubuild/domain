@@ -63,5 +63,8 @@ function db(): PDO
         PDO::ATTR_STRINGIFY_FETCHES => false,
     ]);
     $pdo->exec("SET time_zone = '+00:00'");
+    if (function_exists('df_extensions_bootstrap')) {
+        df_extensions_bootstrap($pdo);
+    }
     return $pdo;
 }
