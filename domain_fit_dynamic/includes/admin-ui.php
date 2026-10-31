@@ -15,6 +15,7 @@ function apply_security_headers(): void
 function admin_header(PDO $pdo, array $admin, string $title, array $extraStyles = []): void
 {
     apply_security_headers();
+    if (!headers_sent()) header('Cache-Control: no-store, private, max-age=0, must-revalidate');
     $requestPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
     $basePath = app_base_path();
     if ($basePath !== '' && str_starts_with($requestPath, $basePath)) $requestPath = substr($requestPath, strlen($basePath));
