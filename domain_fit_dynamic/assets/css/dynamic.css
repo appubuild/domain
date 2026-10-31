@@ -71,3 +71,156 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,te
 @media(max-width:1100px){.post-editor-form .admin-publish-layout{grid-template-columns:minmax(0,1fr) minmax(300px,350px)}}
 @media(max-width:900px){.post-editor-form .admin-publish-layout{grid-template-columns:1fr}.post-editor-form .admin-publish-sidebar.post-editor-sidebar{position:static;max-height:none;overflow:visible;border-top:1px solid var(--cms-border);border-left:0}.post-editor-form .admin-publish-main{padding:1rem}.post-editor-form .post-editor-sidebar{grid-template-columns:repeat(2,minmax(0,1fr))}.post-editor-form .post-editor-settings-card{grid-row:span 2}}
 @media(max-width:620px){.post-editor-form .post-editor-actions{top:0;padding:.45rem .6rem}.post-editor-form .admin-publish-main{padding:.8rem}.post-editor-form .post-editor-sidebar{grid-template-columns:1fr;padding:.8rem}.post-editor-form .post-editor-settings-card{grid-row:auto}.post-editor-form .post-editor-toolbar-heading{align-items:flex-start;flex-direction:column}.post-editor-form .post-editor-toolbar-heading .editor-status{max-width:100%;text-align:left}.post-editor-form .editor-toolbar .ql-formats{margin-right:.1rem!important}.post-editor-form .editor-toolbar button,.post-editor-form .editor-toolbar select{min-height:32px!important;padding:.15rem .35rem!important}.post-editor-form .quill-editor.ql-container.ql-snow,.post-editor-form .quill-editor .ql-editor,.post-editor-form .post-content-field .rich-source-fallback{min-height:340px!important}.post-editor-form .post-editor-sidebar .category-checklist{grid-template-columns:1fr 1fr}}
+
+/* Admin follow-up: message wrapping, quick post controls, extension manager and optimizer. */
+.admin-columns > .admin-card { min-width: 0; }
+.message-body {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  margin: 1rem 0;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  word-break: normal;
+  border: 1px solid var(--cms-border);
+  border-radius: 12px;
+  background: var(--cms-soft);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .86rem;
+  line-height: 1.65;
+}
+
+.post-list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .85rem; }
+.post-list-filter { align-items: center; }
+.post-list-table-wrap { max-width: 100%; }
+.post-list-table { min-width: 1120px; table-layout: fixed; }
+.post-list-table th:nth-child(1) { width: 22%; }
+.post-list-table th:nth-child(2) { width: 14%; }
+.post-list-table th:nth-child(3) { width: 38%; }
+.post-list-table th:nth-child(4) { width: 17%; }
+.post-list-table th:nth-child(5) { width: 105px; }
+.post-list-title-cell { overflow-wrap: anywhere; }
+.post-list-title-cell strong, .post-list-title-cell small { display: block; }
+.post-list-title-cell strong { line-height: 1.45; }
+.post-list-title-cell small { margin-top: .3rem; color: var(--cms-muted); font-size: .75rem; }
+.post-list-title-cell .post-list-slug { overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.post-list-category-cell { display: grid; justify-items: start; gap: .45rem; }
+.post-list-category-cell > span:first-child { overflow-wrap: anywhere; }
+.post-list-gate.is-locked { color: #9b4b19; }
+.post-list-gate.is-cleared { color: #18734d; }
+.post-quick-form { display: grid; grid-template-columns: minmax(92px, .75fr) minmax(170px, 1.25fr) auto; align-items: end; gap: .45rem; min-width: 0; }
+.post-quick-field { display: grid; min-width: 0; gap: .28rem; color: var(--cms-muted); font-size: .68rem; font-weight: 750; }
+.post-quick-field > span { line-height: 1.25; }
+.post-quick-field > span small { font-size: .65rem; font-weight: 600; }
+.post-quick-field input, .post-quick-field select { box-sizing: border-box; width: 100%; min-width: 0; max-width: none !important; min-height: 38px; padding: .35rem .45rem; border: 1px solid var(--cms-border); border-radius: 8px; background: var(--cms-surface); color: inherit; font: inherit; font-size: .75rem; }
+.post-quick-form .button { min-height: 38px; padding: .35rem .65rem; white-space: nowrap; }
+.post-list-actions-cell .admin-actions { gap: .55rem; }
+.post-list-actions-cell .admin-inline-form { margin: 0; }
+.post-list-thumbnail-cell { text-align: center !important; vertical-align: middle !important; }
+.post-list-thumbnail, .post-list-thumbnail-empty { box-sizing: border-box; display: block; width: 88px; height: 60px; border: 1px solid var(--cms-border); border-radius: 9px; background: var(--cms-soft); object-fit: cover; }
+.post-list-thumbnail-empty { display: grid; place-items: center; padding: .3rem; color: var(--cms-muted) !important; font-size: .68rem; text-align: center; }
+.post-list-help { margin: .7rem 0 0; color: var(--cms-muted); font-size: .78rem; line-height: 1.5; }
+.post-list-empty { color: var(--cms-muted); }
+
+.extension-page-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: 0 0 1rem; padding: 1.2rem 1.3rem; border: 1px solid var(--cms-border); border-radius: 15px; background: linear-gradient(135deg, var(--cms-surface), var(--cms-soft)); }
+.extension-page-intro h2 { margin: .1rem 0 .4rem; font-size: 1.2rem; }
+.extension-page-intro p { max-width: 780px; margin: 0; color: var(--cms-muted); font-size: .86rem; line-height: 1.55; }
+.extension-page-intro .eyebrow { margin-bottom: .3rem; color: var(--primary); font-size: .68rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.extension-count { flex: 0 0 auto; padding: .45rem .7rem; border: 1px solid var(--cms-border); border-radius: 999px; background: var(--cms-surface); color: var(--cms-muted); font-size: .75rem; font-weight: 800; }
+.extension-settings-view { min-width: 0; margin: 0 0 1rem; padding: clamp(1rem, 2vw, 1.4rem); border: 1px solid var(--cms-border); border-radius: 16px; background: var(--cms-surface); box-shadow: 0 5px 18px rgba(33, 31, 71, .035); }
+.extension-settings-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin: 0 0 1rem; padding-bottom: .9rem; border-bottom: 1px solid var(--cms-border); }
+.extension-settings-heading h2 { margin: .1rem 0 .25rem; font-size: 1.25rem; }
+.extension-settings-heading p { margin: 0; color: var(--cms-muted); font-size: .78rem; }
+.extension-settings-heading .eyebrow { margin: 0 0 .25rem; color: var(--primary); font-size: .67rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+.extension-settings-heading a { flex: 0 0 auto; font-size: .82rem; }
+.extension-settings-content { min-width: 0; }
+.extension-settings-content > .admin-form { gap: 1rem; }
+.extension-disclosure { margin: .85rem 0 1rem; overflow: hidden; border: 1px solid var(--cms-border); border-radius: 14px; background: var(--cms-surface); }
+.extension-disclosure > summary { display: flex; align-items: center; justify-content: space-between; gap: .8rem; min-height: 52px; padding: .8rem 1rem; color: inherit; font-weight: 800; cursor: pointer; list-style: none; }
+.extension-disclosure > summary::-webkit-details-marker { display: none; }
+.extension-disclosure > summary::after { content: '+'; color: var(--primary); font-size: 1.15rem; line-height: 1; }
+.extension-disclosure[open] > summary::after { content: '−'; }
+.extension-disclosure-body { padding: 1rem; border-top: 1px solid var(--cms-border); }
+.extension-disclosure-body > p:first-child { margin-top: 0; }
+.extension-install-form { max-width: 760px; }
+.extension-registry-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.extension-item-card { display: grid; align-content: start; gap: .7rem; min-width: 0; padding: 1rem; border: 1px solid var(--cms-border); border-radius: 13px; background: var(--cms-surface); }
+.extension-item-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .7rem; }
+.extension-item-heading h3 { margin: .05rem 0 .25rem; font-size: .98rem; overflow-wrap: anywhere; }
+.extension-item-heading p, .extension-item-meta { margin: 0; color: var(--cms-muted); font-size: .74rem; overflow-wrap: anywhere; }
+.extension-item-heading code { font-size: .72rem; }
+.extension-item-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .45rem; }
+.extension-item-actions a, .extension-item-actions button { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: .35rem .6rem; border: 1px solid var(--cms-border); border-radius: 8px; background: var(--cms-surface); color: var(--primary); font-size: .76rem; font-weight: 750; text-decoration: none; cursor: pointer; }
+.extension-item-actions a:hover, .extension-item-actions button:hover { border-color: var(--primary); }
+.extension-item-actions form { margin: 0; }
+.extension-item-actions button.admin-danger { color: #a52626 !important; }
+.extension-item-actions .extension-status-form button { background: var(--cms-soft); }
+
+.optimizer-intro { margin: 0 0 1rem; color: var(--cms-muted); font-size: .88rem; line-height: 1.6; }
+.optimizer-runtime-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; margin: 0 0 1.1rem; }
+.optimizer-runtime-card { display: grid; gap: .25rem; min-width: 0; padding: .9rem 1rem; border: 1px solid var(--cms-border); border-radius: 12px; background: var(--cms-soft); }
+.optimizer-runtime-card span { color: var(--cms-muted); font-size: .72rem; font-weight: 750; }
+.optimizer-runtime-card strong { font-size: 1rem; }
+.optimizer-runtime-card small { color: var(--cms-muted); font-size: .7rem; overflow-wrap: anywhere; }
+.optimizer-status-ready { color: #18734d; }
+.optimizer-status-missing { color: #9b4b19; }
+.optimizer-settings-form { gap: 1rem; }
+.optimizer-section { min-width: 0; margin: 0; padding: clamp(.9rem, 2vw, 1.2rem); }
+.optimizer-section > h3 { margin: 0 0 .85rem; font-size: 1rem; }
+.optimizer-section > p { color: var(--cms-muted); font-size: .82rem; line-height: 1.55; }
+.optimizer-options-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.optimizer-option { display: flex; align-items: flex-start; gap: .65rem; min-width: 0; padding: .8rem; border: 1px solid var(--cms-border); border-radius: 11px; background: var(--cms-soft); cursor: pointer; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+.optimizer-option:hover, .optimizer-option:focus-within { border-color: color-mix(in srgb, var(--primary) 48%, var(--cms-border)); background: var(--cms-surface); box-shadow: 0 3px 12px rgba(33, 31, 71, .045); }
+.optimizer-option > input { flex: 0 0 auto; width: 18px; height: 18px; min-height: 18px; margin: .08rem 0 0; accent-color: var(--primary); }
+.optimizer-option-copy { display: grid; min-width: 0; gap: .25rem; }
+.optimizer-option-copy strong { color: inherit; font-size: .81rem; line-height: 1.4; }
+.optimizer-option-copy small { color: var(--cms-muted); font-size: .72rem; font-weight: 450; line-height: 1.48; overflow-wrap: anywhere; }
+.optimizer-section .form-row { margin-top: .85rem; }
+.optimizer-section .field small { line-height: 1.45; }
+.optimizer-save-actions { justify-content: flex-end; }
+.optimizer-task-card { margin: 0; }
+.optimizer-task-card > h3 { margin-top: 0; }
+.optimizer-task-card > p { color: var(--cms-muted); font-size: .83rem; line-height: 1.55; }
+
+@media (max-width: 980px) {
+  .post-quick-form { grid-template-columns: minmax(95px, .8fr) minmax(155px, 1.2fr); }
+  .post-quick-form > button { grid-column: 1 / -1; justify-self: start; }
+  .extension-registry-list { grid-template-columns: 1fr; }
+  .optimizer-runtime-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 740px) {
+  .post-list-toolbar { align-items: flex-start; flex-direction: column; }
+  .post-list-filter { align-items: stretch; }
+  .post-list-filter input, .post-list-filter select { width: 100%; min-width: 0; }
+  .post-list-table { min-width: 1080px; }
+  .extension-page-intro { flex-direction: column; padding: 1rem; }
+  .extension-count { align-self: flex-start; }
+  .extension-settings-view { padding: .9rem; }
+  .extension-settings-heading { flex-direction: column; }
+  .extension-disclosure-body { padding: .8rem; }
+  .optimizer-runtime-grid { grid-template-columns: 1fr; }
+  .optimizer-options-grid { grid-template-columns: 1fr; }
+  .optimizer-option { padding: .75rem; }
+}
+@media (max-width: 480px) {
+  .message-body { padding: .75rem; font-size: .82rem; }
+  .post-list-filter { flex-direction: column; align-items: stretch; }
+  .post-list-filter .button { align-self: flex-start; }
+  .extension-item-heading { flex-direction: column; }
+  .extension-item-actions { align-items: stretch; }
+  .extension-item-actions a, .extension-item-actions button { flex: 1 1 auto; }
+}
+.extension-settings-heading-actions { display: flex; flex: 0 0 auto; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: .55rem; }
+@media (max-width: 740px) { .extension-settings-heading-actions { justify-content: flex-start; } }
+/* Keep previously installed Speed Optimizer 1.0.0 markup tidy until it is upgraded. */
+.extension-settings-view--speed-optimizer .extension-settings-content > .admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+.extension-settings-view--speed-optimizer .extension-settings-content > .admin-form:not(.optimizer-settings-form) > .admin-card { margin: 0; padding: clamp(.9rem, 2vw, 1.2rem); }
+.extension-settings-view--speed-optimizer .extension-settings-content > .admin-form:not(.optimizer-settings-form) > .admin-card > h3 { margin: 0 0 .8rem; font-size: 1rem; }
+.extension-settings-view--speed-optimizer .extension-settings-content > .admin-form:not(.optimizer-settings-form) > .admin-card > .inline-check { display: flex; width: 100%; align-items: flex-start; min-height: 0; margin: .25rem 0 .15rem; padding: .65rem; border: 1px solid var(--cms-border); border-radius: 10px; background: var(--cms-soft); }
+.extension-settings-view--speed-optimizer .extension-settings-content > .admin-form:not(.optimizer-settings-form) > .admin-card > .inline-check + small { display: block; margin: 0 0 .7rem 2rem; color: var(--cms-muted); font-size: .72rem; line-height: 1.45; }
+.extension-settings-view--speed-optimizer .extension-settings-content > .admin-card { margin: 1rem 0 0; }
+@media (max-width: 740px) { .extension-settings-view--speed-optimizer .extension-settings-content > .admin-stats { grid-template-columns: 1fr; } }

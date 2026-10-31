@@ -167,50 +167,89 @@ $selectedOptions = $selectedExtension ? df_extension_options($pdo, (string) $sel
 admin_header($pdo, $admin, 'Extensions / Plugins');
 ?>
 <?php if ($errorMessage !== ''): ?><div class="notice notice-error" role="alert"><?= e($errorMessage) ?></div><?php endif; ?>
-<section class="admin-card">
-  <h2>Install an extension</h2>
-  <p><strong>Security:</strong> PHP extensions execute with the CMS process's permissions; the private install folder is not a PHP sandbox. Install ZIPs only from a source you trust, back up the database and files first, and keep activation limited to administrators.</p>
-  <p>Package format: one top-level lowercase slug folder containing <code>plugin.json</code> and the declared PHP entry file. ZIP limit: 20 MB; expanded package limit: 60 MB.</p>
-  <?php if (!class_exists(ZipArchive::class)): ?><div class="notice notice-error">PHP ZipArchive is not enabled. Ask hosting support to enable the PHP zip extension before using ZIP installation.</div><?php endif; ?>
-  <form class="admin-form" method="post" action="<?= e(app_url('admin/extensions')) ?>" enctype="multipart/form-data">
-    <?= csrf_field() ?><input type="hidden" name="action" value="install">
-    <div class="field"><label for="extension_zip">Plugin ZIP archive</label><input id="extension_zip" type="file" name="extension_zip" accept=".zip,application/zip" required><small>Hosting PHP settings must allow a request larger than the selected ZIP (post_max_size) and file (upload_max_filesize).</small></div>
-    <button class="button button-primary" type="submit" <?= class_exists(ZipArchive::class) ? '' : 'disabled' ?>>Validate and install</button>
-  </form>
-</section>
-
-<section class="admin-card">
-  <h2>Installed extensions</h2>
-  <?php if (!$extensions): ?><p>No extensions are installed.</p><?php else: ?>
-    <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Extension</th><th>Status</th><th>Installed</th><th>Actions</th></tr></thead><tbody>
-    <?php foreach ($extensions as $extension): $slug = (string) $extension['slug']; $isActive = $extension['status'] === 'active'; $settingsHook = 'admin.extension.settings.' . $slug; ?>
-      <tr>
-        <td><strong><?= e($extension['name']) ?></strong><br><small><?= e($slug) ?> · v<?= e($extension['version']) ?></small></td>
-        <td><span class="admin-badge admin-badge--<?= $isActive ? 'published' : 'draft' ?>"><?= $isActive ? 'Active' : 'Inactive' ?></span></td>
-        <td><?= e((string) $extension['installed_at']) ?></td>
-        <td><div class="admin-actions">
-          <?php if ($isActive && df_has_action($settingsHook)): ?><a href="<?= e(app_url('admin/extensions?plugin=' . rawurlencode($slug))) ?>">Settings</a><?php endif; ?>
-          <form method="post" action="<?= e(app_url('admin/extensions')) ?>"><?= csrf_field() ?><input type="hidden" name="action" value="status"><input type="hidden" name="slug" value="<?= e($slug) ?>"><input type="hidden" name="status" value="<?= $isActive ? 'inactive' : 'active' ?>"><button type="submit"><?= $isActive ? 'Deactivate' : 'Activate' ?></button></form>
-          <form method="post" action="<?= e(app_url('admin/extensions')) ?>" data-confirm="Uninstall <?= e($extension['name']) ?> and remove its files and saved settings?"><?= csrf_field() ?><input type="hidden" name="action" value="uninstall"><input type="hidden" name="slug" value="<?= e($slug) ?>"><button class="admin-danger" type="submit">Uninstall</button></form>
-        </div></td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody></table></div>
-  <?php endif; ?>
-</section>
+<div class="extension-page-intro">
+  <div>
+    <p class="eyebrow">CMS plugin manager</p>
+    <h2><?= $selectedExtension ? 'Extension workspace' : 'Manage your CMS extensions' ?></h2>
+    <p>Extensions run inside this PHP CMS. Review the package source and permissions before activation; this is not a browser-extension store or a sandbox.</p>
+  </div>
+  <span class="extension-count"><?= count($extensions) ?> installed</span>
+</div>
 
 <?php if ($selectedExtension): ?>
-<section class="admin-card">
-  <div class="section-heading"><div><p class="eyebrow">Extension settings</p><h2><?= e($selectedExtension['name']) ?></h2></div><a class="text-link" href="<?= e(app_url('admin/extensions')) ?>">Back to all extensions</a></div>
-  <?php if ($selectedExtension['status'] !== 'active'): ?>
-    <p>Activate this extension before opening its settings page.</p>
-  <?php elseif ($selectedManifest === null): ?>
-    <div class="notice notice-error">The extension manifest is invalid or its entry file is missing. Deactivate and uninstall it before reinstalling a trusted package.</div>
-  <?php elseif (df_has_action('admin.extension.settings.' . $selectedSlug)): ?>
-    <?php df_do_action('admin.extension.settings.' . $selectedSlug, $pdo, $admin, $selectedOptions); ?>
-  <?php else: ?>
-    <p>This active extension has no dedicated settings view.</p>
-  <?php endif; ?>
+<section class="extension-settings-view <?= $selectedSlug === 'speed-optimizer' ? 'extension-settings-view--speed-optimizer' : '' ?>">
+  <div class="extension-settings-heading">
+    <div>
+      <p class="eyebrow">Extension settings</p>
+      <h2><?= e($selectedExtension['name']) ?></h2>
+      <p><code><?= e($selectedExtension['slug']) ?></code> · version <?= e($selectedExtension['version']) ?></p>
+    </div>
+    <div class="extension-settings-heading-actions">
+      <span class="admin-badge admin-badge--<?= $selectedExtension['status'] === 'active' ? 'published' : 'draft' ?>"><?= $selectedExtension['status'] === 'active' ? 'Active' : 'Inactive' ?></span>
+      <a class="text-link" href="<?= e(app_url('admin/extensions')) ?>">All extensions</a>
+    </div>
+  </div>
+  <div class="extension-settings-content">
+    <?php if ($selectedExtension['status'] !== 'active'): ?>
+      <div class="notice notice-warning">Activate this extension before opening its settings.</div>
+    <?php elseif ($selectedManifest === null): ?>
+      <div class="notice notice-error">The extension manifest is invalid or its entry file is missing. Deactivate and uninstall it before reinstalling a trusted package.</div>
+    <?php elseif (df_has_action('admin.extension.settings.' . $selectedSlug)): ?>
+      <?php df_do_action('admin.extension.settings.' . $selectedSlug, $pdo, $admin, $selectedOptions); ?>
+    <?php else: ?>
+      <p>This active extension has no dedicated settings view.</p>
+    <?php endif; ?>
+  </div>
 </section>
 <?php endif; ?>
+
+<details class="extension-disclosure" <?= $selectedExtension ? '' : 'open' ?>>
+  <summary>Manage installed extensions <span class="extension-count"><?= count($extensions) ?> total</span></summary>
+  <div class="extension-disclosure-body">
+    <?php if (!$extensions): ?>
+      <p>No extensions are installed yet.</p>
+    <?php else: ?>
+      <div class="extension-registry-list">
+        <?php foreach ($extensions as $extension):
+          $slug = (string) $extension['slug'];
+          $isActive = $extension['status'] === 'active';
+          $settingsHook = 'admin.extension.settings.' . $slug;
+        ?>
+        <article class="extension-item-card">
+          <div class="extension-item-heading">
+            <div><h3><?= e($extension['name']) ?></h3><p><code><?= e($slug) ?></code> · v<?= e($extension['version']) ?></p></div>
+            <span class="admin-badge admin-badge--<?= $isActive ? 'published' : 'draft' ?>"><?= $isActive ? 'Active' : 'Inactive' ?></span>
+          </div>
+          <p class="extension-item-meta">Installed <?= e((string) $extension['installed_at']) ?> UTC</p>
+          <div class="extension-item-actions">
+            <?php if ($isActive && df_has_action($settingsHook)): ?><a href="<?= e(app_url('admin/extensions?plugin=' . rawurlencode($slug))) ?>">Open settings</a><?php endif; ?>
+            <form class="extension-status-form" method="post" action="<?= e(app_url('admin/extensions')) ?>">
+              <?= csrf_field() ?><input type="hidden" name="action" value="status"><input type="hidden" name="slug" value="<?= e($slug) ?>"><input type="hidden" name="status" value="<?= $isActive ? 'inactive' : 'active' ?>">
+              <button type="submit"><?= $isActive ? 'Deactivate' : 'Activate' ?></button>
+            </form>
+            <form method="post" action="<?= e(app_url('admin/extensions')) ?>" data-confirm="Uninstall <?= e($extension['name']) ?> and remove its files and saved settings?">
+              <?= csrf_field() ?><input type="hidden" name="action" value="uninstall"><input type="hidden" name="slug" value="<?= e($slug) ?>">
+              <button class="admin-danger" type="submit">Uninstall</button>
+            </form>
+          </div>
+        </article>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+</details>
+
+<details class="extension-disclosure">
+  <summary>Install an extension</summary>
+  <div class="extension-disclosure-body">
+    <p><strong>Security:</strong> PHP extensions execute with the CMS process's permissions; the private install folder is not a PHP sandbox. Install ZIPs only from a source you trust, back up the database and files first, and keep activation limited to administrators.</p>
+    <p>Package format: one top-level lowercase slug folder containing <code>plugin.json</code> and the declared PHP entry file. ZIP limit: 20 MB; expanded package limit: 60 MB.</p>
+    <?php if (!class_exists(ZipArchive::class)): ?><div class="notice notice-error">PHP ZipArchive is not enabled. Ask hosting support to enable the PHP zip extension before using ZIP installation.</div><?php endif; ?>
+    <form class="admin-form extension-install-form" method="post" action="<?= e(app_url('admin/extensions')) ?>" enctype="multipart/form-data">
+      <?= csrf_field() ?><input type="hidden" name="action" value="install">
+      <div class="field"><label for="extension_zip">Plugin ZIP archive</label><input id="extension_zip" type="file" name="extension_zip" accept=".zip,application/zip" required><small>Hosting PHP settings must allow a request larger than the selected ZIP (post_max_size) and file (upload_max_filesize).</small></div>
+      <button class="button button-primary" type="submit" <?= class_exists(ZipArchive::class) ? '' : 'disabled' ?>>Validate and install</button>
+    </form>
+  </div>
+</details>
 <?php admin_footer(); ?>

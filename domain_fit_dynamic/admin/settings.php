@@ -85,6 +85,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         }
         audit_log($pdo,(int)$admin['id'],'settings.updated','site_settings','public','Site identity, code injection and integration settings updated.');
         $pdo->commit();
+        $readbackHashes=[];
+        foreach($verificationValues as $key=>$value){
+            $canonicalJson=json_encode($value,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
+            $readbackHashes[$key]=hash('sha256',$canonicalJson);
+        }
+        flash('settings_readback_receipt',json_encode(['created_at'=>time(),'hashes'=>$readbackHashes],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
         cache_clear_all();
         flash('success','Site settings saved.');
         redirect_to('admin/site-settings');
@@ -111,6 +117,27 @@ $settings['hero_cta']=$settings['hero_cta']?:'';$settings['hero_secondary']=$set
 $settings['footer_text']=$settings['footer_text']?:'';$settings['copyright_text']=$settings['copyright_text']?:'';
 $settings['generator_controls_mode']=$settings['generator_controls_mode']?:'drawer';
 $settings['site_analytics_enabled']=(bool)$settings['site_analytics_enabled'];
+$saveReadbackWarning='';
+$readbackReceiptRaw=flash('settings_readback_receipt');
+if($readbackReceiptRaw!==null&&$_SERVER['REQUEST_METHOD']==='GET'){
+    $receipt=json_decode($readbackReceiptRaw,true);
+    if(is_array($receipt)&&isset($receipt['created_at'],$receipt['hashes'])&&is_array($receipt['hashes'])&&time()-(int)$receipt['created_at']<=120){
+        $readbackValues=$settings+['custom_head_code'=>$customHeadCode,'custom_footer_code'=>$customFooterCode];
+        if(array_key_exists('gemini_api_key',$receipt['hashes']))$readbackValues['gemini_api_key']=(string)private_setting($pdo,'gemini_api_key','');
+        $mismatchedKeys=[];
+        foreach($receipt['hashes'] as $key=>$expectedHash){
+            if(!is_string($key)||!array_key_exists($key,$readbackValues)||!is_string($expectedHash)){$mismatchedKeys[]=(string)$key;continue;}
+            try{$currentJson=json_encode($readbackValues[$key],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);}catch(Throwable $encodeError){$mismatchedKeys[]=$key;continue;}
+            if(!hash_equals($expectedHash,hash('sha256',$currentJson)))$mismatchedKeys[]=$key;
+        }
+        if($mismatchedKeys){
+            $mismatchedKeys=array_values(array_unique($mismatchedKeys));
+            error_log('Site settings changed after save or were read from a different database endpoint; mismatched keys: '.implode(',',$mismatchedKeys));
+            $saveReadbackWarning='The save request succeeded, but this fresh page load could not read back the same values. Confirm that the active deployment and database endpoint are the intended ones; check the private PHP log for the affected setting keys.';
+            flash('success');
+        }
+    }
+}
 if($errorMessage!==''&&$_SERVER['REQUEST_METHOD']==='POST'){
     $postedSettingMap=[
         'site_title'=>'site_title','site_description'=>'site_description','site_author'=>'site_author',
@@ -127,6 +154,7 @@ if($errorMessage!==''&&$_SERVER['REQUEST_METHOD']==='POST'){
 $geminiKeyConfigured=gemini_api_key_configured($pdo);
 admin_header($pdo,$admin,'Site settings');
 ?>
+<?php if($saveReadbackWarning!==''):?><div class="notice notice-error" role="alert"><?=e($saveReadbackWarning)?></div><?php endif;?>
 <?php if($errorMessage!==''):?><div class="notice notice-error" role="alert"><?=e($errorMessage)?></div><?php endif;?>
 <form class="admin-form" method="post" action="<?=e(app_url('admin/site-settings'))?>" enctype="multipart/form-data"><?=csrf_field()?>
 <section class="admin-card"><h2>Identity &amp; search metadata</h2><div class="form-row"><div class="field"><label for="site_title">Site title</label><input id="site_title" name="site_title" maxlength="120" required value="<?=e($settings['site_title'])?>"></div><div class="field"><label for="site_author">Structured-data author name</label><input id="site_author" name="site_author" maxlength="120" value="<?=e($settings['site_author'])?>"></div></div><div class="field"><label for="site_description">Default meta description</label><textarea id="site_description" name="site_description" maxlength="320" rows="3"><?=e($settings['site_description'])?></textarea></div><div class="field"><label for="google_site_verification">Search Console verification token</label><input id="google_site_verification" name="google_site_verification" maxlength="200" value="<?=e($settings['google_site_verification']??'')?>"><small>Blank unless a token was issued for your verified domain.</small></div></section>

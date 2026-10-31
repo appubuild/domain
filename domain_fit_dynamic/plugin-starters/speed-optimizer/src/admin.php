@@ -10,8 +10,9 @@ function dfo_admin_navigation_links(array $links, PDO $pdo, array $admin): array
 function dfo_checkbox(string $key, string $label, array $options, string $help = ''): void
 {
     $checked = !empty($options[$key]) ? ' checked' : '';
-    echo '<label class="inline-check"><input type="checkbox" name="settings[' . e($key) . ']" value="1"' . $checked . '><span>' . e($label) . '</span></label>';
+    echo '<label class="optimizer-option"><input type="checkbox" name="settings[' . e($key) . ']" value="1"' . $checked . '><span class="optimizer-option-copy"><strong>' . e($label) . '</strong>';
     if ($help !== '') echo '<small>' . e($help) . '</small>';
+    echo '</span></label>';
 }
 
 function dfo_render_settings(PDO $pdo, array $admin, array $savedOptions): void
@@ -21,15 +22,15 @@ function dfo_render_settings(PDO $pdo, array $admin, array $savedOptions): void
     $zipReady = class_exists(ZipArchive::class);
     $zlibReady = function_exists('ob_gzhandler') || function_exists('gzencode');
     ?>
-    <p>সব feature শুরুতে বন্ধ। একবারে একটি feature চালু করে staging/Lighthouse-এ যাচাই করুন। remote vendor script (যেমন AdSense), native/offline app, admin responses এবং HTML API responses এই optimizer rewrite করে না।</p>
-    <div class="admin-stats">
-      <article class="admin-stat"><span>WebP support</span><strong><?= $gdReady ? 'Available' : 'Not detected' ?></strong><small>PHP GD + imagewebp</small></article>
-      <article class="admin-stat"><span>ZIP installer</span><strong><?= $zipReady ? 'Available' : 'Not detected' ?></strong><small>PHP ZipArchive</small></article>
-      <article class="admin-stat"><span>Gzip support</span><strong><?= $zlibReady ? 'Available' : 'Not detected' ?></strong><small>Host Brotli/Gzip may already be enabled</small></article>
+    <p class="optimizer-intro">সব feature শুরুতে বন্ধ। একবারে একটি feature চালু করে staging/Lighthouse-এ যাচাই করুন। remote vendor script (যেমন AdSense), native/offline app, admin responses এবং HTML API responses এই optimizer rewrite করে না।</p>
+    <div class="optimizer-runtime-grid" aria-label="Server capability checks">
+      <article class="optimizer-runtime-card"><span>WebP support</span><strong class="<?= $gdReady ? 'optimizer-status-ready' : 'optimizer-status-missing' ?>"><?= $gdReady ? 'Available' : 'Not detected' ?></strong><small>PHP GD + imagewebp</small></article>
+      <article class="optimizer-runtime-card"><span>ZIP installer</span><strong class="<?= $zipReady ? 'optimizer-status-ready' : 'optimizer-status-missing' ?>"><?= $zipReady ? 'Available' : 'Not detected' ?></strong><small>PHP ZipArchive</small></article>
+      <article class="optimizer-runtime-card"><span>Gzip support</span><strong class="<?= $zlibReady ? 'optimizer-status-ready' : 'optimizer-status-missing' ?>"><?= $zlibReady ? 'Available' : 'Not detected' ?></strong><small>Host Brotli/Gzip may already be enabled</small></article>
     </div>
-    <form class="admin-form" method="post" action="<?= e(app_url('admin/extensions?plugin=speed-optimizer')) ?>">
+    <form class="admin-form optimizer-settings-form" method="post" action="<?= e(app_url('admin/extensions?plugin=speed-optimizer')) ?>">
       <?= csrf_field() ?><input type="hidden" name="action" value="save_settings"><input type="hidden" name="slug" value="speed-optimizer">
-      <section class="admin-card"><h3>HTML, CSS and JavaScript</h3>
+      <section class="admin-card optimizer-section"><h3>HTML, CSS and JavaScript</h3><div class="optimizer-options-grid">
         <?php dfo_checkbox('minify_html', 'Conservative HTML minification', $options, 'Keeps script/style/pre/textarea/code/SVG blocks intact and retains a separator between adjacent tags.'); ?>
         <?php dfo_checkbox('minify_inline_css', 'Minify inline CSS', $options, 'Applies only to inline style blocks.'); ?>
         <?php dfo_checkbox('minify_inline_js', 'Conservative inline JavaScript minification', $options, 'JSON-LD, import maps, external scripts, template literals and slash-ambiguous JavaScript files are left untouched. Review custom scripts before enabling.'); ?>
@@ -38,25 +39,27 @@ function dfo_render_settings(PDO $pdo, array $admin, array $savedOptions): void
         <?php dfo_checkbox('minify_local_js', 'Serve conservatively minified local JavaScript', $options, 'Only local assets/js/*.js files are included. Test generator/editor interactions after enabling.'); ?>
         <?php dfo_checkbox('defer_local_scripts', 'Add defer to local JavaScript lacking async/defer', $options, 'External vendor scripts and scripts already marked async, defer or module are preserved.'); ?>
         <?php dfo_checkbox('gzip_compression', 'Enable negotiated Gzip where PHP zlib permits', $options, 'If the host already compresses responses, leave off; HTTP output is never intentionally double-compressed.'); ?>
-      </section>
-      <section class="admin-card"><h3>Images and LCP</h3>
+      </div></section>
+      <section class="admin-card optimizer-section"><h3>Images and LCP</h3><div class="optimizer-options-grid">
         <?php dfo_checkbox('lazy_images', 'Lazy-load images without an explicit loading attribute', $options, 'Existing loading="eager" attributes are preserved; logo files under uploads/brand are not lazy-loaded.'); ?>
         <?php dfo_checkbox('image_dimensions', 'Add missing width/height for readable local images', $options, 'Reads dimensions only from local uploads/ and assets/img/ files.'); ?>
         <?php dfo_checkbox('webp_conversion', 'Create WebP alternatives while preserving original-image fallback', $options, 'New JPEG/PNG uploads get a sibling WebP file. HTML receives a WebP srcset candidate only when that file is valid; original src remains the fallback.'); ?>
+      </div>
         <div class="form-row">
           <div class="field"><label for="optimizer_webp_quality">WebP quality (60–92)</label><input id="optimizer_webp_quality" name="settings[webp_quality]" type="number" min="60" max="92" value="<?= (int) $options['webp_quality'] ?>"></div>
           <div class="field"><label for="optimizer_max_dimension">Maximum WebP edge in pixels (640–2400)</label><input id="optimizer_max_dimension" name="settings[image_max_dimension]" type="number" min="640" max="2400" step="80" value="<?= (int) $options['image_max_dimension'] ?>"></div>
         </div>
-        <?php dfo_checkbox('preload_home_hero', 'Preload the homepage hero image as the LCP candidate', $options, 'Only emits a preload when a local hero image is configured in Site Settings.'); ?>
+        <div class="optimizer-options-grid"><?php dfo_checkbox('preload_home_hero', 'Preload the homepage hero image as the LCP candidate', $options, 'Only emits a preload when a local hero image is configured in Site Settings.'); ?></div>
       </section>
-      <section class="admin-card"><h3>Application page cache</h3>
+      <section class="admin-card optimizer-section"><h3>Application page cache</h3><div class="optimizer-options-grid">
         <?php dfo_checkbox('page_cache', 'Enable private file-based page cache', $options, 'Only anonymous GET requests to the homepage, blog/article and public information pages; requests with cookies/query strings, admin, API and form pages are excluded. CMS cache-clear actions invalidate the cache.'); ?>
+      </div>
         <div class="field"><label for="optimizer_cache_ttl">Cache lifetime in seconds (30–900)</label><input id="optimizer_cache_ttl" name="settings[page_cache_ttl]" type="number" min="30" max="900" step="30" value="<?= (int) $options['page_cache_ttl'] ?>"><small>Shared-host/LiteSpeed/CDN caching can coexist; do not enable competing rules without testing purge behavior.</small></div>
       </section>
-      <div class="admin-actions"><button class="button button-primary" type="submit">Save optimizer settings</button></div>
+      <div class="admin-actions optimizer-save-actions"><button class="button button-primary" type="submit">Save optimizer settings</button></div>
     </form>
 
-    <section class="admin-card"><h3>Existing upload conversion</h3>
+    <section class="admin-card optimizer-task-card"><h3>Existing upload conversion</h3>
       <?php if (!$gdReady): ?>
         <p>এই hosting runtime-এ GD/WebP encoder শনাক্ত হয়নি। Hostinger/PHP Selector-এ GD এবং WebP support চালু না হওয়া পর্যন্ত conversion ব্যবহার করা যাবে না।</p>
       <?php elseif (!$options['webp_conversion']): ?>
