@@ -1,7 +1,7 @@
 """L1 — the infrastructure-agnostic kernel of Nova Studio.
 
-This package knows nothing about video editing.  It provides the five mechanisms
-the rest of the system is built from (ARCHITECTURE.md §5):
+This package knows nothing about video editing.  It provides the mechanisms the
+rest of the system is built from (ARCHITECTURE.md §5):
 
 ``events``
     Typed in-process publish/subscribe with sync, queued and outbox delivery.
@@ -18,6 +18,11 @@ the rest of the system is built from (ARCHITECTURE.md §5):
     explicitly-rounded conversions (ADR-0006).
 ``ident``
     Time-ordered UUIDv7 entity ids and human-quotable short ids.
+``jobs``
+    The scheduling *policy* (ADR-0010): the job vocabulary, admission, progress
+    throttling, retry backoff and the circuit breaker — all pure.  The pools
+    that execute work are ``ports.jobs``; the object that owns the queues is a
+    service.
 
 Import rule (ADR-0002): nothing here may import ``nova_studio.domain``,
 ``nova_studio.ports``, ``nova_studio.services``, ``nova_studio.infra`` or
@@ -89,6 +94,30 @@ from nova_studio.core.ident import (
     process_token,
     random_suffix,
 )
+from nova_studio.core.jobs import (
+    CIRCUIT_BREAKER_THRESHOLD,
+    DEFAULT_GRACE_PERIOD_MS,
+    EXPORT_GRACE_PERIOD_MS,
+    KIND_PATTERN,
+    MAX_PROGRESS_HZ,
+    AdmissionVerdict,
+    Affinity,
+    CircuitBreaker,
+    Isolation,
+    JobFailureKind,
+    JobMemoryClass,
+    JobOutcome,
+    JobPriority,
+    JobProgress,
+    JobRecord,
+    JobSpec,
+    JobStatus,
+    PoolCapacity,
+    ProgressThrottle,
+    RetryPolicy,
+    decide_admission,
+    deferral_candidate,
+)
 from nova_studio.core.result import (
     Err,
     Ok,
@@ -123,12 +152,20 @@ from nova_studio.core.temporal import (
 
 __all__ = [
     "AUDIO_SAMPLE_RATES",
+    "CIRCUIT_BREAKER_THRESHOLD",
     "CLOCK_SEQ_BITS",
     "DEFAULT_AUDIO_SAMPLE_RATE",
     "DEFAULT_CLOCK",
+    "DEFAULT_GRACE_PERIOD_MS",
     "DEFAULT_TIMEBASE",
+    "EXPORT_GRACE_PERIOD_MS",
+    "KIND_PATTERN",
+    "MAX_PROGRESS_HZ",
     "STANDARD_TIMEBASES",
+    "AdmissionVerdict",
+    "Affinity",
     "AsyncEventStream",
+    "CircuitBreaker",
     "Command",
     "CommandContext",
     "CommandError",
@@ -153,6 +190,15 @@ __all__ = [
     "FixedClock",
     "FrameCount",
     "IdFactory",
+    "Isolation",
+    "JobFailureKind",
+    "JobMemoryClass",
+    "JobOutcome",
+    "JobPriority",
+    "JobProgress",
+    "JobRecord",
+    "JobSpec",
+    "JobStatus",
     "LayerViolationError",
     "Lifetime",
     "MemoryClass",
@@ -160,13 +206,16 @@ __all__ = [
     "NovaError",
     "NovaInvariantError",
     "Ok",
+    "PoolCapacity",
     "ProblemDetail",
+    "ProgressThrottle",
     "Rational",
     "Registration",
     "ResolutionError",
     "Resolver",
     "Result",
     "ResultUnwrapError",
+    "RetryPolicy",
     "Rounding",
     "SampleCount",
     "ServiceContainer",
@@ -184,6 +233,8 @@ __all__ = [
     "catch_errors",
     "collect",
     "collect_all",
+    "decide_admission",
+    "deferral_candidate",
     "err",
     "error_result",
     "failed",

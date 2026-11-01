@@ -49,6 +49,11 @@ class ErrorDomain(StrEnum):
     ANIMATION = "ANIMATION"
     PLUGIN = "PLUGIN"
     EXPORT = "EXPORT"
+    #: The job subsystem: scheduling, cancellation, worker supervision
+    #: (ADR-0010).  Kept separate from EXPORT and AI because a scheduler
+    #: failure has its own remedies — retry, disable the job type, resume after
+    #: a crash — which belong to no single feature that queued the work.
+    JOB = "JOB"
     TEMPLATE = "TEMPLATE"
     FONT = "FONT"
     SETTINGS = "SETTINGS"

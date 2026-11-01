@@ -228,25 +228,69 @@ class Command(Protocol):
   and dirty-tracking are *subscribers*, not call sites. Adding a new reaction to edits
   requires zero changes to editing code (Open/Closed).
 
-### 5.4 Job scheduler (`core/jobs.py`)
+### 5.4 Job scheduling (`core/jobs.py` policy · `ports/jobs.py` seams · `services/` scheduler)
 
-Long work never runs on the request path.
+Long work never runs on the request path.  ADR-0010 names one scheduler with five
+priority classes; it is realised in three pieces, because a scheduler that also owns
+thread and process pools cannot live in L1.
 
 ```
-JobQueue(priority, kind) ──► JobScheduler ──► WorkerPool
-   CRITICAL  user is waiting (thumbnail of a just-dropped clip)     thread pool
-   HIGH      preview render of visible range                        thread pool
-   NORMAL    export / proxy transcode                               process pool
-   LOW       background AI (captions, scene detect)                 process pool
-   IDLE      cache warm-up, waveform pre-generation                 thread pool
+  core/jobs.py          the vocabulary and the four decisions (pure, no I/O)
+  ─────────────────────────────────────────────────────────────────────────
+  JobSpec(kind, priority, isolation, memory_class, affinity, retry, …)
+  ProgressThrottle      ≤ 20 Hz, but a stage change and the final report always go out
+  decide_admission()    ADMIT · DEFER · REJECT — defers, never kills
+  RetryPolicy           only WORKER_LOST is retried by default, and only if idempotent
+  CircuitBreaker        2 consecutive worker losses disable the kind, with a reason
+
+  ports/jobs.py         the seams an adapter fills (I/O lives behind here)
+  ─────────────────────────────────────────────────────────────────────────
+  JobContext   what a running job sees: is_cancelled, report, checkpoint, heartbeat
+  JobHandle    what the submitter keeps: status, cancel(grace), wait, record
+  JobObserver  the push channel — the WS bridge implements it
+  JobExecutor  the pools: submit, subscribe, running, capacity, drain, shutdown
+  JobStore     ai_jobs / export_jobs: history, reconcile_interrupted, prune
+
+  services/jobs/        the object that owns queues and runs the admission loop
 ```
 
-* Every job reports `progress(0..1)`, `stage`, `eta`, is **cancellable** (cooperative flag +
-  hard-kill for processes), and persists its record to `ai_jobs`/`export_jobs` so a crash
-  leaves an auditable trail.
-* Job events flow to the frontend over the WS bridge → progress bars are reactive, not polled.
-* Back-pressure: per-kind concurrency caps derived from CPU/GPU capability detection, with
-  explicit reservation of one core for the UI/preview path.
+Priority classes and the pool each one defaults to (ADR-0010 §1):
+
+| Priority | Semantics | Pool | Examples |
+| --- | --- | --- | --- |
+| `CRITICAL` | the user is blocked waiting | threads | thumbnail of a just-dropped clip, probe |
+| `HIGH` | next frames needed for playback | threads | preview render of the visible range |
+| `NORMAL` | user-initiated long work | processes | export, proxy transcode |
+| `LOW` | background AI | processes | ASR, scene detect, auto-reframe |
+| `IDLE` | opportunistic | threads | waveform pre-generation, cache warm-up |
+
+Decisions worth the lines they cost:
+
+* **Preemption is admission, never killing.**  `decide_admission` defers a request; a
+  running job keeps its slot, because killing one corrupts its output and throws away
+  everything it had already done.  A job also defers while anything *more urgent* is
+  waiting — without that, eight background waveform jobs fill the thread pool and a
+  dropped clip waits for its thumbnail.
+* **Cancellation is cooperative with a hard deadline.**  `ctx.is_cancelled()` is polled at
+  points the job chooses; `cancel()` arms a watchdog for the spec's grace period
+  (5 s, 30 s for an export mid-mux).  A cancelled job ends `Err(NS-JOB-5005)` — the
+  UI says "stopped", not "failed" — and its partial output is never promoted.
+* **A dead worker is a value, not an exception.**  A codec that segfaults becomes
+  `Err(NS-JOB-5003)`; retrying is the scheduler's decision, made with `RetryPolicy` and
+  the circuit breaker, never the adapter's.  Two consecutive losses disable the kind and
+  record *why*, so the UI can offer a way out instead of failing a third time.
+* **Only an idempotent job may be retried** — enforced when the spec is built, because a
+  retried non-idempotent export is silent corruption.
+* **Nothing starts before it is recorded.**  `JobStore.put` runs first, which is what makes
+  post-crash reporting possible; on the next start, every non-terminal record becomes
+  `INTERRUPTED` and is offered back to the user as resumable.
+* **Progress is a value, not a callback.**  A job in another process can report it, the
+  executor throttles it, and the WS bridge coalesces it — none of the three knows about
+  the others.
+* **Capacity is measured, and a user override may only tighten it**:
+  `cpu_workers = max(1, physical_cores − 1)` with one core reserved for UI/preview,
+  `gpu_workers = 1` and `0` where no GPU was detected (which *rejects* GPU work at
+  admission rather than failing it halfway — ADR-0012 §2), I/O capped separately.
 
 ### 5.5 Errors and Results (`core/errors.py`, `core/result.py`)
 

@@ -43,7 +43,7 @@ Modules (populated in Stage 3)::
     render.py      frame/audio sinks, render targets, toolchain capability probe
     gpu.py         GpuBackend: per-operation acceleration (ADR-0012 §2)
     asr.py         transcription, alignment, translation
-    jobs.py        worker execution, cancellation, progress reporting
+    jobs.py        JobContext, JobHandle, JobObserver, JobExecutor, JobStore
     filesystem.py  media discovery, thumbnails, file watching
 """
 

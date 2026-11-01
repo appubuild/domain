@@ -17,7 +17,19 @@ editor), persistence (an export resumed or reported after a crash), and priority
 
 ## Decision
 
-1. **One scheduler, five priority classes** (`core/jobs.py`):
+1. **One scheduler, five priority classes.**  The ADR names `core/jobs.py`; the
+   realisation splits it in three, because an object that owns thread and process
+   pools performs I/O and cannot live in L1:
+
+   * `core/jobs.py` — the vocabulary (`JobSpec`, `JobProgress`, `JobRecord`,
+     `JobStatus`) and the four *decisions*: `decide_admission`, `ProgressThrottle`,
+     `RetryPolicy`, `CircuitBreaker`.  All pure: time enters as an argument, there
+     is no randomness, and no pool is named.
+   * `ports/jobs.py` — the seams an adapter fills: `JobContext`, `JobHandle`,
+     `JobObserver`, `JobExecutor`, `JobStore`.
+   * `services/jobs/` — the scheduler itself: queues, the admission loop,
+     supervision.  It is built *later*; the policy it runs is already written and
+     tested, so it has no decisions left to invent.
 
    | Priority | Semantics | Pool | Examples |
    | --- | --- | --- | --- |
@@ -40,6 +52,12 @@ editor), persistence (an export resumed or reported after a crash), and priority
    the scheduler throttles to ≤ 20 Hz per job and publishes `job.progressed` on the event
    bus → WS → UI. Partial results (ASR partial hypotheses, first-pass export frames) use the
    same channel with a `payload` field.
+
+   Refined in implementation: the throttle never drops two events.  A **stage change** and
+   the **terminal** report are published regardless of the rate limit, because a bar that
+   stops moving while the stage label changes reads as a hang, and a job that finishes at
+   99 % never recovers.  Reports are values, not callbacks, so a job in another process can
+   emit them and the bridge can coalesce them without either knowing about the other.
 
 4. **Cancellation is cooperative with a hard deadline.** `ctx.is_cancelled()` is polled in
    job loops; a `cancel()` sets the flag and arms a watchdog that terminates the process
