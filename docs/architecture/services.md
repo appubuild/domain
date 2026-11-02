@@ -61,7 +61,7 @@ services/
 ```
 
 Each feature package carries a module docstring with the same fourteen headings
-used in §3 — purpose, structure, backend/frontend architecture, state,
+used in §3 and §4 — purpose, structure, backend/frontend architecture, state,
 functions, events, errors, caching, performance, testing, future expansion — so
 a feature is documented where it is read.
 
@@ -157,7 +157,114 @@ cheapest guard against a catalogue drifting out of step with the domain.
 
 ---
 
-## 4. Conventions a new feature must follow
+## 4. Feature: `services/projects/`
+
+**Purpose.** Own the *lifecycle of a file*, as distinct from what a project is
+(`domain/project.py`) and how its bytes are stored (`infra/persistence`):
+opening one, saving one, deciding whether it is in a good state, checkpointing
+it often enough that a crash costs little, and — after a crash — working out
+what to offer back. The whole feature is one user-facing sentence: **you lose at
+most N commands or T seconds of work.**
+
+**Backend / frontend.** The frontend never opens a file, never decides whether a
+project is healthy, and never computes a timestamp. It calls one API per intent
+— open, save, checkpoint, audit — and renders what comes back:
+`OpenedProject.warnings` in a banner, `ProjectAudit.summary()` in the relink
+panel, `RecoveryPlan.offers` as a dialog. Every sentence a user reads about a
+damaged file is produced here or in the domain, so there is one phrasing of the
+rule and not one per surface.
+
+**Class diagram.**
+
+```
+ProjectSession                      session.py
+├── open()      → Result[OpenedProject]   refuses only 4001 / 4002 / 4003
+├── save(p)     → Result[ProjectManifest] stage all → commit → discard on failure
+├── checkpoint(p, label) → Result[RevisionRef]
+├── audit(p)    → ProjectAudit            (no I/O)
+└── close()
+
+OpenedProject   manifest · project · warnings      → is_clean
+ProjectAudit    problem · missing_assets · unused_assets
+                clip_count · duration_frames       → summary() : tuple[str, ...]
+
+AutosaveState (frozen)              autosave.py
+├── recorded(at_ms, commands) / checkpointed(at_ms) / due(now_ms)
+├── commands_until_due()            what the status bar shows
+└── revisions_to_drop(revisions)    oldest beyond the bound
+
+plan_recovery(window, checkpoint_sequence) → RecoveryPlan   recovery.py
+├── checkpoint_sequence · pending_commands · torn_tail
+├── offers   REPLAY_JOURNAL · RESTORE_CHECKPOINT · DISCARD  (best first)
+└── detail   one sentence for the dialog
+```
+
+**State management.** `ProjectSession` holds the archive, the clock and the
+manifest it last saw — nothing else; it is a door, not a copy of the house.
+`AutosaveState` and `RecoveryPlan` are frozen values, so a snapshot can be
+handed to a worker or compared in a test and no mutable project state lives in
+this layer. The autosave counters live in the state rather than in the caller
+because three places need the same answer: the tick, the manual checkpoint and
+the recovery flow.
+
+**Functions and APIs.**
+
+| Call | Answers |
+| --- | --- |
+| `open()` | "give me this project, and tell me what is wrong with it" |
+| `save(project)` | "make it durable, and tell me when" |
+| `checkpoint(project)` | "remember this moment" |
+| `audit(project)` | "what should the user fix" |
+| `recorded` / `due` / `checkpointed` | "is it time" |
+| `plan_recovery(...)` | "what do we offer after a crash" |
+
+**Events.** None yet, and deliberately: opening and saving already return values
+to a caller that knows the outcome. When the plugin service gains a lifecycle,
+`services/projects` will subscribe to `plugin.effect.*` to re-audit open
+projects and to `media.relinked` to clear a missing-asset warning.
+
+**Error handling.** `Result[T]` throughout, `NS-PROJECT-4xxx`:
+
+| Code | Meaning | Retryable |
+| --- | --- | --- |
+| `NS-PROJECT-4001` | Written by a newer Nova Studio; refused whole. | No — update. |
+| `NS-PROJECT-4002` | A required document is missing. | No — restore. |
+| `NS-PROJECT-4003` | The project rebuilt into something invalid. | No — restore. |
+| `NS-PROJECT-4004` | The save did not become durable; the old file is intact. | **Yes.** |
+
+Everything else — a moved clip, a damaged caption document, a dangling binding —
+is a **warning on a project that still opens** (ADR-0015 rule 3). A damaged
+caption is isolated per document and named, which is why captions are separate
+entries in the container at all (rule 7).
+
+**Caching.** None. A `.nova` file is tens of kilobytes of JSON and a save
+rewrites it wholesale; caching a project across a save would be a stale-read
+bug wearing a performance badge.
+
+**Performance.** Open is one manifest read, two document reads and one caption
+listing; save is two or three document writes plus one commit. The commit is the
+atomic replace — the expensive part — which is exactly why autosave checkpoints
+every 200 commands rather than every one (ADR-0015 §6).
+
+**Testing.** Three files, no filesystem and no real clock:
+
+* `tests/services/test_projects_session.py` — open, save and round-trip against
+  an in-memory archive, plus every warning path: missing media, a dangling clip,
+  a damaged caption, a failed commit that leaves the previous file intact.
+* `tests/services/test_projects_autosave.py` — pins "at most 200 commands or
+  two minutes", the burst case, the idle case, pruning and the backwards clock.
+* `tests/services/test_projects_recovery.py` — pins the offers, the
+  checkpoint-exclusive cut and the torn tail.
+
+**Future expansion.**
+
+* **Migration.** `format_version` is compared but not yet migrated; the ordered
+  chain of `vN → vN+1` functions belongs here, applied inside `open()`.
+* **Save-as and template export**, which reuse `_documents` verbatim.
+* **Autosave to a sidecar** (ADR-0015 §6) once `infra/persistence` exists, so a
+  checkpoint never touches the user's file until they save.
+
+## 5. Conventions a new feature must follow
 
 1. **A package, not a module**, once it holds more than one concern.
 2. **`Result[T]` across the boundary**, `NovaInvariantError` only for bugs.

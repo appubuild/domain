@@ -221,6 +221,21 @@ class ProjectArchive(Protocol):
         """Return the stored checkpoints, oldest first."""
         ...
 
+    def caption_document_ids(self) -> Result[tuple[str, ...]]:
+        """The ids of the caption documents this archive holds.
+
+        ``project.json`` deliberately does not list them — a caption document is
+        its own entry so that one can be rewritten without touching the rest
+        ([`project-file-format.md`](../../docs/architecture/project-file-format.md)
+        §5.5) — so the container is the only thing that knows which ones exist.
+        Listing a directory is a container operation, and it belongs here rather
+        than in a second index that could disagree with the entries.
+
+        Reports :attr:`PersistenceErrorCode.CORRUPT` when an entry under
+        ``captions/`` is not a caption document.
+        """
+        ...
+
     # -- staged writes ----------------------------------------------------
 
     def write_manifest(self, manifest: ProjectManifest) -> Result[None]:

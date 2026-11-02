@@ -25,6 +25,7 @@ import pytest
 
 from nova_studio.core import ErrorDomain, error_result, ok
 from nova_studio.domain.persistence import (
+    CAPTION_PREFIX,
     CacheBudget,
     CacheEntry,
     CacheKind,
@@ -61,6 +62,10 @@ def _manifest(**overrides: Any) -> ProjectManifest:
         "modified_ms": T0,
     }
     return ProjectManifest(**{**defaults, **overrides})
+
+
+def _staged_document_names(staged: Mapping[tuple[Any, ...], Any]) -> list[str]:
+    return [key[1] for key in staged if key[0] == "document"]
 
 
 class MemoryArchive:
@@ -118,6 +123,23 @@ class MemoryArchive:
 
     def revisions(self) -> Any:
         return ok(tuple(sorted(self._revisions, key=lambda revision: revision.sequence)))
+
+    def caption_document_ids(self) -> Any:
+        prefix = CAPTION_PREFIX
+        suffix = ".json"
+        ids = []
+        for name in sorted({*self._documents, *_staged_document_names(self._staged)}):
+            if not name.startswith(prefix) or not name.endswith(suffix):
+                continue
+            document_id = name[len(prefix) : -len(suffix)]
+            if not document_id or "/" in document_id:
+                return error_result(
+                    PersistenceErrorCode.CORRUPT,
+                    f"{name!r} is not a caption document",
+                    domain=ErrorDomain.STORAGE,
+                )
+            ids.append(document_id)
+        return ok(tuple(ids))
 
     # -- staged writes ----------------------------------------------------
 
@@ -345,6 +367,9 @@ class TestRuntimeCheckableLimitations:
             def revisions(self) -> tuple[RevisionRef, ...]:
                 return ()
 
+            def caption_document_ids(self) -> tuple[str, ...]:
+                return ()
+
             def write_manifest(self, manifest: ProjectManifest) -> None: ...
 
             def write_document(self, name: str, document: object) -> None: ...
@@ -376,6 +401,9 @@ class TestRuntimeCheckableLimitations:
                 return b""
 
             def revisions(self) -> tuple[RevisionRef, ...]:
+                return ()
+
+            def caption_document_ids(self) -> tuple[str, ...]:
                 return ()
 
             def write_manifest(self, manifest: ProjectManifest) -> None: ...
