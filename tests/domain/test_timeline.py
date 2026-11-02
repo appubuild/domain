@@ -50,6 +50,8 @@ from nova_studio.domain.timeline import (
     TransitionAlignment,
     TransitionEdge,
     TransitionKind,
+    TransitionMix,
+    bake_transition,
     snap_candidates,
     validate_timeline,
 )
@@ -790,3 +792,168 @@ class TestValidateTimeline:
 
     def test_the_timeline_validates_itself(self) -> None:
         assert Timeline().validate() == ""
+
+
+class TestTransitionMix:
+    def test_the_default_draws_b_over_a(self) -> None:
+        """No transition in progress: both images are drawn whole, and B wins
+        because it is on top.  That is the baseline the geometric kinds start
+        from; the dissolve kinds set the opacities themselves."""
+        assert (TransitionMix().a_opacity, TransitionMix().b_opacity) == (1.0, 1.0)
+
+    def test_an_opacity_outside_the_range_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="must be within"):
+            TransitionMix(b_opacity=1.5)
+
+    def test_a_fill_outside_the_range_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="must be within"):
+            TransitionMix(fill=-0.1)
+
+    def test_an_offset_must_be_a_pair_of_finite_numbers(self) -> None:
+        with pytest.raises(NovaInvariantError, match="pair of finite numbers"):
+            TransitionMix(a_offset=(0.0, float("nan")))
+
+    def test_an_offset_of_the_wrong_length_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="pair of finite numbers"):
+            TransitionMix(b_offset=(0.0,))  # type: ignore[arg-type]
+
+    def test_a_non_positive_scale_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="must be positive and finite"):
+            TransitionMix(a_scale=0.0)
+
+    def test_a_dissolve_does_not_move_anything(self) -> None:
+        assert bake_transition(TransitionKind.CROSS_DISSOLVE, 0.5).is_geometric is False
+
+    def test_a_wipe_moves_something(self) -> None:
+        assert bake_transition(TransitionKind.WIPE, 0.5).is_geometric is True
+
+
+class TestBakeTransition:
+    def test_a_dissolve_starts_on_a_and_ends_on_b(self) -> None:
+        assert bake_transition(TransitionKind.CROSS_DISSOLVE, 0.0).a_opacity == 1.0
+        assert bake_transition(TransitionKind.CROSS_DISSOLVE, 1.0).b_opacity == 1.0
+
+    def test_a_dissolve_splits_the_frame_at_the_midpoint(self) -> None:
+        mix = bake_transition(TransitionKind.CROSS_DISSOLVE, 0.5)
+        assert (mix.a_opacity, mix.b_opacity) == (0.5, 0.5)
+
+    def test_a_dissolve_is_linear(self) -> None:
+        """Blending happens in the working colour space (ADR-0012); a
+        perceptually even dissolve is the compositor's business."""
+        quarter = bake_transition(TransitionKind.CROSS_DISSOLVE, 0.25)
+        assert quarter.b_opacity == pytest.approx(0.25)
+
+    def test_a_dip_to_black_empties_the_frame_at_the_midpoint(self) -> None:
+        """The whole point of a dip: for one instant, neither image shows."""
+        mix = bake_transition(TransitionKind.DIP_TO_BLACK, 0.5)
+        assert (mix.a_opacity, mix.b_opacity) == (0.0, 0.0)
+
+    def test_a_dip_to_black_fills_with_black(self) -> None:
+        assert bake_transition(TransitionKind.DIP_TO_BLACK, 0.5).fill == 0.0
+
+    def test_a_dip_to_white_fills_with_white(self) -> None:
+        """The only reason the two dips are not the same bake."""
+        assert bake_transition(TransitionKind.DIP_TO_WHITE, 0.5).fill == 1.0
+
+    def test_a_dip_leaves_a_before_b_arrives(self) -> None:
+        mix = bake_transition(TransitionKind.DIP_TO_BLACK, 0.25)
+        assert (mix.a_opacity, mix.b_opacity) == (0.5, 0.0)
+
+    def test_a_dip_brings_b_in_after_a_has_gone(self) -> None:
+        mix = bake_transition(TransitionKind.DIP_TO_BLACK, 0.75)
+        assert (mix.a_opacity, mix.b_opacity) == (0.0, 0.5)
+
+    def test_a_wipe_keeps_a_still(self) -> None:
+        assert bake_transition(TransitionKind.WIPE, 0.5).a_offset == (0.0, 0.0)
+
+    def test_a_wipe_slides_b_in_from_the_far_edge(self) -> None:
+        assert bake_transition(TransitionKind.WIPE, 0.0).b_offset == (1.0, 0.0)
+
+    def test_a_wipe_lands_b_in_place(self) -> None:
+        assert bake_transition(TransitionKind.WIPE, 1.0).b_offset == (0.0, 0.0)
+
+    def test_a_wipe_covers_a_rather_than_fading_it(self) -> None:
+        mix = bake_transition(TransitionKind.WIPE, 0.5)
+        assert (mix.a_opacity, mix.b_opacity) == (1.0, 1.0)
+
+    def test_a_push_carries_a_out_as_b_comes_in(self) -> None:
+        mix = bake_transition(TransitionKind.PUSH, 0.5)
+        assert mix.a_offset == (-0.5, 0.0)
+        assert mix.b_offset == (0.5, 0.0)
+
+    def test_a_push_starts_with_b_off_frame(self) -> None:
+        mix = bake_transition(TransitionKind.PUSH, 0.0)
+        assert (mix.a_offset, mix.b_offset) == ((0.0, 0.0), (1.0, 0.0))
+
+    def test_a_push_ends_with_a_off_frame(self) -> None:
+        mix = bake_transition(TransitionKind.PUSH, 1.0)
+        assert (mix.a_offset, mix.b_offset) == ((-1.0, 0.0), (0.0, 0.0))
+
+    def test_a_slide_and_a_push_are_the_same_geometry(self) -> None:
+        """With B drawn over A they are the same picture; both names are
+        accepted because editors offer both (see ``bake_transition``)."""
+        assert bake_transition(TransitionKind.SLIDE, 0.4) == bake_transition(
+            TransitionKind.PUSH, 0.4
+        )
+
+    def test_a_direction_sends_the_geometry_that_way(self) -> None:
+        mix = bake_transition(TransitionKind.WIPE, 0.5, direction=(0.0, 1.0))
+        assert mix.b_offset == (0.0, 0.5)
+
+    def test_a_direction_is_normalised(self) -> None:
+        """A caller may pass pixels; a frame is one unit either way."""
+        by_pixels = bake_transition(TransitionKind.WIPE, 0.5, direction=(1920.0, 0.0))
+        assert by_pixels.b_offset == (0.5, 0.0)
+
+    def test_a_diagonal_direction_is_normalised_too(self) -> None:
+        mix = bake_transition(TransitionKind.WIPE, 0.5, direction=(3.0, 4.0))
+        assert mix.b_offset == pytest.approx((0.3, 0.4))
+
+    def test_a_zero_direction_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="zero vector"):
+            bake_transition(TransitionKind.WIPE, 0.5, direction=(0.0, 0.0))
+
+    def test_a_zoom_scales_both_images(self) -> None:
+        mix = bake_transition(TransitionKind.ZOOM, 0.5)
+        assert mix.a_scale > 1.0
+        assert mix.b_scale < 1.0
+
+    def test_a_zoom_lands_b_at_frame_filling(self) -> None:
+        assert bake_transition(TransitionKind.ZOOM, 1.0).b_scale == pytest.approx(1.0)
+
+    def test_a_zoom_still_cross_fades(self) -> None:
+        mix = bake_transition(TransitionKind.ZOOM, 0.5)
+        assert (mix.a_opacity, mix.b_opacity) == (0.5, 0.5)
+
+    def test_a_zoom_eases_rather_than_running_linear(self) -> None:
+        """Motion that starts and stops abruptly reads as broken; a fade
+        does not."""
+        mix = bake_transition(TransitionKind.ZOOM, 0.25)
+        assert mix.a_scale - 1.0 < 0.25 * 0.25
+
+    def test_an_unknown_kind_falls_back_to_a_dissolve(self) -> None:
+        """A plugin's evaluator decides; until one is registered, a dissolve is
+        never a wrong picture."""
+        assert bake_transition(TransitionKind.CUSTOM, 0.3) == bake_transition(
+            TransitionKind.CROSS_DISSOLVE, 0.3
+        )
+
+    def test_progress_before_the_window_clamps_to_the_start(self) -> None:
+        assert bake_transition(TransitionKind.CROSS_DISSOLVE, -1.0).a_opacity == 1.0
+
+    def test_progress_after_the_window_clamps_to_the_end(self) -> None:
+        assert bake_transition(TransitionKind.CROSS_DISSOLVE, 2.0).b_opacity == 1.0
+
+    def test_a_non_finite_progress_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="progress must be finite"):
+            bake_transition(TransitionKind.CROSS_DISSOLVE, float("inf"))
+
+    def test_the_bake_agrees_with_the_transitions_own_progress(self) -> None:
+        """``Transition.progress`` says how far through we are; the bake says
+        what that looks like.  Together they are the transition stage."""
+        clip = _clip("c1", "x", start_frame=100, out_frame=200)
+        transition = _transition(clip_id="c1", edge=TransitionEdge.START, duration_frames=20)
+        start, _ = transition.window(clip)
+        middle = start + 10
+        mix = bake_transition(transition.kind, transition.progress(clip, middle))
+        assert mix.a_opacity == pytest.approx(0.5)

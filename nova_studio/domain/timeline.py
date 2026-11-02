@@ -45,6 +45,7 @@ Deliberately not here
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -64,6 +65,7 @@ from nova_studio.domain._wire import (
     wire_mappings as _wire_mappings,
     wire_str as _wire_str,
 )
+from nova_studio.domain.animation import Interpolation, ease
 
 __all__ = [
     "DEFAULT_SNAP_TOLERANCE_FRAMES",
@@ -83,6 +85,8 @@ __all__ = [
     "TransitionAlignment",
     "TransitionEdge",
     "TransitionKind",
+    "TransitionMix",
+    "bake_transition",
     "snap_candidates",
     "validate_timeline",
 ]
@@ -459,6 +463,165 @@ class Transition:
             alignment=TransitionAlignment(_wire_str(data, "alignment")),
             params=dict(params) if params is not None else None,
         )
+
+
+# ---------------------------------------------------------------------------
+# Baking a transition
+# ---------------------------------------------------------------------------
+
+
+#: How far a zoom transition travels, as a scale factor.  A quarter is enough to
+#: read as motion without the edges of frame becoming visible.
+_ZOOM_SCALE: Final[float] = 1.25
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TransitionMix:
+    """What the compositor needs at one instant of one transition.
+
+    A transition is a *two-image* problem: the outgoing clip (A), the incoming
+    clip (B), and — for a dip — whatever shows where neither does.  This is that
+    answer, reduced to numbers the compositor can apply without knowing which
+    transition produced them, which is what lets a plugin contribute a new kind
+    by contributing an evaluator rather than a code path in the renderer
+    (ADR-0009 §6's principle).
+
+    Offsets and scales are **normalised**: ``(1.0, 0.0)`` is one frame width to
+    the right, so a mix baked here means the same thing in the 960x540 preview
+    and the 3840x2160 export.
+    """
+
+    #: How much of the outgoing image shows, ``0.0``–``1.0``.
+    a_opacity: float = 1.0
+    #: How much of the incoming image shows, ``0.0``–``1.0``.
+    b_opacity: float = 1.0
+    #: What shows where neither image does: ``0.0`` is black, ``1.0`` is white.
+    #: It is the only reason a dip to white and a dip to black are not the same
+    #: bake.
+    fill: float = 0.0
+    #: Where A is drawn, in frames from centre.
+    a_offset: tuple[float, float] = (0.0, 0.0)
+    #: Where B is drawn, in frames from centre.
+    b_offset: tuple[float, float] = (0.0, 0.0)
+    #: How large A is drawn, ``1.0`` being frame-filling.
+    a_scale: float = 1.0
+    #: How large B is drawn, ``1.0`` being frame-filling.
+    b_scale: float = 1.0
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("a_opacity", self.a_opacity),
+            ("b_opacity", self.b_opacity),
+            ("fill", self.fill),
+        ):
+            if not 0.0 <= value <= 1.0:
+                raise NovaInvariantError(f"{label} must be within [0, 1], got {value}")
+        for label, offset in (("a_offset", self.a_offset), ("b_offset", self.b_offset)):
+            if len(offset) != 2 or not all(math.isfinite(c) for c in offset):
+                raise NovaInvariantError(f"{label} must be a pair of finite numbers, got {offset}")
+        for label, scale in (("a_scale", self.a_scale), ("b_scale", self.b_scale)):
+            if not math.isfinite(scale) or scale <= 0.0:
+                raise NovaInvariantError(f"{label} must be positive and finite, got {scale}")
+
+    @property
+    def is_geometric(self) -> bool:
+        """Whether anything moves, as opposed to only cross-fading.
+
+        A renderer may skip the geometry pass for a pure dissolve, which is the
+        common case by a wide margin.
+        """
+        return (
+            self.a_offset != (0.0, 0.0)
+            or self.b_offset != (0.0, 0.0)
+            or self.a_scale != 1.0
+            or self.b_scale != 1.0
+        )
+
+
+def _scaled(vector: tuple[float, float], factor: float) -> tuple[float, float]:
+    """Vector times scalar.  The ``+ 0.0`` turns ``-0.0`` back into ``0.0``, so
+    a mix at progress zero compares equal to a mix that never moved."""
+    return (vector[0] * factor + 0.0, vector[1] * factor + 0.0)
+
+
+def _unit(vector: tuple[float, float]) -> tuple[float, float]:
+    """A direction, normalised so ``(1920, 0)`` and ``(1, 0)`` mean the same."""
+    if len(vector) != 2 or not all(math.isfinite(c) for c in vector):
+        raise NovaInvariantError(f"direction must be a pair of finite numbers, got {vector}")
+    length = math.hypot(vector[0], vector[1])
+    if length == 0.0:
+        raise NovaInvariantError("direction must not be the zero vector")
+    return (vector[0] / length, vector[1] / length)
+
+
+def bake_transition(
+    kind: TransitionKind,
+    progress: float,
+    *,
+    direction: tuple[float, float] = (1.0, 0.0),
+) -> TransitionMix:
+    """The mix of A and B at ``progress`` through a transition of ``kind``.
+
+    This is the built-in evaluator the transition stage calls.  It is pure and
+    total: every kind returns a mix, ``progress`` outside 0-1 is clamped (a
+    frame at the very edge of a window is still asked for), and a kind this
+    build does not know how to shape falls back to a cross-dissolve rather than
+    to a black frame.
+
+    The dissolve family is linear.  That is deliberate: the compositor blends in
+    the working colour space, and a perceptually even dissolve is the
+    compositor's business, not the edit's (ADR-0012).  The zoom eases because
+    motion that starts and stops abruptly looks broken where a fade does not.
+
+    ``direction`` is the way a geometric transition travels, as a vector in
+    frames: ``(1, 0)`` enters from the right, ``(0, 1)`` from the top.  It is
+    normalised, so a caller may pass pixels.
+    """
+    if not math.isfinite(progress):
+        raise NovaInvariantError(f"progress must be finite, got {progress}")
+    p = min(1.0, max(0.0, progress))
+
+    if kind is TransitionKind.CROSS_DISSOLVE:
+        return TransitionMix(a_opacity=1.0 - p, b_opacity=p)
+
+    if kind in (TransitionKind.DIP_TO_BLACK, TransitionKind.DIP_TO_WHITE):
+        # Both images leave before the other arrives: at the midpoint the frame
+        # is entirely `fill`, which is the whole point of a dip.
+        return TransitionMix(
+            a_opacity=max(0.0, 1.0 - 2.0 * p),
+            b_opacity=max(0.0, 2.0 * p - 1.0),
+            fill=1.0 if kind is TransitionKind.DIP_TO_WHITE else 0.0,
+        )
+
+    if kind is TransitionKind.ZOOM:
+        eased = ease(p, Interpolation.EASE_IN_OUT)
+        return TransitionMix(
+            a_opacity=1.0 - p,
+            b_opacity=p,
+            a_scale=1.0 + (_ZOOM_SCALE - 1.0) * eased,
+            b_scale=(1.0 / _ZOOM_SCALE) + (1.0 - 1.0 / _ZOOM_SCALE) * eased,
+        )
+
+    d = _unit(direction)
+    if kind is TransitionKind.WIPE:
+        # B slides across a stationary A, covering it.
+        return TransitionMix(a_opacity=1.0, b_opacity=1.0, b_offset=_scaled(d, 1.0 - p))
+
+    if kind in (TransitionKind.PUSH, TransitionKind.SLIDE):
+        # The two images travel as one strip: A out one edge, B in the other.
+        # A push and a slide are the same geometry because, with B drawn over A,
+        # they are the same picture; editors offer both names and a project may
+        # carry either, so both are accepted and neither is wrong.
+        return TransitionMix(
+            a_opacity=1.0,
+            b_opacity=1.0,
+            a_offset=_scaled(d, -p),
+            b_offset=_scaled(d, 1.0 - p),
+        )
+
+    # CUSTOM, and any kind a future build adds: the plugin's evaluator decides,
+    # and until one is registered a cross-dissolve is never a wrong picture.
+    return TransitionMix(a_opacity=1.0 - p, b_opacity=p)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

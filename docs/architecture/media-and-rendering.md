@@ -270,6 +270,18 @@ Decision | Why
 cannot happen here. It skips disabled clips and hidden tracks; a *muted* track
 still shows its pictures, because muting is a mix decision the audio stage owns.
 
+**Baking a transition is a pure function of `(kind, progress)`** |
+`bake_transition` returns a `TransitionMix` — A's opacity, B's opacity, what
+fills the frame where neither shows, and each side's offset and scale — so the
+compositor applies numbers without knowing which transition produced them. A
+plugin contributes a new kind by contributing an evaluator, not a code path in
+the renderer (ADR-0009 §6's principle). The dissolve family is *linear*: the
+compositor blends in the working colour space (ADR-0012), so a perceptually even
+dissolve is its business, not the edit's. A dip is the one case where `fill`
+matters — dip-to-black and dip-to-white are the same two weights with a
+different fill. Push and slide are the same geometry and say so: with B drawn
+over A, they are the same picture.
+
 Deliberately not here: **mutation policy**. Moving, trimming, rippling and
 slipping are `Command`s in `services` (ADR-0008) composed from the `with_*`
 builders; effects and grades are a chain on a clip (`domain/effects.py`); and
@@ -335,10 +347,10 @@ Decision | Why
 --- | ---
 **A damaged project still opens** | Construction refuses only what a construction can see — duplicate ids, an empty name. `validate_project` *reports* the rest as one sentence. An editor that refuses to open a broken project is an editor that loses work (ADR-0015 rule 3).
 **Missing media is a state, not an error** | `missing_assets()` lists what is not where the project says; `relink_asset` repairs it. Clips reference the asset *id*, never the path, so a moved folder is one operation rather than a hundred edits.
-**Bindings, not fields** | Effects, transforms, masks and blends live here keyed by the id of the clip or track they decorate, not on `Clip`. A chain does not know what it is attached to, which is what lets one type serve a clip, a track and the output grade — and what makes "delete this clip" a single pruning pass in `with_timeline`.
+**Bindings, not fields** | Effects, transforms, masks, blends and grades live here keyed by the id of the clip or track they decorate, not on `Clip`. A chain does not know what it is attached to, which is what lets one type serve a clip, a track and the output grade — and what makes "delete this clip" a single pruning pass in `with_timeline`.
 **One timebase, one source of truth** | `Project.timebase` reads it from the timeline and never stores a second copy that could disagree with the edit it describes. The container may repeat it in `project.json` for a support engineer; the model has exactly one.
-**Untouched things are not stored** | An empty chain, an identity transform, an empty mask list and a `NORMAL` blend each *remove* their binding. A project the user has never decorated carries no bindings at all, and a project whose effects were all deleted is indistinguishable from one that never had any.
-**Only the first problem is reported** | A user fixes one thing at a time; a wall of text helps nobody. Checks run in the order a user would hit them: the edit's own structure, then clip→asset, then each binding family, then the captions.
+**Untouched things are not stored** | An empty chain, an identity transform, an empty mask list, a `NORMAL` blend and a neutral grade each *remove* their binding. A project the user has never decorated carries no bindings at all, and a project whose effects were all deleted is indistinguishable from one that never had any.
+**Only the first problem is reported** | A user fixes one thing at a time; a wall of text helps nobody. Checks run in the order a user would hit them: the edit's own structure, then clip→asset, then each binding family (effects, transforms, masks, blends, grades), then the captions.
 **Timestamps are injected** | `created_ms` and `modified_ms` are passed in, never read from a clock, so a save is reproducible to the millisecond in a test (ADR-0002 rule 1). `touched` refuses to move a save backwards.
 **Caption ids are validated where they are accepted** | A `.nova` file is a ZIP, so a crafted document id is the zip-slip attack. `CaptionDocumentRef` checks the id against `is_valid_document_name` — the rule belongs at the door, not at the writer.
 **The container split is tested here** | `to_documents()` / `from_documents()` lift the timeline and each caption document into their own entries, so `infra/persistence` maps entries to bytes and never invents the layout.
@@ -352,6 +364,7 @@ Bindings, all frozen and all keyed by what they decorate:
 | `TransformBinding` | `clip_id` | the transform is static *and* the identity at frame 0 |
 | `MaskBinding` | `clip_id` | the mask tuple is empty |
 | `BlendBinding` | `(target, owner_id)` | the mode is `NORMAL` |
+| `GradeBinding` | `(target, owner_id)` | the grade is neutral |
 
 `Project` is immutable: every edit is a `with_*` call returning a new project,
 which is what makes a command's undo a stored previous value rather than an
@@ -359,5 +372,30 @@ inverse operation that can drift (ADR-0008). Deliberately not here: **I/O** (no
 path, no file, no clock), **undo** (this module offers the builders the commands
 compose), and **autosave and export** (`domain/persistence` owns the checkpoint
 policy, `domain/export` owns the output spec).
+
+### 7.11 Colour grading (`domain/grade.py`)
+
+The last thing that happens to a frame, and the first thing a client comments
+on. It lives in its own module rather than in `effects.py` because grading is
+not an effect: it has no chain, no mix and no order — it is one set of
+corrections the compositor applies after a picture is assembled, and the
+renderer compiles it into a single 3-D texture rather than a stack of passes.
+
+Decision | Why
+--- | ---
+**Every correction is animatable** | Exposure ridden across a shot as the sun goes behind a cloud is the same object as exposure set once: an `Animatable`, exactly like an effect parameter or a transform. One keyframe pins a value, so an unanimated grade is still one type.
+**Every correction is 0-neutral** | A model where three sliders are 0-neutral and two are 1-neutral is a model where a default gets pasted into the wrong field at 2 a.m. The one exception is `lut_strength`, which is a proportion and so is naturally 0-1.
+**Curves are monotone cubic (Fritsch–Carlson)** | A plain Catmull-Rom spline can bend past a control point, which on a tone curve reads as a band of inverted contrast exactly where the user was being careful. A user drags curves in *shapes*; the shape they see must be the shape they get. Monotonicity also makes the evaluation total and cheap: the renderer builds a 1-D table from `GradeCurve.at()` and stops worrying about kinks.
+**A curve spans the whole range** | It starts at x=0 and ends at x=1, so the black point and the white point are never undefined, and `at()` holds the end values outside it.
+**A LUT is a reference, not a file** | `Lut` carries an id, a name and the path where it was last seen, and never opens one. A project whose LUT is uninstalled opens with the rest of its grade intact, because a missing LUT is missing media and missing media is a state (ADR-0015 rule 3).
+**A neutral grade costs nothing** | `is_neutral` on both `ColourGrade` and `GradeSample` lets the compositor skip the pass. Most clips in most projects are ungraded, so protecting that case is worth more than any optimisation inside the pass.
+**Ranges are reported, not raised** | `validate_grade` returns the first correction outside its documented range. A grade with a slider pushed too far is still the user's look; the fix is to clamp it, not to lose it.
+
+Units are tabulated in the module docstring and pinned by tests: exposure and
+saturation are **stops** (`2 ** x`, so they are symmetric), contrast is linear
+about mid-grey, temperature and tint are -1 to +1 in white-balance space, and
+`lift`/`gamma`/`gain` are additive per channel. Deliberately not here:
+**pixels** — nothing in this module touches a frame buffer, which is why it
+imports no NumPy (ADR-0012).
 
 ---

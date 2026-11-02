@@ -66,6 +66,7 @@ from nova_studio.domain._wire import (
 )
 from nova_studio.domain.captions import CaptionDocument, validate_caption_document
 from nova_studio.domain.effects import BlendMode, EffectChain, EffectTarget, Mask, Transform
+from nova_studio.domain.grade import ColourGrade
 from nova_studio.domain.media import ColourSpace, ContentHash, MediaAsset, MediaInfo
 from nova_studio.domain.persistence import caption_document, is_valid_document_name
 from nova_studio.domain.timeline import Timeline
@@ -81,6 +82,7 @@ __all__ = [
     "CaptionDocumentRef",
     "EffectBinding",
     "FrameSize",
+    "GradeBinding",
     "MaskBinding",
     "Project",
     "ProjectDocuments",
@@ -113,6 +115,7 @@ _EFFECT_BINDING_FIELDS: Final[set[str]] = {"target", "owner_id", "chain"}
 _TRANSFORM_BINDING_FIELDS: Final[set[str]] = {"clip_id", "transform"}
 _MASK_BINDING_FIELDS: Final[set[str]] = {"clip_id", "masks"}
 _BLEND_BINDING_FIELDS: Final[set[str]] = {"target", "owner_id", "mode"}
+_GRADE_BINDING_FIELDS: Final[set[str]] = {"target", "owner_id", "grade"}
 _CAPTION_REF_FIELDS: Final[set[str]] = {"document_id", "document"}
 _PROJECT_FIELDS: Final[set[str]] = {
     "project_id",
@@ -126,6 +129,7 @@ _PROJECT_FIELDS: Final[set[str]] = {
     "transforms",
     "masks",
     "blends",
+    "grades",
 }
 #: ``project.json`` is the same document with the timeline and the caption
 #: documents lifted out into their own entries (ADR-0015).
@@ -451,6 +455,47 @@ class BlendBinding:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class GradeBinding:
+    """A colour grade attached to a clip, a track, or the output.
+
+    The output grade is the one a colourist means by "the look of the film": it
+    is applied once, after everything is composited, which is why it is not an
+    effect in a chain and has no mix and no order.
+    """
+
+    target: EffectTarget
+    owner_id: str = ""
+    grade: ColourGrade = field(default_factory=ColourGrade)
+
+    def __post_init__(self) -> None:
+        if self.target is not EffectTarget.OUTPUT and not self.owner_id:
+            raise NovaInvariantError(f"a {self.target} grade binding must name its owner")
+        if self.target is EffectTarget.OUTPUT and self.owner_id:
+            raise NovaInvariantError(f"an output grade binding has no owner, got {self.owner_id!r}")
+
+    @property
+    def is_neutral(self) -> bool:
+        """Whether the grade changes nothing, and so need not be stored."""
+        return self.grade.is_neutral
+
+    def to_wire(self) -> dict[str, object]:
+        return {
+            "target": str(self.target),
+            "owner_id": self.owner_id,
+            "grade": self.grade.to_wire(),
+        }
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, object]) -> GradeBinding:
+        _reject_unknown_fields(data, _GRADE_BINDING_FIELDS)
+        return cls(
+            target=EffectTarget(_wire_str(data, "target")),
+            owner_id=_wire_str(data, "owner_id"),
+            grade=ColourGrade.from_wire(_mapping(data, "grade")),
+        )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CaptionDocumentRef:
     """One caption document, and the name it is filed under in the container.
 
@@ -513,6 +558,10 @@ class Project:
     transforms: tuple[TransformBinding, ...] = ()
     masks: tuple[MaskBinding, ...] = ()
     blends: tuple[BlendBinding, ...] = ()
+    #: Colour grading, keyed the same way.  Separate from the effect chains
+    #: because a grade has no order and no mix: it is one set of corrections
+    #: applied after the picture is assembled (§7.11).
+    grades: tuple[GradeBinding, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.project_id:
@@ -530,6 +579,10 @@ class Project:
         _refuse_duplicates(
             "blend binding",
             [f"{binding.target}:{binding.owner_id}" for binding in self.blends],
+        )
+        _refuse_duplicates(
+            "grade binding",
+            [f"{binding.target}:{binding.owner_id}" for binding in self.grades],
         )
 
     # -- identity and shape -------------------------------------------------
@@ -720,6 +773,11 @@ class Project:
                 for binding in self.blends
                 if _owner_exists(timeline, binding.target, binding.owner_id)
             ),
+            grades=tuple(
+                binding
+                for binding in self.grades
+                if _owner_exists(timeline, binding.target, binding.owner_id)
+            ),
         )
 
     # -- effects and looks --------------------------------------------------
@@ -837,6 +895,47 @@ class Project:
             blends=(*kept, BlendBinding(target=target, owner_id=owner_id, mode=mode)),
         )
 
+    def grade_for(self, target: EffectTarget, owner_id: str = "") -> ColourGrade:
+        """The grade on a clip, a track, or the output; neutral when there is
+        none."""
+        for binding in self.grades:
+            if binding.target is target and binding.owner_id == owner_id:
+                return binding.grade
+        return ColourGrade()
+
+    def with_grade(self, target: EffectTarget, owner_id: str, grade: ColourGrade) -> Project:
+        """Attach a grade to a clip, a track, or the output.
+
+        A *neutral* grade removes the binding instead of storing one, so a
+        project nobody has graded carries no grade bindings at all.
+
+        :raises NovaInvariantError: if the owner does not exist.
+        """
+        _require_owner(self.timeline, target, owner_id)
+        kept = tuple(
+            binding
+            for binding in self.grades
+            if not (binding.target is target and binding.owner_id == owner_id)
+        )
+        if grade.is_neutral:
+            return replace(self, grades=kept)
+        binding = GradeBinding(target=target, owner_id=owner_id, grade=grade)
+        return replace(self, grades=(*kept, binding))
+
+    def without_grade(self, target: EffectTarget, owner_id: str) -> Project:
+        """Detach the grade from a clip, a track, or the output.
+
+        :raises NovaInvariantError: if there is no such binding.
+        """
+        kept = tuple(
+            binding
+            for binding in self.grades
+            if not (binding.target is target and binding.owner_id == owner_id)
+        )
+        if len(kept) == len(self.grades):
+            raise NovaInvariantError(f"there is no {target} grade on '{owner_id}' to remove")
+        return replace(self, grades=kept)
+
     # -- captions -----------------------------------------------------------
 
     def caption(self, document_id: str) -> CaptionDocument | None:
@@ -892,6 +991,7 @@ class Project:
             "transforms": [binding.to_wire() for binding in self.transforms],
             "masks": [binding.to_wire() for binding in self.masks],
             "blends": [binding.to_wire() for binding in self.blends],
+            "grades": [binding.to_wire() for binding in self.grades],
         }
 
     @classmethod
@@ -915,6 +1015,7 @@ class Project:
             ),
             masks=tuple(MaskBinding.from_wire(entry) for entry in _wire_mappings(data, "masks")),
             blends=tuple(BlendBinding.from_wire(entry) for entry in _wire_mappings(data, "blends")),
+            grades=tuple(GradeBinding.from_wire(entry) for entry in _wire_mappings(data, "grades")),
         )
 
     def to_documents(self) -> ProjectDocuments:
@@ -1013,6 +1114,13 @@ def validate_project(project: Project) -> str:
             return (
                 f"a blend mode is bound to {blend.target} "
                 f"'{blend.owner_id}', which is not in this project"
+            )
+
+    for grade in project.grades:
+        if not _owner_exists(project.timeline, grade.target, grade.owner_id):
+            return (
+                f"a grade is bound to {grade.target} "
+                f"'{grade.owner_id}', which is not in this project"
             )
 
     for ref in project.captions:

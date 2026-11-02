@@ -46,6 +46,7 @@ from nova_studio.domain.effects import (
     ParamKind,
     Transform,
 )
+from nova_studio.domain.grade import ColourGrade, GradeCurve, Lut
 from nova_studio.domain.media import (
     AssetKind,
     ContentHash,
@@ -65,6 +66,7 @@ from nova_studio.domain.project import (
     CaptionDocumentRef,
     EffectBinding,
     FrameSize,
+    GradeBinding,
     MaskBinding,
     Project,
     ProjectDocuments,
@@ -149,6 +151,11 @@ def _video_info() -> MediaInfo:
             ),
         ),
     )
+
+
+def _grade(**over: Any) -> ColourGrade:
+    """A grade that is *not* neutral, so a binding survives."""
+    return ColourGrade(**{"exposure": Animatable.constant("exposure", 1.0), **over})
 
 
 def _segment(index: int = 0, start_ms: int = 0, end_ms: int = 1_000, text: str = "hello"):
@@ -945,6 +952,7 @@ class TestProjectWire:
                 "transforms",
                 "masks",
                 "blends",
+                "grades",
             }
         )
 
@@ -1073,6 +1081,114 @@ class TestProjectDocuments:
         assert Project.from_documents(project.to_documents()).validate() == ""
 
 
+class TestGradeBinding:
+    def test_a_clip_binding_names_its_clip(self) -> None:
+        assert GradeBinding(target=EffectTarget.CLIP, owner_id="c1").owner_id == "c1"
+
+    def test_the_output_has_no_owner(self) -> None:
+        assert GradeBinding(target=EffectTarget.OUTPUT).owner_id == ""
+
+    def test_a_clip_binding_with_no_owner_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="must name its owner"):
+            GradeBinding(target=EffectTarget.CLIP)
+
+    def test_an_output_binding_with_an_owner_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="has no owner"):
+            GradeBinding(target=EffectTarget.OUTPUT, owner_id="c1")
+
+    def test_the_default_grade_changes_nothing(self) -> None:
+        assert GradeBinding(target=EffectTarget.OUTPUT).is_neutral is True
+
+    def test_a_graded_binding_is_not_neutral(self) -> None:
+        binding = GradeBinding(target=EffectTarget.CLIP, owner_id="c1", grade=_grade())
+        assert binding.is_neutral is False
+
+    def test_the_wire_form_survives_a_round_trip(self) -> None:
+        binding = GradeBinding(target=EffectTarget.CLIP, owner_id="c1", grade=_grade())
+        assert GradeBinding.from_wire(_round_trip(binding.to_wire())) == binding
+
+
+class TestProjectGrades:
+    def test_an_ungraded_clip_is_neutral(self) -> None:
+        assert _project().grade_for(EffectTarget.CLIP, "c1").is_neutral is True
+
+    def test_a_grade_can_be_attached_to_a_clip(self) -> None:
+        project = _project().with_grade(EffectTarget.CLIP, "c1", _grade())
+        assert project.grade_for(EffectTarget.CLIP, "c1").exposure.value == (1.0,)
+
+    def test_a_grade_can_be_attached_to_a_track(self) -> None:
+        project = _project().with_grade(EffectTarget.TRACK, "v1", _grade())
+        assert project.grade_for(EffectTarget.TRACK, "v1").is_neutral is False
+
+    def test_a_grade_can_be_attached_to_the_output(self) -> None:
+        """The output grade is what a colourist means by "the look"."""
+        project = _project().with_grade(EffectTarget.OUTPUT, "", _grade())
+        assert project.grade_for(EffectTarget.OUTPUT).is_neutral is False
+
+    def test_grading_a_missing_clip_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="it is not in this project"):
+            _project().with_grade(EffectTarget.CLIP, "ghost", _grade())
+
+    def test_grading_with_a_neutral_grade_removes_the_binding(self) -> None:
+        project = _project().with_grade(EffectTarget.CLIP, "c1", _grade())
+        assert project.with_grade(EffectTarget.CLIP, "c1", ColourGrade()).grades == ()
+
+    def test_grading_replaces_rather_than_duplicating(self) -> None:
+        project = (
+            _project()
+            .with_grade(EffectTarget.CLIP, "c1", _grade())
+            .with_grade(
+                EffectTarget.CLIP,
+                "c1",
+                _grade(exposure=Animatable.constant("exposure", 2.0)),
+            )
+        )
+        assert len(project.grades) == 1
+        assert project.grade_for(EffectTarget.CLIP, "c1").exposure.value == (2.0,)
+
+    def test_a_grade_can_be_detached(self) -> None:
+        project = _project().with_grade(EffectTarget.CLIP, "c1", _grade())
+        assert project.without_grade(EffectTarget.CLIP, "c1").grades == ()
+
+    def test_detaching_a_grade_that_is_not_there_is_refused(self) -> None:
+        with pytest.raises(NovaInvariantError, match="no clip grade on 'c1'"):
+            _project().without_grade(EffectTarget.CLIP, "c1")
+
+    def test_deleting_a_clip_takes_its_grade_with_it(self) -> None:
+        project = _project().with_grade(EffectTarget.CLIP, "c1", _grade())
+        assert project.with_timeline(_timeline()).grades == ()
+
+    def test_an_output_grade_survives_the_edit_being_replaced(self) -> None:
+        project = _project().with_grade(EffectTarget.OUTPUT, "", _grade())
+        assert len(project.with_timeline(_timeline()).grades) == 1
+
+    def test_grading_does_not_mutate_the_original(self) -> None:
+        project = _project()
+        project.with_grade(EffectTarget.CLIP, "c1", _grade())
+        assert project.grades == ()
+
+    def test_two_grade_bindings_may_not_share_an_owner(self) -> None:
+        binding = GradeBinding(target=EffectTarget.CLIP, owner_id="c1", grade=_grade())
+        with pytest.raises(NovaInvariantError, match="two grade bindings share the id"):
+            _project(grades=(binding, binding))
+
+    def test_a_graded_project_survives_a_round_trip(self) -> None:
+        project = (
+            _project()
+            .with_grade(EffectTarget.CLIP, "c1", _grade())
+            .with_grade(EffectTarget.OUTPUT, "", _grade())
+        )
+        assert Project.from_wire(_round_trip(project.to_wire())) == project
+
+    def test_a_grade_with_curves_and_a_lut_survives_a_round_trip(self) -> None:
+        grade = _grade(
+            curves=(GradeCurve(points=((0.0, 0.0), (0.5, 0.6), (1.0, 1.0))),),
+            lut=Lut(lut_id="teal-orange", name="Teal & Orange"),
+        )
+        project = _project().with_grade(EffectTarget.OUTPUT, "", grade)
+        assert Project.from_wire(_round_trip(project.to_wire())) == project
+
+
 class TestValidateProject:
     def test_a_consistent_project_has_nothing_to_report(self) -> None:
         assert validate_project(_project()) == ""
@@ -1126,6 +1242,16 @@ class TestValidateProject:
         assert validate_project(project) == (
             "a blend mode is bound to clip 'ghost', which is not in this project"
         )
+
+    def test_a_grade_bound_to_a_deleted_clip_is_reported(self) -> None:
+        binding = GradeBinding(target=EffectTarget.CLIP, owner_id="ghost", grade=_grade())
+        assert validate_project(_project(grades=(binding,))) == (
+            "a grade is bound to clip 'ghost', which is not in this project"
+        )
+
+    def test_an_output_grade_is_never_dangling(self) -> None:
+        binding = GradeBinding(target=EffectTarget.OUTPUT, owner_id="", grade=_grade())
+        assert validate_project(_project(grades=(binding,))) == ""
 
     def test_a_broken_caption_document_is_reported_with_its_name(self) -> None:
         broken = CaptionDocument(

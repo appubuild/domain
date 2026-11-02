@@ -143,6 +143,7 @@ split itself is unit-tested (`PROJECT_DOCUMENT_FIELDS`).
      "kind":"video","link_state":"linked","path":"D:/Media/clip_001.mp4","probe":null}
   ],
   "blends": [],
+  "grades": [],
   "effects": [],
   "masks": [],
   "metadata": {"author":"","created_ms":0,"description":"","modified_ms":0,"tags":[]},
@@ -163,8 +164,11 @@ split itself is unit-tested (`PROJECT_DOCUMENT_FIELDS`).
   the compositor builds, in composition pixels from the centre.
   `working_colour_space` is an integer SMPEG/ffmpeg colour-space code written as
   a number, never a name, so a rename upstream cannot invalidate a file.
-* **`effects` / `transforms` / `masks` / `blends`** are the *bindings*: what
-  decorates what, keyed by the id of the clip or track it decorates. They are
+* **`effects` / `transforms` / `masks` / `blends` / `grades`** are the
+  *bindings*: what decorates what, keyed by the id of the clip or track it
+  decorates. A grade is stored here rather than as an effect because it has no
+  chain, no mix and no order — one set of corrections, applied once after the
+  picture is assembled. They are
   stored here rather than on the clip so that deleting a clip is one pruning
   pass (ARCHITECTURE §7.10). An absent binding means "the user has never touched
   this", which is why an empty chain, an identity transform, an empty mask list

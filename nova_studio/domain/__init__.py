@@ -33,6 +33,7 @@ Modules (populated in Stage 3, in dependency order)::
     captions.py    caption cues, words, characters, layers, revisions, deltas
     animation.py   keyframes, easing, bezier segments — a value over time
     effects.py     parameter specs, effect chains, transform and masks
+    grade.py       colour grading: corrections, tone curves, LUT references
     project.py     the aggregate root: a project and its invariants
     export.py      export presets and render intent
 
