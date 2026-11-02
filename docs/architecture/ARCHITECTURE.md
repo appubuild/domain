@@ -642,6 +642,36 @@ builders; effects and grades are a chain on a clip (`domain/effects.py`); and
 which file a clip decodes — original, proxy or thumbnail — is a media-layer
 policy, not an edit decision.
 
+### 7.9 The effect and animation model (`domain/effects.py`)
+
+The other half of the frame pipeline: what a clip *looks like*. Every NLE has
+converged on the same shape — a parameter is a value over time, an effect is a
+bag of parameters plus a mix, a chain is an ordered stack — so this module
+implements that shape rather than inventing one.
+
+Decision | Why
+--- | ---
+**A parameter is one type, animated or not** | `Animatable` holds a value and an optional keyframe list. Adding the first keyframe promotes a constant without changing its type, so no reader needs two branches for what the user thinks of as one slider.
+**Keyframes sit on integer frames** | Interpolation is derived from two integer positions, never accumulated (ADR-0006). The value at frame 720 is identical in the preview, the export and the test suite, at 24 fps and at 60 fps.
+**The left keyframe owns the segment's curve** | Its `interpolation` and `out_handle` decide the shape; the right keyframe contributes only its `in_handle`. Deleting a keyframe therefore changes the easing of the segment *before* it — the rule every editor follows and every from-scratch implementation gets backwards.
+**Bezier handles may overshoot in y but not in x** | `y` outside 0-1 is the bounce a user is asking for; `x` outside it would stop the curve being a function of time. `x` is inverted by Newton-Raphson with a bisection fallback, both bounded, so the solve is deterministic; the cubic-bezier(0.25, 0.1, 0.25, 1.0) reference values are pinned by tests.
+**Plugins publish a spec, not a subclass** | `EffectSpec` + `ParameterSpec` describe a type, its parameters, their ranges, units and whether a stopwatch is offered. A third-party effect is therefore indistinguishable from a built-in one, and the inspector panel is generated (ADR-0011).
+**Effects carry a cost hint** | `EffectCost` lets preview drop expensive effects before it drops frame rate. Export never does; a wrong guess costs a slower preview, not a wrong picture.
+**Transform is a value object, not an effect** | Every clip has one, and its coordinates are composition pixels from the centre — never preview pixels — so a layer 100 px right of centre means the same thing in the 960×540 preview and the 3840×2160 export.
+**Masks are fractions of the layer** | Bounds survive a resolution change and a proxy swap; a `PATH` mask keeps its points and is never interpolated here, because freehand shape animation belongs to the shape system.
+
+`validate_effect` / `validate_chain` check an instance against its spec on
+load — arity, range, choice membership, animatability — so a malformed plugin
+payload is reported when the project opens rather than as a black frame an hour
+into a render. An effect whose *spec* is not installed is skipped, not
+rejected: a project with an uninstalled plugin must still open.
+
+Deliberately not here: **pixels**. Nothing in this module touches a frame
+buffer; `infra/render` does the arithmetic on CPU or GPU (ADR-0012), which is
+why this file imports no NumPy. Also not here: the effect *registry* (a
+services catalogue built from installed plugins) and *ownership* — a chain does
+not know whether it decorates a clip, a track or the output.
+
 ---
 
 ## 8. Caption engine architecture

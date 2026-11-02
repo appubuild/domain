@@ -58,6 +58,12 @@ from nova_studio.core.temporal import (
     Timebase,
     frames_to_seconds,
 )
+from nova_studio.domain._wire import (
+    reject_unknown_fields as _reject_unknown_fields,
+    wire_int as _wire_int,
+    wire_mappings as _wire_mappings,
+    wire_str as _wire_str,
+)
 
 __all__ = [
     "DEFAULT_SNAP_TOLERANCE_FRAMES",
@@ -1117,37 +1123,3 @@ _TRACK_FIELDS: Final[set[str]] = {
 }
 _MARKER_FIELDS: Final[set[str]] = {"marker_id", "frame", "name", "colour", "duration_frames"}
 _TIMELINE_FIELDS: Final[set[str]] = {"timebase", "tracks", "markers"}
-
-
-def _reject_unknown_fields(data: Mapping[str, object], expected: set[str]) -> None:
-    if set(data) != expected:
-        raise NovaInvariantError(
-            f"fields must be exactly {sorted(expected)}, got {sorted(str(key) for key in data)}"
-        )
-
-
-def _wire_int(data: Mapping[str, object], key: str) -> int:
-    raw = data[key]
-    if isinstance(raw, bool) or not isinstance(raw, int):
-        raise NovaInvariantError(f"{key!r} must be an int, got {type(raw).__name__}")
-    return raw
-
-
-def _wire_str(data: Mapping[str, object], key: str) -> str:
-    raw = data[key]
-    if not isinstance(raw, str):
-        raise NovaInvariantError(f"{key!r} must be a str, got {type(raw).__name__}")
-    return raw
-
-
-def _wire_mappings(data: Mapping[str, object], key: str) -> list[Mapping[str, object]]:
-    """A repeated field, checked as a list of mappings."""
-    raw = data[key]
-    if not isinstance(raw, list):
-        raise NovaInvariantError(f"'{key}' must be a list, got {type(raw).__name__}")
-    for entry in raw:
-        if not isinstance(entry, Mapping):
-            raise NovaInvariantError(
-                f"every entry of '{key}' must be a mapping, got {type(entry).__name__}"
-            )
-    return [entry for entry in raw if isinstance(entry, Mapping)]
