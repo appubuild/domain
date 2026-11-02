@@ -617,6 +617,31 @@ Contract rules the port makes mechanical:
 own port — `ports/gpu.py`, `GpuBackend` with `supports/allocate/execute/release` —
 because a compute device has a different lifetime from an encoder.
 
+### 7.8 The edit decision list (`domain/timeline.py`)
+
+What the frame pipeline resolves. `Timeline` → `Track` → `Clip` → source frames,
+plus `Transition` at a clip's edge and `Marker` on the ruler.
+
+Decision | Why
+--- | ---
+**Time is integer frames**, never seconds (ADR-0006) | A clip's duration is derived once from its source length and its exact rational `speed`, then stored as a whole number. Two clips at "half speed" cannot drift apart, because nothing is accumulated as a float.
+**Source time and timeline time are separate spaces** | `start_frame` is a timeline coordinate, `in_frame`/`out_frame` are source coordinates (`out` exclusive, as containers count), and `source_frame_at()` is the only thing that crosses between them. Trimming one end therefore cannot move the other.
+**Tracks are stored top-first, rendered bottom-first** | `tracks[0]` is the topmost track, because that is how an editor displays and names them; `resolve(frame)` returns contributions in painter's-algorithm order, so the last entry is drawn last. Storing in one order and painting in the other is the classic inverted-layer bug, so both are stated and both are tested.
+**An overlap is legal only under a transition** | Two clips sharing frames with no transition between them would be resolved arbitrarily by the renderer — a different picture tomorrow than today. `validate_timeline()` names the overlap and the project is not saved in that state.
+**Transitions hang off a clip edge, not a clip pair** | Deleting a clip takes its transitions with it, and trimming an end drags its transition's cut along — which is what editors do.
+**Snapping targets the timeline's own geometry** | `snap_candidates()` offers the start, the end, every clip edge and every marker within a tolerance, nearest first, and never the dragged clip's own edges. No grid the user did not ask for.
+
+`resolve(frame)` is what makes the compositor a pure function of
+`(timeline, frame)` — the structural reason "preview looks different from export"
+cannot happen here. It skips disabled clips and hidden tracks; a *muted* track
+still shows its pictures, because muting is a mix decision the audio stage owns.
+
+Deliberately not here: **mutation policy**. Moving, trimming, rippling and
+slipping are `Command`s in `services` (ADR-0008) composed from the `with_*`
+builders; effects and grades are a chain on a clip (`domain/effects.py`); and
+which file a clip decodes — original, proxy or thumbnail — is a media-layer
+policy, not an edit decision.
+
 ---
 
 ## 8. Caption engine architecture
