@@ -49,6 +49,13 @@ import numpy.typing as npt
 from nova_studio.core.errors import NovaInvariantError
 from nova_studio.core.ident import EntityId
 from nova_studio.core.temporal import Rational, Rounding, Timebase, frames_to_seconds
+from nova_studio.domain._wire import (
+    reject_unknown_fields as _reject_unknown_fields,
+    wire_float as _wire_number,
+    wire_int as _wire_int,
+    wire_int_mapping as _wire_int_mapping,
+    wire_str as _wire_str,
+)
 
 __all__ = [
     "AssetKind",
@@ -1024,48 +1031,8 @@ _MEDIA_ASSET_FIELDS: Final[set[str]] = {
 # the timeline geometry that looks valid and is wrong.
 
 
-def _reject_unknown_fields(data: Mapping[str, object], expected: set[str]) -> None:
-    if set(data) != expected:
-        raise NovaInvariantError(
-            f"fields must be exactly {sorted(expected)}, got {sorted(str(key) for key in data)}"
-        )
-
-
-def _wire_int(data: Mapping[str, object], key: str) -> int:
-    raw = data[key]
-    if isinstance(raw, bool) or not isinstance(raw, int):
-        raise NovaInvariantError(f"{key!r} must be an int, got {type(raw).__name__}")
-    return raw
-
-
 def _wire_int_in(data: Sequence[object], position: int, key: str) -> int:
     raw = data[position]
     if isinstance(raw, bool) or not isinstance(raw, int):
         raise NovaInvariantError(f"{key!r} must hold ints, got {type(raw).__name__}")
     return raw
-
-
-def _wire_str(data: Mapping[str, object], key: str) -> str:
-    raw = data[key]
-    if not isinstance(raw, str):
-        raise NovaInvariantError(f"{key!r} must be a str, got {type(raw).__name__}")
-    return raw
-
-
-def _wire_int_mapping(data: Mapping[str, object], key: str) -> dict[str, int]:
-    """Validate a nested ``{str: int}`` mapping (the timebase of a stream)."""
-    result: dict[str, int] = {}
-    for name, raw in data.items():
-        if not isinstance(name, str):
-            raise NovaInvariantError(f"{key!r} keys must be strings")
-        if isinstance(raw, bool) or not isinstance(raw, int):
-            raise NovaInvariantError(f"{key}.{name} must be an int, got {type(raw).__name__}")
-        result[name] = raw
-    return result
-
-
-def _wire_number(data: Mapping[str, object], key: str) -> float:
-    raw = data[key]
-    if isinstance(raw, bool) or not isinstance(raw, int | float):
-        raise NovaInvariantError(f"{key!r} must be a number, got {type(raw).__name__}")
-    return float(raw)

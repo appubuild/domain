@@ -642,12 +642,23 @@ builders; effects and grades are a chain on a clip (`domain/effects.py`); and
 which file a clip decodes — original, proxy or thumbnail — is a media-layer
 policy, not an edit decision.
 
-### 7.9 The effect and animation model (`domain/effects.py`)
+### 7.9 The effect and animation model
+(`domain/animation.py`, `domain/effects.py`)
 
 The other half of the frame pipeline: what a clip *looks like*. Every NLE has
 converged on the same shape — a parameter is a value over time, an effect is a
 bag of parameters plus a mix, a chain is an ordered stack — so this module
 implements that shape rather than inventing one.
+
+The model is **two files, not one**. `animation.py` owns the value over time —
+`Interpolation`, `ease`, `bezier_progress`, `Keyframe`, `Animatable`,
+`interpolate` — and `effects.py` owns what the values *mean*: `ParameterSpec`,
+`EffectSpec`, `Effect`, `EffectChain`, `Transform`, `Mask`. The split is not
+cosmetic. ADR-0009 §7 requires the caption baker to emit the editor's own
+keyframes, so captions, transforms and effects all animate through the same
+`Animatable`, and that shared object cannot live inside any one of its three
+customers. It also keeps each file inside the 64 KiB module cap
+(`scripts/check_repo_hygiene.py`) without splitting an object across files.
 
 Decision | Why
 --- | ---
@@ -666,9 +677,14 @@ payload is reported when the project opens rather than as a black frame an hour
 into a render. An effect whose *spec* is not installed is skipped, not
 rejected: a project with an uninstalled plugin must still open.
 
-Deliberately not here: **pixels**. Nothing in this module touches a frame
+`Animatable` deliberately does not carry the parameter's *kind*. Whether a
+number is a percentage, an angle or a colour is declared once by the
+`ParameterSpec` that owns the name; storing it again on every value would give
+the same fact two homes that can disagree.
+
+Deliberately not here: **pixels**. Nothing in either module touches a frame
 buffer; `infra/render` does the arithmetic on CPU or GPU (ADR-0012), which is
-why this file imports no NumPy. Also not here: the effect *registry* (a
+why these files import no NumPy. Also not here: the effect *registry* (a
 services catalogue built from installed plugins) and *ownership* — a chain does
 not know whether it decorates a clip, a track or the output.
 

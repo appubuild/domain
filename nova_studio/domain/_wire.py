@@ -38,10 +38,13 @@ __all__ = [
     "reject_unknown_fields",
     "wire_bool",
     "wire_float",
+    "wire_floats",
     "wire_int",
+    "wire_int_mapping",
     "wire_mappings",
     "wire_rational",
     "wire_str",
+    "wire_strings",
 ]
 
 
@@ -81,6 +84,21 @@ def wire_bool(data: Mapping[str, object], key: str) -> bool:
     return raw
 
 
+def wire_floats(data: Mapping[str, object], key: str) -> tuple[float, ...]:
+    """A list of numbers, as a tuple — the form every numeric field is kept in."""
+    raw = data[key]
+    if not isinstance(raw, list):
+        raise NovaInvariantError(f"'{key}' must be a list, got {type(raw).__name__}")
+    values: list[float] = []
+    for entry in raw:
+        if isinstance(entry, bool) or not isinstance(entry, int | float):
+            raise NovaInvariantError(
+                f"every entry of '{key}' must be a number, got {type(entry).__name__}"
+            )
+        values.append(float(entry))
+    return tuple(values)
+
+
 def wire_mappings(data: Mapping[str, object], key: str) -> list[Mapping[str, object]]:
     """A repeated field, checked as a list of mappings."""
     raw = data[key]
@@ -92,6 +110,32 @@ def wire_mappings(data: Mapping[str, object], key: str) -> list[Mapping[str, obj
                 f"every entry of '{key}' must be a mapping, got {type(entry).__name__}"
             )
     return [entry for entry in raw if isinstance(entry, Mapping)]
+
+
+def wire_int_mapping(data: Mapping[str, object], key: str) -> dict[str, int]:
+    """Validate a nested ``{str: int}`` mapping — a stream's timebase, say."""
+    result: dict[str, int] = {}
+    for name, raw in data.items():
+        if not isinstance(name, str):
+            raise NovaInvariantError(f"{key!r} keys must be strings")
+        if isinstance(raw, bool) or not isinstance(raw, int):
+            raise NovaInvariantError(f"{key}.{name} must be an int, got {type(raw).__name__}")
+        result[name] = raw
+    return result
+
+
+def wire_strings(data: Mapping[str, object], key: str) -> list[str]:
+    raw = data[key]
+    if not isinstance(raw, list):
+        raise NovaInvariantError(f"'{key}' must be a list, got {type(raw).__name__}")
+    values: list[str] = []
+    for entry in raw:
+        if not isinstance(entry, str):
+            raise NovaInvariantError(
+                f"every entry of '{key}' must be a str, got {type(entry).__name__}"
+            )
+        values.append(entry)
+    return values
 
 
 def wire_rational(data: Mapping[str, object], key: str) -> Rational:

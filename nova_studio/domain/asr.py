@@ -41,6 +41,12 @@ from typing import Final
 
 from nova_studio.core.errors import NovaInvariantError
 from nova_studio.core.temporal import Rounding, Timebase, seconds_to_frames
+from nova_studio.domain._wire import (
+    reject_unknown_fields as _reject_unknown_fields,
+    wire_float as _wire_float,
+    wire_int as _wire_int,
+    wire_str as _wire_str,
+)
 
 __all__ = [
     "ASR_SAMPLE_RATE",
@@ -619,31 +625,3 @@ _TRANSCRIPT_FIELDS: Final[set[str]] = {
     "segments",
 }
 _REGION_FIELDS: Final[set[str]] = {"start_ms", "end_ms", "confidence"}
-
-
-def _reject_unknown_fields(data: Mapping[str, object], expected: set[str]) -> None:
-    if set(data) != expected:
-        raise NovaInvariantError(
-            f"fields must be exactly {sorted(expected)}, got {sorted(str(key) for key in data)}"
-        )
-
-
-def _wire_int(data: Mapping[str, object], key: str) -> int:
-    raw = data[key]
-    if isinstance(raw, bool) or not isinstance(raw, int):
-        raise NovaInvariantError(f"{key!r} must be an int, got {type(raw).__name__}")
-    return raw
-
-
-def _wire_str(data: Mapping[str, object], key: str) -> str:
-    raw = data[key]
-    if not isinstance(raw, str):
-        raise NovaInvariantError(f"{key!r} must be a str, got {type(raw).__name__}")
-    return raw
-
-
-def _wire_float(data: Mapping[str, object], key: str) -> float:
-    raw = data[key]
-    if isinstance(raw, bool) or not isinstance(raw, int | float):
-        raise NovaInvariantError(f"{key!r} must be a number, got {type(raw).__name__}")
-    return float(raw)
