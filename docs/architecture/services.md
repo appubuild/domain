@@ -61,7 +61,7 @@ services/
 ```
 
 Each feature package carries a module docstring with the same fourteen headings
-used in §3 and §4 — purpose, structure, backend/frontend architecture, state,
+used in §3–§5 — purpose, structure, backend/frontend architecture, state,
 functions, events, errors, caching, performance, testing, future expansion — so
 a feature is documented where it is read.
 
@@ -264,7 +264,108 @@ every 200 commands rather than every one (ADR-0015 §6).
 * **Autosave to a sidecar** (ADR-0015 §6) once `infra/persistence` exists, so a
   checkpoint never touches the user's file until they save.
 
-## 5. Conventions a new feature must follow
+---
+
+## 5. Feature: `services/media/`
+
+**Purpose.** Own the three decisions that stand between a file on a disk and a
+clip on a timeline: **does this file belong here** (ingest), **which copy of it
+should we decode** (the proxy policy), and **which frames should we draw** (the
+thumbnail plan). What a file *is* lives in `domain/media.py`; reading bytes is
+`infra/`'s job through `ports/media.py`. This layer decides and reports.
+
+**Backend / frontend.** One API per intent. The frontend drops forty files on a
+panel and gets one `IngestReport` back: `assets` to add to the project,
+`failures` to list with their code mapped to a local message, `duplicates` to
+say "already here", and `summary()` for the status bar. It never probes, never
+compares paths and never decides a codec is expensive — the policy lives here so
+that a laptop build and a workstation build differ by one binding, not by two
+code paths.
+
+**Class diagram.**
+
+```
+MediaIngestor                         ingest.py
+└── ingest(paths, existing) → IngestReport
+        entries   : tuple[IngestedAsset]   asset + warnings
+        failures  : tuple[IngestFailure]   path + NovaError (code kept)
+        duplicates: tuple[str]             paths already present
+        → assets · succeeded · is_complete · summary()
+
+ProxyPolicy (frozen)                  proxy.py
+├── decide(scale, available) → DecodeSource   ORIGINAL | PROXY | THUMBNAIL
+├── plan(info)               → ProxyPlan      needed · reason · target size
+└── is_edit_friendly(info)   → bool
+
+thumbnail_indices(count, wanted, keyframes) → tuple[int, ...]   thumbnails.py
+snap_to_keyframe(index, keyframes)          → int
+```
+
+**State management.** `MediaIngestor` holds an injected prober and id source and
+nothing else; every import is independent and repeatable. `ProxyPolicy`,
+`ProxyPlan` and the index tuple are frozen values, safe to hand to a render
+worker or to cache as part of a job payload. No cache, no handles, no threads:
+the only long-running work this feature *causes* is a proxy transcode, and that
+goes to the scheduler as a `NORMAL` job (ADR-0010) — never a thread spawned
+here.
+
+**Functions and APIs.**
+
+| Call | Answers |
+| --- | --- |
+| `ingest(paths, existing)` | "what did we get, what failed, what was already here" |
+| `decide(scale, available)` | "which copy do I decode at this preview scale" |
+| `plan(info)` | "is a proxy worth building, and how big" |
+| `thumbnail_indices(...)` | "which frames does a strip ask for" |
+
+**Events.** None yet. Proxy transcodes will publish `job.*` through the
+scheduler; ingest will emit `media.imported` once the media panel needs to
+refresh live, and `media.relinked` when the relink flow lands — which is when
+`services/projects` starts listening (see §4).
+
+**Error handling.** Ingest never returns a `Result`, because a batch cannot fail
+as a batch: failures travel *inside* the report, each carrying the `NovaError`
+the probe produced (`NS-MEDIA-4001` unreadable, `-4003` unsupported codec,
+`-4004` decode failed). Empty paths are refused without I/O under `-4001`.
+`ProxyPolicy` and `thumbnail_indices` raise `NovaInvariantError` for a
+nonsensical argument (a non-positive scale, a negative frame count), because
+those are bugs in the caller and not states of a file.
+
+**Caching.** None in the code — but the *output* is the cache key.
+`thumbnail_indices` is deterministic, so a strip laid out today and the same
+strip laid out after a reopen ask for the same frames and hit the same cache
+entries instead of repopulating them (ADR-0015 rule 6: the cache is disposable,
+and a stable key is what makes a disposable cache useful).
+
+**Performance.** Ingest is one container open per file and no frame decode — the
+probe port is defined that way on purpose. The thumbnail plan is integer
+arithmetic; it exists precisely to keep the decode count down, snapping each
+target back to a keyframe so a ten-minute 4K clip costs eight cheap seeks
+instead of eight GOP walks. The proxy plan is the other half of the same
+argument: never decode more pixels than the preview can show.
+
+**Testing.** `tests/services/test_media_ingest.py` pins the batch rules against
+a fake prober and a deterministic id source — including that a duplicate is not
+probed twice and that no id is minted for a file that failed.
+`tests/services/test_media_proxy.py` pins the fidelity budget, the single
+edit-friendly codec vocabulary and the even-dimension arithmetic.
+`tests/services/test_media_thumbnails.py` pins the spread, the backwards-only
+keyframe snapping and the deduplication. No FFmpeg, no filesystem, no numpy
+beyond what the domain already carries.
+
+**Future expansion.**
+
+* **Content hashing** once `ports/filesystem.py` exists: duplicates will then be
+  matched by bytes, and a relink will be provable rather than hopeful. Until
+  then duplicates are matched by path, and the panel says so.
+* **Waveform and audio-analysis planning** — the same shape as the thumbnail
+  plan: indices in, samples out.
+* **A `ProxyJob` builder** turning `ProxyPlan` into a scheduler submission, once
+  `services/jobs/` lands.
+
+---
+
+## 6. Conventions a new feature must follow
 
 1. **A package, not a module**, once it holds more than one concern.
 2. **`Result[T]` across the boundary**, `NovaInvariantError` only for bugs.
