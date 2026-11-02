@@ -30,7 +30,7 @@ Modules (populated in Stage 3, in dependency order)::
     persistence.py what we store: manifests, revisions, journal, cache entries
     asr.py         transcripts, words, speech regions, model references
     timeline.py    tracks, clips, transitions, the edit decision list
-    captions.py    caption cues, words, speakers, templates
+    captions.py    caption cues, words, characters, layers, revisions, deltas
     effects.py     effect graphs and parameter values
     project.py     the aggregate root: a project and its invariants
     export.py      export presets and render intent

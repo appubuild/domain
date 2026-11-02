@@ -668,6 +668,56 @@ caption engine is verifiable in CI **with no model weights and no network** — 
 `ManualProvider`, the typed transcript, is both a real implementation and the deterministic
 test double.
 
+### 8.2 The authoring model (`domain/captions.py`)
+
+What the user edits. A `Transcript` is ASR truth and is never edited in place; a
+`CaptionDocument` is the editor's, and survives re-transcription.
+
+```
+CaptionDocument ──► CaptionSegment ──► CaptionWord ──► CaptionChar
+   layers              index, text,       text, timing,    one grapheme,
+   language            timing, words,     confidence,      timing,
+   revisions           speaker, layer,    speaker,         estimated
+   edits (deltas)      position, style    chars, highlight
+```
+
+Decisions that decide whether the Caption Studio is trustworthy:
+
+1. **A character is what a person sees.** `graphemes()` does not split a flag, an
+   accented letter or a ZWJ emoji sequence, because animation animates characters
+   and a half-glyph mid-animation is a visible bug.
+2. **Derived timings are labelled as derived.** `split_chars()` distributes a word's
+   interval across its characters weighted by character class — a vowel is held
+   longer than a consonant, a CJK glyph longer than a letter — and marks every
+   result `estimated`, so the UI says "estimated" rather than presenting a weighted
+   guess as a measurement. A provider that supplies real character timings overrides
+   it, and `has_measured_char_timings` tells the two apart.
+3. **A cue is never silently truncated.** `wrap_caption()` balances lines (29 + 29,
+   not 40 + 2), breaks CJK between glyphs because it has no spaces to break on, and
+   returns *more* lines rather than dropping words. Splitting the cue is the caller's
+   decision; losing text is not an option a breaker may take.
+4. **Human edits are an overlay, not a rewrite.** A re-transcription produces a new
+   base revision; `merge_deltas()` re-attaches each correction by alignment key
+   (normalised text plus a 500 ms bucket, so a small drift still matches), falls back
+   to a text match within 2 s, and returns what it could not place in `unmatched`
+   instead of guessing — a correction attached to the wrong cue is a wrong caption
+   with the user's name on it. Deltas *anchor*: once one has landed on a cue, later
+   deltas with the same key follow it, even though the first edit changed its key.
+   The single destructive rule is deliberate and reported: a text edit discards word
+   timings that no longer describe the text, and every such cue is listed in
+   `timings_dropped`.
+5. **Readability is checked, not assumed.** `validate_caption_document()` names the
+   first problem — overlapping cues, a cue shorter than 500 ms, a cue read faster
+   than 20 characters per second — and a document that fails it must not reach the
+   renderer.
+6. **Geometry is vocabulary, not policy.** `SafeArea`, `CaptionRect.overlaps()` and
+   `CaptionPosition` are what the Position and Resolve stages compute with; the
+   strategies (speaker side, face avoidance, stacking) live in those stages.
+
+Deliberately not here: how a cue is *drawn*. Typography, decoration and animation are
+data — `CaptionTemplate` and the `AnimationBaker` (ADR-0009 §5, §6) — and arrive with
+the styling module.
+
 
 The heart of the product. Full detail: `docs/architecture/module-catalog.md#caption-engine`
 and `services/captions/`.
