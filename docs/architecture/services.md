@@ -61,7 +61,7 @@ services/
 ```
 
 Each feature package carries a module docstring with the same fourteen headings
-used in §3–§6 — purpose, structure, backend/frontend architecture, state,
+used in §3–§7 — purpose, structure, backend/frontend architecture, state,
 functions, events, errors, caching, performance, testing, future expansion — so
 a feature is documented where it is read.
 
@@ -481,7 +481,116 @@ alone. No FFmpeg, no filesystem, no clock that moves unless told to.
 * **Journal replay**, once `services/projects/recovery.py` gains an executor:
   the command log is already a replayable list of these objects.
 
-## 7. Conventions a new feature must follow
+---
+
+## 7. Feature: `services/render/`
+
+**Purpose.** Own the two decisions that stand between a project and a picture:
+**what one composed frame is made of** (`frames.py`) and **how big to draw it**
+(`preview.py`). `domain/` owns what a clip, an effect, a grade and a transition
+*are*; `ports/render.py` owns where composed frames *go*. This owns the recipe
+that both read from — which is what makes the `media-and-rendering.md` §7.2
+promise structural rather than aspirational: **preview and export use the same
+code path.**
+
+Completing a transition is part of that. A transition is a recipe for *two*
+pictures, but the domain hangs it off one clip and `Timeline.resolve` only
+reports clips that contain the frame — so the second half of a centred dissolve
+would have one image and the first half none. `plan_frame` finds the clip on the
+other side of the cut and plans both, outgoing below incoming, carrying the same
+`TransitionMix`.
+
+**Backend / frontend.** One API per intent. The preview panel calls
+`plan_preview(...)` and gets the size, the scale, the letterbox offset and the
+frames to warm. The renderer calls `plan_frame(project, frame, sources=...)`
+once per frame. Neither looks inside a `Project` to find out what a clip is
+wearing, and neither guesses a size.
+
+**Class diagram.**
+
+```
+FramePlan                             frames.py
+├── frame · size                      the composition, in composition pixels
+├── layers: tuple[LayerPlan, ...]     bottom first
+│   └── LayerPlan
+│       ├── clip · track · source_frame
+│       ├── source        "original" | "proxy" | "thumbnail" (carried, not chosen)
+│       ├── transform     from the project, every clip has one
+│       ├── effects       clip chain, then track chain (empty ones dropped)
+│       ├── grades        clip grade, then track grade (neutral ones dropped)
+│       └── transition · transition_role   INCOMING | OUTGOING
+├── output_effects · output_grade     applied once, after compositing
+└── decodes() → tuple[DecodeRequest]  deduplicated, generated clips skipped
+
+PreviewPlan                           preview.py
+├── frame · size · scale · offset · warm
+Viewport · fit_scale · preview_size · warm_frames · plan_preview
+```
+
+**State management.** Everything is a frozen value. A `FramePlan` can be cached,
+handed to a worker process or compared in a test; none of it carries a decoder,
+a clock or a handle. `plan_frames` is a generator, because an export plans a
+hundred thousand frames and holds none of them.
+
+**Functions.**
+
+| Call | Answers |
+| --- | --- |
+| `plan_frame(project, frame, sources)` | "what is this frame made of" |
+| `plan_frames(project, frames, sources)` | the same, lazily, over a range |
+| `FramePlan.decodes()` | "which pictures do I need, deduplicated" |
+| `fit_scale(w, h, viewport)` | "how big can this be drawn" |
+| `preview_size(w, h, viewport, zoom)` | "what size do I composite at" |
+| `warm_frames(playhead, count, last_frame)` | "what should already be decoded" |
+| `plan_preview(...)` | all of the above, for one frame |
+
+**Events.** None yet. A render is a `Job` (ADR-0010) and reports `job.*`; the
+preview publishes nothing, because it is a loop the UI drives rather than a task
+the scheduler owns.
+
+**Error handling.** Both planners are total over *frames*: a frame past the end
+of a timeline plans as empty, because a render runs past the end by design. They
+raise `NovaInvariantError` for a nonsensical argument — a negative frame, a
+zero-sized viewport, a non-positive zoom — because those are bugs in the caller,
+not states of a project. Encoding failures are `ports/render.py`'s codes
+(`NS-RENDER-4001` unwritable, `NS-MEDIA-4002` no encoder, `-4003` encode failed,
+`-4004` unsupported spec, `-4005` cancelled), never this feature's.
+
+**Caching.** The plan *is* the cache design. `DecodeRequest.key` is
+`(asset_id, source_frame, source)`, so a preview cache keys on exactly what it
+decoded rather than on a frame number that means something different after an
+edit; `warm_frames` is forward-only because work behind the playhead is the one
+kind certain to be wasted.
+
+**Performance.** `plan_frame` is O(layers at this frame) — one `resolve`, a
+transition scan, a few tuple lookups — and pure, so a renderer can plan a frame
+while the previous one composites. `decodes()` deduplicates, so a split clip
+left in place costs one read. Neutral grades and empty chains are dropped at
+plan time rather than tested per frame.
+
+**Testing.** `tests/services/test_render_frames.py` pins the recipe: layer order,
+per-layer effect and grade ordering, generated clips asking for no decode,
+duplicate reads collapsing, empty frames, and transitions planned as pairs —
+including the centred dissolve's first half, which the domain alone does not
+surface. `tests/services/test_render_preview.py` pins the geometry: contain not
+cover, the native cap, even dimensions, centred bars, cropped-when-zoomed, and
+forward-only warm-up. No FFmpeg, no numpy beyond what the domain carries, no
+clock.
+
+**Database schema.** None — see the note in §1.
+
+**Future expansion.**
+
+* **Cost estimation.** Whether a frame fits a real-time budget needs the effect
+  *catalogue*, which belongs to `services/effects` — a feature this one may not
+  import. It belongs in `services/shared` when that lands, and it is what a
+  draft-quality preview mode will read.
+* **The compositor itself**, once `infra/render` exists: it consumes these plans
+  and nothing else.
+* **Audio**, which resolves the same timeline into a sample graph rather than a
+  layer stack (`media-and-rendering.md` §7.4).
+
+## 8. Conventions a new feature must follow
 
 1. **A package, not a module**, once it holds more than one concern.
 2. **`Result[T]` across the boundary**, `NovaInvariantError` only for bugs.
