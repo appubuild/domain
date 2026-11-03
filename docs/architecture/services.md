@@ -1,6 +1,6 @@
 # The service layer (L3)
 
-**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-02
+**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-03
 
 The layer between *what a project is* (`domain`) and *how the mechanics work*
 (`infra`). This document is the house style for every feature package under
@@ -52,7 +52,7 @@ services/
 ├── media/        ingest, probing, thumbnails, proxy generation
 ├── timeline/     edit operations as commands, undo scopes, ripple logic
 ├── render/       the frame pipeline: decode → graph → composite → encode
-├── captions/     the caption engine — three-pass ASR, alignment, styling
+├── captions/     cue breaking and house styles (the pipeline lands next)
 ├── effects/      the effect catalogue and the graph it builds   ← built
 ├── export/       presets, queueing, packaging
 ├── ai/           AI Studio orchestration on top of captions and effects
@@ -61,7 +61,7 @@ services/
 ```
 
 Each feature package carries a module docstring with the same fourteen headings
-used in §3–§7 — purpose, structure, backend/frontend architecture, state,
+used in §3–§8 — purpose, structure, backend/frontend architecture, state,
 functions, events, errors, caching, performance, testing, future expansion — so
 a feature is documented where it is read.
 
@@ -590,7 +590,107 @@ clock.
 * **Audio**, which resolves the same timeline into a sample graph rather than a
   layer stack (`media-and-rendering.md` §7.4).
 
-## 8. Conventions a new feature must follow
+## 8. Feature: `services/captions/`
+
+**Purpose.** Own the two decisions that make captions watchable: **which words
+the viewer reads together** (`segmentation.py`) and **what a house style does to
+them** (`styles.py`). `domain/captions.py` owns the document — cues, words,
+characters, layers, revisions; `domain/asr.py` owns what a provider returns;
+`ports/asr.py` owns how audio becomes a transcript. This owns the opinions: how
+long a cue stays up, how fast it may be read, where it sits, and what "a TikTok
+caption" means.
+
+**Backend / frontend.** The frontend never breaks a cue or invents a style. It
+picks a template and shows the cues that came back, with the reading rate each
+one implies. `CueRules` *is* the settings panel: every field is something an
+editor argues about, so every field is data — a podcast house style and a TikTok
+one differ by one object, not by a second code path. The same goes for
+`CaptionLook`: a look is a frozen value, which is what lets a plugin ship one
+(`plugins-and-extensibility.md` §4) and a user fork one without this module
+being recompiled.
+
+**Class diagram.**
+
+```
+CueRules                              segmentation.py
+├── max_lines · max_chars_per_line    two lines of 42, the broadcast default
+│   └── max_chars                     lines x chars, the real budget
+├── max_duration_ms · min_duration_ms
+├── max_reading_rate_cps              21 cps — the cap that catches fast speech
+└── silence_break_ms · punctuation_break
+build_cues(transcript, rules) → tuple[CaptionSegment, ...]
+
+CaptionLook                           styles.py
+├── template · anchor · x · y         where it sits, in the safe area
+├── max_lines · max_chars_per_line    → rules()
+├── text_case · word_animation · highlight_active_word
+├── backdrop · font_* · show_speaker_names
+├── rules() · position() · overrides() · text_of()
+└── LOOKS: netflix · tiktok · podcast · gaming · plain
+apply_look(cues, look) → tuple[CaptionSegment, ...]
+```
+
+**State management.** Both modules are pure functions over frozen values. A
+`CueRules` can be shipped in a project file, a plugin manifest or a preset; a
+`CaptionLook` is a frozen value with three answers and no behaviour. Nothing here
+holds a document, a decoder or a clock.
+
+**Functions.**
+
+| Call | Answers |
+| --- | --- |
+| `build_cues(transcript, rules)` | "which words go together, and when" |
+| `look_for(template)` | "what does this house style mean" |
+| `CaptionLook.rules()` / `.position()` / `.overrides()` | "how to break / where to sit / how it looks" |
+| `apply_look(cues, look)` | "these cues, wearing this look" |
+
+**Events.** None yet. A transcription is a `Job` (ADR-0010) and reports
+`job.*`; the cue builder is a stage inside it.
+
+**Error handling.** Both modules are pure and total over their inputs: an empty
+transcript builds no cues, and a cue with no word timings gets them derived and
+marked estimated rather than failing. They raise `NovaInvariantError` for a
+nonsensical rule — zero characters a line, a non-positive reading rate — because
+those are bugs in whoever wrote the preset. Provider failures are
+`ports/asr.py`'s codes (`NS-ASR-*`), never this feature's.
+
+**Caching.** Cues are derived data and are recomputed on every
+re-transcription — cheaply, because the builder is a single pass over words. What
+survives is *human* work: ADR-0009 §7 files every manual correction under an
+`alignment_key` (normalised text plus a bucketed start time), so a
+re-transcription that moves a cue 300 ms re-attaches the correction instead of
+orphaning it.
+
+**Performance.** One pass over the words, O(n) in the transcript, with a grapheme
+count per candidate cue — graphemes rather than code points, because an emoji, an
+accent and a Bengali conjunct are all one character to a reader. Character
+timings come from the domain's weighted proportional split, which is why karaoke
+is available on every provider and not only on those that ship character timings.
+
+**Testing.** `tests/services/test_captions_segmentation.py` pins the breaker: the
+character, duration and reading-rate caps, silence and punctuation breaks, the
+minimum on-screen time that never overlaps the next cue, derived timings for a
+provider that gave none, and that no word is ever dropped — a viewer is reading
+this text, and losing half a sentence to a tidy-looking break is worse than a
+long line. `tests/services/test_captions_styles.py` pins the presets and the one
+real trap in applying them: that changing a cue's case rebuilds its words,
+because a word's characters must join to make the word.
+
+**Database schema.** None — see the note in §1.
+
+**Future expansion.**
+
+* **The pipeline** (`pipeline.py`): ASR → VAD → word alignment → diarisation →
+  cues → merge with surviving human edits. The ports exist (`ports/asr.py`) and
+  the merge outcome exists (`CaptionMergeOutcome`); the orchestration is the next
+  slice of this feature, and it is a `Job`.
+* **Translation layers**, which are a second `CaptionLayer` of the same document,
+  not a second document (ADR-0009 §8).
+* **Smart positioning and collision resolution** built on `CaptionRect.overlaps`,
+  once face detection lands in `services/ai/`.
+* **Import/export** of SRT, VTT and JSON, in `services/export/`.
+
+## 9. Conventions a new feature must follow
 
 1. **A package, not a module**, once it holds more than one concern.
 2. **`Result[T]` across the boundary**, `NovaInvariantError` only for bugs.
