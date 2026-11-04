@@ -1002,20 +1002,29 @@ docstring cannot show: where this feature sits next to the others.*
 
 ```
 services/export/
-├── __init__.py   the feature's contract
-├── codes.py      ExportErrorCode — NS-EXPORT-6001 and up
-├── layers.py     layer_cues — which cues a file is written from
-├── srt.py        to_srt · srt_timestamp — SubRip
-└── vtt.py        to_vtt · vtt_timestamp — WebVTT
+├── __init__.py    the feature's contract
+├── codes.py       ExportErrorCode — NS-EXPORT-6001 and up
+├── layers.py      layer_cues — which cues a file is written from
+├── parse.py       what SubRip and WebVTT share when you read them
+├── srt.py         to_srt · from_srt · srt_timestamp — SubRip
+├── vtt.py         to_vtt · from_vtt · vtt_timestamp — WebVTT
+└── transcript.py  to_transcript_json · from_transcript_json — the whole thing
 ```
 
-**What it is.** The moment a project leaves Nova Studio: a caption document
-becomes the bytes somebody else's software reads. It owns no encoder, no muxer
-and no queue — those are `services/render/` and the job subsystem.
+**What it is.** Both ends of the same door: a caption document becomes the bytes
+somebody else's software reads, and a file somebody else wrote becomes a
+`Transcript`. It owns no encoder, no muxer and no queue — those are
+`services/render/` and the job subsystem.
 
-**The rule.** An export is a pure function from a document to text. No I/O:
-writing the bytes is a caller's job (ADR-0002), so an export is testable with no
-disk, runnable twice, and incapable of half-writing a file when it fails.
+**The rule.** An export is a pure function from a document to text, and an
+import is a pure function back. No I/O: reading and writing bytes is a caller's
+job (ADR-0002), so a conversion is testable with no disk, runnable twice, and
+incapable of half-writing a file when it fails.
+
+**A `Transcript` in the middle.** An imported file is read *as a transcript* —
+the shape every provider returns (ADR-0009 §1) — so it goes through the same
+pipeline as a recognition and a project cannot tell the two apart. It is also
+what `ExternalTranscriptProvider` will hand the runner.
 
 **The second rule.** A format gets what it can carry, and no pretending. SubRip
 has no styling, so an SRT export is text and timings and nothing else; inventing
@@ -1031,9 +1040,21 @@ cue too short to read). The layer is validated **on its own**, as a one-layer
 document, which is what lets a translation sit on top of the line it translates
 and still be exported.
 
-**Still to come.** Import — the other half, feeding `ExternalTranscriptProvider`
-(ADR-0009 §1) — SSA/ASS, TTML, and burned-in captions, which is not a sidecar at
-all but a render stage reading the same keyframes `bake.py` produced.
+**Reading is tolerant where tolerance costs nothing and strict where it
+matters.** A timestamp may be `HH:MM:SS,mmm`, `MM:SS.mmm` or use a full stop
+where SubRip wants a comma, because files in the wild do all three — and which
+part is which is decided by counting colons, since `02:03.5` is two minutes and
+three and a half seconds, not two hours. But a cue that ends before it starts,
+or one that overlaps the one before it, is refused with its number and its line
+rather than trimmed to fit: silently moving a cue is the corruption ADR-0009 §4
+exists to prevent. Markup (`<i>`, `<c.blue>`, `{\an8}`) is dropped; a `<v Ada>`
+voice tag is kept, because it is meaning and not markup.
+
+**Still to come.** SSA/ASS, which is the only sidecar with real styling; TTML
+for broadcast delivery; a plain-text reader, for a script with no timings at
+all — the one import that has to invent them; and burned-in captions, which is
+not a sidecar at all but a render stage reading the same keyframes `bake.py`
+produced.
 
 ---
 

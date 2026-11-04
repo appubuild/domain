@@ -40,3 +40,14 @@ class ExportErrorCode(StrEnum):
     INVALID_DOCUMENT = "NS-EXPORT-6003"
     #: A format was asked for that this build cannot write.
     UNKNOWN_FORMAT = "NS-EXPORT-6004"
+    #: A file that is not the format it claims to be: no WebVTT header, or not
+    #: one cue anywhere in it.  Reported with the reason, because "could not
+    #: import" is not a sentence anyone can act on.
+    MALFORMED_FILE = "NS-EXPORT-6005"
+    #: One cue that cannot be read: a timing line that is not a timing line, an
+    #: end before its start, or a cue that overlaps the one before it.  The cue
+    #: and the line are named, so the user is pointed at a place in the file.
+    MALFORMED_CUE = "NS-EXPORT-6006"
+    #: A JSON transcript that does not describe one: unknown fields, a wrong
+    #: type, a timestamp that is not a number.
+    MALFORMED_JSON = "NS-EXPORT-6007"

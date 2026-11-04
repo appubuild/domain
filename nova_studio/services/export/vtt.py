@@ -1,4 +1,4 @@
-"""L3 — export: WebVTT (``.vtt``).
+"""L3 — export: WebVTT (``.vtt``), read and written.
 
 WebVTT is what the web platform reads, and it is the only one of the two
 sidecar formats that knows anything about *where* a caption goes and *who* is
@@ -23,7 +23,26 @@ Timestamps are ``HH:MM:SS.mmm`` — a full stop, not SubRip's comma — and the
 file starts with ``WEBVTT`` on a line of its own, followed by a blank line, as
 the specification requires a browser to demand.
 
-No file is written: this layer has no I/O (ADR-0002).
+**Reading one** is the other half, and it returns a
+:class:`~nova_studio.domain.asr.Transcript` — the same shape every provider
+returns — so an imported file goes through the *same* pipeline as a recognition.
+What the reader does with the things only WebVTT has:
+
+* **``<v Ada>`` becomes the speaker.** It is the one piece of meaning the format
+  carries that plain text does not, so it is kept rather than stripped.
+* **Entities are put back**: ``&amp;``, ``&lt;``, ``&gt;``, ``&nbsp;`` and the
+  two direction marks, which the writer escapes and nothing else will.
+* **``NOTE``, ``STYLE`` and ``REGION`` blocks are skipped**, because they are
+  not cues and a file that carries them is still a perfectly good file.
+* **Cue settings are read for nothing.** They say where a caption goes in a
+  player that honours them; a project's own placement is a pipeline stage, and
+  importing a guess would overwrite a decision the editor is about to make.
+
+The refusals are the ones `srt.py` makes, for the same reasons: a cue that ends
+before it starts, and a cue that overlaps the one before it, are reported with
+the cue's number rather than trimmed to fit.
+
+No file is read or written: this layer has no I/O (ADR-0002).
 """
 
 from __future__ import annotations
@@ -31,13 +50,28 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final
 
 from nova_studio.core.result import Result, failed, ok
+from nova_studio.domain.asr import Transcript, TranscriptSegment
 from nova_studio.domain.captions import DEFAULT_LAYER_ID
 from nova_studio.services.export.layers import layer_cues
+from nova_studio.services.export.parse import (
+    blocks_of,
+    malformed_cue,
+    malformed_file,
+    plain_text,
+    timing_of,
+    voice_of,
+)
 
 if TYPE_CHECKING:
     from nova_studio.domain.captions import CaptionDocument, CaptionSegment
 
-__all__ = ["to_vtt", "vtt_timestamp"]
+__all__ = ["from_vtt", "to_vtt", "vtt_timestamp"]
+
+#: How this format names itself in an error, so the message reads as English.
+_FORMAT: Final[str] = "WebVTT"
+
+#: Blocks that are not cues, however much they look like them.
+_NOT_A_CUE: Final[frozenset[str]] = frozenset({"NOTE", "STYLE", "REGION"})
 
 #: How the anchor's horizontal half is said in WebVTT.
 _ALIGN: Final[dict[str, str]] = {"left": "left", "center": "center", "right": "right"}
@@ -88,6 +122,89 @@ def to_vtt(
 
     blocks = [_block(cue, settings=settings, voice=voice) for cue in cues]
     return ok(f"{_HEADER}\n\n" + "\n".join(blocks))
+
+
+def from_vtt(text: str, *, language: str = "") -> Result[Transcript]:
+    """Read WebVTT text as a transcript.
+
+    Args:
+        text: The whole file.
+        language: The BCP-47 tag to file it under, when neither the file nor its
+            header says.
+
+    Returns:
+        ``Ok`` with a transcript of one segment per cue — no word timings,
+        because a WebVTT file has none unless it carries timestamp tags, which
+        are dropped with the rest of the markup — or ``Err`` naming the cue that
+        could not be read.
+    """
+    blocks = blocks_of(text)
+    if not blocks or not blocks[0][0].startswith(_HEADER):
+        return failed(malformed_file(_FORMAT, "it does not start with WEBVTT"))
+
+    segments: list[TranscriptSegment] = []
+    number = 0
+    for block in blocks[1:]:
+        if block[0].split()[0].upper() in _NOT_A_CUE:
+            continue
+        at = _timing_line_of(block)
+        if at is None:
+            continue
+        number += 1
+        times = timing_of(block[at])
+        if times is None:
+            return failed(
+                malformed_cue(
+                    _FORMAT, number, f"{block[at]!r} is not a timing line", line=block[at]
+                )
+            )
+        start_ms, end_ms = times
+        if end_ms <= start_ms:
+            return failed(
+                malformed_cue(
+                    _FORMAT,
+                    number,
+                    f"it ends at {end_ms} ms, before it starts at {start_ms} ms",
+                    line=block[at],
+                )
+            )
+        if segments and start_ms < segments[-1].end_ms:
+            return failed(
+                malformed_cue(
+                    _FORMAT,
+                    number,
+                    f"it starts at {start_ms} ms, before cue {number - 1} ends "
+                    f"at {segments[-1].end_ms} ms",
+                    line=block[at],
+                )
+            )
+        # The voice tag is taken off before the markup is stripped: it is
+        # meaning, and stripping it would lose who is talking.
+        raw = "\n".join(block[at + 1 :])
+        named = voice_of(raw)
+        said = plain_text(named[1] if named else raw, unescape_entities=True).strip()
+        if not said:
+            continue
+        segments.append(
+            TranscriptSegment(
+                start_ms=start_ms,
+                end_ms=end_ms,
+                index=len(segments),
+                text=said,
+                speaker=named[0] if named else None,
+            )
+        )
+    if not segments:
+        return failed(malformed_file(_FORMAT, "it holds no cues with text in them"))
+    return ok(Transcript(segments=tuple(segments), language=language))
+
+
+def _timing_line_of(block: tuple[str, ...]) -> int | None:
+    """Which line of a WebVTT block carries the timings, if any does."""
+    for position, line in enumerate(block):
+        if "-->" in line:
+            return position
+    return None
 
 
 def _block(cue: CaptionSegment, *, settings: bool, voice: bool) -> str:
