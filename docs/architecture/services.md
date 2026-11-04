@@ -617,6 +617,7 @@ services/captions/
 ├── segmentation.py   CueRules · CueSpan · cue_spans · build_cues
 ├── build.py          transcript → CaptionDocument
 ├── merge.py          regeneration: a new transcription that keeps the edits
+├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
 ├── cues.py           CueBreaker — the Break stage
 └── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
 ```
@@ -683,6 +684,8 @@ document, a decoder or a clock.
 | `build_cues(transcript, rules)` | "which words go together, and when" |
 | `cue_spans(words, rules)` | the same, over words of any kind — the reusable core |
 | `CueBreaker().apply(doc, ctx)` | "re-break this document's cues" |
+| `CuePlacer().apply(doc, ctx)` | "put these cues where they do not clash" |
+| `cue_box(cue, ctx)` | "which pixels does this cue cover" |
 | `CaptionPipeline.run(doc, ctx)` | "run every enabled stage, then check the result" |
 | `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
 | `regenerate(doc, transcript)` | "run the model again, and keep my corrections" |
@@ -725,7 +728,10 @@ survives is *human* work: ADR-0009 §7 files every manual correction under an
 re-transcription that moves a cue 300 ms re-attaches the correction instead of
 orphaning it.
 
-**Performance.** One pass over the words, O(n) in the transcript, with a grapheme
+**Performance.** Placement is O(cues x cues on screen at once), which in practice
+is O(cues): overlapping cues are invalid, so the only boxes a cue has to dodge
+are the protected regions and the other layers showing at that moment. One pass
+over the words, O(n) in the transcript, with a grapheme
 count per candidate cue — graphemes rather than code points, because an emoji, an
 accent and a Bengali conjunct are all one character to a reader. Character
 timings come from the domain's weighted proportional split, which is why karaoke
@@ -751,8 +757,10 @@ No model, no audio, no clock: that is the point of ADR-0009 §3.
 
 **Future expansion.**
 
-* **The remaining stages** — `refine`, `emoji`, `highlight`, `position`,
-  `resolve`, `bake` — each as its own module, each with its own tests.
+* **The remaining stages** — `refine`, `emoji`, `highlight`, `bake` — each as
+  its own module, each with its own tests. `Position` and `Resolve` are built
+  (`positioning.py`), and `services/ai/` will feed it the face boxes that make
+  `protected` more than a lower third.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as a
   `Job`.
@@ -763,8 +771,6 @@ No model, no audio, no clock: that is the point of ADR-0009 §3.
   review rather than guessing.
 * **Translation layers**, which are a second `CaptionLayer` of the same document,
   not a second document.
-* **Smart positioning and collision resolution** built on `CaptionRect.overlaps`,
-  once face detection lands in `services/ai/`.
 * **Import/export** of SRT, VTT and JSON, in `services/export/`.
 
 ## 9. Conventions a new feature must follow

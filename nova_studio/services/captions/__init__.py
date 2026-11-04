@@ -25,6 +25,7 @@ services/captions/
 ├── segmentation.py   CueRules · cue_spans · build_cues — the breaker
 ├── build.py          transcript → CaptionDocument (ADR-0009 §1, §2, §4)
 ├── merge.py          regeneration: a new transcription that keeps the edits
+├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
 ├── cues.py           CueBreaker — the Break stage
 └── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
 ```
@@ -49,6 +50,8 @@ document, a decoder or a clock.
 | `build_cues(transcript, rules)` | "which words go together, and when" |
 | `cue_spans(words, rules)` | the same, over words of any kind — the reusable core |
 | `CueBreaker().apply(doc, ctx)` | "re-break this document's cues" |
+| `CuePlacer().apply(doc, ctx)` | "put these cues where they do not clash" |
+| `cue_box(cue, ctx)` | "which pixels does this cue cover" |
 | `CaptionPipeline.run(doc, ctx)` | "run every enabled stage, then check the result" |
 | `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
 | `held_until(…)` / `time_to_read(…)` / `chars_per_second(…)` | the timing arithmetic |
@@ -85,7 +88,11 @@ breaks, the hold that never overlaps the next cue, derived timings for a
 provider that gave none, and that no word is ever dropped.
 `tests/services/test_captions_break.py` pins the same rules as a pipeline
 stage — locked cues untouched, word objects carried rather than rebuilt.
-`test_captions_build.py` pins the transcript seam, `test_captions_merge.py` the
+`test_captions_positioning.py` pins placement: the safe area as a hard wall, a
+cue moved off a protected lower third, a locked cue that is an obstacle for
+everything else, two layers on screen at once, and the same fractions at twice
+the frame size. `test_captions_build.py` pins the transcript seam,
+`test_captions_merge.py` the
 regeneration — a correction re-attached, a locked line kept, an unmatched edit
 reported rather than guessed at — and `test_captions_styles.py` the presets. No
 model, no audio, no clock: that is the point of ADR-0009 §3.
@@ -94,8 +101,9 @@ model, no audio, no clock: that is the point of ADR-0009 §3.
 
 **Future expansion.**
 
-* **The remaining stages** — `refine`, `emoji`, `highlight`, `position`,
-  `resolve`, `bake` — each as its own module, each with its own tests.
+* **The remaining stages** — `refine`, `emoji`, `highlight`, `bake` — each as
+  its own module, each with its own tests. `Position` and `Resolve` are built
+  (`positioning.py`).
 * **The timeline reconciler** (ADR-0009 §8), which commits a document to caption
   clips in one transaction.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
@@ -129,6 +137,14 @@ from nova_studio.services.captions.pipeline import (
     StageContext,
     stage_failed,
 )
+from nova_studio.services.captions.positioning import (
+    DEFAULT_CHAR_ASPECT,
+    DEFAULT_MAX_SHIFT_LINES,
+    DEFAULT_PADDING_FRACTION,
+    CueBox,
+    CuePlacer,
+    cue_box,
+)
 from nova_studio.services.captions.segmentation import (
     DEFAULT_CUE_RULES,
     CueRules,
@@ -155,7 +171,10 @@ from nova_studio.services.captions.timing import (
 )
 
 __all__ = [
+    "DEFAULT_CHAR_ASPECT",
     "DEFAULT_CUE_RULES",
+    "DEFAULT_MAX_SHIFT_LINES",
+    "DEFAULT_PADDING_FRACTION",
     "DEFAULT_TEMPLATE",
     "LOOKS",
     "Backdrop",
@@ -175,6 +194,7 @@ __all__ = [
     "apply_look",
     "build_cues",
     "chars_per_second",
+    "cue_box",
     "cue_spans",
     "document_from_transcript",
     "held_until",
