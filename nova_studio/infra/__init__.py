@@ -1,47 +1,59 @@
-"""L4 — infrastructure: the concrete adapters.
+"""L4 — `infra`: the outermost ring, where the machine finally gets touched.
 
-This is the only ring allowed to touch the outside world.  Every native dependency
-lives behind a port implemented here, so the cost of replacing one is confined to
-one directory (ADR-0002).
+Everything inside `core`, `domain`, `ports` and `services` is testable without a
+filesystem, a clock that moves, a codec or a GPU. That is not an aesthetic
+preference — it is what makes a ten-year-old codebase changeable — and it is only
+possible because the things that *do* touch the machine are all here, behind
+ports, in adapters that do one job.
 
-``infra`` is where the banned-import list is *permitted*: ``av``, ``cv2``, ``PIL``,
-``sqlite3``, ``faster_whisper``, ``ctranslate2``, ``imageio_ffmpeg``,
-``onnxruntime``, ``watchfiles``.  Anywhere else in the package, importing them
-fails the build.
+**What belongs in this package, and what does not.**
 
-Hard rules:
+* **Belongs:** a filesystem, a ZIP, a SQLite file, a subprocess, a device, a
+  driver, a clock that reads the wall, randomness for a file name. Anything whose
+  failure mode is "the disk is full" or "FFmpeg is not installed".
+* **Does not belong:** a decision. Whether to autosave, what to evict from a
+  cache, whether a project is too new to open, which proxy resolution to generate
+  — all of those are `services` or `domain`, and all of them are testable. An
+  adapter that decides policy puts a second copy of the policy where the tests
+  are slow and the rule is invisible.
 
-1. **Implements a port, exports no new interface.**  A consumer in L2/L3 names the
-   port; nothing outside ``infra`` and ``api`` imports an adapter directly.  The
-   binding is registered in the DI container at composition time.
-2. **Failure is translated at this boundary.**  A ``av.error.ValueError`` from
-   PyAV, an ``sqlite3.OperationalError``, a CUDA out-of-memory — each becomes a
-   ``NovaError`` with a stable ``NS-<DOMAIN>-<NNNN>`` code before it travels
-   inward.  Native exception types must not leak into services, because their
-   messages change between library versions and the frontend localises on codes,
-   not strings.
-3. **Resource discipline is explicit.**  Containers are closed, buffers are
-   released, GPU memory is accounted against the VRAM ledger (ADR-0012).  A decode
-   loop that leaks a file handle will exhaust the OS limit partway through a
-   feature-length export, which is the worst possible moment to discover it.
-4. **May import** anything, including third-party libraries — it is the outermost
-   ring.  May not be imported by ``core``, ``domain``, ``ports`` or ``services``.
+**The rules an adapter here keeps.**
 
-Adapters (populated in Stages 3–12)::
+1. **One port, one adapter, one job.** `ports/` declares the capability; this
+   package implements it. An adapter does not grow a second capability because
+   two call sites wanted it — the port changes instead, and the port is reviewed.
+2. **Third-party I/O is imported here and nowhere else.** `av`, `cv2`, `sqlite3`,
+   `faster_whisper`, `PIL`, `webview` are banned outside `infra` by
+   `scripts/check_layering.py`, and `sqlite3` is further confined to
+   `infra/persistence/sqlite.py` by a lint rule — because one driver import in a
+   service is a service that can no longer be tested without a database.
+3. **Resources are owned and released.** An adapter that opens a file closes it,
+   in a `with` or in a `close()` that is safe to call twice. No module state, no
+   singletons, no connection that outlives its owner.
+4. **Errors cross the boundary as `Result[T]` with the port's codes.** A driver
+   exception is a detail; `NS-STORAGE-4001` with a remedy is a sentence the user
+   can act on. The one place that raises is a unit of work whose caller's
+   bookkeeping is already wrong.
+5. **The clock, the ids and the randomness are injected or documented.** An
+   adapter may read a clock only because it is the adapter that *is* the clock;
+   anything else that needs time takes it as an argument.
+6. **Everything here is replaceable.** Every module in this package implements a
+   port, so every module can be swapped for a different implementation without a
+   service noticing. That is the test of whether the seam is real.
 
-    media/         PyAV decoding and encoding, FFmpeg CLI fallback, probing
-    imaging/       OpenCV and Pillow frame operations, colour conversion
-    persistence/   SQLite metadata store, JSON WAL, .nova project archive
-    asr/           faster-whisper transcription, alignment, translation
-    render/        GPU probes, shader-backed effects, encoder selection
-    filesystem/    media discovery, thumbnail cache, file watching
-    platform/      process supervision, single-instance lock, paths
-    clock.py       the real Clock and IdFactory implementations
+**What is here now.**
 
-Performance note: adapters are the only place where a per-frame allocation or an
-unnecessary colour-space round trip is acceptable to trade for correctness, but
-they are also where such a mistake costs the most.  Anything on the frame path is
-benchmarked against ``scripts/bench_render.py`` baselines before it merges.
+```
+infra/
+└── persistence/    the .nova container, the crash journal, the cache index
+                    and the unit of work that commits them in order
+```
+
+Still to come, each behind its own port: `media` (PyAV), `render` (FFmpeg and
+the GPU), `asr` (Faster Whisper), `clock`, `ident`, `jobs`, and the desktop
+adapters ADR-0014 needs for the portable build.
 """
 
 from __future__ import annotations
+
+__all__: list[str] = []

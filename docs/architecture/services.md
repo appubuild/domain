@@ -258,11 +258,11 @@ every 200 commands rather than every one (ADR-0015 §6).
 
 **Future expansion.**
 
-* **Migration.** `format_version` is compared but not yet migrated; the ordered
-  chain of `vN → vN+1` functions belongs here, applied inside `open()`.
 * **Save-as and template export**, which reuse `_documents` verbatim.
-* **Autosave to a sidecar** (ADR-0015 §6) once `infra/persistence` exists, so a
-  checkpoint never touches the user's file until they save.
+* **The autosave service** (ADR-0015 §6) now that `infra/persistence` exists:
+  `open_journal()` supplies the log, `plan_recovery` already decides what to
+  offer a user after a crash, and `AutosaveState` already answers "is it time".
+  What is missing is the one service that owns the clock and calls the three.
 
 ---
 

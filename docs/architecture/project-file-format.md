@@ -60,7 +60,8 @@ project.nova  (ZIP)
 ├── timeline/
 │   ├── document.json          THE authoritative timeline graph     required
 │   └── revisions/             bounded checkpoints (default 5)      optional
-│       └── 000000.json …
+│       ├── index.json         when each was taken, what it is called
+│       └── 000000.json …      plain copies of document.json
 ├── captions/
 │   ├── <doc_id>.json          one CaptionDocument per id           optional
 │   └── sidecar/*.srt|*.vtt    user-exported copies, never read     optional
@@ -211,6 +212,20 @@ The session database, if any, is a derived index rebuilt from it on open.
 Checkpoints of `timeline/document.json`, named by
 `domain/persistence.revision_document(sequence)`: six-digit, zero-padded, so
 that lexical order equals chronological order and `unzip -l` reads as history.
+
+A revision entry is a **plain copy of `timeline/document.json`**, byte for byte.
+`unzip -p project.nova timeline/revisions/000003.json` gives you a timeline you
+can hand to any build, and `diff` between two revisions shows the edit and
+nothing else. What it is not is a wrapper: the moment a decoder rejects unknown
+fields (§6.2), a revision carrying metadata keys of its own is a revision that
+cannot be restored.
+
+The metadata therefore lives in **`timeline/revisions/index.json`** — one list
+of `RevisionRef` wires (sequence, `recorded_at_ms`, `label`, `checksum`), oldest
+first, written and read by `infra/persistence/archive.py`. A reader **may**
+ignore it: the revisions themselves are still there, and a project whose index
+is missing is a project that no longer knows *when* its checkpoints were taken,
+which is a loss of a label and not of an edit.
 
 The set is **bounded** — `CheckpointPolicy.max_revisions`, default **5** — and
 `revisions_to_prune` returns the oldest beyond the bound, oldest-first, which is
@@ -386,10 +401,12 @@ anything recomputed can go stale.
 
 ## 12. Open decisions
 
-* **SQLite container vs ZIP.** ADR-0004 §6 describes a SQLite container;
-  ADR-0015 decides `.nova` is a ZIP. The persistence port accepts either behind
-  one adapter, but the choice must be made explicitly before `infra/persistence`
-  is built. Tracked in ARCHITECTURE §6.1.
+* ~~**SQLite container vs ZIP.**~~ **Decided (2026-11-04).** The `.nova` file
+  is the ZIP described here and is the whole project; SQLite is a **sidecar for
+  derived data only** — the install-wide cache index in the app data directory,
+  never inside the archive and never needed to open a project. SQLite's WAL and
+  shared-memory files cannot live inside a ZIP member, and a project that needed
+  a database to be read could be orphaned by one. See ARCHITECTURE §6.1.
 * **Embedded proxies by default.** Portability says embed; size says reference.
   The format allows both; the default is a product decision.
 * **Sidecar retention.** `captions/sidecar/` is written but never read. Either

@@ -371,13 +371,20 @@ Rules the port makes mechanical rather than conventional:
    journal, so `read_since` returns what parsed and sets `JournalWindow.torn_tail`.
 5. **Entry names are validated** by the domain predicate before anything is written.
 
-*Open decision — needs a call before `infra/persistence` is written:* ADR-0004 §6 calls the
-per-project store a SQLite container while ADR-0015 defines `.nova` as a ZIP of
-canonical-JSON documents. SQLite's WAL and shared-memory files cannot live inside a ZIP
-member, which argues for **a sidecar SQLite database in the project's data directory with
-the archive kept as the portable artefact** (and the tables rebuilt from the document when
-the sidecar is missing — which is the recovery path anyway). The port accepts either
-answer as one adapter, not one rewrite, but the choice should be made explicitly.
+**Decided (2026-11-04, and built):** the `.nova` archive is the project, and SQLite is a
+sidecar for derived data only.
+
+| | What it holds | Where it lives | May it be deleted? |
+| --- | --- | --- | --- |
+| `.nova` (ZIP of canonical JSON) | the project: manifest, settings, the authoritative timeline graph, captions, revisions | wherever the user put it | **No** — that is the edit |
+| `cache.sqlite3` (SQLite, WAL) | the index of derived bytes: proxies, thumbnails, waveforms, analysis | the app data directory | Yes — costs a rebuild, loses nothing |
+| `autosave/<project>/cmds-*.ndjson` | the command journal since the last checkpoint | the app data directory | Yes — costs the unsaved tail, which is all it holds |
+
+SQLite's WAL and shared-memory files cannot live inside a ZIP member, which is the
+mechanical reason; the architectural one is that a project needing a database to be read
+is a project a database can orphan. Because the archive is self-describing, the recovery
+path for a missing sidecar — rebuild from the document — is the same path a crash takes,
+so there is one path and not two.
 
 ---
 
