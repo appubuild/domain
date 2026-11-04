@@ -737,6 +737,7 @@ services/captions/
 ├── refine.py         Refiner · RefineRules — speech as spoken, text as read
 ├── commit.py         what a document asks a caption track to hold (ADR-0009 §8)
 ├── cues.py           CueBreaker — the Break stage
+├── bake.py           AnimationBaker · AnimationSpec — a caption, as keyframes
 └── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
 ```
 
@@ -928,20 +929,33 @@ by the user; a map is data a project extends with
 and unambiguous emotions, never "no" or "yes", because a cross on every "no" is
 what makes a professional caption look automated. An emoji a human chose is kept.
 
+**Bake, in one paragraph.** `bake.py` is the last stage and the only one whose
+product is not a document. `AnimationBaker().bake(document, timebase=…)` returns
+`BakedCaptions`: one `BakedCue` per cue, each holding `BakedPiece`s — a word, or
+a letter when the spec asks — whose parameters are the very `Animatable` objects
+`domain/animation.py` defines. That is the whole reason preview and export cannot
+drift apart (ADR-0009 §6): both evaluate the same keyframes, and because they are
+the editor's own, the Properties panel can show them and an editor can drag them
+— a bounce is three keyframes, not a curve buried in a caption shader. Modes are
+`AnimationSpec` values in one table, so *TikTok* and *Netflix* are rows rather
+than branches, and a mode a newer build named and this one has never heard of is
+`NS-CAPTION-4014` rather than a silent fall-back to "none" that would export
+something the user never saw. The module draws nothing: where a word sits is
+`Position`'s business, what it looks like is the template's, and `fill` — the
+0 → 1 a karaoke word tracks — is a number the renderer decides the colour of.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **The remaining stage** — `bake` — as its own module with its own tests.
-  `Refine`, `Emoji`, `Highlight`, `Position` and `Resolve` are built (`refine.py`,
-  `emoji.py`, `highlight.py`, `positioning.py`), and `services/ai/` will feed it the face boxes that make
-  `protected` more than a lower third.
-* **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
+* **The assembly**: a `default_pipeline()` that names the twelve stages in
+  order, and a runner that drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py`, runs the pure half as a `Job`,
-  and then calls `commit.py` so the timeline follows the document it just built.
-* **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
-  `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as a
-  `Job`.
+  calls `bake()` for the keyframes and `commit.py` so the timeline follows the
+  document it just built. Every stage module exists; nothing has wired them
+  together yet.
+* **`services/ai/` feeding `protected`** the face boxes that make it more than a
+  lower third.
 * **The reconciler's window into the renderer**: a caption clip names a cue by
   address (`"<track>.<layer>.<index>"`), so the renderer resolves it against the
   document rather than carrying a copy of the text and its styling that would

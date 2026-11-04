@@ -27,7 +27,8 @@ services/captions/
 ├── merge.py          regeneration: a new transcription that keeps the edits
 ├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
 ├── cues.py           CueBreaker — the Break stage
-└── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
+├── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
+└── bake.py           AnimationBaker · AnimationSpec · BakedCaptions — keyframes
 ```
 
 **Backend / frontend.** The frontend never breaks a cue or invents a style. It
@@ -53,6 +54,8 @@ document, a decoder or a clock.
 | `CuePlacer().apply(doc, ctx)` | "put these cues where they do not clash" |
 | `cue_box(cue, ctx)` | "which pixels does this cue cover" |
 | `CaptionPipeline.run(doc, ctx)` | "run every enabled stage, then check the result" |
+| `AnimationBaker().bake(doc, timebase=…)` | "these cues, as keyframes the timeline already understands" |
+| `spec_for(mode)` | "what this animation mode means, as data" |
 | `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
 | `held_until(…)` / `time_to_read(…)` / `chars_per_second(…)` | the timing arithmetic |
 
@@ -101,9 +104,10 @@ model, no audio, no clock: that is the point of ADR-0009 §3.
 
 **Future expansion.**
 
-* **The remaining stages** — `refine`, `emoji`, `highlight`, `bake` — each as
-  its own module, each with its own tests. `Position` and `Resolve` are built
-  (`positioning.py`).
+* **The remaining stages** — every stage named in ADR-0009 §3 now has its
+  module: `refine.py`, `emoji.py`, `highlight.py`, `positioning.py` and
+  `bake.py`. What is left is the assembly: a `default_pipeline()` that names
+  them in order.
 * **The timeline reconciler** (ADR-0009 §8), which commits a document to caption
   clips in one transaction.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
@@ -116,6 +120,22 @@ model, no audio, no clock: that is the point of ADR-0009 §3.
 
 from __future__ import annotations
 
+from nova_studio.services.captions.bake import (
+    DEFAULT_BAKE_SPEC,
+    PARAM_FILL,
+    PARAM_OFFSET,
+    PARAM_OPACITY,
+    PARAM_SCALE,
+    SPECS,
+    AnimationBaker,
+    AnimationSpec,
+    BakedCaptions,
+    BakedCue,
+    BakedPiece,
+    Granularity,
+    bake_cue,
+    spec_for,
+)
 from nova_studio.services.captions.build import (
     document_from_transcript,
     segments_from_transcript,
@@ -226,7 +246,12 @@ __all__ = [
     "DEFAULT_UNITS",
     "FILLERS_BY_LANGUAGE",
     "LOOKS",
+    "AnimationBaker",
+    "AnimationSpec",
     "Backdrop",
+    "BakedCaptions",
+    "BakedCue",
+    "BakedPiece",
     "CaptionCommit",
     "CaptionErrorCode",
     "CaptionLook",
@@ -236,6 +261,7 @@ __all__ = [
     "CueBreaker",
     "CueRules",
     "CueSpan",
+    "Granularity",
     "HighlightRules",
     "Highlighter",
     "RefineRules",
@@ -246,6 +272,7 @@ __all__ = [
     "WordAnimation",
     "apply_edit",
     "apply_look",
+    "bake_cue",
     "build_cues",
     "caption_clip",
     "chars_per_second",
@@ -269,6 +296,7 @@ __all__ = [
     "refine_words",
     "regenerate",
     "segments_from_transcript",
+    "spec_for",
     "stage_failed",
     "term_counts",
     "term_counts_of",
