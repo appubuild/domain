@@ -739,7 +739,8 @@ services/captions/
 ├── cues.py           CueBreaker — the Break stage
 ├── bake.py           AnimationBaker · AnimationSpec — a caption, as keyframes
 ├── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
-└── assembly.py       default_pipeline — the twelve names, wired in order
+├── assembly.py       default_pipeline — the twelve names, wired in order
+└── runner.py         CaptionRunner — the five stages that need a machine
 ```
 
 **Backend / frontend.** The frontend never breaks a cue or invents a style. It
@@ -960,15 +961,29 @@ the look has the last word on the text, and before break, so the breaker uses th
 look's own line budget — a TikTok look breaks shorter than a broadcast one, and
 that must be the same decision the template made.
 
+**The runner, in one paragraph.** `runner.py` is the seam where ADR-0009 meets
+the machine. `assembly.py` registers the seven stages that are pure; the other
+five — `extract`, `vad`, `transcribe`, `diarise`, `translate` — need audio, a
+model or the network, and a `StageContext` carries frame geometry and a language
+and nothing else, so they are the body of `CaptionRunner`, whose constructor
+takes the ports. That is what keeps the decisive consequence of the ADR true: a
+test hands in fakes and gets a real run, with no model weights anywhere. Two
+rules live here because here is the only place they can. **Audio reaches a
+provider as 16 kHz mono float32, always** — one rule, in one method, instead of
+one each adapter has to remember. And **silence trimming is undone**: the VAD
+cuts the room tone, the provider numbers its words against what is left, and
+`_retimed` puts every one of those numbers back through the table `_trimmed`
+kept of where each piece came from. A transcript that comes back two seconds
+early is the bug that table exists to prevent.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **The runner**, which drives the five stages that need the world outside
-  (`extract`, `vad`, `transcribe`, `diarise`, `translate`) through
-  `ports/asr.py`, runs `default_pipeline()` as a `Job`, calls `bake()` for the
-  keyframes and `commit.py` so the timeline follows the document it just built.
-  Every stage module and the assembly exist; the runner does not yet.
+* **The reconciler's call site.** A run finishes with a document and its
+  keyframes; what it does not do yet is hand them to `commit.py` so the timeline
+  follows, nor report itself as a `Job` — both are a caller's to wire, and both
+  are one call.
 * **`services/ai/` feeding `protected`** the face boxes that make it more than a
   lower third.
 * **The reconciler's window into the renderer**: a caption clip names a cue by

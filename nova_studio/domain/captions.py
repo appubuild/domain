@@ -1479,17 +1479,16 @@ def validate_caption_document(document: CaptionDocument) -> str:
 
     A document that fails this must not reach the renderer: what it describes is
     captions that overlap, flash past, or cannot be read.
+
+    **Overlap is judged inside a layer, not across them.** A translation sits on
+    top of the line it translates, at the very same moment, and so does a
+    commentary track describing a sound: calling that an overlap would forbid the
+    one thing ADR-0009 §7 asks for. Two cues *of one layer* on screen together is
+    still the mistake it always was — the viewer can read neither.
     """
     for position, segment in enumerate(document.segments):
         if segment.index != position:
             return f"segment {position} has index {segment.index}; indices must be sequential"
-        if position > 0:
-            previous = document.segments[position - 1]
-            if segment.start_ms < previous.end_ms:
-                return (
-                    f"segment {segment.index} starts at {segment.start_ms} ms, before "
-                    f"segment {previous.index} ends at {previous.end_ms} ms"
-                )
         if segment.duration_ms < CAPTION_MIN_DURATION_MS:
             return (
                 f"segment {segment.index} lasts {segment.duration_ms} ms, below the "
@@ -1501,6 +1500,15 @@ def validate_caption_document(document: CaptionDocument) -> str:
                 f"segment {segment.index} is read at {rate:.1f} characters per second, "
                 f"above the {CAPTION_MAX_CPS} cps ceiling"
             )
+    previous_by_layer: dict[str, CaptionSegment] = {}
+    for segment in document.segments:
+        earlier = previous_by_layer.get(segment.layer_id)
+        if earlier is not None and segment.start_ms < earlier.end_ms:
+            return (
+                f"segment {segment.index} starts at {segment.start_ms} ms, before "
+                f"segment {earlier.index} ends at {earlier.end_ms} ms"
+            )
+        previous_by_layer[segment.layer_id] = segment
     return ""
 
 

@@ -988,3 +988,50 @@ class TestValidateCaptionDocument:
 
     def test_the_document_validates_itself(self) -> None:
         assert CaptionDocument().validate() == ""
+
+    def test_a_translation_sitting_on_top_of_the_original_is_fine(self) -> None:
+        """A translation is a second layer at the very same moment (ADR-0009 §7)."""
+        document = CaptionDocument(
+            segments=(
+                _segment(0, 0, 1_000, "good morning", layer_id="primary"),
+                _segment(1, 0, 1_000, "guten morgen", layer_id="de"),
+            ),
+            layers=(
+                CaptionLayer.primary(language="en"),
+                CaptionLayer(layer_id="de", language="de", kind=CaptionLayerKind.TRANSLATION),
+            ),
+        )
+        assert validate_caption_document(document) == ""
+
+    def test_two_cues_of_one_layer_on_screen_together_are_still_refused(self) -> None:
+        document = CaptionDocument(
+            segments=(
+                _segment(0, 0, 1_000, "good morning", layer_id="primary"),
+                _segment(1, 0, 1_000, "and also this", layer_id="primary"),
+            )
+        )
+        assert "before segment 0 ends" in validate_caption_document(document)
+
+    def test_an_overlap_is_refused_even_when_another_layer_sits_between(self) -> None:
+        document = CaptionDocument(
+            segments=(
+                _segment(0, 0, 1_000, "good morning", layer_id="primary"),
+                _segment(1, 0, 1_000, "guten morgen", layer_id="de"),
+                _segment(2, 500, 1_500, "a second line", layer_id="primary"),
+            ),
+            layers=(
+                CaptionLayer.primary(language="en"),
+                CaptionLayer(layer_id="de", language="de", kind=CaptionLayerKind.TRANSLATION),
+            ),
+        )
+        assert "before segment 0 ends" in validate_caption_document(document)
+
+    def test_a_translation_too_fast_to_read_is_still_caught(self) -> None:
+        document = CaptionDocument(
+            segments=(_segment(0, 0, 1_000, "a" * 60, layer_id="de"),),
+            layers=(
+                CaptionLayer.primary(language="en"),
+                CaptionLayer(layer_id="de", language="de", kind=CaptionLayerKind.TRANSLATION),
+            ),
+        )
+        assert "cps ceiling" in validate_caption_document(document)

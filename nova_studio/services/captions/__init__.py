@@ -57,6 +57,7 @@ document, a decoder or a clock.
 | `AnimationBaker().bake(doc, timebase=…)` | "these cues, as keyframes the timeline already understands" |
 | `spec_for(mode)` | "what this animation mode means, as data" |
 | `default_pipeline(look=…)` | "the stages of ADR-0009 §3, in their order" |
+| `CaptionRunner(…).run(request, timebase=…)` | "caption this, end to end" |
 | `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
 | `held_until(…)` / `time_to_read(…)` / `chars_per_second(…)` | the timing arithmetic |
 
@@ -116,7 +117,6 @@ model, no audio, no clock: that is the point of ADR-0009 §3.
   a `Job`.
 * **Translation layers**, which are a second `CaptionLayer` of the same
   document, not a second document.
-* **Import/export** of SRT, VTT and JSON, in `services/export/`.
 """
 
 from __future__ import annotations
@@ -212,6 +212,15 @@ from nova_studio.services.captions.refine import (
     refine_words,
     tidy_text,
 )
+from nova_studio.services.captions.runner import (
+    PROVIDER_CHANNELS,
+    PROVIDER_SAMPLE_RATE,
+    TRIM_PADDING_MS,
+    CaptionRequest,
+    CaptionRun,
+    CaptionRunner,
+    ProgressSink,
+)
 from nova_studio.services.captions.segmentation import (
     DEFAULT_CUE_RULES,
     CueRules,
@@ -254,8 +263,11 @@ __all__ = [
     "FILLERS_BY_LANGUAGE",
     "IO_STAGES",
     "LOOKS",
+    "PROVIDER_CHANNELS",
+    "PROVIDER_SAMPLE_RATE",
     "PURE_STAGES",
     "STAGE_ORDER",
+    "TRIM_PADDING_MS",
     "AnimationBaker",
     "AnimationSpec",
     "Backdrop",
@@ -274,6 +286,7 @@ __all__ = [
     "Granularity",
     "HighlightRules",
     "Highlighter",
+    "ProgressSink",
     "RefineRules",
     "Refiner",
     "StageContext",
