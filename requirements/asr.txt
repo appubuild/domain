@@ -1,0 +1,14 @@
+# ---------------------------------------------------------------------------
+# Nova Studio — speech recognition extras
+#
+# Optional (ADR-0009): Nova Studio runs completely without these; the caption
+# engine then accepts transcripts from ExternalTranscriptProvider or
+# ManualTranscriptProvider and every other stage remains fully functional.
+#
+# faster-whisper pulls ctranslate2, tokenizers, onnxruntime (Silero VAD) and
+# huggingface-hub (model download).  Model weights are NOT installed by pip:
+# they are downloaded at runtime into <data>/models by the ModelDownloader,
+# which supports HF Hub, a mirror endpoint and fully offline local paths.
+# ---------------------------------------------------------------------------
+
+faster-whisper>=1.0,<2.0
