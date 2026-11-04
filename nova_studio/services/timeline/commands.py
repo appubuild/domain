@@ -750,6 +750,16 @@ class ReplaceTrackClipsCommand(TimelineCommand):
     create: bool = True
     #: Captured on execution: the track as it was, or ``None`` when it is new.
     previous: Track | None = None
+    #: Captured on execution: whether this command created the track.
+    #:
+    #: Only a command that made a track may take it away again.  A command that
+    #: was *refused* — a locked track, a track it was told not to create —
+    #: applied nothing, and its undo must not delete what it never made.  That
+    #: matters more than it sounds: a composite rolls a failure back by asking
+    #: the failed child to undo itself, so without this flag a refused commit
+    #: inside a multi-track sync would delete the very track it was refused
+    #: access to.
+    created: bool = False
 
     command_id = "timeline.replace-track-clips"
     display_name = "command.timeline.replace_track_clips"
@@ -773,6 +783,7 @@ class ReplaceTrackClipsCommand(TimelineCommand):
                         "and this command was told not to create it",
                     )
                 )
+            self.created = True
             created = _sorted_track(self.track_id, self.kind, self.track_name, self.clips)
             store.replace(timeline.with_track(created))
             return ok(
@@ -826,6 +837,10 @@ class ReplaceTrackClipsCommand(TimelineCommand):
             return failed(CommandError.not_executed(self.command_id))
         timeline = store.current()
         if self.previous is None:
+            if not self.created:
+                # Nothing was applied, so there is nothing to take back: the
+                # track that is there was there all along.
+                return ok(None)
             if timeline.track(self.track_id) is None:  # pragma: no cover - no-op commit
                 return ok(None)
             store.replace(timeline.without_track(self.track_id))

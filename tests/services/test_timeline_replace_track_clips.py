@@ -235,6 +235,26 @@ class TestWhatItRefuses:
         editor.execute(ReplaceTrackClipsCommand(track_id="captions", clips=clips))
         assert store.current() == before
 
+    def test_a_refused_command_does_not_delete_the_track_it_never_made(self) -> None:
+        """A command that applied nothing must not take anything away.
+
+        A composite rolls a failure back by asking the failed child to undo
+        itself, so a refused commit that undid "the track I created" would
+        delete the very track it was refused access to.  `created` is what
+        tells the two apart.
+        """
+        _, store = _editor(_track("captions", _clip("finished"), locked=True))
+        refused = ReplaceTrackClipsCommand(track_id="captions", clips=(_clip("fresh"),))
+        TimelineEditor(store=store, project_id="p1").execute(refused)
+        assert refused.created is False
+        assert store.current().track("captions") is not None
+
+    def test_a_command_that_never_ran_undoes_to_nothing(self) -> None:
+        _, store = _editor(_track("captions", _clip("finished")))
+        command = ReplaceTrackClipsCommand(track_id="captions", clips=(_clip("fresh"),))
+        assert command.undo(TimelineEditor(store=store, project_id="p1").context()).is_ok()
+        assert store.current().clip("finished") is not None
+
 
 # -- undo --------------------------------------------------------------------
 

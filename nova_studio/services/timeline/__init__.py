@@ -114,6 +114,12 @@ from nova_studio.services.timeline.ripple import (
     undo_ripple,
 )
 from nova_studio.services.timeline.store import TimelineStore, timeline_store
+from nova_studio.services.timeline.sync import (
+    SyncReport,
+    TrackSync,
+    sync_report,
+    sync_tracks,
+)
 
 __all__ = [
     "LiftClipCommand",
@@ -124,9 +130,11 @@ __all__ = [
     "Rippled",
     "SlipClipCommand",
     "SplitClipCommand",
+    "SyncReport",
     "TimelineCommand",
     "TimelineEditor",
     "TimelineStore",
+    "TrackSync",
     "TrimClipCommand",
     "TrimEdge",
     "lift_clip",
@@ -135,6 +143,8 @@ __all__ = [
     "slip_clip",
     "source_frames_for",
     "split_clip",
+    "sync_report",
+    "sync_tracks",
     "timeline_store",
     "undo_ripple",
 ]

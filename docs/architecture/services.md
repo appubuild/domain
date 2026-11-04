@@ -405,7 +405,12 @@ TimelineCommand (abstract)            commands.py
     ├── SlipClipCommand          delta_frames · accumulates · coalescible
     ├── SplitClipCommand         at_frame + a caller-supplied new id
     ├── LiftClipCommand          removes, leaves the gap
-    └── RippleDeleteCommand      closes the gap · MemoryClass.MEDIUM
+    ├── RippleDeleteCommand      closes the gap · MemoryClass.MEDIUM
+    └── ReplaceTrackClipsCommand "hold exactly this" · a generated track
+                                 records `created`, so a refusal undoes nothing
+
+sync.py  —  TrackSync · SyncReport · sync_tracks · sync_report
+            one CompositeCommand over several ReplaceTrackClipsCommands
 
 ripple.py  —  lift_clip · reinsert_clip · ripple_delete · undo_ripple
               split_clip · slip_clip · source_frames_for      (pure)
@@ -428,6 +433,8 @@ second piece of state: they record what they captured so they can put it back.
 | `split_clip(clip, at_frame, new_id)` | the two halves |
 | `slip_clip(clip, delta)` | the same clip, a different source window |
 | `source_frames_for(clip, frames)` | how much source a timeline span eats |
+| `sync_tracks(editor, tracks, ctx?)` | "make these tracks hold exactly this, in one transaction" |
+| `sync_report(editor, tracks)` | "what would a sync change — is it worth doing?" |
 
 **Events.** `CommandHistory` publishes `command.executed`, `command.reverted`
 and `command.failed` on the injected `EventBus`, carrying the affected ids and
@@ -466,7 +473,11 @@ reverse, and that every delta inverts.
 undo, the coalescing rules and the guard.
 `tests/services/test_timeline_editor.py` pins the door itself — undo/redo
 ordering, the Edit-menu state, and that a rejected command leaves the redo stack
-alone. No FFmpeg, no filesystem, no clock that moves unless told to.
+alone.
+`tests/services/test_timeline_sync.py` pins the reconciler's transaction: a
+multi-track sync is one undo entry, a locked track rolls the whole plan back and
+leaves nothing behind, and a second sync of an unchanged document issues no new
+version. No FFmpeg, no filesystem, no clock that moves unless told to.
 
 **The reconciler (ADR-0009 §8).** A caption document is the authoring source of
 truth, and it is not the timeline — but captions have to be *on* the timeline to
@@ -475,10 +486,19 @@ step, and neither imports the other:
 
 ```
 services/captions/commit.py       document + frame rate → the clips it implies
-services/timeline/commands.py     ReplaceTrackClipsCommand → applies them
+services/timeline/sync.py         SyncReport · TrackSync · sync_tracks → applies
+                                  several of them as one transaction
+services/timeline/commands.py     ReplaceTrackClipsCommand → applies one
         └── the application layer is the only place that knows about both
             (ADR-0002 rule 4: a feature may not import a sibling feature)
 ```
+
+Three modules, and the handshake between them is a plain value. `commit.py`
+answers *what* a document asks a track to hold; `sync.py` answers *how* the
+timeline is made to hold it, and its input — a `TrackSync` of a track id and some
+clips — names nothing about captions, which is why neither side imports the
+other. A caption layer, a chapter list and a beat grid all reconcile through the
+same door.
 
 One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
 document, which is why the kind counts as generated in the domain. A clip's id is
@@ -489,6 +509,19 @@ of rebuilding the track. Applying a commit is one command, therefore one undo
 entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
 through the track rebuilding itself. A locked track is never rewritten, and a
 commit of nothing creates no track at all.
+
+`sync_tracks(editor, tracks)` is that transaction for several tracks at once: a
+project with a primary caption layer and two translations is three tracks, and
+three separate commits would mean Ctrl+Z steps through the rebuild one language
+at a time — while a failure after the first would leave a timeline that is
+neither the old captions nor the new ones. One `CompositeCommand` gives both
+properties at once: all-or-nothing on failure, one undo entry on success. Two
+details earn their keep. The report is taken **before** the edit, because asked
+afterwards it could only ever answer "nothing changed" — true, useless, and
+hiding a re-render. And a command that was *refused* records `created = False`,
+so its undo cannot delete the track it never made: a composite rolls back by
+asking the failed child to undo itself, and a locked-track refusal that undid
+"the track I created" would delete the very track it was refused access to.
 
 **Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
 starts ("we're going to we're going to") and stutters ("I I I") out of a
@@ -641,10 +674,19 @@ step, and neither imports the other:
 
 ```
 services/captions/commit.py       document + frame rate → the clips it implies
-services/timeline/commands.py     ReplaceTrackClipsCommand → applies them
+services/timeline/sync.py         SyncReport · TrackSync · sync_tracks → applies
+                                  several of them as one transaction
+services/timeline/commands.py     ReplaceTrackClipsCommand → applies one
         └── the application layer is the only place that knows about both
             (ADR-0002 rule 4: a feature may not import a sibling feature)
 ```
+
+Three modules, and the handshake between them is a plain value. `commit.py`
+answers *what* a document asks a track to hold; `sync.py` answers *how* the
+timeline is made to hold it, and its input — a `TrackSync` of a track id and some
+clips — names nothing about captions, which is why neither side imports the
+other. A caption layer, a chapter list and a beat grid all reconcile through the
+same door.
 
 One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
 document, which is why the kind counts as generated in the domain. A clip's id is
@@ -655,6 +697,19 @@ of rebuilding the track. Applying a commit is one command, therefore one undo
 entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
 through the track rebuilding itself. A locked track is never rewritten, and a
 commit of nothing creates no track at all.
+
+`sync_tracks(editor, tracks)` is that transaction for several tracks at once: a
+project with a primary caption layer and two translations is three tracks, and
+three separate commits would mean Ctrl+Z steps through the rebuild one language
+at a time — while a failure after the first would leave a timeline that is
+neither the old captions nor the new ones. One `CompositeCommand` gives both
+properties at once: all-or-nothing on failure, one undo entry on success. Two
+details earn their keep. The report is taken **before** the edit, because asked
+afterwards it could only ever answer "nothing changed" — true, useless, and
+hiding a re-render. And a command that was *refused* records `created = False`,
+so its undo cannot delete the track it never made: a composite rolls back by
+asking the failed child to undo itself, and a locked-track refusal that undid
+"the track I created" would delete the very track it was refused access to.
 
 **Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
 starts ("we're going to we're going to") and stutters ("I I I") out of a
@@ -881,10 +936,19 @@ step, and neither imports the other:
 
 ```
 services/captions/commit.py       document + frame rate → the clips it implies
-services/timeline/commands.py     ReplaceTrackClipsCommand → applies them
+services/timeline/sync.py         SyncReport · TrackSync · sync_tracks → applies
+                                  several of them as one transaction
+services/timeline/commands.py     ReplaceTrackClipsCommand → applies one
         └── the application layer is the only place that knows about both
             (ADR-0002 rule 4: a feature may not import a sibling feature)
 ```
+
+Three modules, and the handshake between them is a plain value. `commit.py`
+answers *what* a document asks a track to hold; `sync.py` answers *how* the
+timeline is made to hold it, and its input — a `TrackSync` of a track id and some
+clips — names nothing about captions, which is why neither side imports the
+other. A caption layer, a chapter list and a beat grid all reconcile through the
+same door.
 
 One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
 document, which is why the kind counts as generated in the domain. A clip's id is
@@ -895,6 +959,19 @@ of rebuilding the track. Applying a commit is one command, therefore one undo
 entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
 through the track rebuilding itself. A locked track is never rewritten, and a
 commit of nothing creates no track at all.
+
+`sync_tracks(editor, tracks)` is that transaction for several tracks at once: a
+project with a primary caption layer and two translations is three tracks, and
+three separate commits would mean Ctrl+Z steps through the rebuild one language
+at a time — while a failure after the first would leave a timeline that is
+neither the old captions nor the new ones. One `CompositeCommand` gives both
+properties at once: all-or-nothing on failure, one undo entry on success. Two
+details earn their keep. The report is taken **before** the edit, because asked
+afterwards it could only ever answer "nothing changed" — true, useless, and
+hiding a re-render. And a command that was *refused* records `created = False`,
+so its undo cannot delete the track it never made: a composite rolls back by
+asking the failed child to undo itself, and a locked-track refusal that undid
+"the track I created" would delete the very track it was refused access to.
 
 **Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
 starts ("we're going to we're going to") and stutters ("I I I") out of a
@@ -981,9 +1058,9 @@ early is the bug that table exists to prevent.
 **Future expansion.**
 
 * **The reconciler's call site.** A run finishes with a document and its
-  keyframes; what it does not do yet is hand them to `commit.py` so the timeline
-  follows, nor report itself as a `Job` — both are a caller's to wire, and both
-  are one call.
+  keyframes; `commit.py` turns it into clips and `sync_tracks` puts them on the
+  timeline, so the wiring is two calls the application layer makes. What is not
+  wired yet is the run reporting itself as a `Job`.
 * **`services/ai/` feeding `protected`** the face boxes that make it more than a
   lower third.
 * **The reconciler's window into the renderer**: a caption clip names a cue by
