@@ -130,6 +130,14 @@ from nova_studio.services.captions.commit import (
     commit_layer,
 )
 from nova_studio.services.captions.cues import CueBreaker
+from nova_studio.services.captions.emoji import (
+    DEFAULT_EMOJI,
+    DEFAULT_EMOJI_RULES,
+    EmojiDecorator,
+    EmojiRules,
+    decorate_segment,
+    emoji_for,
+)
 from nova_studio.services.captions.highlight import (
     DEFAULT_HIGHLIGHT_RULES,
     DEFAULT_STOP_WORDS,
@@ -206,6 +214,8 @@ __all__ = [
     "DEFAULT_CAPTION_TRACK_ID",
     "DEFAULT_CHAR_ASPECT",
     "DEFAULT_CUE_RULES",
+    "DEFAULT_EMOJI",
+    "DEFAULT_EMOJI_RULES",
     "DEFAULT_FILLERS",
     "DEFAULT_HIGHLIGHT_RULES",
     "DEFAULT_MAX_SHIFT_LINES",
@@ -244,7 +254,9 @@ __all__ = [
     "commit_layer",
     "cue_box",
     "cue_spans",
+    "decorate_segment",
     "document_from_transcript",
+    "emoji_for",
     "held_until",
     "is_filler",
     "look_for",

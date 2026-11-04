@@ -514,6 +514,17 @@ best two win: a cue with six highlighted words is a cue with none. A highlight a
 human set is never unset and never spends the cap, and a filler is never the
 word of the line even with `Refine` switched off.
 
+**Emoji, in one paragraph.** `EmojiDecorator` sets `CaptionSegment.emoji` — a
+field on the *content* side of the model, so it travels with the text and
+survives a template change — from a **map** of words and phrases to emoji,
+matched longest-phrase-first ("happy birthday" is a cake, not a smiley and a
+cake). A map rather than a model, because a model would be a network call in the
+middle of a pure pipeline, wrong in ways nobody could predict, and uncorrectable
+by the user; a map is data a project extends with
+`EmojiRules().with_mapping({...})`. The default is deliberately concrete — nouns
+and unambiguous emotions, never "no" or "yes", because a cross on every "no" is
+what makes a professional caption look automated. An emoji a human chose is kept.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -669,6 +680,17 @@ best two win: a cue with six highlighted words is a cue with none. A highlight a
 human set is never unset and never spends the cap, and a filler is never the
 word of the line even with `Refine` switched off.
 
+**Emoji, in one paragraph.** `EmojiDecorator` sets `CaptionSegment.emoji` — a
+field on the *content* side of the model, so it travels with the text and
+survives a template change — from a **map** of words and phrases to emoji,
+matched longest-phrase-first ("happy birthday" is a cake, not a smiley and a
+cake). A map rather than a model, because a model would be a network call in the
+middle of a pure pipeline, wrong in ways nobody could predict, and uncorrectable
+by the user; a map is data a project extends with
+`EmojiRules().with_mapping({...})`. The default is deliberately concrete — nouns
+and unambiguous emotions, never "no" or "yes", because a cross on every "no" is
+what makes a professional caption look automated. An emoji a human chose is kept.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -711,6 +733,7 @@ services/captions/
 ├── merge.py          regeneration: a new transcription that keeps the edits
 ├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
 ├── highlight.py      Highlighter — which word a viewer's eye should land on
+├── emoji.py          EmojiDecorator — the picture that goes with the words
 ├── refine.py         Refiner · RefineRules — speech as spoken, text as read
 ├── commit.py         what a document asks a caption track to hold (ADR-0009 §8)
 ├── cues.py           CueBreaker — the Break stage
@@ -894,13 +917,24 @@ best two win: a cue with six highlighted words is a cue with none. A highlight a
 human set is never unset and never spends the cap, and a filler is never the
 word of the line even with `Refine` switched off.
 
+**Emoji, in one paragraph.** `EmojiDecorator` sets `CaptionSegment.emoji` — a
+field on the *content* side of the model, so it travels with the text and
+survives a template change — from a **map** of words and phrases to emoji,
+matched longest-phrase-first ("happy birthday" is a cake, not a smiley and a
+cake). A map rather than a model, because a model would be a network call in the
+middle of a pure pipeline, wrong in ways nobody could predict, and uncorrectable
+by the user; a map is data a project extends with
+`EmojiRules().with_mapping({...})`. The default is deliberately concrete — nouns
+and unambiguous emotions, never "no" or "yes", because a cross on every "no" is
+what makes a professional caption look automated. An emoji a human chose is kept.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **The remaining stages** — `emoji` and `bake` — each as its own module, each
-  with its own tests. `Refine`, `Highlight`, `Position` and `Resolve` are built
-  (`refine.py`, `highlight.py`, `positioning.py`), and `services/ai/` will feed it the face boxes that make
+* **The remaining stage** — `bake` — as its own module with its own tests.
+  `Refine`, `Emoji`, `Highlight`, `Position` and `Resolve` are built (`refine.py`,
+  `emoji.py`, `highlight.py`, `positioning.py`), and `services/ai/` will feed it the face boxes that make
   `protected` more than a lower third.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py`, runs the pure half as a `Job`,
