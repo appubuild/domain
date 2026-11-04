@@ -592,9 +592,31 @@ class TestCaptionSegment:
                 "style_overrides": {"colour": "yellow"},
                 "locked": True,
                 "confidence": 0.8,
+                "emoji": "🍕",
             }
         )
         assert CaptionSegment.from_wire(_round_trip(segment.to_wire())) == segment
+
+    def test_a_cue_has_no_emoji_until_one_is_given(self) -> None:
+        assert _segment().emoji == ""
+
+    def test_an_emoji_can_be_set_and_cleared(self) -> None:
+        assert _segment().with_emoji("☕").emoji == "☕"
+        assert _segment().with_emoji("☕").with_emoji("").emoji == ""
+
+    def test_an_emoji_is_stripped_of_surrounding_space(self) -> None:
+        assert _segment().with_emoji(" ☕ ").emoji == "☕"
+
+    def test_an_emoji_is_not_text(self) -> None:
+        """Whitespace would make it words, and words belong in the words."""
+        with pytest.raises(NovaInvariantError, match="whitespace"):
+            _segment().with_emoji("☕ 🍕")
+
+    def test_an_emoji_travels_with_its_cue(self) -> None:
+        cue = _timed().with_emoji("☕")
+        moved = cue.shifted(1_000)
+        assert moved.emoji == "☕"
+        assert moved.words[0].start_ms == cue.words[0].start_ms + 1_000
 
     def test_a_wire_cue_rejects_unknown_fields(self) -> None:
         with pytest.raises(NovaInvariantError, match="fields must be exactly"):

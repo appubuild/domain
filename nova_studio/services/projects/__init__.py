@@ -76,8 +76,9 @@ offers, including the torn-tail case.
 
 **Future expansion.**
 
-* **Migration.** `format_version` is compared but not yet migrated; the ordered
-  chain of `vN → vN+1` functions belongs here, applied inside `open()`.
+* **Older formats beyond the ones migrated so far.** The chain is built and
+  applied inside `open()` (`migrations.py`); adding a step is one pure function
+  plus one test, and the format version is what decides whether it runs.
 * **Save-as and template export**, which reuse `_documents` verbatim.
 * **Autosave to a sidecar** (ADR-0015 rule 6) once `infra/persistence` exists.
 """
@@ -85,6 +86,14 @@ offers, including the torn-tail case.
 from __future__ import annotations
 
 from nova_studio.services.projects.autosave import DEFAULT_AUTOSAVE, AutosaveState
+from nova_studio.services.projects.migrations import (
+    MIGRATION_FAILED,
+    MIGRATIONS,
+    DocumentKind,
+    DocumentMigration,
+    migrated,
+    migrations_between,
+)
 from nova_studio.services.projects.recovery import (
     RecoveryOffer,
     RecoveryPlan,
@@ -103,16 +112,22 @@ from nova_studio.services.projects.session import (
 
 __all__ = [
     "DEFAULT_AUTOSAVE",
+    "MIGRATIONS",
+    "MIGRATION_FAILED",
     "NS_PROJECT_MISSING_DOCUMENT",
     "NS_PROJECT_SAVE_FAILED",
     "NS_PROJECT_UNREADABLE",
     "NS_PROJECT_UNSUPPORTED_VERSION",
     "AutosaveState",
+    "DocumentKind",
+    "DocumentMigration",
     "OpenedProject",
     "ProjectAudit",
     "ProjectSession",
     "RecoveryOffer",
     "RecoveryPlan",
     "entries_after_checkpoint",
+    "migrated",
+    "migrations_between",
     "plan_recovery",
 ]

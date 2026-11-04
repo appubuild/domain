@@ -42,6 +42,7 @@ from nova_studio.domain.persistence import (
     caption_document,
 )
 from nova_studio.domain.project import Project, ProjectDocuments, validate_project
+from nova_studio.services.projects.migrations import DocumentKind, migrated
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -222,7 +223,7 @@ class ProjectSession:
             return failed(timeline_document.unwrap_err())
 
         warnings: list[str] = []
-        captions = self._read_captions(warnings)
+        captions = self._read_captions(warnings, manifest.format_version)
 
         try:
             project = Project.from_documents(
@@ -247,7 +248,9 @@ class ProjectSession:
             return failed(_missing_document(name, error.message))
         return ok(result.unwrap())
 
-    def _read_captions(self, warnings: list[str]) -> tuple[tuple[str, Mapping[str, object]], ...]:
+    def _read_captions(
+        self, warnings: list[str], format_version: int
+    ) -> tuple[tuple[str, Mapping[str, object]], ...]:
         """Read every caption document, reporting the ones that would not read.
 
         Captions are separate entries precisely so that one bad document cannot
@@ -256,6 +259,11 @@ class ProjectSession:
         without it.  Each document is decoded here rather than in
         :meth:`Project.from_documents` so that the failure can be attributed to
         the document that caused it.
+
+        A document written by an **older** build is migrated first
+        (`docs/architecture/project-file-format.md` §7), which is the whole
+        point of the format version: a cue gaining a field is not a reason to
+        throw away a project's captions.
         """
         ids = self._archive.caption_document_ids()
         if ids.is_err():
@@ -272,6 +280,19 @@ class ProjectSession:
                 )
                 continue
             document = result.unwrap()
+            upgraded = migrated(
+                DocumentKind.CAPTIONS,
+                document,
+                from_version=format_version,
+                to_version=self._supported_format_version,
+            )
+            if upgraded.is_err():
+                warnings.append(
+                    f"caption document '{document_id}' is from a format this build "
+                    f"cannot read and was skipped: {upgraded.unwrap_err().message}"
+                )
+                continue
+            document = upgraded.unwrap()
             try:
                 CaptionDocument.from_wire(document)
             except NovaInvariantError as error:

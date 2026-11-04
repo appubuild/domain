@@ -780,6 +780,16 @@ class CaptionSegment:
     #: re-transcription.
     locked: bool = False
     confidence: float | None = None
+    #: An emoji shown beside the cue's text, put there by the Emoji stage
+    #: (ADR-0009 §3). Empty means none.
+    #:
+    #: This is **content, not styling**: it travels with the text when a cue is
+    #: re-broken or re-timed, it is what an editor edits in the inspector, and
+    #: the template decides where and how it is drawn. Keeping it out of
+    #: ``style_overrides`` is what stops a template change from deleting the
+    #: emoji an editor chose — and what lets a project saved before this field
+    #: existed still open (see ``services/projects/migrations.py``).
+    emoji: str = ""
 
     def __post_init__(self) -> None:
         if self.index < 0:
@@ -794,6 +804,10 @@ class CaptionSegment:
             raise NovaInvariantError(f"segment {self.index} must have text")
         if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
             raise NovaInvariantError(f"confidence must be within [0, 1], got {self.confidence}")
+        if any(character.isspace() for character in self.emoji):
+            # One run of characters, drawn as one glyph or a short row of them.
+            # Spaces would make it text, and text belongs in ``text``.
+            raise NovaInvariantError(f"an emoji must not contain whitespace, got {self.emoji!r}")
         previous = self.start_ms
         for word in self.words:
             if word.start_ms < previous:
@@ -902,6 +916,10 @@ class CaptionSegment:
         """Set or clear the per-cue style overrides."""
         return replace(self, style_overrides=dict(overrides) if overrides else None)
 
+    def with_emoji(self, emoji: str) -> CaptionSegment:
+        """Set or clear the cue's emoji."""
+        return replace(self, emoji=emoji.strip())
+
     def to_wire(self) -> dict[str, object]:
         """A JSON-ready mapping."""
         return {
@@ -916,6 +934,7 @@ class CaptionSegment:
             "style_overrides": dict(self.style_overrides) if self.style_overrides else None,
             "locked": self.locked,
             "confidence": self.confidence,
+            "emoji": self.emoji,
         }
 
     @classmethod
@@ -950,6 +969,7 @@ class CaptionSegment:
             style_overrides=dict(style) if style is not None else None,
             locked=bool(data["locked"]),
             confidence=_optional_float(data, "confidence"),
+            emoji=_wire_str(data, "emoji"),
         )
 
 
@@ -1510,6 +1530,7 @@ _SEGMENT_FIELDS: Final[set[str]] = {
     "style_overrides",
     "locked",
     "confidence",
+    "emoji",
 }
 _LAYER_FIELDS: Final[set[str]] = {"layer_id", "name", "language", "kind", "visible", "locked"}
 _REVISION_FIELDS: Final[set[str]] = {

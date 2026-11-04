@@ -44,7 +44,7 @@ __version__: str = "0.1.0"
 #: separate from ``__version__`` because the format must stay stable across
 #: application releases: a patch release that cannot open yesterday's project is a
 #: data-loss bug, not an inconvenience.
-PROJECT_FORMAT_VERSION: int = 1
+PROJECT_FORMAT_VERSION: int = 2
 
 #: Schema version of the SQLite metadata store (ADR-0004).  Migrations are
 #: forward-only and are applied on open by ``infra.persistence``.

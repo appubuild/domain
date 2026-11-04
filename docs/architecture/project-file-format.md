@@ -303,10 +303,17 @@ description of what to fix (ADR-0015 rule 3).
 * **Newer than supported → refuse.** "This project was made by Nova Studio
   2.4 and this is 1.8; update to open it." No partial parse, ever.
 * **Older → migrate.** Migrations are an ordered chain of pure functions
-  `vN → vN+1`, one file each, applied in memory on open. A project is written
-  in the current format **only on explicit user save** — opening an old file
-  never rewrites it behind the user's back, because that would break their
-  ability to go back to the old build.
+  `vN → vN+1`, applied in memory on open by
+  `services/projects/migrations.py`. A project is written in the current format
+  **only on explicit user save** — opening an old file never rewrites it behind
+  the user's back, because that would break their ability to go back to the old
+  build.
+
+  The chain in use today has one step: `v1 → v2` gives every caption cue an
+  empty `emoji`, the field the Emoji stage (ADR-0009 §3) writes. Without it, a
+  project saved before that field existed would fail the decoder's
+  "exactly these keys" rule and every caption in it would be dropped — which is
+  what a version number is for.
 * A migration must not read a clock, a filesystem or a network. It is a
   function from one mapping to another, and it is unit-tested against a fixture
   file committed next to it.
