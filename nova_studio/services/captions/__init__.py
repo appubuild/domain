@@ -106,17 +106,17 @@ model, no audio, no clock: that is the point of ADR-0009 §3.
 
 **Future expansion.**
 
-* **The remaining stages** — every stage named in ADR-0009 §3 now has its
-  module: `refine.py`, `emoji.py`, `highlight.py`, `positioning.py` and
-  `bake.py`. What is left is the assembly: a `default_pipeline()` that names
-  them in order.
-* **The timeline reconciler** (ADR-0009 §8), which commits a document to caption
-  clips in one transaction.
-* **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
-  `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as
-  a `Job`.
-* **Translation layers**, which are a second `CaptionLayer` of the same
-  document, not a second document.
+* **The reconciler's call site.** A run finishes with a document and its
+  keyframes; what it does not do yet is hand them to `commit.py` so the timeline
+  follows (ADR-0009 §8), nor report itself as a `Job`. Both are a caller's to
+  wire, and both are one call.
+* **Import** — the other half of `services/export/`, which writes SRT and VTT
+  and does not read them yet. Reading one is what feeds
+  `ExternalTranscriptProvider` (ADR-0009 §1) and what makes a file somebody else
+  captioned editable here.
+* **Burned-in captions**, which is not a sidecar but a render stage — and which
+  will read the keyframes `bake.py` produced, so a burned-in caption and a
+  previewed one are the same picture.
 """
 
 from __future__ import annotations

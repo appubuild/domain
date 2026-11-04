@@ -54,14 +54,14 @@ services/
 ├── render/       the frame pipeline: decode → graph → composite → encode
 ├── captions/     the caption pipeline: transcript → cues → styles → timeline
 ├── effects/      the effect catalogue and the graph it builds   ← built
-├── export/       presets, queueing, packaging
+├── export/       caption sidecars (SRT, VTT) · presets, queueing, packaging
 ├── ai/           AI Studio orchestration on top of captions and effects
 ├── plugins/      manifest validation, permission audit, lifecycle
 └── jobs/         scheduler, admission control, circuit breaker
 ```
 
 Each feature package carries a module docstring with the same fourteen headings
-used in §3–§8 — purpose, structure, backend/frontend architecture, state,
+used in §3–§9 — purpose, structure, backend/frontend architecture, state,
 functions, events, errors, caching, performance, testing, future expansion — so
 a feature is documented where it is read.
 
@@ -994,7 +994,50 @@ early is the bug that table exists to prevent.
   not a second document.
 * **Import/export** of SRT, VTT and JSON, in `services/export/`.
 
-## 9. Conventions a new feature must follow
+## 9. Feature: `services/export/`
+
+*The fourteen headings this feature is documented under live in its own
+`__init__.py`, like every other feature here. What follows is the one thing a
+docstring cannot show: where this feature sits next to the others.*
+
+```
+services/export/
+├── __init__.py   the feature's contract
+├── codes.py      ExportErrorCode — NS-EXPORT-6001 and up
+├── layers.py     layer_cues — which cues a file is written from
+├── srt.py        to_srt · srt_timestamp — SubRip
+└── vtt.py        to_vtt · vtt_timestamp — WebVTT
+```
+
+**What it is.** The moment a project leaves Nova Studio: a caption document
+becomes the bytes somebody else's software reads. It owns no encoder, no muxer
+and no queue — those are `services/render/` and the job subsystem.
+
+**The rule.** An export is a pure function from a document to text. No I/O:
+writing the bytes is a caller's job (ADR-0002), so an export is testable with no
+disk, runnable twice, and incapable of half-writing a file when it fails.
+
+**The second rule.** A format gets what it can carry, and no pretending. SubRip
+has no styling, so an SRT export is text and timings and nothing else; inventing
+italics for it produces a file that renders differently in every player that
+reads it. WebVTT knows about alignment and speakers, so a VTT export writes
+them. Neither guesses about the other.
+
+**Which layer.** A document holds every layer a project has and a sidecar file
+holds exactly one, so `layer_cues` is the only place that question is answered —
+and the place three things are refused rather than written: a layer that is not
+there, a layer with nothing in it, and cues a player will mishandle (overlap, a
+cue too short to read). The layer is validated **on its own**, as a one-layer
+document, which is what lets a translation sit on top of the line it translates
+and still be exported.
+
+**Still to come.** Import — the other half, feeding `ExternalTranscriptProvider`
+(ADR-0009 §1) — SSA/ASS, TTML, and burned-in captions, which is not a sidecar at
+all but a render stage reading the same keyframes `bake.py` produced.
+
+---
+
+## 10. Conventions a new feature must follow
 
 1. **A package, not a module**, once it holds more than one concern.
 2. **`Result[T]` across the boundary**, `NovaInvariantError` only for bugs.
