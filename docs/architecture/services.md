@@ -738,7 +738,8 @@ services/captions/
 ├── commit.py         what a document asks a caption track to hold (ADR-0009 §8)
 ├── cues.py           CueBreaker — the Break stage
 ├── bake.py           AnimationBaker · AnimationSpec — a caption, as keyframes
-└── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
+├── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
+└── assembly.py       default_pipeline — the twelve names, wired in order
 ```
 
 **Backend / frontend.** The frontend never breaks a cue or invents a style. It
@@ -944,16 +945,30 @@ something the user never saw. The module draws nothing: where a word sits is
 `Position`'s business, what it looks like is the template's, and `fill` — the
 0 → 1 a karaoke word tracks — is a number the renderer decides the colour of.
 
+**The assembly, in one paragraph.** `assembly.py` is where the sentence in
+ADR-0009 §3 becomes a value: `default_pipeline()` registers the stages in order,
+and `STAGE_ORDER` names all twelve in one place so a plugin that asks "what comes
+before me" gets a true answer. Only seven are registered, and that is a decision,
+not an omission: `extract`, `vad`, `transcribe`, `diarise` and `translate` need
+audio, a model or the network, and a `StageContext` carries frame geometry and a
+language and deliberately nothing else — so those five are the body of the
+runner, which holds the ports. `resolve` *is* registered, carrying the same
+placer as `position` and switched off, because `Position` and `Resolve` are one
+pass (`positioning.py`) and the slot exists so a plugin can insert between them.
+`style` sits between `refine` and `break` when a look is given: after refine, so
+the look has the last word on the text, and before break, so the breaker uses the
+look's own line budget — a TikTok look breaks shorter than a broadcast one, and
+that must be the same decision the template made.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **The assembly**: a `default_pipeline()` that names the twelve stages in
-  order, and a runner that drives the I/O stages (`extract`, `vad`, `transcribe`,
-  `diarise`, `translate`) through `ports/asr.py`, runs the pure half as a `Job`,
-  calls `bake()` for the keyframes and `commit.py` so the timeline follows the
-  document it just built. Every stage module exists; nothing has wired them
-  together yet.
+* **The runner**, which drives the five stages that need the world outside
+  (`extract`, `vad`, `transcribe`, `diarise`, `translate`) through
+  `ports/asr.py`, runs `default_pipeline()` as a `Job`, calls `bake()` for the
+  keyframes and `commit.py` so the timeline follows the document it just built.
+  Every stage module and the assembly exist; the runner does not yet.
 * **`services/ai/` feeding `protected`** the face boxes that make it more than a
   lower third.
 * **The reconciler's window into the renderer**: a caption clip names a cue by

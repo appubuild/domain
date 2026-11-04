@@ -37,6 +37,8 @@ from nova_studio.services.captions.styles import CaptionTemplate, WordAnimation,
 
 TB = Timebase(num=30, den=1)
 
+pytestmark = pytest.mark.unit
+
 
 def _words(*text: str, start_ms: int = 0, span_ms: int = 400) -> tuple[CaptionWord, ...]:
     return tuple(

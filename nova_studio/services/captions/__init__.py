@@ -56,6 +56,7 @@ document, a decoder or a clock.
 | `CaptionPipeline.run(doc, ctx)` | "run every enabled stage, then check the result" |
 | `AnimationBaker().bake(doc, timebase=…)` | "these cues, as keyframes the timeline already understands" |
 | `spec_for(mode)` | "what this animation mode means, as data" |
+| `default_pipeline(look=…)` | "the stages of ADR-0009 §3, in their order" |
 | `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
 | `held_until(…)` / `time_to_read(…)` / `chars_per_second(…)` | the timing arithmetic |
 
@@ -120,6 +121,12 @@ model, no audio, no clock: that is the point of ADR-0009 §3.
 
 from __future__ import annotations
 
+from nova_studio.services.captions.assembly import (
+    IO_STAGES,
+    PURE_STAGES,
+    STAGE_ORDER,
+    default_pipeline,
+)
 from nova_studio.services.captions.bake import (
     DEFAULT_BAKE_SPEC,
     PARAM_FILL,
@@ -245,7 +252,10 @@ __all__ = [
     "DEFAULT_TEMPLATE",
     "DEFAULT_UNITS",
     "FILLERS_BY_LANGUAGE",
+    "IO_STAGES",
     "LOOKS",
+    "PURE_STAGES",
+    "STAGE_ORDER",
     "AnimationBaker",
     "AnimationSpec",
     "Backdrop",
@@ -282,6 +292,7 @@ __all__ = [
     "cue_box",
     "cue_spans",
     "decorate_segment",
+    "default_pipeline",
     "document_from_transcript",
     "emoji_for",
     "held_until",
