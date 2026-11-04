@@ -37,13 +37,7 @@ from typing import TYPE_CHECKING
 
 from nova_studio.core.errors import ErrorDomain, NovaError, NovaInvariantError
 from nova_studio.core.result import Result, failed, ok
-from nova_studio.domain.captions import (
-    CAPTION_MAX_CPS,
-    CAPTION_MAX_LINE_CHARS,
-    CAPTION_MAX_LINES,
-    SafeArea,
-    validate_caption_document,
-)
+from nova_studio.domain.captions import SafeArea, validate_caption_document
 from nova_studio.services.captions.codes import CaptionErrorCode
 
 if TYPE_CHECKING:
@@ -72,8 +66,12 @@ class StageContext:
     particular preview: a nudge has to mean the same thing in a 480 p proxy and
     a 4 K export, which is the only way the two can match.
 
-    Text *metrics* are not here on purpose. Measuring a string needs a font and
-    a shaper, which is a port this feature does not have yet; the layout stages
+    Two things are deliberately *not* here. **Text metrics** — how many
+    characters fit a line, how fast a cue may be read — are a house style, and a
+    house style belongs to the pipeline that was built for it
+    (:class:`~nova_studio.services.captions.segmentation.CueRules`), not to the
+    frame the project happens to be. **Measuring a string** needs a font and a
+    shaper, which is a port this feature does not have yet; the layout stages
     therefore work in lines and fractions, and the renderer supplies real
     extents when it draws.
     """
@@ -84,26 +82,16 @@ class StageContext:
     safe_area: SafeArea = field(default_factory=SafeArea)
     #: Region no caption may cover: a lower third, a detected face, a logo.
     protected: tuple[CaptionRect, ...] = ()
-    max_line_chars: int = CAPTION_MAX_LINE_CHARS
-    max_lines: int = CAPTION_MAX_LINES
     #: Height of one line as a fraction of the safe area's height.
     line_height_fraction: float = 0.06
-    #: Fastest a cue may be read, in characters per second.
-    max_reading_rate_cps: float = CAPTION_MAX_CPS
     language: str = ""
 
     def __post_init__(self) -> None:
         if self.frame_size[0] <= 0 or self.frame_size[1] <= 0:
             raise NovaInvariantError(f"a frame must be positive, got {self.frame_size}")
-        if self.max_line_chars < 1 or self.max_lines < 1:
-            raise NovaInvariantError("a caption needs at least one line of one character")
         if not 0.0 < self.line_height_fraction <= 1.0:
             raise NovaInvariantError(
                 f"line_height_fraction must be in (0, 1], got {self.line_height_fraction}"
-            )
-        if self.max_reading_rate_cps <= 0:
-            raise NovaInvariantError(
-                f"max_reading_rate_cps must be positive, got {self.max_reading_rate_cps}"
             )
 
 

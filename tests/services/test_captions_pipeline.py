@@ -18,9 +18,6 @@ import pytest
 from nova_studio.core.errors import NovaError, NovaInvariantError
 from nova_studio.core.result import Err, Result, failed, ok
 from nova_studio.domain.captions import (
-    CAPTION_MAX_CPS,
-    CAPTION_MAX_LINE_CHARS,
-    CAPTION_MAX_LINES,
     CAPTION_MIN_DURATION_MS,
     CaptionDocument,
     CaptionSegment,
@@ -100,11 +97,10 @@ def _run(pipeline: CaptionPipeline, document: CaptionDocument | None = None, ctx
 
 
 class TestTheContext:
-    def test_the_defaults_are_the_domain_ceiling(self) -> None:
-        ctx = StageContext()
-        assert ctx.max_line_chars == CAPTION_MAX_LINE_CHARS
-        assert ctx.max_lines == CAPTION_MAX_LINES
-        assert ctx.max_reading_rate_cps == CAPTION_MAX_CPS
+    def test_text_metrics_are_not_part_of_the_context(self) -> None:
+        # How much text fits a line is a house style, and a house style belongs
+        # to the pipeline (CueRules), not to the frame the project happens to be.
+        assert not hasattr(StageContext(), "max_line_chars")
 
     def test_the_default_frame_is_1080p(self) -> None:
         assert StageContext().frame_size == (1920, 1080)
@@ -116,19 +112,9 @@ class TestTheContext:
         with pytest.raises(NovaInvariantError, match="frame must be positive"):
             StageContext(frame_size=(0, 1080))
 
-    def test_a_caption_needs_a_line_of_a_character(self) -> None:
-        with pytest.raises(NovaInvariantError, match="at least one line"):
-            StageContext(max_line_chars=0)
-        with pytest.raises(NovaInvariantError, match="at least one line"):
-            StageContext(max_lines=0)
-
     def test_a_line_height_must_be_a_fraction(self) -> None:
         with pytest.raises(NovaInvariantError, match="line_height_fraction"):
             StageContext(line_height_fraction=0.0)
-
-    def test_a_reading_rate_must_be_positive(self) -> None:
-        with pytest.raises(NovaInvariantError, match="max_reading_rate_cps"):
-            StageContext(max_reading_rate_cps=0)
 
     def test_each_context_has_its_own_safe_area(self) -> None:
         # A mutable default shared between contexts is the bug that makes one

@@ -1,75 +1,91 @@
-"""L3 feature — captions: the engine behind the AI Caption Studio (ADR-0009).
+"""L3 feature — captions: from a stream of words to cues a viewer can read.
 
-**Purpose.** Own everything that happens to captions *after* the words exist.
-`domain/asr.py` owns what a transcript is; `ports/asr.py` owns how speech
-becomes one; this feature owns how a transcript becomes cues, how those cues are
-broken, placed, styled and animated, and how a document is reconciled onto the
-timeline.
+**Purpose.** Own everything that happens to a caption *after* the words exist.
+`domain/captions.py` owns what a caption document is; `domain/asr.py` owns what
+a provider returns; `ports/asr.py` owns how audio becomes a transcript. This
+layer owns the opinions: **which words a viewer reads together**, **how long a
+cue stays up**, **where it sits**, **what a house style does to it**, and **the
+order in which all of that happens**.
 
-The spine is `CaptionPipeline`: twelve named stages —
+The order is `CaptionPipeline` — twelve named stages,
 `Extract → VAD → Transcribe → Refine → Diarise → Translate → Break → Emoji →
-Highlight → Position → Resolve → Bake` — each a pure function from one immutable
-document to the next. That is the decision that makes the engine verifiable in
-CI on a machine with no network, no GPU and no model weights, and the decision
-that lets a plugin insert a stage without touching any other.
+Highlight → Position → Resolve → Bake` (ADR-0009 §3), each a pure function from
+one immutable document to the next. That is what makes the engine verifiable in
+CI on a machine with no model weights, and what lets a plugin insert a stage
+without touching any other.
 
 **Folder structure.**
 
 ```
 services/captions/
-├── __init__.py   this file: the feature's contract
-├── codes.py      CaptionErrorCode — NS-CAPTION-4010 and up
-├── pipeline.py   CaptionPipeline · StageContext · stage_failed
-├── timing.py     held_until · chars_per_second — the two shared rules
-├── build.py      transcript → CaptionDocument (ADR-0009 §1, §2, §4)
-└── cues.py       the Break stage: words → readable cues
+├── __init__.py       this file: the feature's contract
+├── codes.py          CaptionErrorCode — NS-CAPTION-4010 and up
+├── pipeline.py       CaptionPipeline · StageContext · stage_failed
+├── timing.py         chars_per_second · time_to_read · held_until
+├── segmentation.py   CueRules · cue_spans · build_cues — the breaker
+├── build.py          transcript → CaptionDocument (ADR-0009 §1, §2, §4)
+├── cues.py           CueBreaker — the Break stage of the pipeline
+└── styles.py         CaptionTemplate · CaptionLook · apply_look
 ```
 
-**Backend / frontend.** One call per intent. The Caption Studio panel builds a
-document from a transcript, runs a pipeline, and commits the result; every call
-returns a `Result`, so the UI renders a remedy ("download the base model —
-145 MB") rather than a traceback.
+**Backend / frontend.** The frontend never breaks a cue or invents a style. It
+picks a template, and the panel shows the cues that came back plus the reading
+rate each one implies. `CueRules` *is* the settings panel: every field is a
+thing an editor argues about, so every field is data rather than a constant — a
+podcast house style and a TikTok one differ by one object, not by a second code
+path.
 
-**State management.** Every stage is a frozen value, and every document is
-immutable, so a pipeline can be handed to a worker without anyone worrying
-about a plugin inserting a stage mid-run. Nothing here holds a model, a file
-handle or a clock.
+**State management.** Every module here is a pure function over frozen values. A
+`CueRules` can be shipped in a project file, a plugin manifest or a preset; a
+`CaptionPipeline` can be handed to a worker, because nothing in it holds a
+document, a decoder or a clock.
 
 **Functions.**
 
 | Call | Answers |
 | --- | --- |
-| `document_from_transcript(t)` | "what cues does this transcript say" |
+| `document_from_transcript(t, …)` | "what cues does this transcript say, as a document" |
+| `build_cues(transcript, rules)` | "which words go together, and when" |
+| `cue_spans(words, rules)` | the same, over words of any kind — the reusable core |
+| `CueBreaker().apply(doc, ctx)` | "re-break this document's cues" |
 | `CaptionPipeline.run(doc, ctx)` | "run every enabled stage, then check the result" |
-| `CueBreaker().apply(doc, ctx)` | "break these words into readable cues" |
-| `held_until(start, end, …)` | "when should this cue stop being shown" |
-| `chars_per_second(text, s, e)` | "can this be read that fast" |
+| `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
+| `held_until(…)` / `time_to_read(…)` / `chars_per_second(…)` | the timing arithmetic |
 
-**Events.** None yet. A generation is a `Job` (ADR-0010) and reports `job.*`;
+**Events.** None yet. A transcription is a `Job` (ADR-0010) and reports `job.*`;
 the stages themselves publish nothing, because they are values a caller runs
 rather than tasks a scheduler owns.
 
-**Error handling.** Two bands, split at the seam ADR-0009 §1 draws:
+**Error handling.** Two bands, split at the seam ADR-0009 §1 draws.
 `NS-CAPTION-4001`–`4006` come from `ports/asr.py` and describe *speech
 recognition* — unreadable audio, missing weights, a transcript whose timings
-cannot be trusted. `CaptionErrorCode` (`4010`+) describes *caption authoring* —
-a stage that failed, a result no renderer may be given, a template that does not
-describe a style. Caller bugs — a duplicate stage name, a frame of zero size —
-raise `NovaInvariantError` instead of being returned, because they cannot be
-fixed by retrying.
+cannot be trusted; `document_from_transcript` returns those rather than a
+document built from something unsound. `CaptionErrorCode` (`4010`+) describes
+*caption authoring* — a stage that failed, a result no renderer may be given.
+Caller bugs — a duplicate stage name, a rule with no characters a line — raise
+`NovaInvariantError`, because they cannot be fixed by retrying.
 
-**Caching.** Nothing is cached yet, and that is deliberate: a stage is pure, so
-a cache is a decision for the caller that knows how long a document lives.
+**Caching.** Cues are derived data and are recomputed on every re-transcription
+— cheaply, because the builder is a single pass over words. What survives is
+*human* work: ADR-0009 §7 files every manual correction under an
+`alignment_key` (normalised text plus a bucketed start time), so a
+re-transcription that moves a cue 300 ms re-attaches the correction instead of
+orphaning it.
 
-**Performance.** Every stage is a single pass over the cues, and every document
-is immutable, so a run allocates one document per stage rather than mutating in
-place. `Break` is O(words × fill) in the worst case; the fill is capped by the
-line budget, which is a constant.
+**Performance.** One pass over the words, O(n) in the transcript, with a
+grapheme count per candidate cue. Character timings come from the domain's
+weighted proportional split, which is why karaoke is available on every provider
+and not only on those that ship character timings.
 
 **Testing.** `tests/services/test_captions_pipeline.py` pins ordering, skipping
-and attribution; `test_captions_break.py` pins the four constraints and two
-preferences; `test_captions_build.py` pins the transcript seam. No model, no
-audio, no clock — which is the point of ADR-0009 §3.
+and attribution; `test_captions_segmentation.py` pins the breaker — the
+character, duration and reading-rate caps, silence, punctuation and speaker
+breaks, the hold that never overlaps the next cue, derived timings for a
+provider that gave none, and that no word is ever dropped.
+`tests/services/test_captions_break.py` pins the same rules as a pipeline
+stage — locked cues untouched, word objects carried rather than rebuilt.
+`test_captions_build.py` pins the transcript seam and `test_captions_styles.py`
+the presets. No model, no audio, no clock: that is the point of ADR-0009 §3.
 
 **Database schema.** None — see the note in `docs/architecture/services.md` §1.
 
@@ -78,8 +94,13 @@ audio, no clock — which is the point of ADR-0009 §3.
 * **The remaining stages** — `refine`, `emoji`, `highlight`, `position`,
   `resolve`, `bake` — each as its own module, each with its own tests.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
-  `diarise`, `translate`) through `ports/asr.py` and then runs the pure half.
-* **Non-destructive regeneration** (§7) and **the timeline reconciler** (§8).
+  `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as
+  a `Job`.
+* **Non-destructive regeneration** (ADR-0009 §7) and **the timeline
+  reconciler** (§8).
+* **Translation layers**, which are a second `CaptionLayer` of the same
+  document, not a second document.
+* **Import/export** of SRT, VTT and JSON, in `services/export/`.
 """
 
 from __future__ import annotations
@@ -89,30 +110,59 @@ from nova_studio.services.captions.build import (
     segments_from_transcript,
 )
 from nova_studio.services.captions.codes import CaptionErrorCode
-from nova_studio.services.captions.cues import (
-    DEFAULT_MAX_DURATION_MS,
-    DEFAULT_MIN_DURATION_MS,
-    MIN_WORDS_BEFORE_BACKOFF,
-    CueBreaker,
-)
+from nova_studio.services.captions.cues import CueBreaker
 from nova_studio.services.captions.pipeline import (
     CaptionPipeline,
     StageContext,
     stage_failed,
 )
-from nova_studio.services.captions.timing import chars_per_second, held_until
+from nova_studio.services.captions.segmentation import (
+    DEFAULT_CUE_RULES,
+    CueRules,
+    CueSpan,
+    build_cues,
+    cue_spans,
+)
+from nova_studio.services.captions.styles import (
+    DEFAULT_TEMPLATE,
+    LOOKS,
+    Backdrop,
+    CaptionLook,
+    CaptionTemplate,
+    TextCase,
+    WordAnimation,
+    apply_look,
+    look_for,
+)
+from nova_studio.services.captions.timing import (
+    chars_per_second,
+    held_until,
+    time_to_read,
+)
 
 __all__ = [
-    "DEFAULT_MAX_DURATION_MS",
-    "DEFAULT_MIN_DURATION_MS",
-    "MIN_WORDS_BEFORE_BACKOFF",
+    "DEFAULT_CUE_RULES",
+    "DEFAULT_TEMPLATE",
+    "LOOKS",
+    "Backdrop",
     "CaptionErrorCode",
+    "CaptionLook",
     "CaptionPipeline",
+    "CaptionTemplate",
     "CueBreaker",
+    "CueRules",
+    "CueSpan",
     "StageContext",
+    "TextCase",
+    "WordAnimation",
+    "apply_look",
+    "build_cues",
     "chars_per_second",
+    "cue_spans",
     "document_from_transcript",
     "held_until",
+    "look_for",
     "segments_from_transcript",
     "stage_failed",
+    "time_to_read",
 ]
