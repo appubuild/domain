@@ -73,7 +73,7 @@ def _cue(
 
 def _document(*cues: CaptionSegment, layers: tuple[CaptionLayer, ...] = ()) -> CaptionDocument:
     """A document, with a layer for every id its cues name."""
-    named = {cue.layer_id for cue in cues} | {layer.layer_id for layer in layers}
+    named = dict.fromkeys([cue.layer_id for cue in cues] + [layer.layer_id for layer in layers])
     return CaptionDocument(
         segments=cues,
         layers=tuple(

@@ -490,6 +490,19 @@ entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
 through the track rebuilding itself. A locked track is never rewritten, and a
 commit of nothing creates no track at all.
 
+**Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
+starts ("we're going to we're going to") and stutters ("I I I") out of a
+document — fillers first, so an "um" inside a false start does not hide it — and
+then tidies what is left: collapsed whitespace, no space before punctuation, a
+capital at the start of each sentence. It never changes a word it keeps, never
+re-times a segment, never raises a confidence, and never touches a locked line.
+Two rules keep it from doing damage: a word repeated **twice** is kept ("very
+very" is emphasis, not a stutter), and the filler sets are deliberately small —
+a missing entry costs a filler that survives, which a human deletes in a second,
+while a wrong entry deletes a real word, which a human may never notice. A
+stutter's surviving word keeps its start and stretches to the end of the run, so
+karaoke highlight sweeps across it instead of leaving a hole.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -621,6 +634,19 @@ entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
 through the track rebuilding itself. A locked track is never rewritten, and a
 commit of nothing creates no track at all.
 
+**Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
+starts ("we're going to we're going to") and stutters ("I I I") out of a
+document — fillers first, so an "um" inside a false start does not hide it — and
+then tidies what is left: collapsed whitespace, no space before punctuation, a
+capital at the start of each sentence. It never changes a word it keeps, never
+re-times a segment, never raises a confidence, and never touches a locked line.
+Two rules keep it from doing damage: a word repeated **twice** is kept ("very
+very" is emphasis, not a stutter), and the filler sets are deliberately small —
+a missing entry costs a filler that survives, which a human deletes in a second,
+while a wrong entry deletes a real word, which a human may never notice. A
+stutter's surviving word keeps its start and stretches to the end of the run, so
+karaoke highlight sweeps across it instead of leaving a hole.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -662,6 +688,7 @@ services/captions/
 ├── build.py          transcript → CaptionDocument
 ├── merge.py          regeneration: a new transcription that keeps the edits
 ├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
+├── refine.py         Refiner · RefineRules — speech as spoken, text as read
 ├── commit.py         what a document asks a caption track to hold (ADR-0009 §8)
 ├── cues.py           CueBreaker — the Break stage
 └── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
@@ -820,13 +847,26 @@ entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
 through the track rebuilding itself. A locked track is never rewritten, and a
 commit of nothing creates no track at all.
 
+**Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
+starts ("we're going to we're going to") and stutters ("I I I") out of a
+document — fillers first, so an "um" inside a false start does not hide it — and
+then tidies what is left: collapsed whitespace, no space before punctuation, a
+capital at the start of each sentence. It never changes a word it keeps, never
+re-times a segment, never raises a confidence, and never touches a locked line.
+Two rules keep it from doing damage: a word repeated **twice** is kept ("very
+very" is emphasis, not a stutter), and the filler sets are deliberately small —
+a missing entry costs a filler that survives, which a human deletes in a second,
+while a wrong entry deletes a real word, which a human may never notice. A
+stutter's surviving word keeps its start and stretches to the end of the run, so
+karaoke highlight sweeps across it instead of leaving a hole.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **The remaining stages** — `refine`, `emoji`, `highlight`, `bake` — each as
-  its own module, each with its own tests. `Position` and `Resolve` are built
-  (`positioning.py`), and `services/ai/` will feed it the face boxes that make
+* **The remaining stages** — `emoji`, `highlight`, `bake` — each as its own
+  module, each with its own tests. `Refine`, `Position` and `Resolve` are built
+  (`refine.py`, `positioning.py`), and `services/ai/` will feed it the face boxes that make
   `protected` more than a lower third.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py`, runs the pure half as a `Job`,
