@@ -98,6 +98,18 @@ test-all: ## Run every test, including asr, gpu, perf and slow markers
 test-core: ## Run only the L1 kernel tests
 	$(PYTEST) tests/core
 
+.PHONY: serve
+serve: ## Run the local API service on an ephemeral loopback port
+	$(PY) -m nova_studio serve
+
+.PHONY: smoke
+smoke: ## Start the service for real and check that it answers
+	$(PYTEST) tests/api -m integration
+
+.PHONY: openapi
+openapi: ## Regenerate docs/architecture/api-contract.json from the routes
+	$(PY) -m nova_studio openapi --out docs/architecture/api-contract.json
+
 .PHONY: test-cov
 test-cov: ## Run tests with a branch-coverage report
 	$(PYTEST) $(PYTEST_DEFAULT) --cov=nova_studio --cov-report=term-missing --cov-report=xml

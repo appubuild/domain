@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import platform
 import sys
 from dataclasses import asdict, dataclass
@@ -141,25 +140,15 @@ def _child_module_count(code: str) -> int | None:
 def _resolve_data_dir() -> tuple[str, bool]:
     """Return the writable state directory and whether it came from the environment.
 
-    The default is platform-appropriate rather than hardcoded, because a portable
-    Windows build, a macOS bundle and a Linux install each have a different
-    convention, and writing into the wrong one is how an application ends up
-    scattering state across a user's home directory.
+    The answer belongs to `infra/paths.py`, because the API and the desktop shell
+    need the same one: two modules that each decide where the data directory is
+    are two modules that will eventually disagree, and the symptom would be a
+    project saved in one place and its journal written to another.
     """
-    override = os.environ.get(DATA_DIR_ENV)
-    if override:
-        return str(Path(override).expanduser()), True
-    system = platform.system()
-    home = Path.home()
-    if system == "Windows":
-        base = os.environ.get("LOCALAPPDATA") or str(home / "AppData" / "Local")
-        candidate = Path(base) / "NovaStudio"
-    elif system == "Darwin":
-        candidate = home / "Library" / "Application Support" / "NovaStudio"
-    else:
-        base = os.environ.get("XDG_DATA_HOME") or str(home / ".local" / "share")
-        candidate = Path(base) / "nova-studio"
-    return str(candidate), False
+    from nova_studio.infra.paths import data_dir
+
+    directory, from_env = data_dir()
+    return str(directory), from_env
 
 
 def _probe_components() -> tuple[ComponentStatus, ...]:
@@ -322,6 +311,67 @@ def cmd_layering(args: argparse.Namespace) -> int:
     return subprocess.run(command, check=False).returncode
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    """Run the local service on loopback until it is told to stop.
+
+    Starts the ASGI application on an ephemeral port and announces where it is,
+    because a port nobody can learn is a port nobody can use (ADR-0005 §1). The
+    endpoint carries the session token, so it is written to a file readable only
+    by this user when one is named; without ``--endpoint-file`` it goes to
+    stdout, which is what a script or `make dev` wants.
+
+    Returns 130 on interrupt, which is the convention for "stopped because the
+    user asked", and 0 on a clean exit.
+    """
+    import asyncio
+
+    from nova_studio.api.app import create_app
+    from nova_studio.api.server import serve, write_endpoint_file
+    from nova_studio.core.events import EventBus
+
+    async def run() -> None:
+        bus = EventBus(autostart=False)
+        app = create_app(bus)
+        async with serve(app, host=args.host, port=args.port) as running:
+            endpoint = running.endpoint
+            if args.endpoint_file:
+                write_endpoint_file(Path(args.endpoint_file), endpoint)
+            else:
+                print(endpoint.as_json(), flush=True)
+            print(
+                f"nova-studio listening on {endpoint.url} — press ctrl-c to stop",
+                file=sys.stderr,
+                flush=True,
+            )
+            # Until something stops us. A console build is stopped by ctrl-c; a
+            # shell embedding this in-process calls `serve()` itself and never
+            # comes here.
+            await asyncio.Event().wait()
+
+    try:
+        asyncio.run(run())
+    except KeyboardInterrupt:
+        return 130
+    return 0
+
+
+def cmd_openapi(args: argparse.Namespace) -> int:
+    """Print the API contract, or write it to a file.
+
+    The frontend's client is generated from this, so it is generated from the
+    routes that actually run rather than maintained beside them.
+    """
+    from nova_studio.api.openapi import contract_json
+
+    document = contract_json()
+    if args.out:
+        Path(args.out).write_text(document, encoding="utf-8")
+        print(f"wrote {args.out} ({len(document)} bytes)", file=sys.stderr)
+    else:
+        print(document, end="")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construct the CLI parser.
 
@@ -364,6 +414,43 @@ def build_parser() -> argparse.ArgumentParser:
     layering_parser.add_argument("--json", action="store_true", help="emit JSON")
     layering_parser.add_argument("--explain", action="store_true", help="print the rules and exit")
     layering_parser.set_defaults(func=cmd_layering)
+
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="run the local service on loopback and announce where it is",
+        description=(
+            "Start the ASGI service on 127.0.0.1 with an ephemeral port chosen by "
+            "the operating system, then print the endpoint — URL and session token "
+            "— as one JSON line. Every other Nova Studio component, including the "
+            "desktop window, is a client of this service (ADR-0005)."
+        ),
+    )
+    serve_parser.add_argument(
+        "--host", default="127.0.0.1", help="host to bind; loopback is the only safe choice"
+    )
+    serve_parser.add_argument(
+        "--port", type=int, default=0, help="port to bind; 0 (the default) asks for a free one"
+    )
+    serve_parser.add_argument(
+        "--endpoint-file",
+        metavar="PATH",
+        help="write the endpoint to PATH (mode 0600) instead of printing it",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
+
+    openapi_parser = subparsers.add_parser(
+        "openapi",
+        help="print the API contract generated from the routes",
+        description=(
+            "Emit the OpenAPI document the service serves at /openapi.json. The "
+            "frontend client is generated from this, so a change here is a change "
+            "to the frontend, and both are reviewed together."
+        ),
+    )
+    openapi_parser.add_argument(
+        "--out", metavar="PATH", help="write the document to PATH instead of stdout"
+    )
+    openapi_parser.set_defaults(func=cmd_openapi)
 
     return parser
 

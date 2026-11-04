@@ -1,0 +1,411 @@
+# The API layer (L4)
+
+**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-04
+
+The layer that turns Nova Studio from a library into an application. Everything
+the frontend can do, it does through this layer, over one loopback HTTP socket
+and one WebSocket (ADR-0005). This document is the house style for
+`nova_studio/api/` and the record of what it owns.
+
+Companion artefacts:
+
+* [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the decision this layer implements.
+* [`api-contract.json`](api-contract.json) — the **generated** OpenAPI contract. Regenerate with `make openapi`; a test fails when the committed copy is stale.
+
+---
+
+## 1. Purpose and rules
+
+An editor's backend is a *service*, not a set of functions the UI calls. It has
+background work (renders, transcriptions, autosave), it outlives the window that
+started it, and it has to be drivable by something that is not a window at all —
+a browser in `make dev`, a Playwright test in CI, a script.
+
+Four rules, all enforced by `scripts/check_layering.py`:
+
+1. **May import `core`, `domain`, `ports`, `services`, `infra`.** It is the
+   outermost ring: it translates, orchestrates and nothing else.
+2. **No domain logic.** If a rule about timelines or captions is being decided
+   here, it is in the wrong ring. The API asks a service and maps the answer.
+3. **One translator per concern.** One place a `Result` becomes a response
+   (`errors.py`), one place a token is checked (`auth.py`), one place a bus event
+   becomes a frame (`ws.py`). Drift in an API layer is always drift between two
+   copies of the same rule.
+4. **No globals.** The session — bus, token, data directory, port — is a value
+   created at startup and injected. A module global would be shared by the second
+   window in this process, and "open this project in a new window" is a normal
+   thing to want.
+
+**Error discipline.** Services return `Result[T]`; `respond()` turns that into
+either a body or a `problem+json` document. Routers never raise a domain error
+and never invent an error body. Every failure the frontend can see — including a
+404 from the framework and a 422 from a query string — has one shape (§5).
+
+**Database schema.** None. The API owns no tables; the per-project SQLite store
+and its schema belong to `infra/persistence` (ADR-0004 §3,
+[`project-file-format.md`](project-file-format.md)). What the API *does* own is
+the `SessionState`, which is per-process and never persisted.
+
+---
+
+## 2. Folder structure
+
+```
+api/
+├── app.py        the one ASGI factory: settings, lifespan, routers, guard
+├── server.py     running it: ephemeral port, endpoint, endpoint file
+├── openapi.py    the generated contract, corrected for what the wire sends
+├── auth.py       the session token, and the loopback guard
+├── errors.py     the one place a Result becomes a response
+├── state.py      SessionState — everything one running instance is
+├── ws.py         EventBridge — one bus, many sockets, recoverable loss
+├── schemas/      DTOs: the wire contract, documented field by field
+│   ├── system.py    health, identity, capabilities
+│   └── problem.py   the error body (RFC 9457)
+├── routers/      HTTP endpoints
+│   ├── system.py    /healthz, /api/v1/system/{info,capabilities}
+│   └── events.py    /api/v1/events, and the /api/v1/ws endpoint
+└── (to come)     resources/ (projects, timeline, media, render, captions,
+                  export, plugins), mappers/, dependencies/
+```
+
+Two rules for `schemas/`, stated in that package's `__init__.py`:
+
+* **A DTO is not an entity.** It is a wire shape, versioned with the contract;
+  the domain model evolves on its own schedule.
+* **Every field carries a `description`.** The frontend generates its client and
+  its developer tooltips from this file; an undocumented field is a field someone
+  will guess about. A test enforces it.
+* **`extra="forbid"`** everywhere except `ProblemResponse`, where extension
+  members *are* the mechanism RFC 9457 provides for carrying context.
+
+---
+
+## 3. The application (`app.py`)
+
+```python
+app = create_app(bus, session=state, settings=ApiSettings(...))
+```
+
+| Part | Responsibility |
+|---|---|
+| `ApiSettings` | Transport configuration: allowed hosts, topics, buffer size, heartbeat interval, whether docs are served. Every default is correct for a desktop session. |
+| `app.state.session` | The `SessionState`, read by the `session_state` dependency rather than captured in a closure. |
+| `app.state.bridge` | The `EventBridge` the WebSocket serves from. |
+| `install_error_handlers(app)` | Three handlers: `HTTPException`, `RequestValidationError`, `Exception`. |
+| `guard.as_middleware()` | Host/Origin check on every HTTP request (§4). |
+| `dependencies=[Depends(token_dependency(...))]` | Applied to the *router*, not to handlers, so an endpoint cannot forget to ask. |
+| `/healthz` | Registered outside every router — the one endpoint without a token. |
+| `_lifespan` | Start the bus if nobody has, publish `api.started`, publish `api.stopped` and shut the bus down on the way out. |
+
+Lifespan does three things and nothing else. A lifespan that opened a project or
+warmed a cache would be doing work the user did not ask for before they had a
+window to see it in.
+
+### Class diagram
+
+```
+                    create_app(bus, session=None, settings=None)
+                                     │
+        ┌────────────────────────────┼─────────────────────────────┐
+        ▼                            ▼                             ▼
+  SessionState  ◄──── session_state(request) dependency     EventBridge
+  (frozen)             reads app.state.session               (ws.py)
+   ├ data_dir                                                 ├ bus
+   ├ bus ───────────────────────────────┐                     ├ topics
+   ├ token ── token_dependency(token) ──┤                     ├ max_buffered
+   ├ host, port, started_ms             │                     ├ heartbeat_seconds
+   └ app_version                        │                     └ serve(websocket)
+                                        ▼
+                              routers/system.py   routers/events.py
+                                        │                │
+                                        └────────────────┴──► /api/v1/*
+                                                     │
+                                        LoopbackGuard (middleware + handshake)
+                                        SessionToken  (constant-time compare)
+```
+
+---
+
+## 4. Security: the token and the guard
+
+ADR-0005 §4 is blunt: **loopback is not a trust boundary**. Binding to
+`127.0.0.1` stops other machines and nothing else — not the other processes on
+this one, and not the browser, which a web page can point at
+`127.0.0.1:<port>` and often make same-origin through DNS rebinding.
+
+Two independent defences:
+
+| Defence | Stops | Where |
+|---|---|---|
+| **Session token** — 256 bits from `secrets`, generated per launch, handed to the window once | a local process that knows the port | `auth.SessionToken`, `token_dependency()` |
+| **Host/Origin guard** | a web page that does not have the token but can make the user's browser send a request anyway | `auth.LoopbackGuard` |
+
+Details that earn their place:
+
+* **Comparison is constant-time** (`hmac.compare_digest`). `==` on a secret leaks
+  its length and its prefix through timing — a small leak, and a silly one to leave.
+* **REST reads `Authorization: Bearer`; the WebSocket reads the query string or a
+  subprotocol.** A browser cannot set a header on a handshake. One verifier, two
+  transports.
+* **The WebSocket is authorised before `accept()`.** Accepting first and refusing
+  after hands an unauthenticated caller a socket, a file descriptor and a slot —
+  precisely the resource it should not be able to take.
+* **The guard is asked by the handshake, not only by middleware.** HTTP
+  middleware does not run for a WebSocket upgrade; a guard that lived only there
+  would leave the socket wide open. There is a test named for this.
+* **An absent `Origin` is allowed.** A native client and a same-origin `file://`
+  fetch send none, and refusing them would break the very shell the guard protects.
+* **`/healthz` is the one exception**, because the shell polls it *before* it has
+  a token. It discloses a version string and a process id, it is still behind the
+  guard, and there is a test that it discloses nothing more.
+
+---
+
+## 5. Errors (`errors.py`)
+
+Every failure is RFC 9457 `application/problem+json`, with the Nova extensions
+spread at the top level — a client reads `body["code"]`, not
+`body["extensions"]["code"]`, and the extra hop is where a code gets lost.
+
+| Situation | Code | Status | Domain |
+|---|---|---|---|
+| No token, or the wrong one | `NS-TRANSPORT-401` | 401 | TRANSPORT |
+| Host/Origin is not this session | `NS-TRANSPORT-4030` | 403 | TRANSPORT |
+| No such route | `NS-TRANSPORT-404` | 404 | TRANSPORT |
+| Request did not match the schema | `NS-VALIDATION-4220` | 422 | VALIDATION |
+| Requested range already evicted | `NS-TRANSPORT-416` | 416 | TRANSPORT |
+| Unexpected exception | `NS-TRANSPORT-5000` | 500 | TRANSPORT |
+| A service refusal (any domain) | the service's own `NS-<DOMAIN>-<NNNN>` | from severity | that domain |
+
+**The status comes from `ErrorSeverity`, not from a router's mood.** The mapping
+lives in L1 (`core/errors.py`) so a job failure broadcast over the socket carries
+a status the frontend can treat the same way even though no HTTP request was
+involved: `warning → 409` (a toast the UI carries on from), `error → 422`,
+`critical → 500` (a blocking banner).
+
+A `NovaError` is **not** registered as an exception handler, deliberately: it is
+a value, it arrives inside a `Result`, and `respond()` is what maps it.
+Registering a handler would imply the opposite — that services raise refusals
+across the wire.
+
+The generated contract documents these as `ProblemResponse` with the
+`application/problem+json` media type, corrected in `openapi.py` because FastAPI
+documents extra responses as `application/json` whatever the handler sends.
+
+---
+
+## 6. The WebSocket protocol (`ws.py`)
+
+One socket at `/api/v1/ws` carries every event. A socket per topic would multiply
+the handshakes, the token checks and the places a gap can appear.
+
+**Server → client**
+
+| Frame | When | Carries |
+|---|---|---|
+| `hello` | once, on connect | `seq`, `topics`, `heartbeat_seconds` |
+| `event` | on each bus event | `seq`, `topic`, `ts`, `payload`, `source` |
+| `heartbeat` | when idle for `heartbeat_seconds` | `seq`, `dropped`, `at_ms` |
+| `pong` | in answer to a `ping` | `seq` |
+| `resync` | in answer to a `resync` | `since`, `events`, `last_seq`, `oldest_seq`, `complete` |
+| `goodbye` | the socket is closing | `seq` |
+
+**Client → server:** `ping`, `resync {since}`, `unsubscribe`. Anything else —
+malformed JSON, a frame that is not an object, a request from a future version —
+is ignored rather than punished: a newer client must keep working.
+
+Three decisions carry the weight:
+
+1. **Sequence numbers, and a client that checks them.** A client seeing
+   `…41, 42, 47` knows it lost four events and *which* four, so recovery is a
+   request rather than a guess.
+2. **A gap is repaired from history, or admitted.** `resync` replays what is
+   retained and answers `complete: false` when the gap predates it — the signal to
+   refetch over REST. A partial replay dressed up as complete is a UI showing a
+   state that never existed.
+3. **The socket is a notification channel, not a data pipe.** Payloads are small.
+   Preview frames and waveforms go over a binary channel or a REST response
+   (ADR-0005 §5). A socket carrying frame buffers would need congestion control
+   and would get it wrong during a scrub.
+
+Back-pressure is the bus's: a stream drops its *oldest* buffered event when a
+client falls behind and counts it, because for a progress stream the newest
+position is the one that matters. The count is forwarded on every heartbeat, so
+"the UI is behind" is a number somebody can read.
+
+The bridge closes its own side after `goodbye` — nothing else will, and a socket
+left open is a connection the client holds until its own timeout.
+
+---
+
+## 7. State management (`state.py`)
+
+`SessionState` is a frozen, slotted dataclass: `data_dir`, `bus`, `token`,
+`host`, `port`, `started_ms`, `app_version`, with derived `origin` and
+`uptime_ms`.
+
+* **Frozen, so a handler cannot rebind it.** A mutation that survives to the next
+  request is a defect that appears an hour later in a different feature.
+* **One object, not several globals.** Two bridges in one process — a test, a
+  future multi-window shell — would both otherwise see the last one's bus.
+* **It carries the address it bound**, so "which port did this instance get" is
+  answered by the instance that knows rather than by a file two instances race over.
+* **The data directory is resolved at construction**, so a test can set
+  `NOVA_DATA_DIR` and get an answer that reflects it.
+
+---
+
+## 8. Running the service (`server.py`, `cli.py`)
+
+```bash
+make serve                     # or: python -m nova_studio serve
+python -m nova_studio serve --endpoint-file /tmp/session.json
+python -m nova_studio openapi --out docs/architecture/api-contract.json
+```
+
+| Piece | Responsibility |
+|---|---|
+| `serve(app)` | Async context manager: start uvicorn on loopback, yield once listening, stop on exit. |
+| `RunningServer.port` | Read from the *bound* socket. Binding to 0 and re-binding to "the port that was free" is a race with every other process on the machine. |
+| `RunningServer.endpoint` | `SessionEndpoint(url, ws, token)` derived from the app's own session, so a shell cannot announce a token the service will refuse. |
+| `write_endpoint_file()` | 0600, opened with the mode — for the moment the file exists with a wider mode, another user can read the token out of it. |
+
+A desktop shell does not use the CLI: it calls `serve()` on its own event loop
+and hands `endpoint` to the window. The CLI exists for `make dev`, for CI, and
+for the day somebody wants to drive the editor from a script.
+
+Uvicorn is configured with `access_log=False`: a desktop application's console
+belongs to nobody, and an access log line per scrub request would be the loudest
+thing in the process.
+
+---
+
+## 9. Caching strategy
+
+None in this layer, on purpose. A cache in front of a service is a second copy of
+the service's truth with an invalidation rule that is always slightly wrong. The
+caches that exist live with their owners: the media proxy cache, the render
+frame cache, the bus's retained history (which is a cache of *events*, sized and
+evicted by L1).
+
+What the API does instead of caching:
+
+* **`ETag` / `304` later, per resource**, once the resource routers land — for
+  reads where the client already has the bytes (thumbnails, waveform peaks).
+* **Sequence numbers on the socket**, which let a client skip a refetch entirely
+  rather than re-validate one.
+* **Capability negotiation once per session** (`/api/v1/system/capabilities`),
+  not per operation.
+
+---
+
+## 10. Performance strategy
+
+| Concern | Approach |
+|---|---|
+| Handshake cost | One socket for every topic, not one per topic. |
+| Serialisation | `json.dumps` with separators stripped; payloads are small by contract. |
+| Idle cost | A heartbeat every 15 s (configurable), not per-second polling. |
+| Back-pressure | Bounded per-client buffer (512 events); the oldest are dropped and counted, not queued forever. |
+| Slow clients | Never block the bus: a stream that is full drops for *that* client only. |
+| Large payloads | Never on the socket — binary channel or REST (ADR-0005 §5). |
+| Per-request allocation | Dependencies are built once at startup; handlers allocate a DTO and a JSON body. |
+| Docs in a packaged build | `ApiSettings(docs=False)`: the schema is a map of the internals and costs nothing to withhold from a user who will never read it. |
+
+The loopback call costs ~0.1–0.5 ms, which is why hot paths (scrubbing) use
+optimistic UI on the frontend and binary frames rather than JSON.
+
+---
+
+## 11. Events
+
+| Topic | Published by | Payload |
+|---|---|---|
+| `api.started` | lifespan, once listening | `version`, `port` |
+| `api.stopped` | lifespan, on the way out | `port` |
+
+Everything else on the socket originates in a service. The API adds no topics of
+its own for resource changes — a resource change is a domain event, and the
+frontend learns about it because the service published it, not because a router
+did.
+
+The REST read `/api/v1/events?since=&limit=` returns the same frames the socket
+would have sent, so a client that cannot hold a socket open — a CLI, a test, a
+recovery path after a long gap — is not a second-class citizen.
+
+---
+
+## 12. Testing
+
+`tests/api/`, 152 tests, all of which run in `make check`.
+
+| File | What it pins |
+|---|---|
+| `test_transport_security.py` | ADR-0005 §4: the token is required everywhere under `/api/v1`, `/healthz` is open and discloses three fields, the guard refuses foreign Host/Origin on **both** transports, two sessions do not share a token. |
+| `test_errors.py` | One error shape: a 404, a 422, a service refusal and a genuine bug all produce the same keys; the severity→status mapping; no traceback on the wire. |
+| `test_system_router.py` | Health, identity and capabilities; probing never imports what it probes. |
+| `test_events_router.py` | The tail of history; a gap older than the retained history is a 416 that names the oldest sequence kept. |
+| `test_ws_bridge.py` | hello → event → ping/pong → resync → goodbye; `complete: false` is honest; heartbeats carry the dropped count; a malformed frame does not kill the socket. |
+| `test_server.py` | A real server on a real port: the port it reports is the port it is on, the token it announces is the token it accepts, the endpoint file is private. |
+| `test_openapi.py` | The committed contract matches the routes (`make openapi` after a route change); every path is versioned or public; every field is documented. |
+
+Two `TestClient` quirks are worth knowing before a mysterious 403 costs an hour:
+
+* A client built without `base_url` sends `Host: testserver`, which the guard
+  refuses — correctly, because it is not a loopback address.
+* `TestClient` does **not** derive a WebSocket handshake's `Host` from its
+  `base_url`; every handshake arrives as `testserver` unless the test passes the
+  header. `tests/api/conftest.py` exists to say so once.
+
+The doubles in `test_ws_bridge.py` (`ScriptedSocket`, `FakeBus`) exist because
+two promises — silence and loss — cannot be arranged through a real socket
+without a sleep and a hope.
+
+---
+
+## 13. Frontend architecture notes
+
+The frontend (stage 4) consumes this layer under rules that fall out of the above:
+
+1. **One client, one token.** Read it from the endpoint the shell handed you;
+   send it as `Authorization: Bearer` and in the handshake query string. Never
+   persist it — a token in `localStorage` is a token any script can read.
+2. **Watch the sequence numbers.** A gap is not an error, it is a `resync`. If
+   `complete` is `false`, refetch the slice over REST and say nothing to the user.
+3. **Reconnect with backoff, then resync.** On `hello`, compare its `seq` with
+   what you have; the difference is exactly what you missed.
+4. **Heartbeats are liveness, not data.** If none arrives within two intervals,
+   treat the socket as dead and reconnect.
+5. **Optimistic UI for anything at display rate** (transport position, drag
+   gestures); the socket is authoritative but not fast enough to be the only
+   source during a scrub.
+6. **Errors are one shape.** Parse `code` for localisation, `detail` for the
+   toast, `remedy` for the action, `retryable` for whether to offer one.
+7. **`pywebview.api.*` is for native window concerns only** (ADR-0005 §3):
+   show/hide, minimise/maximise/fullscreen, native dialogs, clipboard image,
+   focus, title, quit. A lint rule in the frontend will forbid it elsewhere.
+
+---
+
+## 14. Future expansion
+
+| Next | Why the seam is already there |
+|---|---|
+| Resource routers (projects, timeline, media, render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` for the DTOs. |
+| `mappers/` — entity ↔ DTO translation | Nothing maps today because nothing is exposed yet; when it is, the mapping belongs in one module per resource, not inline in handlers. |
+| Command endpoints (`POST /api/v1/timeline/commands`) | Commands are already the public editing API; a router that accepts a serialised command and returns the events it produced is a thin translation. |
+| Job endpoints (progress, cancel) | The job scheduler is already the only way long work runs (ADR-0010); progress arrives as events, so the socket carries it for free. |
+| Binary frame channels (preview, waveforms) | ADR-0005 §5 fixes the three sinks; the socket already separates text and binary frames. |
+| `ETag`/`304` on media reads | The resource routers will own the validators. |
+| PyWebView bridge (`apps/desktop`) | `serve()` runs in-process; `endpoint` is what the window is handed. The bridge carries window concerns only. |
+| A second window | `create_app` takes its session as an argument and holds no global; two apps in one process already have two tokens (there is a test). |
+
+---
+
+## 15. Where to read next
+
+* [`ARCHITECTURE.md`](ARCHITECTURE.md) §4 — where L4 sits in the ring model.
+* [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the transport decision and its alternatives.
+* [`services.md`](services.md) — what the routers will call.
+* [`api-contract.json`](api-contract.json) — the generated contract the frontend compiles against.
