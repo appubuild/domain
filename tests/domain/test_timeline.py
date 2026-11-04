@@ -159,6 +159,10 @@ class TestClip:
         assert _clip(asset_id="", kind=ClipKind.ADJUSTMENT).is_generated
         assert _clip(asset_id="", kind=ClipKind.TEXT).is_generated
 
+    def test_a_caption_clip_needs_no_asset(self) -> None:
+        """Its content is the caption document, not a media file (ADR-0009 §8)."""
+        assert _clip(asset_id="", kind=ClipKind.CAPTION).is_generated
+
     def test_a_decoded_clip_is_not_generated(self) -> None:
         assert not _clip().is_generated
 

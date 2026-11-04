@@ -121,6 +121,14 @@ from nova_studio.services.captions.build import (
     segments_from_transcript,
 )
 from nova_studio.services.captions.codes import CaptionErrorCode
+from nova_studio.services.captions.commit import (
+    DEFAULT_CAPTION_TRACK_ID,
+    CaptionCommit,
+    caption_clip,
+    clip_id_for,
+    commit_document,
+    commit_layer,
+)
 from nova_studio.services.captions.cues import CueBreaker
 from nova_studio.services.captions.merge import (
     CaptionRegeneration,
@@ -171,6 +179,7 @@ from nova_studio.services.captions.timing import (
 )
 
 __all__ = [
+    "DEFAULT_CAPTION_TRACK_ID",
     "DEFAULT_CHAR_ASPECT",
     "DEFAULT_CUE_RULES",
     "DEFAULT_MAX_SHIFT_LINES",
@@ -178,6 +187,7 @@ __all__ = [
     "DEFAULT_TEMPLATE",
     "LOOKS",
     "Backdrop",
+    "CaptionCommit",
     "CaptionErrorCode",
     "CaptionLook",
     "CaptionPipeline",
@@ -193,7 +203,11 @@ __all__ = [
     "apply_edit",
     "apply_look",
     "build_cues",
+    "caption_clip",
     "chars_per_second",
+    "clip_id_for",
+    "commit_document",
+    "commit_layer",
     "cue_box",
     "cue_spans",
     "document_from_transcript",

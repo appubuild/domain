@@ -93,6 +93,7 @@ from __future__ import annotations
 from nova_studio.services.timeline.commands import (
     LiftClipCommand,
     MoveClipCommand,
+    ReplaceTrackClipsCommand,
     RippleDeleteCommand,
     SlipClipCommand,
     SplitClipCommand,
@@ -118,6 +119,7 @@ __all__ = [
     "LiftClipCommand",
     "Lifted",
     "MoveClipCommand",
+    "ReplaceTrackClipsCommand",
     "RippleDeleteCommand",
     "Rippled",
     "SlipClipCommand",

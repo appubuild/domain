@@ -186,8 +186,15 @@ class TransitionAlignment(StrEnum):
 
 #: Kinds of clip that are generated rather than read from an asset, and so need
 #: no asset id.
+#:
+#: :attr:`ClipKind.CAPTION` belongs here because a caption clip's content is the
+#: :class:`~nova_studio.domain.captions.CaptionDocument`, not a media file
+#: (ADR-0009 §8): the document stays the source of truth and a reconciler keeps
+#: the clips in step with it. Asking such a clip for an asset — and decoding it,
+#: and checking that the asset still exists — would be asking a question with no
+#: answer.
 _GENERATED_CLIP_KINDS: Final[frozenset[ClipKind]] = frozenset(
-    {ClipKind.SOLID, ClipKind.ADJUSTMENT, ClipKind.TEXT}
+    {ClipKind.SOLID, ClipKind.ADJUSTMENT, ClipKind.TEXT, ClipKind.CAPTION}
 )
 
 #: Playing at the rate it was recorded at.

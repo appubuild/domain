@@ -1,4 +1,4 @@
-"""L3 — the edit commands: six ways to change a timeline, each reversible.
+"""L3 — the edit commands: seven ways to change a timeline, each reversible.
 
 This is where ADR-0008 rule 1 becomes concrete: there is no other way to change
 a timeline.  A drag, a razor blade, a delete key and a scripted batch all go
@@ -45,7 +45,13 @@ from nova_studio.core.commands import (
     UndoScope,
 )
 from nova_studio.core.result import Result, failed, ok
-from nova_studio.domain.timeline import MIN_CLIP_FRAMES, validate_timeline
+from nova_studio.domain.timeline import (
+    MIN_CLIP_FRAMES,
+    Track,
+    TrackKind,
+    Transition,
+    validate_timeline,
+)
 from nova_studio.services.timeline.ripple import (
     Lifted,
     Rippled,
@@ -61,12 +67,13 @@ from nova_studio.services.timeline.store import timeline_store
 
 if TYPE_CHECKING:
     from nova_studio.core.commands import CommandContext
-    from nova_studio.domain.timeline import Clip, Timeline, Track
+    from nova_studio.domain.timeline import Clip, Timeline
     from nova_studio.services.timeline.store import TimelineStore
 
 __all__ = [
     "LiftClipCommand",
     "MoveClipCommand",
+    "ReplaceTrackClipsCommand",
     "RippleDeleteCommand",
     "SlipClipCommand",
     "SplitClipCommand",
@@ -703,3 +710,160 @@ class RippleDeleteCommand(TimelineCommand):
             return failed(CommandError.not_executed(self.command_id))
         store.replace(undo_ripple(store.current(), self.rippled))
         return ok(None)
+
+
+@dataclass
+class ReplaceTrackClipsCommand(TimelineCommand):
+    """Make one track hold exactly these clips — nothing added, nothing kept.
+
+    The other half of the caption reconciler (ADR-0009 §8), and not only that:
+    anything that *generates* a track's contents rather than hand-placing them
+    needs it — a re-transcribed caption track, a chapters track, a beat grid.
+    What those all have in common is that the source is elsewhere and the track
+    is a projection of it, so the only correct edit is "hold exactly this",
+    never "add this" or "remove that".
+
+    Why one command and not a batch of adds and deletes: **one transaction**.
+    A commit that arrived as forty undo entries would mean Ctrl+Z steps through
+    a caption track rebuilding itself one cue at a time, and a failure halfway
+    would leave a project that is not what the document says and not what the
+    timeline said either.
+
+    The delta is the track it replaced — its clips and their transitions — which
+    is bounded by the track and not by the timeline, so a commit over two
+    thousand cues costs one track's worth of undo memory (ADR-0008 §2).
+
+    Two refusals, both preconditions rather than crashes: a **locked** track is
+    never rewritten (it is the guard against destroying a finished mix), and a
+    track that is not there is created only when the caller asked for it, so
+    "reconcile this" can never conjure a track the project did not have.
+    Committing an empty document creates nothing at all.
+    """
+
+    track_id: str
+    clips: tuple[Clip, ...] = ()
+    #: The kind of track to create when it is not there yet.
+    kind: TrackKind = TrackKind.CAPTION
+    #: The name of a track created this way.
+    track_name: str = ""
+    #: Whether a missing track may be created.
+    create: bool = True
+    #: Captured on execution: the track as it was, or ``None`` when it is new.
+    previous: Track | None = None
+
+    command_id = "timeline.replace-track-clips"
+    display_name = "command.timeline.replace_track_clips"
+    memory_class = MemoryClass.MEDIUM
+
+    def __post_init__(self) -> None:
+        super().__init__()
+
+    def _apply(self, store: TimelineStore, timeline: Timeline) -> Result[CommandOutcome]:
+        existing = timeline.track(self.track_id)
+        if existing is None:
+            if not self.clips:
+                # Nothing to reconcile, and no reason to leave an empty track
+                # behind: a document with no cues commits to no track at all.
+                return ok(CommandOutcome.none())
+            if not self.create:
+                return failed(
+                    CommandError.precondition(
+                        self.command_id,
+                        f"track {self.track_id!r} is not on this timeline, "
+                        "and this command was told not to create it",
+                    )
+                )
+            created = _sorted_track(self.track_id, self.kind, self.track_name, self.clips)
+            store.replace(timeline.with_track(created))
+            return ok(
+                CommandOutcome(
+                    affected=frozenset(clip.clip_id for clip in self.clips),
+                    invalidate=_TIMELINE_INVALIDATED,
+                    summary=f"created {self.track_id!r} with {len(self.clips)} clips",
+                )
+            )
+        if existing.locked:
+            return failed(
+                CommandError.precondition(
+                    self.command_id,
+                    f"track {self.track_id!r} is locked, so its clips cannot be replaced",
+                )
+            )
+        if existing.clips == self.clips:
+            return ok(CommandOutcome.none())
+        self.previous = existing
+        store.replace(
+            timeline.replaced(
+                _sorted_track(
+                    self.track_id,
+                    existing.kind,
+                    existing.name,
+                    self.clips,
+                    index=existing.index,
+                    muted=existing.muted,
+                    hidden=existing.hidden,
+                    transitions=_surviving_transitions(existing, self.clips),
+                )
+            )
+        )
+        return ok(
+            CommandOutcome(
+                affected=frozenset(
+                    {clip.clip_id for clip in existing.clips}
+                    | {clip.clip_id for clip in self.clips}
+                ),
+                invalidate=_TIMELINE_INVALIDATED,
+                summary=(
+                    f"{self.track_id!r} now holds {len(self.clips)} clips, "
+                    f"was {existing.clip_count}"
+                ),
+            )
+        )
+
+    def undo(self, ctx: CommandContext) -> Result[None]:
+        store = timeline_store(ctx)
+        if store is None:
+            return failed(CommandError.not_executed(self.command_id))
+        timeline = store.current()
+        if self.previous is None:
+            if timeline.track(self.track_id) is None:  # pragma: no cover - no-op commit
+                return ok(None)
+            store.replace(timeline.without_track(self.track_id))
+            return ok(None)
+        store.replace(timeline.replaced(self.previous))
+        return ok(None)
+
+
+def _sorted_track(
+    track_id: str,
+    kind: TrackKind,
+    name: str,
+    clips: tuple[Clip, ...],
+    *,
+    index: int = 0,
+    muted: bool = False,
+    hidden: bool = False,
+    transitions: tuple[Transition, ...] = (),
+) -> Track:
+    """A track whose clips are in the order a track must keep them in."""
+    return Track(
+        track_id=track_id,
+        kind=kind,
+        index=index,
+        name=name,
+        muted=muted,
+        hidden=hidden,
+        clips=tuple(sorted(clips, key=lambda clip: (clip.start_frame, clip.clip_id))),
+        transitions=transitions,
+    )
+
+
+def _surviving_transitions(track: Track, clips: tuple[Clip, ...]) -> tuple[Transition, ...]:
+    """The transitions still attached to a clip that is still there.
+
+    A transition names a clip; dropping the clip without dropping the transition
+    would break the track's own invariant, and silently keeping both would be
+    worse.
+    """
+    kept = {clip.clip_id for clip in clips}
+    return tuple(item for item in track.transitions if item.clip_id in kept)

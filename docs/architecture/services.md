@@ -468,6 +468,28 @@ undo, the coalescing rules and the guard.
 ordering, the Edit-menu state, and that a rejected command leaves the redo stack
 alone. No FFmpeg, no filesystem, no clock that moves unless told to.
 
+**The reconciler (ADR-0009 §8).** A caption document is the authoring source of
+truth, and it is not the timeline — but captions have to be *on* the timeline to
+be trimmed, moved and exported with the picture. Two modules keep the two in
+step, and neither imports the other:
+
+```
+services/captions/commit.py       document + frame rate → the clips it implies
+services/timeline/commands.py     ReplaceTrackClipsCommand → applies them
+        └── the application layer is the only place that knows about both
+            (ADR-0002 rule 4: a feature may not import a sibling feature)
+```
+
+One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
+document, which is why the kind counts as generated in the domain. A clip's id is
+**derived** from where the cue is, not minted per commit — so committing an
+unchanged document produces identical clips, `ReplaceTrackClipsCommand` reports
+that nothing changed, and a re-transcription of one cue replaces one clip instead
+of rebuilding the track. Applying a commit is one command, therefore one undo
+entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
+through the track rebuilding itself. A locked track is never rewritten, and a
+commit of nothing creates no track at all.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -577,6 +599,28 @@ cover, the native cap, even dimensions, centred bars, cropped-when-zoomed, and
 forward-only warm-up. No FFmpeg, no numpy beyond what the domain carries, no
 clock.
 
+**The reconciler (ADR-0009 §8).** A caption document is the authoring source of
+truth, and it is not the timeline — but captions have to be *on* the timeline to
+be trimmed, moved and exported with the picture. Two modules keep the two in
+step, and neither imports the other:
+
+```
+services/captions/commit.py       document + frame rate → the clips it implies
+services/timeline/commands.py     ReplaceTrackClipsCommand → applies them
+        └── the application layer is the only place that knows about both
+            (ADR-0002 rule 4: a feature may not import a sibling feature)
+```
+
+One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
+document, which is why the kind counts as generated in the domain. A clip's id is
+**derived** from where the cue is, not minted per commit — so committing an
+unchanged document produces identical clips, `ReplaceTrackClipsCommand` reports
+that nothing changed, and a re-transcription of one cue replaces one clip instead
+of rebuilding the track. Applying a commit is one command, therefore one undo
+entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
+through the track rebuilding itself. A locked track is never rewritten, and a
+commit of nothing creates no track at all.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -618,6 +662,7 @@ services/captions/
 ├── build.py          transcript → CaptionDocument
 ├── merge.py          regeneration: a new transcription that keeps the edits
 ├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
+├── commit.py         what a document asks a caption track to hold (ADR-0009 §8)
 ├── cues.py           CueBreaker — the Break stage
 └── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
 ```
@@ -753,6 +798,28 @@ pins the presets and the one real trap in applying them — that changing a cue'
 case rebuilds its words, because a word's characters must join to make the word.
 No model, no audio, no clock: that is the point of ADR-0009 §3.
 
+**The reconciler (ADR-0009 §8).** A caption document is the authoring source of
+truth, and it is not the timeline — but captions have to be *on* the timeline to
+be trimmed, moved and exported with the picture. Two modules keep the two in
+step, and neither imports the other:
+
+```
+services/captions/commit.py       document + frame rate → the clips it implies
+services/timeline/commands.py     ReplaceTrackClipsCommand → applies them
+        └── the application layer is the only place that knows about both
+            (ADR-0002 rule 4: a feature may not import a sibling feature)
+```
+
+One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
+document, which is why the kind counts as generated in the domain. A clip's id is
+**derived** from where the cue is, not minted per commit — so committing an
+unchanged document produces identical clips, `ReplaceTrackClipsCommand` reports
+that nothing changed, and a re-transcription of one cue replaces one clip instead
+of rebuilding the track. Applying a commit is one command, therefore one undo
+entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
+through the track rebuilding itself. A locked track is never rewritten, and a
+commit of nothing creates no track at all.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -762,13 +829,15 @@ No model, no audio, no clock: that is the point of ADR-0009 §3.
   (`positioning.py`), and `services/ai/` will feed it the face boxes that make
   `protected` more than a lower third.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
+  `diarise`, `translate`) through `ports/asr.py`, runs the pure half as a `Job`,
+  and then calls `commit.py` so the timeline follows the document it just built.
+* **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as a
   `Job`.
-* **The timeline reconciler** (ADR-0009 §8), which commits a document to
-  caption clips in one transaction. Regeneration (§7) is built:
-  `merge.py` re-attaches a correction under its alignment key, keeps a locked
-  line out of the new transcription, and returns what it could not match for
-  review rather than guessing.
+* **The reconciler's window into the renderer**: a caption clip names a cue by
+  address (`"<track>.<layer>.<index>"`), so the renderer resolves it against the
+  document rather than carrying a copy of the text and its styling that would
+  silently go stale.
 * **Translation layers**, which are a second `CaptionLayer` of the same document,
   not a second document.
 * **Import/export** of SRT, VTT and JSON, in `services/export/`.
