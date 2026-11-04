@@ -503,6 +503,17 @@ while a wrong entry deletes a real word, which a human may never notice. A
 stutter's surviving word keeps its start and stretches to the end of the run, so
 karaoke highlight sweeps across it instead of leaving a hole.
 
+**Highlight, in one paragraph.** `Highlighter` sets `CaptionWord.highlight` — the
+flag the templates and the animation baker consume — from five signals, each
+switchable: **numbers** ("47", "3.5", "30%"), the **unit** beside them ("5
+minutes"), words the speaker **held** (far longer than their own median word,
+which is the only signal here that hears the performance rather than reading
+it), a **name** the first time it is said, and a **term** said three or more
+times across the piece. Candidates are *scored*, not fired in order, and the
+best two win: a cue with six highlighted words is a cue with none. A highlight a
+human set is never unset and never spends the cap, and a filler is never the
+word of the line even with `Refine` switched off.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -647,6 +658,17 @@ while a wrong entry deletes a real word, which a human may never notice. A
 stutter's surviving word keeps its start and stretches to the end of the run, so
 karaoke highlight sweeps across it instead of leaving a hole.
 
+**Highlight, in one paragraph.** `Highlighter` sets `CaptionWord.highlight` — the
+flag the templates and the animation baker consume — from five signals, each
+switchable: **numbers** ("47", "3.5", "30%"), the **unit** beside them ("5
+minutes"), words the speaker **held** (far longer than their own median word,
+which is the only signal here that hears the performance rather than reading
+it), a **name** the first time it is said, and a **term** said three or more
+times across the piece. Candidates are *scored*, not fired in order, and the
+best two win: a cue with six highlighted words is a cue with none. A highlight a
+human set is never unset and never spends the cap, and a filler is never the
+word of the line even with `Refine` switched off.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
@@ -688,6 +710,7 @@ services/captions/
 ├── build.py          transcript → CaptionDocument
 ├── merge.py          regeneration: a new transcription that keeps the edits
 ├── positioning.py    CuePlacer · cue_box — where a cue sits, and what moves it
+├── highlight.py      Highlighter — which word a viewer's eye should land on
 ├── refine.py         Refiner · RefineRules — speech as spoken, text as read
 ├── commit.py         what a document asks a caption track to hold (ADR-0009 §8)
 ├── cues.py           CueBreaker — the Break stage
@@ -860,13 +883,24 @@ while a wrong entry deletes a real word, which a human may never notice. A
 stutter's surviving word keeps its start and stretches to the end of the run, so
 karaoke highlight sweeps across it instead of leaving a hole.
 
+**Highlight, in one paragraph.** `Highlighter` sets `CaptionWord.highlight` — the
+flag the templates and the animation baker consume — from five signals, each
+switchable: **numbers** ("47", "3.5", "30%"), the **unit** beside them ("5
+minutes"), words the speaker **held** (far longer than their own median word,
+which is the only signal here that hears the performance rather than reading
+it), a **name** the first time it is said, and a **term** said three or more
+times across the piece. Candidates are *scored*, not fired in order, and the
+best two win: a cue with six highlighted words is a cue with none. A highlight a
+human set is never unset and never spends the cap, and a filler is never the
+word of the line even with `Refine` switched off.
+
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **The remaining stages** — `emoji`, `highlight`, `bake` — each as its own
-  module, each with its own tests. `Refine`, `Position` and `Resolve` are built
-  (`refine.py`, `positioning.py`), and `services/ai/` will feed it the face boxes that make
+* **The remaining stages** — `emoji` and `bake` — each as its own module, each
+  with its own tests. `Refine`, `Highlight`, `Position` and `Resolve` are built
+  (`refine.py`, `highlight.py`, `positioning.py`), and `services/ai/` will feed it the face boxes that make
   `protected` more than a lower third.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py`, runs the pure half as a `Job`,

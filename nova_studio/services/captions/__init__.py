@@ -130,6 +130,19 @@ from nova_studio.services.captions.commit import (
     commit_layer,
 )
 from nova_studio.services.captions.cues import CueBreaker
+from nova_studio.services.captions.highlight import (
+    DEFAULT_HIGHLIGHT_RULES,
+    DEFAULT_STOP_WORDS,
+    DEFAULT_UNITS,
+    Highlighter,
+    HighlightRules,
+    held_words,
+    highlight_segment,
+    highlight_words,
+    is_number,
+    term_counts,
+    term_counts_of,
+)
 from nova_studio.services.captions.merge import (
     CaptionRegeneration,
     apply_edit,
@@ -194,10 +207,13 @@ __all__ = [
     "DEFAULT_CHAR_ASPECT",
     "DEFAULT_CUE_RULES",
     "DEFAULT_FILLERS",
+    "DEFAULT_HIGHLIGHT_RULES",
     "DEFAULT_MAX_SHIFT_LINES",
     "DEFAULT_PADDING_FRACTION",
     "DEFAULT_REFINE_RULES",
+    "DEFAULT_STOP_WORDS",
     "DEFAULT_TEMPLATE",
+    "DEFAULT_UNITS",
     "FILLERS_BY_LANGUAGE",
     "LOOKS",
     "Backdrop",
@@ -210,6 +226,8 @@ __all__ = [
     "CueBreaker",
     "CueRules",
     "CueSpan",
+    "HighlightRules",
+    "Highlighter",
     "RefineRules",
     "Refiner",
     "StageContext",
@@ -240,5 +258,7 @@ __all__ = [
     "regenerate",
     "segments_from_transcript",
     "stage_failed",
+    "term_counts",
+    "term_counts_of",
     "time_to_read",
 ]
