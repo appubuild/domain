@@ -14,17 +14,21 @@ from dataclasses import replace
 import pytest
 
 from nova_studio.core.errors import NovaInvariantError
+from nova_studio.core.result import Err
 from nova_studio.domain.captions import (
     CaptionAnchor,
+    CaptionDocument,
     CaptionSegment,
     CaptionWord,
 )
+from nova_studio.services.captions.pipeline import CaptionPipeline, StageContext
 from nova_studio.services.captions.styles import (
     DEFAULT_TEMPLATE,
     LOOKS,
     Backdrop,
     CaptionLook,
     CaptionTemplate,
+    StyleStage,
     TextCase,
     WordAnimation,
     apply_look,
@@ -344,3 +348,84 @@ class TestWhatACueCannotHonour:
         dressed = apply_look((_cue(with_words=False),), look_for(CaptionTemplate.GAMING))
         assert dressed[0].style_overrides is not None
         assert dressed[0].style_overrides["word_animation"] == "slide"
+
+
+class TestTheStage:
+    """The same look, run inside a pipeline (ADR-0009 §3)."""
+
+    def test_the_stage_calls_itself_style(self) -> None:
+        assert StyleStage().name == "style"
+
+    def test_a_stage_starts_on_the_default_template(self) -> None:
+        assert StyleStage().look is look_for(DEFAULT_TEMPLATE)
+
+    def test_a_stage_can_carry_another_look(self) -> None:
+        tiktok = look_for(CaptionTemplate.TIKTOK)
+        assert StyleStage(look=tiktok).look is tiktok
+
+    def test_running_the_stage_gives_a_document(self) -> None:
+        document = CaptionDocument.of(_cue())
+        result = StyleStage().apply(document, StageContext())
+        assert not isinstance(result, Err)
+        assert result.unwrap().segment_count == 1
+
+    def test_the_stage_dresses_every_unlocked_cue(self) -> None:
+        document = CaptionDocument.of(_cue(), _cue("a second line", start_ms=5_000))
+        dressed = (
+            StyleStage(look=look_for(CaptionTemplate.TIKTOK))
+            .apply(document, StageContext())
+            .unwrap()
+        )
+        assert all(
+            cue.style_overrides is not None and cue.style_overrides["template"] == "tiktok"
+            for cue in dressed.segments
+        )
+
+    def test_the_stage_leaves_a_locked_cue_alone(self) -> None:
+        locked = _cue("leave me alone", locked=True)
+        document = CaptionDocument.of(locked, _cue("dress me", start_ms=5_000))
+        dressed = (
+            StyleStage(look=look_for(CaptionTemplate.TIKTOK))
+            .apply(document, StageContext())
+            .unwrap()
+        )
+        assert dressed.segments[0] == locked
+
+    def test_the_stage_keeps_the_rest_of_the_document(self) -> None:
+        document = CaptionDocument.of(_cue(), language="en")
+        dressed = StyleStage().apply(document, StageContext()).unwrap()
+        assert dressed.language == "en"
+        assert dressed.layers == document.layers
+
+    def test_the_stage_can_be_switched_off(self) -> None:
+        """A pipeline keeps the stage in the order, so it can be turned back on."""
+        document = CaptionDocument.of(_cue())
+        pipeline = (
+            CaptionPipeline()
+            .with_stage("style", StyleStage(look=look_for(CaptionTemplate.TIKTOK)))
+            .disabled_stage("style")
+        )
+        assert pipeline.run(document, StageContext()).unwrap().segments == document.segments
+
+    def test_the_stage_runs_after_the_break(self) -> None:
+        """A re-break then a re-style: the two things an editor asks for together."""
+        from nova_studio.services.captions.cues import CueBreaker
+
+        # Comfortably readable speech: speech faster than the reading rate
+        # cannot be fixed by breaking, and the pipeline says so (NS-CAPTION-4012)
+        # rather than shipping a caption nobody can finish.
+        long = " ".join(f"word{index}" for index in range(40))
+        document = CaptionDocument.of(_cue(long, step_ms=500))
+        pipeline = (
+            CaptionPipeline()
+            .with_stage("break", CueBreaker())
+            .with_stage("style", StyleStage(look=look_for(CaptionTemplate.NETFLIX)))
+        )
+        result = pipeline.run(document, StageContext())
+        assert not isinstance(result, Err), result.error()
+        dressed = result.unwrap()
+        assert dressed.segment_count > 1
+        assert all(
+            cue.style_overrides is not None and cue.style_overrides["template"] == "netflix"
+            for cue in dressed.segments
+        )

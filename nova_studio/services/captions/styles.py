@@ -31,11 +31,12 @@ left the characters alone would build a document the domain refuses to load.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from typing import TYPE_CHECKING, Final
 
 from nova_studio.core.errors import NovaInvariantError
+from nova_studio.core.result import Result, ok
 from nova_studio.domain.captions import (
     CaptionAnchor,
     CaptionPosition,
@@ -47,12 +48,16 @@ from nova_studio.services.captions.segmentation import CueRules
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
+    from nova_studio.domain.captions import CaptionDocument
+    from nova_studio.services.captions.pipeline import StageContext
+
 __all__ = [
     "DEFAULT_TEMPLATE",
     "LOOKS",
     "Backdrop",
     "CaptionLook",
     "CaptionTemplate",
+    "StyleStage",
     "TextCase",
     "WordAnimation",
     "apply_look",
@@ -313,6 +318,35 @@ def _with_speaker(cue: CaptionSegment, look: CaptionLook) -> str:
     if cue.text.startswith(f"{cue.speaker}:"):
         return cue.text
     return f"{cue.speaker}: {cue.text}"
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class StyleStage:
+    """The look, as a pipeline stage (ADR-0009 §3, §5).
+
+    A template is usually chosen once, when a project is set up, and the runner
+    applies it before the pipeline runs. It is *also* a stage, because "re-style
+    my captions" is a thing an editor asks for after an edit, and a stage is how
+    the engine answers a question like that — with a name, in an order, and able
+    to be switched off.
+
+    It is deliberately not one of the twelve names ADR-0009 §3 lists: those
+    describe one generation pass end to end, and this is the house style's own
+    step inside it. ``Bake`` is the later stage that turns a look's animation
+    mode into keyframes (§6).
+
+    The stage does what :func:`apply_look` does and nothing more: locked cues
+    untouched, karaoke dropped on a cue that has no word timings, and words
+    rebuilt when the case changes so their characters still join to make them.
+    """
+
+    #: The stage's name in the pipeline.
+    name: str = "style"
+    look: CaptionLook = field(default_factory=lambda: look_for(DEFAULT_TEMPLATE))
+
+    def apply(self, document: CaptionDocument, ctx: StageContext) -> Result[CaptionDocument]:
+        """Dress every unlocked cue in this look."""
+        return ok(document.with_segments(apply_look(document.segments, self.look)))
 
 
 def _reword(word: CaptionWord, look: CaptionLook) -> CaptionWord:

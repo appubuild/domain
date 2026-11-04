@@ -24,8 +24,9 @@ services/captions/
 ├── timing.py         chars_per_second · time_to_read · held_until
 ├── segmentation.py   CueRules · cue_spans · build_cues — the breaker
 ├── build.py          transcript → CaptionDocument (ADR-0009 §1, §2, §4)
-├── cues.py           CueBreaker — the Break stage of the pipeline
-└── styles.py         CaptionTemplate · CaptionLook · apply_look
+├── merge.py          regeneration: a new transcription that keeps the edits
+├── cues.py           CueBreaker — the Break stage
+└── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
 ```
 
 **Backend / frontend.** The frontend never breaks a cue or invents a style. It
@@ -84,8 +85,10 @@ breaks, the hold that never overlaps the next cue, derived timings for a
 provider that gave none, and that no word is ever dropped.
 `tests/services/test_captions_break.py` pins the same rules as a pipeline
 stage — locked cues untouched, word objects carried rather than rebuilt.
-`test_captions_build.py` pins the transcript seam and `test_captions_styles.py`
-the presets. No model, no audio, no clock: that is the point of ADR-0009 §3.
+`test_captions_build.py` pins the transcript seam, `test_captions_merge.py` the
+regeneration — a correction re-attached, a locked line kept, an unmatched edit
+reported rather than guessed at — and `test_captions_styles.py` the presets. No
+model, no audio, no clock: that is the point of ADR-0009 §3.
 
 **Database schema.** None — see the note in `docs/architecture/services.md` §1.
 
@@ -93,11 +96,11 @@ the presets. No model, no audio, no clock: that is the point of ADR-0009 §3.
 
 * **The remaining stages** — `refine`, `emoji`, `highlight`, `position`,
   `resolve`, `bake` — each as its own module, each with its own tests.
+* **The timeline reconciler** (ADR-0009 §8), which commits a document to caption
+  clips in one transaction.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as
   a `Job`.
-* **Non-destructive regeneration** (ADR-0009 §7) and **the timeline
-  reconciler** (§8).
 * **Translation layers**, which are a second `CaptionLayer` of the same
   document, not a second document.
 * **Import/export** of SRT, VTT and JSON, in `services/export/`.
@@ -111,6 +114,16 @@ from nova_studio.services.captions.build import (
 )
 from nova_studio.services.captions.codes import CaptionErrorCode
 from nova_studio.services.captions.cues import CueBreaker
+from nova_studio.services.captions.merge import (
+    CaptionRegeneration,
+    apply_edit,
+    record_deletion,
+    record_insertion,
+    record_style_edit,
+    record_text_edit,
+    record_timing_edit,
+    regenerate,
+)
 from nova_studio.services.captions.pipeline import (
     CaptionPipeline,
     StageContext,
@@ -129,6 +142,7 @@ from nova_studio.services.captions.styles import (
     Backdrop,
     CaptionLook,
     CaptionTemplate,
+    StyleStage,
     TextCase,
     WordAnimation,
     apply_look,
@@ -148,13 +162,16 @@ __all__ = [
     "CaptionErrorCode",
     "CaptionLook",
     "CaptionPipeline",
+    "CaptionRegeneration",
     "CaptionTemplate",
     "CueBreaker",
     "CueRules",
     "CueSpan",
     "StageContext",
+    "StyleStage",
     "TextCase",
     "WordAnimation",
+    "apply_edit",
     "apply_look",
     "build_cues",
     "chars_per_second",
@@ -162,6 +179,12 @@ __all__ = [
     "document_from_transcript",
     "held_until",
     "look_for",
+    "record_deletion",
+    "record_insertion",
+    "record_style_edit",
+    "record_text_edit",
+    "record_timing_edit",
+    "regenerate",
     "segments_from_transcript",
     "stage_failed",
     "time_to_read",

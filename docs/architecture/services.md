@@ -616,8 +616,9 @@ services/captions/
 ├── timing.py         chars_per_second · time_to_read · held_until
 ├── segmentation.py   CueRules · CueSpan · cue_spans · build_cues
 ├── build.py          transcript → CaptionDocument
+├── merge.py          regeneration: a new transcription that keeps the edits
 ├── cues.py           CueBreaker — the Break stage
-└── styles.py         CaptionTemplate · CaptionLook · apply_look
+└── styles.py         CaptionTemplate · CaptionLook · apply_look · StyleStage
 ```
 
 **Backend / frontend.** The frontend never breaks a cue or invents a style. It
@@ -684,6 +685,8 @@ document, a decoder or a clock.
 | `CueBreaker().apply(doc, ctx)` | "re-break this document's cues" |
 | `CaptionPipeline.run(doc, ctx)` | "run every enabled stage, then check the result" |
 | `look_for(template)` / `apply_look(cues, look)` | "what does this house style mean / these cues, wearing it" |
+| `regenerate(doc, transcript)` | "run the model again, and keep my corrections" |
+| `apply_edit(doc, delta)` | "make this edit now, and file it for next time" |
 | `held_until(…)` / `time_to_read(…)` / `chars_per_second(…)` | the timing arithmetic |
 
 **Events.** None yet. A transcription is a `Job` (ADR-0010) and reports `job.*`;
@@ -709,6 +712,11 @@ document out of something unsound. `CaptionErrorCode` (`4010`+) describes
 
 Caller bugs — a duplicate stage name, a rule with no characters a line — raise
 `NovaInvariantError`, because they cannot be fixed by retrying.
+
+`NS-CAPTION-4012` deserves a note: it is what stops the engine shipping captions
+nobody can read. Speech faster than the reading rate cannot be fixed by
+breaking, so the pipeline refuses the document and names the cue rather than
+quietly producing three-hundred-millisecond flashes.
 
 **Caching.** Cues are derived data and are recomputed on every
 re-transcription — cheaply, because the builder is a single pass over words. What
@@ -748,9 +756,11 @@ No model, no audio, no clock: that is the point of ADR-0009 §3.
 * **The runner**, which drives the I/O stages (`extract`, `vad`, `transcribe`,
   `diarise`, `translate`) through `ports/asr.py` and then runs the pure half as a
   `Job`.
-* **Non-destructive regeneration** (ADR-0009 §7) and **the timeline
-  reconciler** (§8 of the ADR), which commits a document to caption clips in one
-  transaction.
+* **The timeline reconciler** (ADR-0009 §8), which commits a document to
+  caption clips in one transaction. Regeneration (§7) is built:
+  `merge.py` re-attaches a correction under its alignment key, keeps a locked
+  line out of the new transcription, and returns what it could not match for
+  review rather than guessing.
 * **Translation layers**, which are a second `CaptionLayer` of the same document,
   not a second document.
 * **Smart positioning and collision resolution** built on `CaptionRect.overlaps`,
