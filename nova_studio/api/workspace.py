@@ -47,12 +47,14 @@ from nova_studio import __version__
 from nova_studio.core.clock import SystemClock
 from nova_studio.core.commands import CommandHistory, CommandOutcome
 from nova_studio.core.errors import ErrorDomain, ErrorSeverity, NovaError
-from nova_studio.core.ident import new_entity_id
+from nova_studio.core.ident import IdFactory, new_entity_id
 from nova_studio.core.result import Result, err, ok
 from nova_studio.domain.persistence import JournalEntry
 from nova_studio.domain.project import Project, ProjectMetadata
+from nova_studio.infra.media import PyAVProber
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION, ZipProjectArchive
 from nova_studio.infra.persistence.journal import open_journal
+from nova_studio.services.media import MediaIngestor
 from nova_studio.services.projects import (
     DEFAULT_AUTOSAVE,
     AutosaveState,
@@ -69,12 +71,16 @@ if TYPE_CHECKING:
 
     from nova_studio.core.commands import Command
     from nova_studio.core.events import EventBus
+    from nova_studio.domain.media import MediaAsset
     from nova_studio.domain.persistence import CheckpointPolicy, ProjectManifest, RevisionRef
     from nova_studio.ports.clock import Clock
+    from nova_studio.ports.media import MediaProber
     from nova_studio.ports.persistence import Journal, ProjectArchive
+    from nova_studio.services.media import IngestReport
 
 __all__ = [
     "CHECKPOINT_ENTRY",
+    "MEDIA_IMPORT_ENTRY",
     "NS_PROJECT_ALREADY_OPEN",
     "NS_PROJECT_JOURNAL_FAILED",
     "NS_PROJECT_NEVER_SAVED",
@@ -85,6 +91,7 @@ __all__ = [
     "REDO_ENTRY",
     "UNDO_ENTRY",
     "Checkpoint",
+    "ImportedMedia",
     "OpenProject",
     "ProjectWorkspace",
     "SavedProject",
@@ -124,6 +131,9 @@ NS_PROJECT_REFUSED: Final[str] = "NS-PROJECT-4220"
 
 #: The project the caller asked for could not be constructed (an empty name).
 NS_TIMELINE_OUT_OF_SYNC: Final[str] = "NS-TIMELINE-4090"
+
+#: The journal name of an import, so a replay knows the bin grew.
+MEDIA_IMPORT_ENTRY: Final[str] = "import-media"
 
 #: How an undo and a redo are recorded. The journal is append-only and its
 #: sequences are never reused, so a reverted command becomes *another* entry
@@ -190,6 +200,19 @@ class Checkpoint:
     recorded_at_ms: int
     #: Commands dropped from the journal because this checkpoint baked them in.
     truncated: int
+
+
+@dataclass(frozen=True, slots=True)
+class ImportedMedia:
+    """What one import produced: the report, and where the project stands.
+
+    Both, because the panel needs the failures and the status bar needs the
+    counters, and a caller that fetched the second afterwards could be told about
+    a project that has changed since.
+    """
+
+    report: IngestReport
+    project: OpenProject
 
 
 @dataclass(frozen=True, slots=True)
@@ -271,6 +294,9 @@ class ProjectWorkspace:
         supported_format_version: The newest `.nova` format this build reads.
         app_version: Recorded in every manifest a save writes.
         autosave_policy: When a checkpoint is owed.
+        prober: What import probes files with. Injected because it is the one
+            thing here that reads a user's disk outside the project file, and a
+            test must be able to answer without one.
 
     Every method returns a `Result`: refusing is an answer, not an exception,
     because "this project is already open" and "this file is not a project" are
@@ -288,6 +314,7 @@ class ProjectWorkspace:
         supported_format_version: int = SUPPORTED_FORMAT_VERSION,
         app_version: str = __version__,
         autosave_policy: CheckpointPolicy | None = None,
+        prober: MediaProber | None = None,
     ) -> None:
         self._bus = bus
         self._data_dir = data_dir
@@ -297,6 +324,7 @@ class ProjectWorkspace:
         self._supported_format_version = supported_format_version
         self._app_version = app_version
         self._autosave_policy = autosave_policy or DEFAULT_AUTOSAVE
+        self._media = MediaIngestor(prober=prober or PyAVProber(), ids=IdFactory())
         self._open: dict[str, _Entry] = {}
         self._guard = threading.RLock()
 
@@ -411,10 +439,56 @@ class ProjectWorkspace:
             self.close(project_id)
         return len(project_ids)
 
+    # -- media -------------------------------------------------------------
+
+    def assets(self, project_id: str) -> Result[tuple[MediaAsset, ...]]:
+        """The bin: every asset the project knows about, in import order."""
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            return ok(entry.project.assets)
+
+    def import_media(self, project_id: str, paths: Sequence[str]) -> Result[ImportedMedia]:
+        """Probe files, add the ones that read, and report on the rest.
+
+        The report comes back however the batch went: a file that cannot be read
+        is one entry in `failures`, not a failed import. Refusing the whole batch
+        over one bad file is how an editor trains its users to import one file at
+        a time.
+
+        What *is* journalled is the addition itself, so a crash between the
+        import and the next save does not lose the bin.
+        """
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            report = self._media.ingest(paths, existing=entry.project.assets)
+            if not report.entries:
+                # Nothing changed, so nothing is recorded: an import that added
+                # no assets must not make the project dirty.
+                return ok(ImportedMedia(report=report, project=entry.as_value()))
+            project = entry.project
+            for asset in report.assets:
+                project = project.with_asset(asset)
+            stored = self.store(
+                project_id,
+                project,
+                name=MEDIA_IMPORT_ENTRY,
+                payload={"paths": [asset.path for asset in report.assets]},
+            )
+            if stored.is_err():
+                return err(stored.unwrap_err())
+            return ok(ImportedMedia(report=report, project=stored.unwrap()))
+
     # -- editing -----------------------------------------------------------
 
     def store(
-        self, project_id: str, project: Project, *, name: str = "edit"
+        self,
+        project_id: str,
+        project: Project,
+        *,
+        name: str = "edit",
+        payload: Mapping[str, object] | None = None,
     ) -> Result[OpenProject]:
         """Put an edited project back, and journal that it happened.
 
@@ -434,7 +508,9 @@ class ProjectWorkspace:
             entry.project = project
             entry.dirty = True
             entry.autosave = entry.autosave.recorded(at_ms=now_ms)
-            failure = self._append(entry, name, now_ms, {"name": project.name})
+            failure = self._append(
+                entry, name, now_ms, payload if payload is not None else {"name": project.name}
+            )
             if failure is not None:
                 # The edit stands in memory; what failed is the guarantee, and
                 # the caller is told so it can ask the user to save.

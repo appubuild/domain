@@ -1,6 +1,17 @@
 {
   "components": {
     "schemas": {
+      "AssetKind": {
+        "description": "What a referenced file *is*, as decided by the probe — never by its suffix.\n\nSuffixes lie: ``.mov`` files carry ProRes, HEVC or only audio; a ``.mp4`` may\nbe a still with a cover art stream; a ``.png`` is a legitimate timeline clip.\nThe probe decides, and everything downstream (which panel offers the asset,\nwhich streams a clip may bind to) reads this field rather than guessing from\na name.",
+        "enum": [
+          "video",
+          "audio",
+          "image",
+          "unknown"
+        ],
+        "title": "AssetKind",
+        "type": "string"
+      },
       "AssetRef": {
         "additionalProperties": false,
         "description": "One media asset, as the audit reports it.",
@@ -27,6 +38,46 @@
           "kind"
         ],
         "title": "AssetRef",
+        "type": "object"
+      },
+      "AudioSummary": {
+        "additionalProperties": false,
+        "description": "One audio stream.",
+        "properties": {
+          "channel_layout": {
+            "description": "Layout name, e.g. `stereo`; empty when the file does not say.",
+            "title": "Channel Layout",
+            "type": "string"
+          },
+          "channels": {
+            "description": "Channel count.",
+            "title": "Channels",
+            "type": "integer"
+          },
+          "codec_name": {
+            "description": "The codec, as the file reported it.",
+            "title": "Codec Name",
+            "type": "string"
+          },
+          "duration_seconds": {
+            "description": "Stream length, from the sample count.",
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "sample_rate": {
+            "description": "Samples per second.",
+            "title": "Sample Rate",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "codec_name",
+          "sample_rate",
+          "channels",
+          "channel_layout",
+          "duration_seconds"
+        ],
+        "title": "AudioSummary",
         "type": "object"
       },
       "AuditResponse": {
@@ -571,6 +622,122 @@
         "title": "HistorySummary",
         "type": "object"
       },
+      "ImportFailure": {
+        "additionalProperties": false,
+        "description": "One file that did not come in, and what to do about it.",
+        "properties": {
+          "code": {
+            "description": "The error code; the frontend maps it to a local message.",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "description": "What happened, as a sentence.",
+            "title": "Message",
+            "type": "string"
+          },
+          "path": {
+            "description": "The path that failed.",
+            "title": "Path",
+            "type": "string"
+          },
+          "remedy": {
+            "description": "What the user can do about it; empty when there is nothing.",
+            "title": "Remedy",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "code",
+          "message",
+          "remedy"
+        ],
+        "title": "ImportFailure",
+        "type": "object"
+      },
+      "ImportRequest": {
+        "additionalProperties": false,
+        "description": "Files to import.\n\nA batch, because that is what a drag-and-drop is: forty files at once, and\nthe answer is a report rather than a success or a failure.",
+        "properties": {
+          "paths": {
+            "description": "Absolute paths to import; duplicates within the list are skipped.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "paths"
+        ],
+        "title": "ImportRequest",
+        "type": "object"
+      },
+      "ImportResponse": {
+        "additionalProperties": false,
+        "description": "What an import produced.\n\nA 200 whatever happened to the individual files: a batch cannot fail as a\nbatch, and the user needs the list, not a verdict.",
+        "properties": {
+          "assets": {
+            "description": "What came in, with anything odd about it.",
+            "items": {
+              "$ref": "#/components/schemas/MediaAssetSummary"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "duplicates": {
+            "description": "Paths already in the project, or offered twice.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Duplicates",
+            "type": "array"
+          },
+          "failures": {
+            "description": "What did not, one entry per path.",
+            "items": {
+              "$ref": "#/components/schemas/ImportFailure"
+            },
+            "title": "Failures",
+            "type": "array"
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence; 0 for none.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "pending_commands": {
+            "description": "Edits since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project the assets were added to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "summary": {
+            "description": "One sentence for the status bar.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "assets",
+          "failures",
+          "duplicates",
+          "summary",
+          "journal_sequence",
+          "pending_commands"
+        ],
+        "title": "ImportResponse",
+        "type": "object"
+      },
       "LiftClipRequest": {
         "additionalProperties": false,
         "description": "Remove a clip and leave the gap behind.",
@@ -593,6 +760,121 @@
           "clip_id"
         ],
         "title": "LiftClipRequest",
+        "type": "object"
+      },
+      "MediaAssetSummary": {
+        "additionalProperties": false,
+        "description": "One asset in the bin: everything a row needs to draw itself.",
+        "properties": {
+          "asset_id": {
+            "description": "Stable id; the key every clip references.",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "audio": {
+            "description": "Audio streams, in file order.",
+            "items": {
+              "$ref": "#/components/schemas/AudioSummary"
+            },
+            "title": "Audio",
+            "type": "array"
+          },
+          "duration_seconds": {
+            "description": "Length of the file; 0 when it reported none.",
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AssetKind",
+            "description": "What the probe decided it is; never guessed from the suffix."
+          },
+          "linked": {
+            "description": "Whether the recorded path resolved on last check.",
+            "title": "Linked",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "File name, without the directory — what the row shows.",
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "description": "Where the file was when it was imported.",
+            "title": "Path",
+            "type": "string"
+          },
+          "probed": {
+            "description": "Whether a probe summary is available.",
+            "title": "Probed",
+            "type": "boolean"
+          },
+          "video": {
+            "description": "Video streams, in file order.",
+            "items": {
+              "$ref": "#/components/schemas/VideoSummary"
+            },
+            "title": "Video",
+            "type": "array"
+          },
+          "warnings": {
+            "description": "Anything odd the user should know, as sentences.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "asset_id",
+          "path",
+          "name",
+          "kind",
+          "linked",
+          "probed",
+          "duration_seconds",
+          "warnings",
+          "video",
+          "audio"
+        ],
+        "title": "MediaAssetSummary",
+        "type": "object"
+      },
+      "MediaListResponse": {
+        "additionalProperties": false,
+        "description": "The bin.",
+        "properties": {
+          "assets": {
+            "description": "Everything in the bin, in import order.",
+            "items": {
+              "$ref": "#/components/schemas/MediaAssetSummary"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "missing": {
+            "description": "How many no longer resolve to a file.",
+            "title": "Missing",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project these assets belong to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "total": {
+            "description": "How many there are.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "assets",
+          "total",
+          "missing"
+        ],
+        "title": "MediaListResponse",
         "type": "object"
       },
       "MoveClipRequest": {
@@ -1572,6 +1854,82 @@
           "kind"
         ],
         "title": "ValidationField",
+        "type": "object"
+      },
+      "VideoSummary": {
+        "additionalProperties": false,
+        "description": "One video stream, as the bin and the inspector show it.",
+        "properties": {
+          "codec_name": {
+            "description": "The codec, as the file reported it.",
+            "title": "Codec Name",
+            "type": "string"
+          },
+          "display_height": {
+            "description": "Height as it should be shown.",
+            "title": "Display Height",
+            "type": "integer"
+          },
+          "display_width": {
+            "description": "Width as it should be shown: aspect ratio and rotation applied.",
+            "title": "Display Width",
+            "type": "integer"
+          },
+          "duration_seconds": {
+            "description": "Stream length, from the frame count and the rate.",
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "frame_count": {
+            "description": "Frames in the stream; 0 when the file does not say.",
+            "title": "Frame Count",
+            "type": "integer"
+          },
+          "frame_rate": {
+            "description": "Exact rate as `num/den`, e.g. `30000/1001`.",
+            "title": "Frame Rate",
+            "type": "string"
+          },
+          "has_colour_metadata": {
+            "description": "Whether the file declared its colour, or left it unspecified.",
+            "title": "Has Colour Metadata",
+            "type": "boolean"
+          },
+          "height": {
+            "description": "Coded height in pixels.",
+            "title": "Height",
+            "type": "integer"
+          },
+          "pixel_format": {
+            "description": "Pixel format, e.g. `yuv420p`.",
+            "title": "Pixel Format",
+            "type": "string"
+          },
+          "rotation": {
+            "description": "Degrees to rotate for display: 0, 90, 180 or 270.",
+            "title": "Rotation",
+            "type": "integer"
+          },
+          "width": {
+            "description": "Coded width in pixels.",
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "codec_name",
+          "width",
+          "height",
+          "display_width",
+          "display_height",
+          "frame_rate",
+          "frame_count",
+          "duration_seconds",
+          "pixel_format",
+          "rotation",
+          "has_colour_metadata"
+        ],
+        "title": "VideoSummary",
         "type": "object"
       }
     },
@@ -2666,6 +3024,232 @@
         "summary": "Apply one edit",
         "tags": [
           "timeline"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/media": {
+      "get": {
+        "description": "Every asset the project knows about, in import order.\n\nEach row carries the probe summary that was stored with it, so a project\nwhose originals are offline still draws correct geometry and duration rather\nthan a spinner (ADR-0015 rule 3).",
+        "operationId": "list_media_api_v1_projects__project_id__media_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "The media bin",
+        "tags": [
+          "media"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/media/import": {
+      "post": {
+        "description": "Probe every path, add the ones that read, and report on the rest.\n\nA 200 whatever the files turned out to be: one unreadable file is one entry\nin `failures`, and the user gets to see the other thirty-nine arrive. Paths\nalready in the project — or offered twice in one selection — come back as\n`duplicates` rather than as a second asset pointing at the same file.",
+        "operationId": "import_media_api_v1_projects__project_id__media_import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Import files into the bin",
+        "tags": [
+          "media"
         ]
       }
     },

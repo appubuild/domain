@@ -65,16 +65,19 @@ api/
 │   ├── system.py    health, identity, capabilities
 │   ├── projects.py  the project DTOs: summary, open, save, checkpoint, audit
 │   ├── timeline.py  the edit, its history, and the seven commands (§9)
+│   ├── media.py     the bin: asset rows, and the import report (§10)
 │   └── problem.py   the error body (RFC 9457)
 ├── mappers/      entity ↔ DTO translation, one module per resource
 │   ├── projects.py  Project ↔ ProjectSummary, ProjectAudit → sentences
-│   └── timeline.py  Timeline → summary, wire command → domain command
+│   ├── timeline.py  Timeline → summary, wire command → domain command
+│   └── media.py     MediaAsset → row, IngestReport → import answer
 ├── routers/      HTTP endpoints
 │   ├── system.py    /healthz, /api/v1/system/{info,capabilities}
 │   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
 │   ├── projects.py  /api/v1/projects/* (§8)
-│   └── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
-└── (to come)     resources/ (media, render, captions, export, plugins)
+│   ├── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
+│   └── media.py     /api/v1/projects/{id}/media{,/import} (§10)
+└── (to come)     resources/ (render, captions, export, plugins)
 ```
 
 Two rules for `schemas/`, stated in that package's `__init__.py`:
@@ -485,7 +488,74 @@ waiting.
 
 ---
 
-## 10. Running the service (`server.py`, `cli.py`)
+## 10. The media ring (`routers/media.py`, `infra/media.py`)
+
+The bin: getting footage into a project and showing it once it is there. Two
+endpoints, and one rule that decides what the second returns.
+
+    **An import is a report, never a failure.**
+
+Somebody drops forty files on a panel. One of them is a text file. An endpoint
+that answered 400 would be an endpoint that trains its users to import one file
+at a time and guess which one was bad — so a failure travels *inside* a 200, one
+entry per path, each carrying the code the frontend maps to a local sentence. The
+only thing that makes the endpoint fail at all is the project not being open.
+
+| Method and path | Returns | Notes |
+|---|---|---|
+| `GET /api/v1/projects/{id}/media` | `MediaListResponse` | Every asset, in import order, each row carrying the probe that was stored with it. |
+| `POST /api/v1/projects/{id}/media/import` | `ImportResponse` | `assets`, `failures`, `duplicates` and a `summary` sentence — whatever the files turned out to be. |
+
+### Where the probe happens
+
+```
+  routers/media.py          api/workspace.py           services/media
+  ┌────────────────┐  import_media  ┌──────────────┐  ingest  ┌────────────────┐
+  │ ImportRequest  │───────────────►│ MediaIngestor│─────────►│ probe each path│
+  │  paths: [...]  │                │ (one, shared)│          │ (-ing port)    │
+  └────────────────┘                └──────┬───────┘          └────────────────┘
+                                           │ adds the assets, then            ▲
+                                           ▼                                  │
+                                    project.with_asset  ────── journal ────┐   │
+                                                                           │   │
+                                                          infra/media.py ──┴───┘
+                                                          PyAVProber
+```
+
+`services/media` decides *what a file is* and what is odd about it;
+`infra/media.py` is the only thing that opens one. The workspace holds one
+`MediaIngestor` for the session, built with the prober as a constructor argument,
+so a test can import into a project without a codec in the room.
+
+### What the prober decides
+
+| Question | Answer |
+|---|---|
+| Is this video, audio, an image or nothing? | Decided by the streams, never by the suffix: an MP3 with cover art is audio, a PNG is an image, a file with neither is `UNKNOWN` and still imports (greyed, with a reason). |
+| What is the rate? | An exact `Timebase`. 29.97 stays `30000/1001`, because a frame count derived from a rounded rate drifts by a frame every few minutes of footage. |
+| How long is it? | The container's word, then the longest stream's. An unknown frame count stays `0` rather than being guessed from a bitrate. |
+| Why can I not read it? | `NS-MEDIA-4001` (unreadable — the user's problem) and `NS-MEDIA-4003` (no decoder in this build — ours) are different answers, and a prober that collapsed them would send somebody looking for a file that is fine. |
+
+Two limits are recorded rather than papered over: **rotation** comes from the
+`rotate` tag, because PyAV 18 exposes no stream side data, so phone footage that
+carries rotation only in a `DISPLAYMATRIX` reports `0` until the FFmpeg-CLI
+adapter lands; and **frame counts** a container does not report stay `0`, which
+the domain already reads as "unknown" rather than "empty".
+
+### Caching and performance
+
+* **The bin is the cache.** The probe summary is the one part of a probe the
+  project file persists (ADR-0015), which is why a project opens with correct
+  geometry while the originals are still on a camera card.
+* **Import is one container open per file and no decode** — the probe port is
+  defined that way, so forty files cost forty opens and not forty decodes.
+* **Nothing is recorded when nothing changed.** An import that added no assets
+  does not journal and does not make the project dirty; an autosave indicator
+  that counted failed imports as work would be a liar.
+
+---
+
+## 11. Running the service (`server.py`, `cli.py`)
 
 ```bash
 make serve                     # or: python -m nova_studio serve
@@ -510,7 +580,7 @@ thing in the process.
 
 ---
 
-## 11. Caching strategy
+## 12. Caching strategy
 
 None in this layer, on purpose. A cache in front of a service is a second copy of
 the service's truth with an invalidation rule that is always slightly wrong. The
@@ -529,7 +599,7 @@ What the API does instead of caching:
 
 ---
 
-## 12. Performance strategy
+## 13. Performance strategy
 
 | Concern | Approach |
 |---|---|
@@ -547,7 +617,7 @@ optimistic UI on the frontend and binary frames rather than JSON.
 
 ---
 
-## 13. Events
+## 14. Events
 
 | Topic | Published by | Payload |
 |---|---|---|
@@ -568,7 +638,9 @@ They are session events: what the window's title, dirty marker and recent-files
 list are driven by. They are not domain events and they are never journalled —
 a replay does not re-open projects.
 
-The timeline ring adds no topics of its own. `CommandHistory` already publishes
+Neither the timeline ring nor the media ring adds topics of its own; an import
+publishes `project.edited` like any other change, and `media.imported` arrives
+with the panel that needs to refresh while another window is importing. `CommandHistory` already publishes
 `command.executed`, `command.reverted` and `command.failed`, and an edit also
 publishes `project.edited` once it is journalled. Two families, because they
 answer different questions: what a command did, and what that means for the file.
@@ -579,9 +651,9 @@ recovery path after a long gap — is not a second-class citizen.
 
 ---
 
-## 14. Testing
+## 15. Testing
 
-`tests/api/`, 228 tests, all of which run in `make check`.
+`tests/api/`, 246 tests, all of which run in `make check`.
 
 | File | What it pins |
 |---|---|
@@ -592,6 +664,7 @@ recovery path after a long gap — is not a second-class citizen.
 | `test_ws_bridge.py` | hello → event → ping/pong → resync → goodbye; `complete: false` is honest; heartbeats carry the dropped count; a malformed frame does not kill the socket. |
 | `test_projects_router.py` | The file menu: a close saves nothing; a second close is a 404; reopening forgets the dirty flag; a checkpoint truncates exactly `sequence - checkpoint_sequence - 1` entries; an edit that cannot be journalled is refused rather than acknowledged; a broken journal arrives through the injected factory, not by reaching inside. |
 | `test_timeline_router.py` | The edit: every command applies and is journalled under its wire name with replayable arguments; a split's generated id is recorded; a refused command is a 409 that changes nothing (not even the redo future); undo and redo are journalled too; an edit that cannot be recorded is rolled back; the editor is the same object on the next request, so Ctrl+Z still has something to undo. |
+| `test_media_router.py` | The bin, and the batch rule: a file that is not media is one entry in `failures` inside a 200 and not a failed import; a path imported twice is one asset; a relative path never reaches the disk; an import is journalled, and one that added nothing is not. |
 | `test_server.py` | A real server on a real port: the port it reports is the port it is on, the token it announces is the token it accepts, the endpoint file is private. |
 | `test_openapi.py` | The committed contract matches the routes (`make openapi` after a route change); every path is versioned or public; every field is documented. |
 
@@ -609,7 +682,7 @@ without a sleep and a hope.
 
 ---
 
-## 15. Frontend architecture notes
+## 16. Frontend architecture notes
 
 The frontend (stage 4) consumes this layer under rules that fall out of the above:
 
@@ -633,11 +706,13 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 16. Future expansion
+## 17. Future expansion
 
 | Next | Why the seam is already there |
 |---|---|
-| Resource routers (media, render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. The project and timeline rings are the worked example. |
+| Resource routers (render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. The project, timeline and media rings are the worked example. |
+| Relinking missing media | `MediaAsset.relink` already couples the hash and the probe correctly; what is missing is a content hash at import (`ports/filesystem.py`) and the endpoint that offers a replacement path. |
+| `MediaDecoder`, `AudioResampler` | `infra/media.py` has the prober; the decoder and its frame/audio sources arrive with the render and preview slices, behind the same port. |
 | Replaying a journal | The entries already carry everything a replay needs: the wire name, the arguments, and `undo`/`redo` markers. What is missing is the fold itself (§9), and the recovery dialog that offers it (`services/projects/recovery.py` already returns the plan). |
 | A second editing scope (captions, colour) | `UndoScope` already separates the stacks, so a caption editor gets its own history next to the timeline's; `ProjectWorkspace` would hold one editor per scope per project. |
 | Multi-window | `ProjectWorkspace` is a value on `app.state`, not a global; two windows in one process would each get one, and the "already open here" rule (4090) is already per-workspace. |
@@ -650,7 +725,7 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 17. Where to read next
+## 18. Where to read next
 
 * [`ARCHITECTURE.md`](ARCHITECTURE.md) §4 — where L4 sits in the ring model.
 * [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the transport decision and its alternatives.

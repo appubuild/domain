@@ -38,7 +38,7 @@ from fastapi import Depends, FastAPI
 from nova_studio import __version__
 from nova_studio.api.auth import LoopbackGuard, token_dependency
 from nova_studio.api.errors import error_responses, install_error_handlers
-from nova_studio.api.routers import events, projects, system, timeline
+from nova_studio.api.routers import events, media, projects, system, timeline
 from nova_studio.api.schemas.system import HealthResponse
 from nova_studio.api.state import SessionState, new_session_state
 from nova_studio.api.workspace import ProjectWorkspace
@@ -147,6 +147,7 @@ def create_app(
     app.include_router(events.router, dependencies=authenticated)
     app.include_router(projects.router, dependencies=authenticated)
     app.include_router(timeline.router, dependencies=authenticated)
+    app.include_router(media.router, dependencies=authenticated)
 
     # The projects this session has open, held next to the session rather than
     # beside it in a global: a second window is a second workspace.
