@@ -59,14 +59,19 @@ api/
 ├── errors.py     the one place a Result becomes a response
 ├── state.py      SessionState — everything one running instance is
 ├── ws.py         EventBridge — one bus, many sockets, recoverable loss
+├── workspace.py ProjectWorkspace — every open project in this session (§8)
+├── dependencies.py  the FastAPI dependencies (the session state, and the workspace)
 ├── schemas/      DTOs: the wire contract, documented field by field
 │   ├── system.py    health, identity, capabilities
+│   ├── projects.py  the project DTOs: summary, open, save, checkpoint, audit
 │   └── problem.py   the error body (RFC 9457)
+├── mappers/      entity ↔ DTO translation, one module per resource
+│   └── projects.py  Project ↔ ProjectSummary, ProjectAudit → sentences
 ├── routers/      HTTP endpoints
 │   ├── system.py    /healthz, /api/v1/system/{info,capabilities}
-│   └── events.py    /api/v1/events, and the /api/v1/ws endpoint
-└── (to come)     resources/ (projects, timeline, media, render, captions,
-                  export, plugins), mappers/, dependencies/
+│   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
+│   └── projects.py  /api/v1/projects/* (§8)
+└── (to come)     resources/ (timeline, media, render, captions, export, plugins)
 ```
 
 Two rules for `schemas/`, stated in that package's `__init__.py`:
@@ -92,15 +97,18 @@ app = create_app(bus, session=state, settings=ApiSettings(...))
 | `ApiSettings` | Transport configuration: allowed hosts, topics, buffer size, heartbeat interval, whether docs are served. Every default is correct for a desktop session. |
 | `app.state.session` | The `SessionState`, read by the `session_state` dependency rather than captured in a closure. |
 | `app.state.bridge` | The `EventBridge` the WebSocket serves from. |
+| `app.state.workspace` | The `ProjectWorkspace`: every project open in this session (§8). Created *before* the app, closed by the lifespan, handed to routers by a dependency. |
 | `install_error_handlers(app)` | Three handlers: `HTTPException`, `RequestValidationError`, `Exception`. |
 | `guard.as_middleware()` | Host/Origin check on every HTTP request (§4). |
 | `dependencies=[Depends(token_dependency(...))]` | Applied to the *router*, not to handlers, so an endpoint cannot forget to ask. |
 | `/healthz` | Registered outside every router — the one endpoint without a token. |
-| `_lifespan` | Start the bus if nobody has, publish `api.started`, publish `api.stopped` and shut the bus down on the way out. |
+| `_lifespan` | Start the bus if nobody has, publish `api.started`, publish `api.stopped`, close every open project and shut the bus down on the way out. |
 
-Lifespan does three things and nothing else. A lifespan that opened a project or
-warmed a cache would be doing work the user did not ask for before they had a
-window to see it in.
+Lifespan does four things and nothing else. It opens no project and warms no
+cache: that would be work the user did not ask for before they had a window to
+see it in. Closing what is open is different — it is the process dropping what it
+was holding, and it happens in a `finally`, so it happens on the way out even
+when startup failed.
 
 ### Class diagram
 
@@ -256,7 +264,110 @@ left open is a connection the client holds until its own timeout.
 
 ---
 
-## 8. Running the service (`server.py`, `cli.py`)
+## 8. The project ring (`workspace.py`, `routers/projects.py`)
+
+The first resource: the file menu, and the guarantees behind it. It is where the
+promises of ADR-0015 — a damaged project still opens, nothing is lost that was
+acknowledged, a crash is a restart — stop being prose and become code the
+frontend can call.
+
+**Where the logic is not.** `ProjectWorkspace` decides *when* a file is written
+and *what* the user is told. It does not decide what a project *is*
+(`domain/project.py`), how a `.nova` file is laid out
+(`infra/persistence/archive.py`), or how a command is journalled
+(`infra/persistence/journal.py`). It owns one thing: the set of open projects in
+this session, and the order in which the durable facts are established.
+
+### The one transaction
+
+Every operation that changes durable state is the same three steps, in this order:
+
+1. **Write the durable thing** — the archive, or the journal entry — and only
+   then
+2. **Move the in-memory truth** (a counter, a sequence, a handle), and
+3. **Publish the event** last, so a listener that reacts by reading gets the
+   state the event describes.
+
+A crash between 1 and 2 is recovered from; a crash between 2 and 1 is a lie.
+
+### Endpoints
+
+| Method and path | Returns | Notes |
+|---|---|---|
+| `GET /api/v1/projects` | `{"projects": [ProjectSummary]}` | What is open right now. |
+| `POST /api/v1/projects` | 201 `OpenProjectResponse` | Empty, dirty, no file. |
+| `POST /api/v1/projects/open` | `OpenProjectResponse` | Warnings included when the file is imperfect (ADR-0015 rule 3). |
+| `GET /api/v1/projects/{id}` | `ProjectSummary` | 404 when it is not open. |
+| `DELETE /api/v1/projects/{id}` | 204 | **Does not save.** See below. |
+| `POST /api/v1/projects/{id}/save` | `SaveProjectResponse` | 409 `NS-PROJECT-4091` when there is no file yet. |
+| `POST /api/v1/projects/{id}/save-as` | `SaveProjectResponse` | The id travels; only the location changes. |
+| `POST /api/v1/projects/{id}/checkpoint` | `CheckpointResponse` | A revision now, regardless of policy. |
+| `POST /api/v1/projects/{id}/autosave` | `CheckpointResponse` (`taken: false` when nothing is owed) | The tick the timer calls. |
+| `GET /api/v1/projects/{id}/audit` | `AuditResponse` | Health, as sentences the domain wrote. |
+| `GET /api/v1/projects/{id}/recovery` | `RecoveryResponse` | What a crash left, and what can be done with it. |
+
+### Class diagram
+
+```
+        routers/projects.py                 api/workspace.py
+   ┌──────────────────────────┐      ┌──────────────────────────────────┐
+   │ _answer(result, to_body) │─────►│ ProjectWorkspace(bus, data_dir,  │
+   │ _status_for(error)       │      │   autosave_policy,               │
+   └────────────┬─────────────┘      │   archive_factory, journal_factory)│
+                │                    │                                  │
+        mappers/projects.py          │  open: dict[str, _OpenProject]    │
+   ProjectSummary ◄── Project        │  ├ project: Project               │
+   AuditResponse  ◄── ProjectAudit   │  ├ archive: ZipProjectArchive     │
+   CheckpointResponse ◄── Checkpoint │  ├ journal: Journal               │
+                                     │  └ counters: sequences, revisions │
+                                     └───────┬──────────────────────────┘
+                                             │ publishes
+                       project.created / opened / saved / checkpointed / closed
+```
+
+### Two rules this ring enforces
+
+1. **A close is not a save.** `DELETE` drops the project and writes nothing. An
+   implementation that "saved for you" on the way out would destroy the one
+   thing a close is for: abandoning an edit. Recovery offers are still available
+   from the journal afterwards, which is how the user gets another chance.
+2. **A path must be absolute.** A relative path resolves against the process'
+   working directory — for a packaged build, wherever the shortcut happened to
+   point. `AbsolutePath` in `schemas/projects.py` refuses one at the boundary,
+   so "no such file" is never a lie told about a file written somewhere nobody
+   looked.
+
+### Errors
+
+| Code | Status | Meaning |
+|---|---|---|
+| `NS-PROJECT-4090` | 409 | The file is already open here; two handles on one archive would disagree. |
+| `NS-PROJECT-4091` | 409 | Never saved, so there is nothing to write to. |
+| `NS-PROJECT-4040` | 404 | Not open in this session. |
+| `NS-PROJECT-4041` | 404 | No such file — a distinct answer from "not a project". |
+| `NS-PROJECT-4005` | 400 | The journal could not be written; the edit was not acknowledged. |
+| `NS-PROJECT-4220` | 422 | The archive refused the file (corrupt, or not a Nova Studio project). |
+
+The status is the transport's choice, not the domain's: `routers/projects.py`
+maps a code to a status where the severity-derived default would mislead, and
+falls through to `errors.ERROR_STATUSES` everywhere else.
+
+### Caching and performance
+
+* **Nothing about an open project is cached.** The workspace holds the project it
+  is editing; the counts in a `ProjectSummary` are read off it, not remembered.
+* **Writes are ordered, not batched.** A save fsyncs the archive before it moves
+  the dirty flag; a checkpoint truncates the journal only after the revision is
+  in. Batching would be faster and wrong.
+* **Handlers are `def`, not `async def`**, so Starlette runs them in the thread
+  pool and a blocking `fsync` does not stall the event loop.
+* **Autosave is a policy, not a timer.** `CheckpointPolicy` decides when
+  (`commands_between_checkpoints`, `seconds_between_checkpoints`); the endpoint
+  only asks. A tick that found nothing owed takes nothing.
+
+---
+
+## 9. Running the service (`server.py`, `cli.py`)
 
 ```bash
 make serve                     # or: python -m nova_studio serve
@@ -281,7 +392,7 @@ thing in the process.
 
 ---
 
-## 9. Caching strategy
+## 10. Caching strategy
 
 None in this layer, on purpose. A cache in front of a service is a second copy of
 the service's truth with an invalidation rule that is always slightly wrong. The
@@ -300,7 +411,7 @@ What the API does instead of caching:
 
 ---
 
-## 10. Performance strategy
+## 11. Performance strategy
 
 | Concern | Approach |
 |---|---|
@@ -318,17 +429,26 @@ optimistic UI on the frontend and binary frames rather than JSON.
 
 ---
 
-## 11. Events
+## 12. Events
 
 | Topic | Published by | Payload |
 |---|---|---|
 | `api.started` | lifespan, once listening | `version`, `port` |
 | `api.stopped` | lifespan, on the way out | `port` |
 
-Everything else on the socket originates in a service. The API adds no topics of
-its own for resource changes — a resource change is a domain event, and the
-frontend learns about it because the service published it, not because a router
-did.
+The project ring adds one family:
+
+| Topic | Published by | Payload |
+|---|---|---|
+| `project.created` | `ProjectWorkspace.create` | `project_id`, `path` |
+| `project.opened` | `ProjectWorkspace.open` | `project_id`, `path`, `warnings` |
+| `project.saved` | `ProjectWorkspace.save` / `save_as` | `project_id`, `path` |
+| `project.checkpointed` | `ProjectWorkspace.checkpoint` / `autosave` | `project_id`, `sequence`, `revision` |
+| `project.closed` | `ProjectWorkspace.close` | `project_id` |
+
+They are session events: what the window's title, dirty marker and recent-files
+list are driven by. They are not domain events and they are never journalled —
+a replay does not re-open projects.
 
 The REST read `/api/v1/events?since=&limit=` returns the same frames the socket
 would have sent, so a client that cannot hold a socket open — a CLI, a test, a
@@ -336,9 +456,9 @@ recovery path after a long gap — is not a second-class citizen.
 
 ---
 
-## 12. Testing
+## 13. Testing
 
-`tests/api/`, 152 tests, all of which run in `make check`.
+`tests/api/`, 199 tests, all of which run in `make check`.
 
 | File | What it pins |
 |---|---|
@@ -347,6 +467,7 @@ recovery path after a long gap — is not a second-class citizen.
 | `test_system_router.py` | Health, identity and capabilities; probing never imports what it probes. |
 | `test_events_router.py` | The tail of history; a gap older than the retained history is a 416 that names the oldest sequence kept. |
 | `test_ws_bridge.py` | hello → event → ping/pong → resync → goodbye; `complete: false` is honest; heartbeats carry the dropped count; a malformed frame does not kill the socket. |
+| `test_projects_router.py` | The file menu: a close saves nothing; a second close is a 404; reopening forgets the dirty flag; a checkpoint truncates exactly `sequence - checkpoint_sequence - 1` entries; an edit that cannot be journalled is refused rather than acknowledged; a broken journal arrives through the injected factory, not by reaching inside. |
 | `test_server.py` | A real server on a real port: the port it reports is the port it is on, the token it announces is the token it accepts, the endpoint file is private. |
 | `test_openapi.py` | The committed contract matches the routes (`make openapi` after a route change); every path is versioned or public; every field is documented. |
 
@@ -364,7 +485,7 @@ without a sleep and a hope.
 
 ---
 
-## 13. Frontend architecture notes
+## 14. Frontend architecture notes
 
 The frontend (stage 4) consumes this layer under rules that fall out of the above:
 
@@ -388,12 +509,13 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 14. Future expansion
+## 15. Future expansion
 
 | Next | Why the seam is already there |
 |---|---|
-| Resource routers (projects, timeline, media, render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` for the DTOs. |
-| `mappers/` — entity ↔ DTO translation | Nothing maps today because nothing is exposed yet; when it is, the mapping belongs in one module per resource, not inline in handlers. |
+| Resource routers (timeline, media, render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs. The project ring is the worked example. |
+| Editing over the wire (`POST /api/v1/projects/{id}/commands`) | Commands are already the public editing API and are already journalled; an endpoint that accepts a serialised command, executes it through the workspace and returns the events it produced is a thin translation of what `ProjectWorkspace.store` does today. |
+| Multi-window | `ProjectWorkspace` is a value on `app.state`, not a global; two windows in one process would each get one, and the "already open here" rule (4090) is already per-workspace. |
 | Command endpoints (`POST /api/v1/timeline/commands`) | Commands are already the public editing API; a router that accepts a serialised command and returns the events it produced is a thin translation. |
 | Job endpoints (progress, cancel) | The job scheduler is already the only way long work runs (ADR-0010); progress arrives as events, so the socket carries it for free. |
 | Binary frame channels (preview, waveforms) | ADR-0005 §5 fixes the three sinks; the socket already separates text and binary frames. |
@@ -403,7 +525,7 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 15. Where to read next
+## 16. Where to read next
 
 * [`ARCHITECTURE.md`](ARCHITECTURE.md) §4 — where L4 sits in the ring model.
 * [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the transport decision and its alternatives.
