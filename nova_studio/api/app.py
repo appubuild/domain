@@ -38,9 +38,10 @@ from fastapi import Depends, FastAPI
 from nova_studio import __version__
 from nova_studio.api.auth import LoopbackGuard, token_dependency
 from nova_studio.api.errors import error_responses, install_error_handlers
-from nova_studio.api.routers import events, system
+from nova_studio.api.routers import events, projects, system
 from nova_studio.api.schemas.system import HealthResponse
 from nova_studio.api.state import SessionState, new_session_state
+from nova_studio.api.workspace import ProjectWorkspace
 from nova_studio.api.ws import (
     DEFAULT_HEARTBEAT_SECONDS,
     DEFAULT_MAX_BUFFERED,
@@ -110,6 +111,10 @@ def create_app(
         heartbeat_seconds=settings.heartbeat_seconds,
     )
     guard = LoopbackGuard(allowed_hosts=settings.allowed_hosts)
+    # The projects this session has open. Built before the application because
+    # the lifespan closes them, and held on `app.state` so a handler's dependency
+    # can reach them without a global.
+    workspace = ProjectWorkspace(bus, data_dir=state.data_dir)
 
     app = FastAPI(
         title="Nova Studio",
@@ -122,13 +127,14 @@ def create_app(
         docs_url="/docs" if settings.docs else None,
         redoc_url=None,
         openapi_url="/openapi.json" if settings.docs else None,
-        lifespan=_lifespan(state, bus),
+        lifespan=_lifespan(state, bus, workspace),
     )
 
     # The session travels with the app rather than living in a module global:
     # two apps in one process — a test, a second window — must not share a token.
     app.state.session = state
     app.state.bridge = bridge
+    app.state.workspace = workspace
 
     install_error_handlers(app)
     app.middleware("http")(guard.as_middleware())
@@ -139,6 +145,10 @@ def create_app(
     authenticated = [Depends(token_dependency(state.token))]
     app.include_router(system.router, dependencies=authenticated)
     app.include_router(events.router, dependencies=authenticated)
+    app.include_router(projects.router, dependencies=authenticated)
+
+    # The projects this session has open, held next to the session rather than
+    # beside it in a global: a second window is a second workspace.
     events.install(app, bridge=bridge, session=state, guard=guard)
 
     # The one endpoint that answers without a token, deliberately outside the
@@ -156,9 +166,14 @@ def create_app(
 
 
 def _lifespan(
-    state: SessionState, bus: EventBus
+    state: SessionState, bus: EventBus, workspace: ProjectWorkspace
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
-    """Start and stop the bus with the application, and announce both."""
+    """Start and stop the bus with the application, and announce both.
+
+    Also closes every open project on the way out: a process that exits holding
+    an archive leaves a staged temporary file or a lock behind, and the next
+    launch is the one that has to explain it.
+    """
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -168,6 +183,7 @@ def _lifespan(
         try:
             yield
         finally:
+            workspace.close_all()
             bus.publish("api.stopped", {"port": state.port})
             bus.shutdown()
 

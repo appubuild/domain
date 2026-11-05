@@ -29,10 +29,11 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
 from starlette.websockets import WebSocket  # noqa: TC002
 
 from nova_studio.api.auth import LoopbackGuard, authorize_websocket
+from nova_studio.api.dependencies import session_state
 from nova_studio.api.errors import error_responses
-from nova_studio.api.state import SessionState, session_state
 
 if TYPE_CHECKING:
+    from nova_studio.api.state import SessionState
     from nova_studio.api.ws import EventBridge
 
 __all__ = ["install", "router"]

@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Depends
 
 from nova_studio import __version__
+from nova_studio.api.dependencies import session_state
 from nova_studio.api.errors import error_responses, respond
 from nova_studio.api.schemas.system import (
     CapabilitiesResponse,
@@ -35,7 +36,7 @@ from nova_studio.api.schemas.system import (
     probe_components,
     python_version,
 )
-from nova_studio.api.state import SessionState, session_state
+from nova_studio.api.state import SessionState
 from nova_studio.core.result import ok
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION
 
@@ -84,7 +85,7 @@ async def system_info(state: SessionState = Depends(session_state)) -> Any:
                 port=state.port,
             )
         ),
-        to_body=lambda body: body.model_dump(mode="json"),
+        to_body=lambda body: body,
         instance="/api/v1/system/info",
     )
 
@@ -99,6 +100,6 @@ async def capabilities() -> Any:
     """Which optional components are installed, and whether the app can run."""
     return respond(
         ok(probe_components()),
-        to_body=lambda body: body.model_dump(mode="json"),
+        to_body=lambda body: body,
         instance="/api/v1/system/capabilities",
     )

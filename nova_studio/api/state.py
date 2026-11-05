@@ -36,8 +36,6 @@ from typing import TYPE_CHECKING
 # degrades into "a parameter with no known type", i.e. a query string. The
 # endpoint then 422s with "request: field required", which reads like nonsense
 # until you know this.
-from fastapi import Request  # noqa: TC002 — runtime import, see the comment above
-
 from nova_studio.api.auth import SessionToken
 from nova_studio.infra.paths import data_dir
 
@@ -46,7 +44,7 @@ if TYPE_CHECKING:
 
     from nova_studio.core.events import EventBus
 
-__all__ = ["SessionState", "new_session_state", "session_state"]
+__all__ = ["SessionState", "new_session_state"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,14 +102,3 @@ def new_session_state(
         started_ms=int(time.time() * 1000),
         app_version=app_version,
     )
-
-
-def session_state(request: Request) -> SessionState:
-    """The FastAPI dependency that hands a handler its own session.
-
-    Read from `app.state` rather than captured in a closure, so the value the
-    handlers see is the one the application was created with — including after a
-    test replaces it.
-    """
-    state: SessionState = request.app.state.session
-    return state

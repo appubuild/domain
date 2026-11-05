@@ -1,6 +1,98 @@
 {
   "components": {
     "schemas": {
+      "AssetRef": {
+        "additionalProperties": false,
+        "description": "One media asset, as the audit reports it.",
+        "properties": {
+          "asset_id": {
+            "description": "Stable id.",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`video`, `audio`, `image` or `other`.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "description": "File name, or the name the user gave it.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "name",
+          "kind"
+        ],
+        "title": "AssetRef",
+        "type": "object"
+      },
+      "AuditResponse": {
+        "additionalProperties": false,
+        "description": "What a user would want to know about the state of this project.",
+        "properties": {
+          "clean": {
+            "description": "Whether there is anything to tell the user.",
+            "title": "Clean",
+            "type": "boolean"
+          },
+          "clip_count": {
+            "description": "Clips on the timeline.",
+            "title": "Clip Count",
+            "type": "integer"
+          },
+          "duration_frames": {
+            "description": "Length of the timeline, in frames.",
+            "title": "Duration Frames",
+            "type": "integer"
+          },
+          "missing_assets": {
+            "description": "Assets referenced but not found on disk.",
+            "items": {
+              "$ref": "#/components/schemas/AssetRef"
+            },
+            "title": "Missing Assets",
+            "type": "array"
+          },
+          "problem": {
+            "description": "The one structural problem, or an empty string.",
+            "title": "Problem",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "The project that was audited.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "summary": {
+            "description": "The audit as sentences, in the user's language.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Summary",
+            "type": "array"
+          },
+          "unused_assets": {
+            "description": "Assets imported but never used.",
+            "items": {
+              "$ref": "#/components/schemas/AssetRef"
+            },
+            "title": "Unused Assets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project_id",
+          "clean",
+          "problem",
+          "clip_count",
+          "duration_frames"
+        ],
+        "title": "AuditResponse",
+        "type": "object"
+      },
       "CapabilitiesResponse": {
         "additionalProperties": false,
         "description": "What this machine can do, and what it is missing.",
@@ -31,6 +123,52 @@
           "usable"
         ],
         "title": "CapabilitiesResponse",
+        "type": "object"
+      },
+      "CheckpointResponse": {
+        "additionalProperties": false,
+        "description": "The outcome of a checkpoint (a manual one, or an autosave tick).",
+        "properties": {
+          "project_id": {
+            "description": "The project that was checkpointed.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "recorded_at_ms": {
+            "description": "Unix milliseconds of the checkpoint.",
+            "title": "Recorded At Ms",
+            "type": "integer"
+          },
+          "revision": {
+            "description": "Revision number in the archive.",
+            "title": "Revision",
+            "type": "integer"
+          },
+          "sequence": {
+            "description": "Journalled sequence of this checkpoint.",
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "taken": {
+            "default": true,
+            "description": "False when an autosave tick found nothing owed.",
+            "title": "Taken",
+            "type": "boolean"
+          },
+          "truncated": {
+            "description": "Journal entries this checkpoint made redundant.",
+            "title": "Truncated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "sequence",
+          "revision",
+          "recorded_at_ms",
+          "truncated"
+        ],
+        "title": "CheckpointResponse",
         "type": "object"
       },
       "ComponentStatus": {
@@ -67,6 +205,50 @@
         "title": "ComponentStatus",
         "type": "object"
       },
+      "CreateProjectRequest": {
+        "additionalProperties": false,
+        "description": "A new, empty project.",
+        "properties": {
+          "author": {
+            "default": "",
+            "description": "Recorded in the project metadata.",
+            "maxLength": 200,
+            "title": "Author",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "description": "Recorded in the metadata.",
+            "maxLength": 2000,
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "description": "What to call it.",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional file to attach now; omit for an unsaved project.",
+            "title": "Path"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "CreateProjectRequest",
+        "type": "object"
+      },
       "HealthResponse": {
         "additionalProperties": false,
         "description": "Whether the service is up, and nothing else.\n\nDeliberately tiny: it is polled in a loop while the process starts, and it\nis the one endpoint that answers without a session token, so it must not be\nable to disclose anything — or fail for any reason but \"not listening yet\".",
@@ -93,6 +275,52 @@
           "pid"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "OpenProjectRequest": {
+        "additionalProperties": false,
+        "description": "Open a file that exists.",
+        "properties": {
+          "path": {
+            "description": "Absolute path of a `.nova` file.",
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "OpenProjectRequest",
+        "type": "object"
+      },
+      "OpenProjectResponse": {
+        "additionalProperties": false,
+        "description": "What opening returns: the project, and what is wrong with it.\n\n`warnings` is the whole of ADR-0015 rule 3 in one field — a project that opens\nwith warnings is a project the user gets back, and the warnings are sentences\nwritten for them.",
+        "properties": {
+          "project": {
+            "$ref": "#/components/schemas/ProjectSummary",
+            "description": "The project that was opened."
+          },
+          "recovered": {
+            "default": false,
+            "description": "Whether a journal was found for this project at open time.",
+            "title": "Recovered",
+            "type": "boolean"
+          },
+          "warnings": {
+            "description": "What the user should know, in their language.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "title": "OpenProjectResponse",
         "type": "object"
       },
       "ProblemResponse": {
@@ -190,6 +418,187 @@
           "retryable"
         ],
         "title": "ProblemResponse",
+        "type": "object"
+      },
+      "ProjectSummary": {
+        "additionalProperties": false,
+        "description": "One project, as a row in a list or a heading in a window.",
+        "properties": {
+          "autosave_due": {
+            "description": "Whether a checkpoint is owed right now.",
+            "title": "Autosave Due",
+            "type": "boolean"
+          },
+          "checkpoint_sequence": {
+            "description": "Sequence of the newest checkpoint; 0 for none.",
+            "title": "Checkpoint Sequence",
+            "type": "integer"
+          },
+          "clip_count": {
+            "description": "Clips on the timeline.",
+            "title": "Clip Count",
+            "type": "integer"
+          },
+          "commands_until_checkpoint": {
+            "description": "How many more edits before autosave writes one.",
+            "title": "Commands Until Checkpoint",
+            "type": "integer"
+          },
+          "dirty": {
+            "description": "Whether the project in memory differs from the file.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "duration_frames": {
+            "description": "Length of the timeline, in frames.",
+            "title": "Duration Frames",
+            "type": "integer"
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence; 0 when nothing yet.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "name": {
+            "description": "The project's name, as the user typed it.",
+            "title": "Name",
+            "type": "string"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The `.nova` file, or null for one never saved.",
+            "title": "Path"
+          },
+          "pending_commands": {
+            "description": "Edits since the last checkpoint — what a crash would lose.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Stable id; the key every other project call uses.",
+            "title": "Project Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "name",
+          "dirty",
+          "clip_count",
+          "duration_frames",
+          "pending_commands",
+          "commands_until_checkpoint",
+          "autosave_due",
+          "journal_sequence",
+          "checkpoint_sequence"
+        ],
+        "title": "ProjectSummary",
+        "type": "object"
+      },
+      "RecoveryResponse": {
+        "additionalProperties": false,
+        "description": "What to offer the user after a crash, as the domain phrased it.",
+        "properties": {
+          "checkpoint_sequence": {
+            "description": "The checkpoint recovery would replay onto.",
+            "title": "Checkpoint Sequence",
+            "type": "integer"
+          },
+          "detail": {
+            "description": "One sentence for the dialog, in the user's language.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "offers": {
+            "description": "What can be done, best first: replay, restore, discard.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Offers",
+            "type": "array"
+          },
+          "pending_commands": {
+            "description": "Commands not yet baked into a checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project the journal belongs to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "torn_tail": {
+            "description": "Whether the journal's last line was cut short by the crash.",
+            "title": "Torn Tail",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_id",
+          "pending_commands",
+          "torn_tail",
+          "checkpoint_sequence",
+          "detail"
+        ],
+        "title": "RecoveryResponse",
+        "type": "object"
+      },
+      "SaveAsRequest": {
+        "additionalProperties": false,
+        "description": "Save to a new location.",
+        "properties": {
+          "path": {
+            "description": "Absolute path to write the `.nova` file to.",
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "SaveAsRequest",
+        "type": "object"
+      },
+      "SaveProjectResponse": {
+        "additionalProperties": false,
+        "description": "The outcome of a save.",
+        "properties": {
+          "format_version": {
+            "description": "The `.nova` format version written.",
+            "title": "Format Version",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Where it was written.",
+            "title": "Path",
+            "type": "string"
+          },
+          "project_id": {
+            "description": "The project that was saved.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "saved_at_ms": {
+            "description": "Unix milliseconds of the save, for 'last saved'.",
+            "title": "Saved At Ms",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "project_id",
+          "path",
+          "saved_at_ms",
+          "format_version"
+        ],
+        "title": "SaveProjectResponse",
         "type": "object"
       },
       "SystemInfoResponse": {
@@ -430,6 +839,1138 @@
         "summary": "Recent events, for a client that fell behind",
         "tags": [
           "events"
+        ]
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "description": "Every open project, in the order they were opened.\n\nSummaries, not projects: a list that carried whole timelines would be a\nrequest that grows without bound as the user works.",
+        "operationId": "list_projects_api_v1_projects_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "$ref": "#/components/schemas/ProjectSummary"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response List Projects Api V1 Projects Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "The projects open in this session",
+        "tags": [
+          "projects"
+        ]
+      },
+      "post": {
+        "description": "A new, empty project, open in memory and not yet written anywhere.",
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Create a new project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/open": {
+      "post": {
+        "description": "Open a project, refusing only what cannot be read at all.\n\nA damaged project comes back with warnings rather than as a failure\n(ADR-0015 rule 3): the user gets their work and a list of what to fix.",
+        "operationId": "open_project_api_v1_projects_open_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenProjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Open a `.nova` file",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "delete": {
+        "description": "Close a project without saving it.\n\nDeliberately does *not* write first: a close that silently saved would\noverwrite the very file the user may be trying to abandon.",
+        "operationId": "close_project_api_v1_projects__project_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "204": {
+            "description": "The project was closed."
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Close a project",
+        "tags": [
+          "projects"
+        ]
+      },
+      "get": {
+        "description": "The state of one open project, or a 404 when it is not open here.",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "One open project",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/audit": {
+      "get": {
+        "description": "What a user would want to know, as sentences rather than as a boolean.",
+        "operationId": "audit_project_api_v1_projects__project_id__audit_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "How this project is doing",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/autosave": {
+      "post": {
+        "description": "The autosave tick, callable by the frontend's own timer.\n\nAnswers `taken: false` when nothing was owed, which is not an error — a tick\nthat checkpointed unconditionally would rewrite the archive on every keypress.",
+        "operationId": "autosave_project_api_v1_projects__project_id__autosave_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Take a checkpoint if one is owed",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/checkpoint": {
+      "post": {
+        "description": "Store a revision and truncate the journal it makes redundant.",
+        "operationId": "checkpoint_project_api_v1_projects__project_id__checkpoint_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "What to remember it by.",
+            "in": "query",
+            "name": "label",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "What to remember it by.",
+              "maxLength": 120,
+              "title": "Label",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckpointResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Write an autosave checkpoint now",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/recovery": {
+      "get": {
+        "description": "The offers for this project's journal, best first.\n\nAsked at startup when a journal is found for a project that was open when the\nprocess died, and by the recovery dialog when the user asks.",
+        "operationId": "recovery_for_project_api_v1_projects__project_id__recovery_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "What can be recovered after a crash",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/save": {
+      "post": {
+        "description": "Write the project to the file it came from; 409 when it has none yet.",
+        "operationId": "save_project_api_v1_projects__project_id__save_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Save a project to its own file",
+        "tags": [
+          "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/save-as": {
+      "post": {
+        "description": "Write the project to a new file and make that its home.",
+        "operationId": "save_project_as_api_v1_projects__project_id__save_as_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveProjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Save a project somewhere else",
+        "tags": [
+          "projects"
         ]
       }
     },

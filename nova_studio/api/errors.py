@@ -149,11 +149,21 @@ def problem_body(problem: Any) -> dict[str, Any]:
     return body
 
 
-def problem_response(error: NovaError, *, instance: str | None = None) -> JSONResponse:
-    """One `NovaError` as one `problem+json` response."""
+def problem_response(
+    error: NovaError, *, instance: str | None = None, status: int | None = None
+) -> JSONResponse:
+    """One `NovaError` as one `problem+json` response.
+
+    Args:
+        error: The refusal.
+        instance: The path the failure happened on.
+        status: An explicit status, used when the transport knows better than
+            the severity — "there is no such open project" is a 404 however
+            severely the domain regards it.
+    """
     problem = error.to_problem(instance=instance)
     return JSONResponse(
-        status_code=problem.status,
+        status_code=problem.status if status is None else status,
         content=problem_body(problem),
         media_type=PROBLEM_MEDIA_TYPE,
     )
@@ -165,6 +175,7 @@ def respond(
     to_body: Callable[[Any], Any] | None = None,
     status_code: int = status.HTTP_200_OK,
     instance: str | None = None,
+    status_for: Callable[[NovaError], int | None] | None = None,
 ) -> JSONResponse:
     """Map a `Result` onto a response, in the one shape the frontend parses.
 
@@ -174,6 +185,8 @@ def respond(
             rather than the caller building a body and losing the `Result`.
         status_code: The status for the success half — `201` for a create.
         instance: The request path, echoed into the problem body on failure.
+        status_for: Optional per-code status override, for the cases where the
+            transport and not the domain knows which status is truthful.
 
     Returns:
         A `200`/`201` with the serialised value, or a `problem+json` response
@@ -181,9 +194,22 @@ def respond(
     """
     problem = result.error()
     if problem is not None:
-        return problem_response(problem, instance=instance)
+        override = status_for(problem) if status_for is not None else None
+        return problem_response(problem, instance=instance, status=override)
     body = to_body(result.unwrap()) if to_body is not None else None
-    return JSONResponse(status_code=status_code, content=body)
+    return JSONResponse(status_code=status_code, content=_as_content(body))
+
+
+def _as_content(body: Any) -> Any:
+    """A pydantic DTO as JSON-ready data; anything else untouched.
+
+    Routers hand :func:`respond` a DTO from a mapper rather than a dict they
+    built, because a body built by hand is a second definition of the contract.
+    Dumping it here means every router does not have to remember `.model_dump`,
+    and the one that forgets does not ship a 500.
+    """
+    dumper = getattr(body, "model_dump", None)
+    return dumper(mode="json") if callable(dumper) else body
 
 
 def _validation_problem(request: Request, error: RequestValidationError) -> dict[str, Any]:

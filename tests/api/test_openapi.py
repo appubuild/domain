@@ -74,5 +74,15 @@ class TestTheSchema:
 
     def test_the_websocket_is_not_in_it(self) -> None:
         """OpenAPI cannot describe a socket; the WS protocol is documented in
-        `docs/architecture/adr/ADR-0005-local-http-ws-transport.md` instead."""
-        assert "ws" not in json.dumps(contract()["paths"])  # type: ignore[index]
+        `docs/architecture/adr/ADR-0005-local-http-ws-transport.md` instead.
+
+        The check is on the paths, not on the document's text: prose about the
+        socket is allowed to say "WebSocket".
+        """
+        assert "/api/v1/ws" not in contract()["paths"]  # type: ignore[index]
+        assert all(  # no path may carry a socket method
+            method not in operations
+            for operations in contract()["paths"].values()  # type: ignore[union-attr]
+            for method in operations
+            if method in {"websocket"}
+        )
