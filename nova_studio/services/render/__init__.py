@@ -25,7 +25,8 @@ services/render/
 ├── kernels.py    the arithmetic behind the effect catalogue, and its registry
 ├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
 ├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
-└── loop.py       render_frames · render_preview_frame — one loop, any sink
+├── loop.py       render_frames · render_preview_frame — one loop, any sink
+└── export.py     ExportVideoJob — that loop, as a cancellable job
 ```
 
 `composite.py` and `kernels.py` are split the way a specification and an
@@ -139,8 +140,22 @@ kernel and a missing one is skipped, and that one frame twice is byte-identical.
 `tests/services/test_render_pool.py` counts seeks against a decoder that can be
 asked how many it made, and `tests/services/test_render_loop.py` drives the loop
 into a fake sink to pin where an empty frame, a gap, a cancellation and an
-encoder failure each land. `tests/infra/test_imaging.py` pins the imaging port's
-adapter against a second, plain-NumPy implementation. No FFmpeg, no clock.
+encoder failure each land. `tests/services/test_render_preview.py` and
+`test_preview_renderer.py` cover the panel's half, and
+`tests/services/test_render_export.py` covers the job: staged progress, resume
+points, a cancellation that leaves no file, an offline asset that does not stop
+the export, and — in the one test that touches FFmpeg — a clip exported through
+the real encoder and opened again. `tests/infra/test_imaging.py` pins the
+imaging port's adapter against a second, plain-NumPy implementation. No FFmpeg,
+no clock.
+
+**The export job.** `export.py` is the loop's other caller, and the differences
+are the point: it runs in the process pool (ADR-0010 §1), it is data rather than
+a closure so that Windows `spawn` can pickle it, it builds its decoders and its
+renderer *inside* the worker from injected factories, and it reports through the
+job port rather than to a caller. What it does not do is know that: a job body
+takes a `JobContext` and returns a `Result[JobOutcome]`, which is why a test can
+run a whole export by calling it directly.
 
 **Database schema.** None — see the note in `docs/architecture/services.md` §1.
 
@@ -162,6 +177,13 @@ adapter against a second, plain-NumPy implementation. No FFmpeg, no clock.
 from __future__ import annotations
 
 from nova_studio.services.render.composite import apply_grade, composite_frame
+from nova_studio.services.render.export import (
+    EXPORT_JOB_KIND,
+    ExportRequest,
+    ExportVideoJob,
+    export_job_spec,
+    export_summary,
+)
 from nova_studio.services.render.frames import (
     DECODE_FROM_ORIGINAL,
     DecodeRequest,
@@ -202,7 +224,10 @@ __all__ = [
     "DEFAULT_CACHE_BYTES",
     "DEFAULT_OPEN_SOURCES",
     "DEFAULT_WARM_COUNT",
+    "EXPORT_JOB_KIND",
     "DecodeRequest",
+    "ExportRequest",
+    "ExportVideoJob",
     "FramePlan",
     "FrameSourcePool",
     "KernelRegistry",
@@ -218,6 +243,8 @@ __all__ = [
     "apply_grade",
     "builtin_kernels",
     "composite_frame",
+    "export_job_spec",
+    "export_summary",
     "fit_scale",
     "kernel_types",
     "plan_frame",

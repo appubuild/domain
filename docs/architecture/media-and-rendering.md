@@ -705,7 +705,70 @@ clip encoded in a temporary directory by PyAV — the frame arrives as JPEG with
 `no-store`, the headers describe it, closing a project closes its renderer and
 its file handles, and an edit invalidates the cache by itself.
 
-**Future expansion.** `FrameFormat.PNG` and `WEBP` are already implemented in
+### 7.15 The export job (`services/render/export.py`)
+
+Previewing a frame and exporting a range are the same loop with a different
+sink. What an export adds is everything the preview never has to answer: it runs
+for minutes, it can be stopped, it must not leave a half-file, and somebody is
+watching a bar.
+
+```
+routers/export.py (to come) ──► JobExecutor.submit(spec, body)
+                                        │
+                                        ▼
+                        ExportVideoJob(project, request, *factories)(context)
+                                        │
+        ┌───────────────────────────────┼────────────────────────────────┐
+        ▼                               ▼                                ▼
+ renderer_factory()             FrameSourcePool              _ProgressSink
+ -> Renderer.open(spec, path)   (decoder_factory(),          counts writes,
+    -> RenderTarget                resolve)                  reports, checkpoints
+        │                               │                                │
+        │                               ▼                                │
+        │                    render_frames(…, cancel=context.is_cancelled)│
+        │                               │                                │
+        └──────────────► target.finish() ◄───────────────────────────────┘
+                         (the commit point: index, trailer, rename)
+```
+
+Decision | Why
+--- | ---
+**A job body, not a function** | It takes a `JobContext` and returns `Result[JobOutcome]`. Nothing here knows what a thread, a process or a WebSocket is (ADR-0010 §1) — which is also why a test can run an entire export by calling it.
+**Data, not a closure** | An export is CPU-bound for minutes: it runs in the process pool, and Windows `spawn` pickles the body. So it is a frozen dataclass of frozen values plus **module-level factories**, and it builds its decoders, renderer and clock *inside* the worker. A body that captured an open decoder is unpicklable — refused at submit time rather than forty minutes in.
+**Federated assembly** | `services` may not import `infra` (ADR-0002 rule 2), so the composition root supplies the factories and gets both: the real ones in production, fakes in a test, and no second copy of the wiring.
+**Progress lives on the sink** | The loop's job is to render frames in order; wrapping the sink keeps it unchanged and puts the count exactly where the thing being counted happens — after a *successful* write, the only count a user cares about.
+**Two finishes** | `render_frames` finishes the *stream* (flush the encoder); `target.finish()` commits the *container* (index, trailer, promote the temporary file). Reporting the muxing stage at the flush would park the bar at 100 % while the trailer was still being written — the exact hang the stage exists to distinguish.
+**A gap does not fail the export** | An offline asset means a hole in the picture, ids in the progress payload and a count in the summary. Refusing to export a project with one unplugged drive is refusing nineteen clips that are fine. An export that must be complete sets `fail_on_missing`, and then the same situation is refused *before* the first frame.
+
+Stage | What it means
+--- | ---
+`preparing` | Probing the encoder and opening the destination. Slow the first time, and worth saying out loud.
+`encoding` | One report per frame: `frame`, `frames`, and an ETA once there is a rate to extrapolate from — never from the first four frames.
+`muxing` | The container is being finalised.
+`done` | Terminal, always published, carrying the summary a user reads.
+
+**Caching / performance.** The pool's cache is deliberately an eighth of the
+preview's: a forward export reads every frame once, so a large cache is memory
+spent to avoid work that will not happen. Resume points are written every 120
+frames, and the export is declared idempotent so a lost worker can be retried
+without asking the user.
+
+**Testing.** `tests/services/test_render_export.py` (44): staged progress and
+resume points, a cancellation that stops between frames and leaves no file, an
+encoder rejection at frame four that leaves no file, an unwritable destination
+refused before a frame is decoded, gaps tolerated and `fail_on_missing`
+refusing, and a pickling test that fails a body built with a closure. One test
+touches FFmpeg: a clip encoded by PyAV, exported through `PyAVRenderer`, opened
+again and counted.
+
+**Future expansion.** The audio mix is the obvious gap: `RenderTarget.audio()`
+already exists and the job ignores it, because there is no mixer yet (§7.4).
+Resume from a checkpoint — restarting at frame *n* — needs the executor and a
+store, both of which land with the job scheduler. Segment-parallel export
+(render four ranges into four files and concat) is a scheduler decision this body
+never has to know about.
+
+**Future expansion (preview).** `FrameFormat.PNG` and `WEBP` are already implemented in
 `infra/preview.py` and selectable at the composition root; which one a session
 serves becomes an `ApiSettings` field the day a client needs it. The desktop
 shell replaces the JPEG sink with shared memory (§7.2) and nothing above

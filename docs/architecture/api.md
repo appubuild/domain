@@ -725,7 +725,7 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 | A second editing scope (captions, colour) | `UndoScope` already separates the stacks, so a caption editor gets its own history next to the timeline's; `ProjectWorkspace` would hold one editor per scope per project. |
 | Multi-window | `ProjectWorkspace` is a value on `app.state`, not a global; two windows in one process would each get one, and the "already open here" rule (4090) is already per-workspace. |
 | Command endpoints (`POST /api/v1/timeline/commands`) | Commands are already the public editing API; a router that accepts a serialised command and returns the events it produced is a thin translation. |
-| Job endpoints (progress, cancel) | The job scheduler is already the only way long work runs (ADR-0010); progress arrives as events, so the socket carries it for free. |
+| Job endpoints (progress, cancel) | The export job body already reports through `JobContext` (`media-and-rendering.md` §7.15); what is missing is the executor and the router that turn a submit into a `job_id`. |
 | Binary frame channels (waveforms) | ADR-0005 §5 fixes the three sinks; the socket already separates text and binary frames. Preview chose HTTP-and-`no-store` over the socket for now, so a frame is one cacheable-by-nobody request rather than a subscription the server must keep up with. |
 | `ETag`/`304` on media reads | The resource routers will own the validators. |
 | PyWebView bridge (`apps/desktop`) | `serve()` runs in-process; `endpoint` is what the window is handed. The bridge carries window concerns only. |

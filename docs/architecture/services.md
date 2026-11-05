@@ -600,7 +600,8 @@ services/render/
 ├── kernels.py    the arithmetic behind the effect catalogue, and its registry
 ├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
 ├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
-└── loop.py       render_frames · render_preview_frame — one loop, any sink
+├── loop.py       render_frames · render_preview_frame — one loop, any sink
+└── export.py     ExportVideoJob — that loop, as a cancellable job
 ```
 
 **The full contract** — per-module responsibilities, the class diagram, the
@@ -633,9 +634,11 @@ in a batch, outside the request path) and `DELETE …/preview/cache` (drop the
 pictures, keep the decoders). An edit invalidates through the command's own
 `invalidate` set, so a pure selection change costs no re-decode.
 
-**Events.** None yet. A render is a `Job` (ADR-0010) and reports `job.*`; the
-preview publishes nothing, because it is a loop the UI drives rather than a task
-the scheduler owns.
+**Events.** The preview publishes nothing, because it is a loop the UI drives
+rather than a task the scheduler owns. An export *is* a job (ADR-0010) and
+reports through `JobContext.report`, which the executor throttles to 20 Hz and
+the bus carries to the socket — so progress, stage changes and completion arrive
+as events the window subscribed to, not as answers to requests it polls.
 
 **Testing.** `tests/services/test_render_frames.py` pins the recipe,
 `test_render_preview.py` the geometry and the renderer — never upscaled, a
