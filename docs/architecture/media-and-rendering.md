@@ -761,7 +761,61 @@ refusing, and a pickling test that fails a body built with a closure. One test
 touches FFmpeg: a clip encoded by PyAV, exported through `PyAVRenderer`, opened
 again and counted.
 
-**Future expansion.** The audio mix is the obvious gap: `RenderTarget.audio()`
+### 7.16 The job executor and the job history (`infra/jobs.py`, `infra/persistence/jobs.py`)
+
+A job body can be called directly, which is what makes it testable — but a user
+does not call it. Something has to record it before it starts, run it somewhere
+it cannot hurt the UI, stop it when asked, and report while it runs.
+
+```
+ submit(spec, body) ──► store.put(record)        ← BEFORE anything runs (rule 4)
+        ┌────────────────────┴─────────────────────┐
+        ▼                                          ▼
+ THREAD isolation                            PROCESS isolation
+ ThreadPoolExecutor                          one process per job
+ └─ _Context (flag, report, checkpoint)      ├─ mp.Queue → reader thread → observers
+                                             └─ mp.Event ← cancel()
+        └──────────────────┬──────────────────────┘
+                           ▼
+        settle → store.put → observers.on_status
+        (RUNNING → SUCCEEDED | FAILED | CANCELLED | INTERRUPTED)
+```
+
+Decision | Why
+--- | ---
+**A process per job, not a process pool** | `ProcessPoolExecutor` gives a worker no way to send anything home until it returns — progress would arrive at the end, which is the refresh-timer UI ADR-0010 §7 rules out. A process of its own, with an inherited `Queue` and `Event`, reports as it goes. The cost (~50 ms on Linux, ~300 ms on Windows) is nothing against an export measured in minutes.
+**`spawn`, never `fork`** | A forked worker inherits the event loop, the sockets and the locks; a job that touched them would corrupt the editor rather than fail. It is also what Windows does.
+**The record is written before the work starts** | The last thing the process did is always on disk — the whole of post-crash reporting. A job whose history cannot be written is refused rather than run.
+**Settled before completed** | The record closes *before* the future does, so `wait()` returning means the record is final, not that it soon will be.
+**Cancellation is cooperative, then hard** | A process is terminated after its grace period (30 s for an export, so a job mid-mux is not killed into a corrupt file). A thread cannot be killed: its record is closed with `NS-JOB-5004` and the worker is left to end.
+**Progress is throttled, the edges are not** | 20 Hz, but a stage change and the terminal report are always published: a bar frozen at 99 % is indistinguishable from a hang.
+**A dead worker is a value** | An exception in a body is `NS-JOB-5006`; a worker that died is `NS-JOB-5003`. The editor survives both; the scheduler decides on retry.
+
+Adapter | For
+--- | ---
+`ConcurrentJobExecutor` | Threads for short work, a process each for long CPU-bound work.
+`ThreadPoolJobExecutor` | Tests, and the frozen Windows build until it can call `freeze_support()`. A process job is refused at once rather than run in the wrong place.
+`JsonJobStore` | The history as one JSON file in the data directory, written whole and atomically (staged beside, `os.replace`). Rows move to `ai_jobs`/`export_jobs` (ADR-0004 §6) as a constructor argument, not a rewrite.
+
+**Reconciliation.** At startup `reconcile_interrupted()` turns every
+non-terminal record into `INTERRUPTED` — a job that was running when the editor
+closed neither failed nor finished — and pruning deletes terminal records only,
+so a crash cannot disappear a job that might still be resumable.
+
+**Testing.** `tests/infra/test_jobs.py` (47): an exception becomes a value; a
+burst of 200 reports is throttled while a stage change and the terminal report
+survive; a cancelled job is *cancelled*, not *failed*; a job that will not stop
+is closed by the watchdog; a second job is refused when there is one slot and
+accepted once it frees; an unpicklable body is refused before a worker is
+scheduled; and two tests start a real process and read progress back across the
+boundary.
+
+**Future expansion.** Retry and the circuit breaker (the scheduler), a waiting
+queue with priority deferral (`decide_admission` already returns the verdict),
+and resume-from-checkpoint — the checkpoint is already on the record, and an
+export writes one every 120 frames.
+
+**Future expansion (export job).** The audio mix is the obvious gap: `RenderTarget.audio()`
 already exists and the job ignores it, because there is no mixer yet (§7.4).
 Resume from a checkpoint — restarting at frame *n* — needs the executor and a
 store, both of which land with the job scheduler. Segment-parallel export
