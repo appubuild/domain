@@ -9,7 +9,8 @@ by a user who wants to clean up, and impossible to write into the wrong place:
 ├── autosave/
 │   └── <project_id>/
 │       └── cmds-<ms>-<token>.ndjson   the journal for one project
-└── cache.sqlite3                  one install-wide index of derived bytes
+├── cache.sqlite3                  one install-wide index of derived bytes
+└── jobs.json                      the install-wide job history (ADR-0010 §6)
 
 <project path>.nova.bak            the previous version of a project file
 <project path>.nova.tmp-<token>    a save in progress, in the same directory
@@ -25,6 +26,10 @@ Two rules make this more than a pile of constants:
 * **A temporary file is written in the same directory as its target**, never in
   `/tmp`. `os.replace` is only atomic within one filesystem, so a save that
   staged somewhere else would not be atomic at all — it would be a copy.
+* **The job history is install-wide, not per-project.** A job belongs to the
+  machine that ran it, not to the file it was working on: an export interrupted
+  by a power cut is reported the next time the editor opens, whichever project
+  happens to be open then.
 
 A project id becomes a directory name, which makes it untrusted input in exactly
 the way an archive entry name is: `../../etc` as a project id is the zip-slip

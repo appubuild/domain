@@ -60,25 +60,33 @@ api/
 ├── state.py      SessionState — everything one running instance is
 ├── ws.py         EventBridge — one bus, many sockets, recoverable loss
 ├── workspace.py ProjectWorkspace — every open project in this session (§8)
-├── dependencies.py  the FastAPI dependencies (the session state, and the workspace)
+├── exports.py   ExportJobFactory — how a worker's job body is built (§11)
+├── job_events.py   JobEventBridge — the executor's events, onto the bus (§11)
+├── dependencies.py  the FastAPI dependencies (session, workspace, jobs, exports)
 ├── schemas/      DTOs: the wire contract, documented field by field
 │   ├── system.py    health, identity, capabilities
 │   ├── projects.py  the project DTOs: summary, open, save, checkpoint, audit
 │   ├── timeline.py  the edit, its history, and the seven commands (§9)
 │   ├── media.py     the bin: asset rows, and the import report (§10)
+│   ├── export.py    the export dialog: the request, and the job it got (§11)
+│   ├── jobs.py      a job row: progress inside it, not beside it (§11)
 │   └── problem.py   the error body (RFC 9457)
 ├── mappers/      entity ↔ DTO translation, one module per resource
 │   ├── projects.py  Project ↔ ProjectSummary, ProjectAudit → sentences
 │   ├── timeline.py  Timeline → summary, wire command → domain command
-│   └── media.py     MediaAsset → row, IngestReport → import answer
+│   ├── media.py     MediaAsset → row, IngestReport → import answer
+│   ├── export.py    "MP4, high quality" → an OutputSpec the domain can build
+│   └── jobs.py      JobRecord → the row the panel draws
 ├── routers/      HTTP endpoints
 │   ├── system.py    /healthz, /api/v1/system/{info,capabilities}
 │   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
 │   ├── projects.py  /api/v1/projects/* (§8)
 │   ├── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
 │   ├── media.py     /api/v1/projects/{id}/media{,/import} (§10)
-│   └── render.py    /api/v1/projects/{id}/preview/{frame,warm,cache} (§7.14)
-└── (to come)     resources/ (render, captions, export, plugins)
+│   ├── render.py    /api/v1/projects/{id}/preview/{frame,warm,cache} (§7.14)
+│   ├── export.py    POST /api/v1/projects/{id}/exports (§11)
+│   └── jobs.py      /api/v1/jobs{,/{id},/{id}/cancel} (§11)
+└── (to come)     captions/, plugins/, resources/
 ```
 
 Two rules for `schemas/`, stated in that package's `__init__.py`:
@@ -105,13 +113,15 @@ app = create_app(bus, session=state, settings=ApiSettings(...))
 | `app.state.session` | The `SessionState`, read by the `session_state` dependency rather than captured in a closure. |
 | `app.state.bridge` | The `EventBridge` the WebSocket serves from. |
 | `app.state.workspace` | The `ProjectWorkspace`: every project open in this session (§8). Created *before* the app, closed by the lifespan, handed to routers by a dependency. |
+| `app.state.jobs` | The `ConcurrentJobExecutor`: the pools, and the job history behind them (§11). Created before the app, shut down by the lifespan. |
+| `app.state.exports` | The `ExportJobFactory`: how the body of an export job is built for a worker (§11). |
 | `install_error_handlers(app)` | Three handlers: `HTTPException`, `RequestValidationError`, `Exception`. |
 | `guard.as_middleware()` | Host/Origin check on every HTTP request (§4). |
 | `dependencies=[Depends(token_dependency(...))]` | Applied to the *router*, not to handlers, so an endpoint cannot forget to ask. |
 | `/healthz` | Registered outside every router — the one endpoint without a token. |
-| `_lifespan` | Start the bus if nobody has, publish `api.started`, publish `api.stopped`, close every open project and shut the bus down on the way out. |
+| `_lifespan` | Start the bus if nobody has, reconcile the job history, publish `api.started`, then on the way out: unsubscribe the job bridge, shut the pools down, close every open project, publish `api.stopped`, shut the bus down. |
 
-Lifespan does four things and nothing else. It opens no project and warms no
+Lifespan does those things and nothing else. It opens no project and warms no
 cache: that would be work the user did not ask for before they had a window to
 see it in. Closing what is open is different — it is the process dropping what it
 was holding, and it happens in a `finally`, so it happens on the way out even
@@ -556,7 +566,127 @@ the domain already reads as "unknown" rather than "empty".
 
 ---
 
-## 11. Running the service (`server.py`, `cli.py`)
+## 11. The job ring (`routers/export.py`, `routers/jobs.py`, `api/exports.py`, `api/job_events.py`)
+
+Everything in §8–§10 answers inside the request. This ring is the first that
+does not, and it is where ADR-0010 stops being a document about a scheduler and
+becomes a contract a window can call.
+
+    **An export is a job, not a request.**
+
+It takes minutes. A handler that rendered one inline would hold a connection,
+block a worker in the ASGI pool, and be indistinguishable from a hang while it
+did — so `POST .../exports` answers `202` with a job id, and the work is
+followed on the socket. The three endpoints that remain exist for the two
+moments a *request* is genuinely the right shape:
+
+| Method and path | Returns | Notes |
+|---|---|---|
+| `POST /api/v1/projects/{id}/exports` | 202 `ExportSubmission` | The job id, the project, the frame count, one line for the status bar. |
+| `GET /api/v1/jobs` | `JobListResponse` | The history, newest first — including jobs a previous run started. |
+| `GET /api/v1/jobs/{id}` | `JobRecordView` | One job, progress inside it. The resync read. |
+| `POST /api/v1/jobs/{id}/cancel` | `JobCancelResponse` | `cancelled: true` means the request was *made*, not that the job has stopped. |
+
+### What is deliberately not here
+
+* **No "wait for the job" endpoint.** A request that blocked for nine minutes is
+  a hang with a nicer name, and it holds a connection the socket already
+  replaced.
+* **No retry endpoint.** Whether a failure deserves another attempt is the
+  scheduler's decision, made from the record — a button that retried a job which
+  failed because the destination is read-only would fail identically, ninety
+  seconds later.
+* **No cancel-and-delete.** Cancelling does not remove the record: a job the user
+  stopped is a job the history should still be able to explain.
+* **No progress endpoint.** Progress is `job.progressed` on the socket, throttled
+  to ≤ 20 Hz per job by the executor. A polling endpoint would re-add the 60 Hz
+  request storm the event bus exists to remove.
+
+### Class diagram
+
+```
+   routers/export.py              api/exports.py                 the worker
+  ┌────────────────────┐   ┌──────────────────────────┐   ┌──────────────────┐
+  │ StartExportRequest │   │ ExportJobFactory         │   │  ExportVideoJob  │
+  │  path, container,  │──►│  renderer/ops/decoder    │──►│  project (frozen)│
+  │  codec, crf, range │   │  = module-level fns      │   │  request, cache  │
+  └─────────┬──────────┘   └──────────────────────────┘   └────────┬─────────┘
+            │ mappers/export.py                                    │ pickled
+            ▼                                                      ▼
+     ExportRequest + OutputSpec                          spawn context, own
+            │                                            decoders and encoder
+            │  jobs.submit(export_job_spec(), body)
+            ▼
+   ┌────────────────────────────────────────────────────────────────────┐
+   │ ConcurrentJobExecutor  (app.state.jobs)                            │
+   │   record → admit → thread pool or one process per job              │
+   └───────────┬──────────────────────────────┬─────────────────────────┘
+               │ JobObserver                  │ reads and writes
+               ▼                              ▼
+      api/job_events.py              JsonJobStore → <data>/jobs.json
+      JobEventBridge                  (one document, one lock, staged writes)
+      job.progressed / job.status / job.failed
+               │
+               ▼
+        EventBus → /api/v1/ws → the panel
+```
+
+### Validation happens before a worker exists
+
+The container, the codec, the priority and the frame range are all checked in the
+handler, against the open project, so a typo costs a `422` now instead of a
+failed job ninety seconds from now. The range is *resolved* here too —
+`ExportRequest.frames_for(project)` is what counts the frames the response
+reports — which is why an export of an empty project is refused rather than
+queued.
+
+Two defaults live in `mappers/export.py` and nowhere else: the size defaults to
+the project's own, and the timebase to the project's own. A default duplicated
+into a client is a default two clients will eventually disagree about, and the
+disagreement looks like two exports of the same project that do not match.
+
+### Overwriting is allowed, and safe
+
+The renderer writes beside the target and promotes on success
+(`media-and-rendering.md` §7.7), so a failed export leaves the previous file
+exactly as it was. Refusing to overwrite would be the worse deal: the user would
+rename files by hand to buy the safety atomic promotion already gives them.
+
+### Errors
+
+| Code | Status | Meaning |
+|---|---|---|
+| `NS-PROJECT-4040` | 404 | No project with that id is open, so there is nothing to export. |
+| `NS-VALIDATION-4220` | 422 | A container, a codec, a priority or a range the domain cannot build. |
+| `NS-JOB-5001` | 503 | No slot. Nothing was started, so submitting again is safe. |
+| `NS-JOB-5002` | 503 | The kind's circuit breaker is open, so this kind is disabled. |
+| `NS-JOB-5006` | 409 | Cancelling a job that has already stopped. |
+| `NS-JOB-5007` | 500 | A job body that cannot cross the process boundary — a bug in a factory. |
+| `NS-JOB-5008` | 503 | The job history could not be written, so no job was started. |
+
+The status is the transport's choice: `errors.STATUS_FOR_CODE` maps each code,
+because a severity-derived default would call "no slot right now" a 500 and a
+client would stop retrying something it should retry. A refusal from the executor
+arrives as `Err` and is served with *its* remedy attached; the router never
+rewrites the sentence.
+
+### Caching and performance
+
+* **Nothing is cached.** A job record is the truth about a job, and a second copy
+  with an invalidation rule would be a second thing to keep in step.
+* **The history is bounded at the edges**: `store.by_kind(kind, limit=…)` and a
+  `HISTORY_LIMIT` of 50 rows, because a month of exports is thousands of records
+  and a panel that fetched all of them to show the last twenty would cost the
+  user a megabyte to save itself a filter.
+* **Handlers are `def`, not `async def`**, and `submit` does no I/O beyond one
+  write of one small JSON document, so the request path stays off the event loop.
+* **The expensive parts happen in a worker the API never waits for**: the
+  project is frozen into the job body, so an edit made while an export runs
+  changes the editor and not the file being written.
+
+---
+
+## 12. Running the service (`server.py`, `cli.py`)
 
 ```bash
 make serve                     # or: python -m nova_studio serve
@@ -581,7 +711,7 @@ thing in the process.
 
 ---
 
-## 12. Caching strategy
+## 13. Caching strategy
 
 None in this layer, on purpose. A cache in front of a service is a second copy of
 the service's truth with an invalidation rule that is always slightly wrong. The
@@ -607,7 +737,7 @@ What the API does instead of caching:
 
 ---
 
-## 13. Performance strategy
+## 14. Performance strategy
 
 | Concern | Approach |
 |---|---|
@@ -617,6 +747,8 @@ What the API does instead of caching:
 | Back-pressure | Bounded per-client buffer (512 events); the oldest are dropped and counted, not queued forever. |
 | Slow clients | Never block the bus: a stream that is full drops for *that* client only. |
 | Large payloads | Never on the socket — binary channel or REST (ADR-0005 §5). |
+| Long work | Never in a request. An export is a job: `submit` writes one small JSON document and returns, and the minutes happen in a worker the request path never waits for. |
+| Progress | Never polled. Throttled to ≤ 20 Hz per job, on the socket; the REST read exists for resync only. |
 | Per-request allocation | Dependencies are built once at startup; handlers allocate a DTO and a JSON body. |
 | Docs in a packaged build | `ApiSettings(docs=False)`: the schema is a map of the internals and costs nothing to withhold from a user who will never read it. |
 
@@ -625,7 +757,7 @@ optimistic UI on the frontend and binary frames rather than JSON.
 
 ---
 
-## 14. Events
+## 15. Events
 
 | Topic | Published by | Payload |
 |---|---|---|
@@ -646,6 +778,22 @@ They are session events: what the window's title, dirty marker and recent-files
 list are driven by. They are not domain events and they are never journalled —
 a replay does not re-open projects.
 
+The job ring adds a third family, and it is the one a progress bar listens to
+(`api/job_events.py`, §11):
+
+| Topic | Published by | Payload |
+|---|---|---|
+| `api.jobs.reconciled` | lifespan, once on startup | `count` — how many jobs a previous run left open |
+| `job.progressed` | the bridge, from the executor | `job_id`, `progress` (fraction, stage, detail, eta) |
+| `job.status` | the bridge, on every change of state | the whole `JobRecord` |
+| `job.failed` | the bridge, when the record went to `failed` | the whole record, under a second name |
+
+`job.failed` is a *second name for a subset of the stream*, not a second stream:
+a notifier, a log, a toast — each can subscribe to failures without filtering a
+stream it otherwise ignores. Progress is throttled to ≤ 20 Hz per job by the
+executor, and a stage change or the terminal report is never dropped, because a
+bar that stops moving while the label changes reads as a hang.
+
 Neither the timeline ring nor the media ring adds topics of its own; an import
 publishes `project.edited` like any other change, and `media.imported` arrives
 with the panel that needs to refresh while another window is importing. `CommandHistory` already publishes
@@ -659,9 +807,9 @@ recovery path after a long gap — is not a second-class citizen.
 
 ---
 
-## 15. Testing
+## 16. Testing
 
-`tests/api/`, 246 tests, all of which run in `make check`.
+`tests/api/`, 309 tests, all of which run in `make check`.
 
 | File | What it pins |
 |---|---|
@@ -675,6 +823,10 @@ recovery path after a long gap — is not a second-class citizen.
 | `test_media_router.py` | The bin, and the batch rule: a file that is not media is one entry in `failures` inside a 200 and not a failed import; a path imported twice is one asset; a relative path never reaches the disk; an import is journalled, and one that added nothing is not. |
 | `test_server.py` | A real server on a real port: the port it reports is the port it is on, the token it announces is the token it accepts, the endpoint file is private. |
 | `test_openapi.py` | The committed contract matches the routes (`make openapi` after a route change); every path is versioned or public; every field is documented. |
+| `test_export_api.py` | The submission: 202 and a job id, never a file; a container, a priority or an empty range is a 422 **before** a worker exists; a range past the last clip is trimmed, not refused; a busy pool is a 503 that started nothing. |
+| `test_jobs_api.py` | The history: newest first, readable after a restart, progress carried *inside* the row so one request resyncs a reconnecting client; an unknown id is a 404; cancelling a finished job is a 409 and not a shrug. |
+| `test_job_events.py` | The translation: `job.status` carries the whole record, `job.failed` is published beside it and only for a failure, a cancellation is not a failure, the two events do not share a payload, and the bridge can be unsubscribed. |
+| `test_export_api.py::test_an_export_really_runs_in_a_worker…` | *(integration)* The wiring with nothing doubled: a real submission runs in a real worker, the file is written where the dialog chose, and the finished record is in the history a restarted editor would read. |
 
 Two `TestClient` quirks are worth knowing before a mysterious 403 costs an hour:
 
@@ -688,9 +840,17 @@ The doubles in `test_ws_bridge.py` (`ScriptedSocket`, `FakeBus`) exist because
 two promises — silence and loss — cannot be arranged through a real socket
 without a sleep and a hope.
 
+`tests/api/job_fakes.py` is the stand-in executor the job tests share. It is
+worth one paragraph of its own, because what it does *not* fake is the
+instructive part: it writes into the **real** `JsonJobStore`, so the history
+endpoints are exercised against the same file production writes, and it refuses
+on cue so the 503 and 409 paths are reachable without arranging a genuinely full
+pool. Whether a worker really starts is the executor's own question, and it is
+asked of the real thing with real processes in `tests/infra/test_jobs.py`.
+
 ---
 
-## 16. Frontend architecture notes
+## 17. Frontend architecture notes
 
 The frontend (stage 4) consumes this layer under rules that fall out of the above:
 
@@ -708,24 +868,29 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
    source during a scrub.
 6. **Errors are one shape.** Parse `code` for localisation, `detail` for the
    toast, `remedy` for the action, `retryable` for whether to offer one.
-7. **`pywebview.api.*` is for native window concerns only** (ADR-0005 §3):
+7. **Subscribe to jobs, do not poll them.** `POST .../exports` gives you an id;
+   `job.progressed` moves the bar and `job.status` ends it. Read
+   `GET /api/v1/jobs/{id}` when you arrive late — a reconnect, a window opened
+   over a running export — and never on a timer.
+8. **`pywebview.api.*` is for native window concerns only** (ADR-0005 §3):
    show/hide, minimise/maximise/fullscreen, native dialogs, clipboard image,
    focus, title, quit. A lint rule in the frontend will forbid it elsewhere.
 
 ---
 
-## 17. Future expansion
+## 18. Future expansion
 
 | Next | Why the seam is already there |
 |---|---|
-| Resource routers (captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. Render landed as `routers/render.py` (`media-and-rendering.md` §7.14) and is the model for the rest. |
+| Resource routers (captions, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. Render landed as `routers/render.py` (`media-and-rendering.md` §7.14), export and jobs as §11, and those two are the model for the rest. |
+| A transcription job, end to end | `ports/jobs.py` is kind-agnostic and the caption body will be a second `JobBody` with the same shape; `JOB_KINDS` in `routers/jobs.py` is the one line to add. |
 | Relinking missing media | `MediaAsset.relink` already couples the hash and the probe correctly; what is missing is a content hash at import (`ports/filesystem.py`) and the endpoint that offers a replacement path. |
 | `AudioResampler` | `infra/media.py` has the prober and `PyAVDecoder` implements `MediaDecoder`; the audio half arrives with the audio slice, behind the same port. |
 | Replaying a journal | The entries already carry everything a replay needs: the wire name, the arguments, and `undo`/`redo` markers. What is missing is the fold itself (§9), and the recovery dialog that offers it (`services/projects/recovery.py` already returns the plan). |
 | A second editing scope (captions, colour) | `UndoScope` already separates the stacks, so a caption editor gets its own history next to the timeline's; `ProjectWorkspace` would hold one editor per scope per project. |
 | Multi-window | `ProjectWorkspace` is a value on `app.state`, not a global; two windows in one process would each get one, and the "already open here" rule (4090) is already per-workspace. |
 | Command endpoints (`POST /api/v1/timeline/commands`) | Commands are already the public editing API; a router that accepts a serialised command and returns the events it produced is a thin translation. |
-| Job endpoints (progress, cancel) | The export job body already reports through `JobContext` (`media-and-rendering.md` §7.15); what is missing is the executor and the router that turn a submit into a `job_id`. |
+| ~~Job endpoints (progress, cancel)~~ | **Landed as §11**: `routers/export.py` submits, `routers/jobs.py` lists, reads and cancels, `api/job_events.py` puts `job.*` on the bus. What is still missing is a *scheduler* — a queue that defers and reorders, which `decide_admission` and `deferral_candidate` already describe from the outside. |
 | Binary frame channels (waveforms) | ADR-0005 §5 fixes the three sinks; the socket already separates text and binary frames. Preview chose HTTP-and-`no-store` over the socket for now, so a frame is one cacheable-by-nobody request rather than a subscription the server must keep up with. |
 | `ETag`/`304` on media reads | The resource routers will own the validators. |
 | PyWebView bridge (`apps/desktop`) | `serve()` runs in-process; `endpoint` is what the window is handed. The bridge carries window concerns only. |
@@ -733,7 +898,7 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 18. Where to read next
+## 19. Where to read next
 
 * [`ARCHITECTURE.md`](ARCHITECTURE.md) §4 — where L4 sits in the ring model.
 * [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the transport decision and its alternatives.

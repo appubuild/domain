@@ -178,10 +178,12 @@ from __future__ import annotations
 
 from nova_studio.services.render.composite import apply_grade, composite_frame
 from nova_studio.services.render.export import (
+    EXPORT_CACHE_BYTES,
     EXPORT_JOB_KIND,
     ExportRequest,
     ExportVideoJob,
     export_job_spec,
+    export_params_hash,
     export_summary,
 )
 from nova_studio.services.render.frames import (
@@ -224,6 +226,7 @@ __all__ = [
     "DEFAULT_CACHE_BYTES",
     "DEFAULT_OPEN_SOURCES",
     "DEFAULT_WARM_COUNT",
+    "EXPORT_CACHE_BYTES",
     "EXPORT_JOB_KIND",
     "DecodeRequest",
     "ExportRequest",
@@ -244,6 +247,7 @@ __all__ = [
     "builtin_kernels",
     "composite_frame",
     "export_job_spec",
+    "export_params_hash",
     "export_summary",
     "fit_scale",
     "kernel_types",

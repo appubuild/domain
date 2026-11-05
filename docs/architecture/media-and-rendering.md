@@ -802,6 +802,13 @@ non-terminal record into `INTERRUPTED` — a job that was running when the edito
 closed neither failed nor finished — and pruning deletes terminal records only,
 so a crash cannot disappear a job that might still be resumable.
 
+**How a client reaches it.** The executor is behind `app.state.jobs` and the
+HTTP surface is `api.md` §11: `POST /api/v1/projects/{id}/exports` submits and
+answers `202` with a job id, and `api/job_events.py` puts `job.progressed`,
+`job.status` and `job.failed` on the bus, which is how progress reaches a panel.
+Nothing in this section knows about HTTP, and nothing in `api/` knows how a
+worker is started — the seam is the `JobObserver` port.
+
 **Testing.** `tests/infra/test_jobs.py` (47): an exception becomes a value; a
 burst of 200 reports is throttled while a stage change and the terminal report
 survive; a cancelled job is *cancelled*, not *failed*; a job that will not stop

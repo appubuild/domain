@@ -43,6 +43,7 @@ a refusal before the first frame is decoded.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -88,6 +89,7 @@ __all__ = [
     "ExportVideoJob",
     "RendererFactory",
     "export_job_spec",
+    "export_params_hash",
     "export_summary",
 ]
 
@@ -236,6 +238,35 @@ def export_summary(stats: RenderStats, *, missing: tuple[str, ...] = ()) -> str:
         noun = "asset" if len(missing) == 1 else "assets"
         text += f" · {len(missing)} {noun} offline"
     return text
+
+
+def export_params_hash(request: ExportRequest) -> str:
+    """A short fingerprint of *what was asked for*, not of what was produced.
+
+    Two rows in the job history carrying the same hash are the same export
+    asked twice, which is what lets a panel say "run again" instead of making
+    the user wonder whether the second row differs from the first.
+
+    Deliberately **not** a hash of the project: the project changes between two
+    exports of the same settings, and a fingerprint that moved with it would
+    answer a question nobody asked ("did anything change?", to which the answer
+    is always yes). This answers "same destination, same settings, same range".
+    """
+    video = request.spec.video
+    parts = (
+        request.path,
+        str(request.spec.container),
+        str(video.codec),
+        str(video.width),
+        str(video.height),
+        str(video.timebase.num) if video.timebase else "0",
+        str(video.timebase.den) if video.timebase else "0",
+        str(video.rate_control.crf) if video.rate_control.crf is not None else "",
+        str(video.rate_control.bit_rate) if video.rate_control.bit_rate is not None else "",
+        str(request.start_frame),
+        str(request.end_frame),
+    )
+    return hashlib.sha256("\x1f".join(parts).encode()).hexdigest()[:16]
 
 
 def _bytes(count: int) -> str:

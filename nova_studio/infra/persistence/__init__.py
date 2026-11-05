@@ -35,6 +35,7 @@ infra/persistence/
 ├── journal.py     NdjsonJournal — the append-only command log
 ├── sqlite.py      SqliteGateway — the ONLY module that may import sqlite3
 ├── cache.py       SqliteCacheIndex — derived artefacts and what they cost
+├── jobs.py        JsonJobStore — the job history, one JSON document
 └── work.py        PersistenceUnitOfWork — document first, then rows
 ```
 
@@ -63,6 +64,7 @@ global state, no singletons, no caches that outlive their owner.
 | `.commit()` / `.discard()` | "make it durable" / "I have changed my mind" |
 | `open_journal(data_root, project_id, started_ms)` | "the crash log for this project" |
 | `open_cache_index(path)` · `SqliteCacheIndex` | "what derived bytes do we hold" |
+| `job_history_path(root)` · `JsonJobStore` | "what jobs ran, and how did they end" |
 | `PersistenceUnitOfWork(archive=…, rows=…)` | "commit these two together or not at all" |
 
 **Events.** None. Persistence is called, it does not announce itself — the
@@ -127,6 +129,7 @@ from nova_studio.infra.persistence.canonical import (
     dumps_canonical,
     loads_canonical,
 )
+from nova_studio.infra.persistence.jobs import JOB_HISTORY_NAME, JsonJobStore, job_history_path
 from nova_studio.infra.persistence.journal import NdjsonJournal, open_journal
 from nova_studio.infra.persistence.paths import (
     AUTOSAVE_SUBDIR,
@@ -150,8 +153,10 @@ __all__ = [
     "CACHE_DATABASE_NAME",
     "CACHE_INDEX_DDL",
     "DEFAULT_MAX_REVISIONS",
+    "JOB_HISTORY_NAME",
     "SUPPORTED_FORMAT_VERSION",
     "CanonicalJsonError",
+    "JsonJobStore",
     "NdjsonJournal",
     "PersistenceCommitError",
     "PersistenceUnitOfWork",
@@ -166,6 +171,7 @@ __all__ = [
     "dumps_canonical",
     "is_journal_name",
     "is_safe_project_id",
+    "job_history_path",
     "journal_dir",
     "loads_canonical",
     "open_cache_index",

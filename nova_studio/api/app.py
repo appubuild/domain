@@ -38,7 +38,9 @@ from fastapi import Depends, FastAPI
 from nova_studio import __version__
 from nova_studio.api.auth import LoopbackGuard, token_dependency
 from nova_studio.api.errors import error_responses, install_error_handlers
-from nova_studio.api.routers import events, media, projects, render, system, timeline
+from nova_studio.api.exports import ExportJobFactory
+from nova_studio.api.job_events import install as install_job_events
+from nova_studio.api.routers import events, export, jobs, media, projects, render, system, timeline
 from nova_studio.api.schemas.system import HealthResponse
 from nova_studio.api.state import SessionState, new_session_state
 from nova_studio.api.workspace import ProjectWorkspace
@@ -47,12 +49,16 @@ from nova_studio.api.ws import (
     DEFAULT_MAX_BUFFERED,
     EventBridge,
 )
+from nova_studio.core.clock import SystemClock
+from nova_studio.infra.jobs import ConcurrentJobExecutor, spawn_context
+from nova_studio.infra.persistence.jobs import JsonJobStore, job_history_path
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
     from contextlib import AbstractAsyncContextManager
 
     from nova_studio.core.events import EventBus
+    from nova_studio.ports.jobs import Unsubscribe
 
 __all__ = ["ApiSettings", "create_app"]
 
@@ -101,6 +107,17 @@ def create_app(
         A FastAPI application with the error handlers, the loopback guard, the
         session-token dependency, the system router and the WebSocket bridge
         installed, and the session available to handlers as `app.state.session`.
+
+    What lives on `app.state`, because handlers reach it through the
+    dependencies in `api/dependencies.py` rather than through a global:
+
+    | Attribute | What it is |
+    | --- | --- |
+    | `session` | the token, the data directory, the port |
+    | `bridge` | bus to WebSocket |
+    | `workspace` | the projects this session has open |
+    | `jobs` | the executor: the pools and the job history |
+    | `exports` | how an export job body is built for a worker |
     """
     settings = settings or ApiSettings()
     state = session or new_session_state(bus, app_version=settings.app_version)
@@ -115,6 +132,22 @@ def create_app(
     # the lifespan closes them, and held on `app.state` so a handler's dependency
     # can reach them without a global.
     workspace = ProjectWorkspace(bus, data_dir=state.data_dir)
+    # The pools this session runs background work on, and the history it is
+    # written to. Built here rather than in a module global for the same reason
+    # the workspace is: a second window is a second session, and its exports
+    # must not compete for the first one's slots.
+    #
+    # `spawn`, never `fork` — a forked worker inherits the editor's event loop
+    # and sockets, and a job that touched them would corrupt the session rather
+    # than fail. Where a context cannot be had (the frozen Windows build before
+    # `freeze_support()`), process jobs are refused at submit time instead of
+    # misbehaving at run time.
+    executor = ConcurrentJobExecutor(
+        store=JsonJobStore(job_history_path(state.data_dir)),
+        clock=SystemClock(),
+        process_context=spawn_context(),
+    )
+    exec_unsubscribe = install_job_events(executor, bus)
 
     app = FastAPI(
         title="Nova Studio",
@@ -127,7 +160,7 @@ def create_app(
         docs_url="/docs" if settings.docs else None,
         redoc_url=None,
         openapi_url="/openapi.json" if settings.docs else None,
-        lifespan=_lifespan(state, bus, workspace),
+        lifespan=_lifespan(state, bus, workspace, executor, exec_unsubscribe),
     )
 
     # The session travels with the app rather than living in a module global:
@@ -135,6 +168,8 @@ def create_app(
     app.state.session = state
     app.state.bridge = bridge
     app.state.workspace = workspace
+    app.state.jobs = executor
+    app.state.exports = ExportJobFactory()
 
     install_error_handlers(app)
     app.middleware("http")(guard.as_middleware())
@@ -152,6 +187,11 @@ def create_app(
     # the only one that answers with a body that is not JSON, and a client that
     # met it first would be forgiven for assuming the rest do too.
     app.include_router(render.router, dependencies=authenticated)
+    # The job surfaces last: reading a job is the fallback for a client that
+    # missed its events, and a client that met them first would be forgiven for
+    # polling what it should have been watching.
+    app.include_router(export.router, dependencies=authenticated)
+    app.include_router(jobs.router, dependencies=authenticated)
 
     # The projects this session has open, held next to the session rather than
     # beside it in a global: a second window is a second workspace.
@@ -172,23 +212,38 @@ def create_app(
 
 
 def _lifespan(
-    state: SessionState, bus: EventBus, workspace: ProjectWorkspace
+    state: SessionState,
+    bus: EventBus,
+    workspace: ProjectWorkspace,
+    executor: ConcurrentJobExecutor,
+    unsubscribe: Unsubscribe,
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     """Start and stop the bus with the application, and announce both.
 
     Also closes every open project on the way out: a process that exits holding
     an archive leaves a staged temporary file or a lock behind, and the next
-    launch is the one that has to explain it.
+    launch is the one that has to explain it — and shuts the pools down, so a
+    session cannot leak a worker.
+
+    On the way in it **reconciles the history**: a job recorded as running when
+    the process exited did not survive it, and saying so now is what lets the
+    UI offer "this export was interrupted" instead of a bar that never moves
+    again (ADR-0010 §6).
     """
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         if not bus.is_running:
             bus.start()
+        interrupted = executor.reconcile_interrupted()
         bus.publish("api.started", {"version": state.app_version, "port": state.port})
+        if interrupted:
+            bus.publish("api.jobs.reconciled", {"count": len(interrupted)})
         try:
             yield
         finally:
+            unsubscribe()
+            executor.shutdown()
             workspace.close_all()
             bus.publish("api.stopped", {"port": state.port})
             bus.shutdown()

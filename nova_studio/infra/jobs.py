@@ -595,6 +595,67 @@ class ConcurrentJobExecutor:
     def capacity(self) -> PoolCapacity:
         return self._capacity
 
+    # -- beyond the port: what a composition root and a router need --------
+
+    @property
+    def store(self) -> JobStore:
+        """The history this executor writes.
+
+        Exposed because history must be readable when the pools are gone: a
+        router listing jobs after a restart has no other way in, and a caller
+        that reached around the executor to build a second store would have two
+        opinions about where the file is.
+        """
+        return self._store
+
+    def now_ms(self) -> int:
+        """The executor's idea of now, in wall-clock milliseconds.
+
+        Handed to callers so two consecutive responses describe elapsed time
+        against the same clock, rather than each one reading its own.
+        """
+        return self._clock.now_ms()
+
+    def record_for(self, job_id: str) -> JobRecord | None:
+        """One record, from the table or from the history on disk.
+
+        Memory first, then the store: a job this process started is in the
+        table, and one started by a run that has since closed is only on disk —
+        which is exactly the case a client reconnecting after a restart asks
+        about. ``None`` is an ordinary answer, because a caller may be asking
+        about an id that was pruned.
+        """
+        with self._guard:
+            record = self._records.get(job_id)
+        if record is not None:
+            return record
+        return self._store.get(job_id)
+
+    def reconcile_interrupted(self) -> tuple[JobRecord, ...]:
+        """Close the records a previous run left open (ADR-0010 §6).
+
+        Called once, at startup, by the composition root. A job that was
+        ``RUNNING`` when the process exited did not survive it — the worker is
+        gone, and the file it may have been writing was never promoted — so the
+        honest ending is ``interrupted``, not a bar that sits at 40 % forever.
+
+        Returns:
+            The records that were changed, so the caller can say how many.
+            Empty on a first run, which is the ordinary case.
+        """
+        return self._store.reconcile_interrupted()
+
+    def cancel(self, job_id: str, *, grace_period_ms: int | None = None) -> Result[None]:
+        """Ask one job to stop, by id (ADR-0010 §4).
+
+        The port puts ``cancel`` on the *handle*, because a handle is what a
+        submitter keeps. A router only has an id — the handle lives in the
+        process that submitted the job, and after a restart there is no handle
+        at all — so this is the same operation addressed the way an HTTP client
+        can only address it.
+        """
+        return self._cancel(job_id, grace_period_ms=grace_period_ms)
+
     def cancel_all(self, *, reason: str = "shutdown") -> int:
         """Cancel every outstanding job; return how many were asked to stop."""
         with self._guard:

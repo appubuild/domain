@@ -95,6 +95,14 @@ STATUS_FOR_CODE: dict[str, int] = {
     # The timeline ring: a command refused because the state will not allow it.
     "NS-COMMAND-4104": 409,
     "NS-TIMELINE-4090": 409,  # the timeline was replaced behind the editor's back
+    # The job ring: a refusal the scheduler made *before any work existed*.
+    # Nothing here means "the export failed" — a job's own failure is an
+    # outcome on the socket, not a response to the request that queued it.
+    "NS-JOB-5001": 503,  # no slot; nothing was started, so submitting again is safe
+    "NS-JOB-5002": 503,  # the kind's circuit breaker is open, so it is disabled
+    "NS-JOB-5006": 409,  # cancelling a job that has already stopped
+    "NS-JOB-5007": 500,  # a job body that cannot cross the process boundary
+    "NS-JOB-5008": 503,  # the job history could not be written or read
 }
 
 

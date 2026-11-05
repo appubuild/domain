@@ -252,6 +252,14 @@ thread and process pools cannot live in L1.
   JobStore     ai_jobs / export_jobs: history, reconcile_interrupted, prune
 
   services/jobs/        the object that owns queues and runs the admission loop
+
+  Realised so far
+  ─────────────────────────────────────────────────────────────────────────
+  infra/jobs.py                ConcurrentJobExecutor — the pools (§7.16)
+  infra/persistence/jobs.py    JsonJobStore — the history, one JSON document
+  api/job_events.py            JobObserver → the event bus
+  api/routers/export.py        POST …/exports — submit, and answer 202
+  api/routers/jobs.py          the history, one job, and cancel
 ```
 
 Priority classes and the pool each one defaults to (ADR-0010 §1):
