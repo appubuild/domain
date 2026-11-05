@@ -171,10 +171,53 @@ Contract rules an adapter must honour:
 6. **No third-party types.** Frames are `FrameBuffer`, audio is `AudioBuffer`, both from
    `domain`.
 
-*Still to build:* `infra/media/pyav/` and `infra/media/cli/` (the two adapters), the
-`FrameSourcePool` that owns handle lifetimes, and
-`tests/media/test_backend_conformance.py`, which runs both backends over the same generated
-assets and asserts identical output metadata (ADR-0007).
+**`infra/media.py` — the PyAV adapter.** Both halves of the port live in one module,
+because the mapping from FFmpeg's vocabulary to the domain's is the one thing worth
+sharing: a prober and a decoder that described the same file differently would produce a
+timeline laid out at the wrong size. `describe_container()` is the single description both
+halves return, and `tests/infra/test_media_decode.py` asserts a decoder's `info()` equals a
+prober's `probe()` on the same file.
+
+| Class | Port | Lifetime |
+| --- | --- | --- |
+| `PyAVProber` | `MediaProber` | stateless, shared across threads (§10) |
+| `PyAVDecoder` | `MediaDecoder` | stateless; `open()` answers a handle |
+| `PyAVMedia` | `DecodedMedia` | the pooled handle: one container, one description |
+| `PyAVVideoSource` | `VideoFrameSource` | one video stream, RGB24 `FrameBuffer` per frame |
+| `PyAVAudioSource` | `AudioSampleSource` | one audio stream, interleaved float32 blocks |
+| `PyAVResampler` | `AudioResampler` | stateless; one libswresample per call |
+
+Five decisions the decode half makes, each one pinned by a test:
+
+1. **A read is self-contained.** Every read seeks first (except the very first on a fresh
+   handle), because `keyframe_indices()` demuxes the container to its end and
+   `container.decode(video)` demuxes the whole file, dropping the packets of the stream you
+   did not ask for. A source that trusted the container's position would answer the next
+   caller with the wrong frames. The cost is one seek per read, well inside the "random
+   access may cost a GOP" the port allows.
+2. **A file that cannot be seeked is still readable forwards.** A still, or a pipe, may
+   refuse a seek; when the caller asked for position 0 the adapter decodes from wherever the
+   stream is instead of failing a read that would have worked.
+3. **Audio arrives in the domain's layout, or is converted here.** AAC decodes to planar
+   float, a WAV to packed 16-bit integer. Anything that is not already float goes through
+   libswresample inside the adapter, so no consumer downstream ever meets a second layout.
+4. **Blocks are never split.** `samples(count=…)` treats the count as a maximum and returns
+   whole decoder blocks, because a render job writes blocks straight into a muxer and
+   splitting one would cost a copy for no benefit; the caller trims the partial block, which
+   is what the port says.
+5. **The resampler is created per call.** libswresample carries delay between calls, so one
+   shared instance would leak the tail of one buffer into the head of the next.
+   `PyAVResampler` holds no state a caller can observe.
+
+**Pooling.** Not yet built: the `FrameSourcePool` that owns handle lifetimes, hands one
+handle to one task (ADR-0007 §5) and closes them idempotently under both the pool's eviction
+and a caller's `finally`. The adapter is written for it — a handle is not thread-shared, and
+closing the last source closes the handle.
+
+*Still to build:* `infra/media/cli.py`, the FFmpeg-CLI adapter ADR-0007 §2 needs for
+rotation the bindings cannot see, frame counts on containers without an index, and
+discontinued codecs; the pool above; and `tests/media/test_backend_conformance.py`, which
+runs both backends over the same generated assets and asserts identical metadata.
 
 ### 7.6 Colour truth
 

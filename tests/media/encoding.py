@@ -27,6 +27,7 @@ __all__ = [
     "SAMPLE_RATE",
     "WIDTH",
     "write_audio_only",
+    "write_pcm16_wav",
     "write_song_with_cover_art",
     "write_still",
     "write_video",
@@ -67,6 +68,7 @@ def write_video(
     with_audio: bool = True,
     video_codec: str = "libx264",
     frames: int = FRAMES,
+    gop: int | None = None,
 ) -> Path:
     """A real, playable file: h264 at 29.97, with AAC when asked.
 
@@ -75,10 +77,16 @@ def write_video(
     afterwards has none — the first packet out of it then fails with "cannot
     rebase to zero time", which is a message that names neither the cause nor
     the stream.
+
+    `gop` sets the keyframe interval, which a decode test needs in order to have
+    more than one keyframe to seek to: a 30-frame clip encoded with libx264's
+    default interval of 250 is a single GOP.
     """
     with av.open(str(path), "w") as container:
         video = container.add_stream(video_codec, rate=RATE)
         video.width, video.height, video.pix_fmt = WIDTH, HEIGHT, "yuv420p"
+        if gop is not None:
+            video.options = {"g": str(gop)}
         audio = container.add_stream("aac", rate=SAMPLE_RATE) if with_audio else None
 
         for index, array in enumerate(_video_frames()):
@@ -146,5 +154,25 @@ def write_still(path: Path) -> Path:
         for packet in still.encode(frame):
             container.mux(packet)
         for packet in still.encode():
+            container.mux(packet)
+    return path
+
+
+def write_pcm16_wav(path: Path, *, blocks: int = 4, level: float = 0.5) -> Path:
+    """16-bit integer audio, the format that is *not* already float.
+
+    The decode tests need one, because a decoder adapter that only ever handled
+    `fltp` would pass every test written against AAC and fail on a WAV.
+    """
+    with av.open(str(path), "w") as container:
+        audio = container.add_stream("pcm_s16le", rate=8_000)
+        for index in range(blocks):
+            integers = (np.full((1, 800), level, dtype=np.float32) * 32767).astype(np.int16)
+            frame = av.AudioFrame.from_ndarray(integers, format="s16p", layout="mono")
+            frame.sample_rate = 8_000
+            frame.pts = index * 800
+            for packet in audio.encode(frame):
+                container.mux(packet)
+        for packet in audio.encode():
             container.mux(packet)
     return path
