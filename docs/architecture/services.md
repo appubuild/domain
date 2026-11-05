@@ -596,6 +596,7 @@ other side of the cut and plans both, outgoing below incoming, carrying the same
 services/render/
 ├── frames.py     FramePlan · LayerPlan · DecodeRequest — the recipe
 ├── preview.py    Viewport · fit_scale · preview_size · warm_frames · PreviewPlan
+│                 PreviewRenderer · resolve_asset — one frame, for a panel
 ├── kernels.py    the arithmetic behind the effect catalogue, and its registry
 ├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
 ├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
@@ -623,16 +624,29 @@ and export differ *only* in the sink, which is the whole of the promise.
 explicitly bounded — `FrameSourcePool` holds a few open decoders and a
 byte-budgeted picture cache, and both are released by `close()`.
 
+**API surface.** `PreviewRenderer` is what the preview panel talks to, and the
+workspace owns exactly one per open project (`api/workspace.py`): it holds the
+decoders, and a renderer built per request would reopen a file per frame. Three
+endpoints sit on top of it in `api/routers/render.py` — `GET …/preview/frame`
+(an image, with the geometry in headers), `POST …/preview/warm` (decode ahead,
+in a batch, outside the request path) and `DELETE …/preview/cache` (drop the
+pictures, keep the decoders). An edit invalidates through the command's own
+`invalidate` set, so a pure selection change costs no re-decode.
+
 **Events.** None yet. A render is a `Job` (ADR-0010) and reports `job.*`; the
 preview publishes nothing, because it is a loop the UI drives rather than a task
 the scheduler owns.
 
 **Testing.** `tests/services/test_render_frames.py` pins the recipe,
-`test_render_preview.py` the geometry, `test_render_composite.py` the pixels at
-64x48, `test_render_pool.py` the *seek counts* — a pool is a performance
-component, and thirty frames of one clip costing thirty seeks is the bug it
-exists to prevent — and `test_render_loop.py` the promise itself: the same
-compositor, one code path, preview frame and export frame byte-identical.
+`test_render_preview.py` the geometry and the renderer — never upscaled, a
+missing asset is a gap and not a failure, warming ten frames costs one seek —
+`test_render_composite.py` the pixels at 64x48, `test_render_pool.py` the *seek
+counts* — a pool is a performance component, and thirty frames of one clip
+costing thirty seeks is the bug it exists to prevent — and `test_render_loop.py`
+the promise itself: the same compositor, one code path, preview frame and export
+frame byte-identical. `tests/api/test_render_api.py` drives both through real
+HTTP against a clip encoded in a temporary directory: the frame arrives as JPEG
+with `no-store`, and warming ten frames over the wire still costs one seek.
 `tests/infra/test_imaging.py` checks the OpenCV adapter against a second,
 plain-NumPy implementation of the port. No FFmpeg, no clock.
 

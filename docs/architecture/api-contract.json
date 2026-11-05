@@ -967,6 +967,110 @@
         "title": "OpenProjectResponse",
         "type": "object"
       },
+      "PreviewCacheResponse": {
+        "additionalProperties": false,
+        "description": "The answer to \"forget what you decoded\".",
+        "properties": {
+          "cached_bytes": {
+            "description": "How much decoded picture is held now.",
+            "title": "Cached Bytes",
+            "type": "integer"
+          },
+          "cleared": {
+            "description": "Whether the pictures were dropped.",
+            "title": "Cleared",
+            "type": "boolean"
+          },
+          "open_sources": {
+            "description": "How many decoders are still open. Clearing the cache keeps them: an edit changes the timeline, not the files.",
+            "title": "Open Sources",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cleared",
+          "cached_bytes",
+          "open_sources"
+        ],
+        "title": "PreviewCacheResponse",
+        "type": "object"
+      },
+      "PreviewWarmRequest": {
+        "additionalProperties": false,
+        "description": "\"Have these frames ready\" — the difference between scrubbing and not.\n\nWarming is a separate request rather than a side effect of asking for a\nframe, because it is work the user has not asked to see: doing it inside the\nframe request would add the latency of fifteen decodes to the one frame the\nuser is waiting for, and a panel that scrubs backwards would pay for frames\nit is leaving behind.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many frames ahead. The session's default when omitted.",
+            "title": "Count"
+          },
+          "frame": {
+            "default": 0,
+            "description": "The playhead. The frame after it is the first one warmed.",
+            "minimum": 0.0,
+            "title": "Frame",
+            "type": "integer"
+          }
+        },
+        "title": "PreviewWarmRequest",
+        "type": "object"
+      },
+      "PreviewWarmResponse": {
+        "additionalProperties": false,
+        "description": "How much of the future is now in hand.",
+        "properties": {
+          "cached_bytes": {
+            "description": "How much decoded picture is held.",
+            "title": "Cached Bytes",
+            "type": "integer"
+          },
+          "frame": {
+            "description": "The playhead this warming started from.",
+            "title": "Frame",
+            "type": "integer"
+          },
+          "gaps": {
+            "description": "Assets that could not be decoded, by id.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "open_sources": {
+            "description": "How many decoders are open.",
+            "title": "Open Sources",
+            "type": "integer"
+          },
+          "seeks": {
+            "description": "How many reads the pool has started. One per clip per run is healthy; one per frame is a bug report.",
+            "title": "Seeks",
+            "type": "integer"
+          },
+          "warmed": {
+            "description": "How many frames were decoded. Zero at the end of a timeline, which is the one place where warming legitimately does nothing.",
+            "title": "Warmed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frame",
+          "warmed",
+          "cached_bytes",
+          "open_sources",
+          "seeks"
+        ],
+        "title": "PreviewWarmResponse",
+        "type": "object"
+      },
       "ProblemResponse": {
         "additionalProperties": true,
         "description": "The body of every failure, in the one shape the frontend parses.\n\n`code` and `title` say *what kind of thing went wrong* and are what the UI\nlocalises from; `detail`, `remedy` and the extension members say *what\nhappened this time*, and are for the log line and the toast.",
@@ -3250,6 +3354,392 @@
         "summary": "Import files into the bin",
         "tags": [
           "media"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/preview/cache": {
+      "delete": {
+        "description": "Forget what has been decoded, and keep the decoders.\n\nThe workspace does this itself after every edit; this endpoint is for the\nother case, which is memory: a long session on a large project has a cache\nfull of pictures of frames the user has finished with.\n\nAn open decoder is a file, and the files have not changed, so they stay.",
+        "operationId": "clear_preview_cache_api_v1_projects__project_id__preview_cache_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewCacheResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Drop the decoded pictures",
+        "tags": [
+          "render"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/preview/frame": {
+      "get": {
+        "description": "Composite one frame and send it as an image.\n\nThe frame is composited by the same code the export uses, at the project's\nown size, and scaled down to what the panel can show — never up: pixels\nabove 1:1 are not information, and zoom is a display concern, not a request\nfor more of them.\n\nA layer whose media is offline is **not** a failure: the frame is drawn\nwithout it and the asset ids are listed in `X-Nova-Preview-Gaps`, because a\npanel that showed an error instead of a frame would hide the nineteen clips\nthat are fine.",
+        "operationId": "preview_frame_api_v1_projects__project_id__preview_frame_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "The timeline frame to draw.",
+            "in": "query",
+            "name": "frame",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "description": "The timeline frame to draw.",
+              "minimum": 0,
+              "title": "Frame",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The panel's width, in device pixels.",
+            "in": "query",
+            "name": "width",
+            "required": false,
+            "schema": {
+              "default": 960,
+              "description": "The panel's width, in device pixels.",
+              "minimum": 2,
+              "title": "Width",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The panel's height, in device pixels.",
+            "in": "query",
+            "name": "height",
+            "required": false,
+            "schema": {
+              "default": 540,
+              "description": "The panel's height, in device pixels.",
+              "minimum": 2,
+              "title": "Height",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "A deliberate multiplier on the fitted scale.",
+            "in": "query",
+            "name": "zoom",
+            "required": false,
+            "schema": {
+              "default": 1.0,
+              "description": "A deliberate multiplier on the fitted scale.",
+              "exclusiveMinimum": 0,
+              "title": "Zoom",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Preview Frame Api V1 Projects  Project Id  Preview Frame Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "One frame of the preview, as an image",
+        "tags": [
+          "render"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/preview/warm": {
+      "post": {
+        "description": "Have the next few frames decoded before they are asked for.\n\nWarming is its own request rather than a side effect of :func:`preview_frame`\nbecause it is work the user has not asked to see: done inside the frame\nrequest it would add fifteen decodes of latency to the one frame being\nwaited for, and done on every request it would warm the frames the user is\nscrubbing *away* from.\n\nThe response carries the pool's `seeks`, which is the number that says\nwhether scrubbing is healthy: one per clip per run, not one per frame.",
+        "operationId": "warm_preview_api_v1_projects__project_id__preview_warm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewWarmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewWarmResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Decode ahead of the playhead",
+        "tags": [
+          "render"
         ]
       }
     },

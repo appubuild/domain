@@ -186,11 +186,14 @@ from nova_studio.services.render.pool import (
 )
 from nova_studio.services.render.preview import (
     DEFAULT_WARM_COUNT,
+    PreviewFrame,
     PreviewPlan,
+    PreviewRenderer,
     Viewport,
     fit_scale,
     plan_preview,
     preview_size,
+    resolve_asset,
     warm_frames,
 )
 
@@ -205,7 +208,9 @@ __all__ = [
     "KernelRegistry",
     "LayerPlan",
     "PoolStats",
+    "PreviewFrame",
     "PreviewPlan",
+    "PreviewRenderer",
     "RenderOutcome",
     "SourceResolver",
     "Viewport",
@@ -221,5 +226,6 @@ __all__ = [
     "preview_size",
     "render_frames",
     "render_preview_frame",
+    "resolve_asset",
     "warm_frames",
 ]

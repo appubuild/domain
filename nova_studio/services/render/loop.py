@@ -63,7 +63,6 @@ if TYPE_CHECKING:
     from nova_studio.domain.project import Project
     from nova_studio.ports.imaging import ImageOps
     from nova_studio.ports.render import FrameSink
-    from nova_studio.services.render.frames import DecodeRequest
     from nova_studio.services.render.kernels import KernelRegistry
     from nova_studio.services.render.pool import FrameSourcePool
 
@@ -247,7 +246,7 @@ def render_preview_frame(
     sources: SourcePlan | None = None,
     kernels: KernelRegistry | None = None,
     luts: LutReader | None = None,
-) -> tuple[FrameBuffer, tuple[DecodeRequest, ...]]:
+) -> tuple[FrameBuffer, tuple[str, ...]]:
     """Composite one frame and hand it back, without a sink.
 
     The preview panel wants a picture, not a file: it scales it, letterboxes it
@@ -255,8 +254,9 @@ def render_preview_frame(
     that is the whole promise — and skips only the encode.
 
     Returns:
-        The composed frame, and the requests that could not be served: an empty
-        tuple means the frame is complete.
+        The composed frame, and the ids of the assets whose pictures were
+        missing: an empty tuple means the frame is complete. An asset, not a
+        request — see :attr:`RenderOutcome.missing`.
 
     Raises:
         NovaInvariantError: if ``frame`` is negative, which is a bug in the
@@ -268,7 +268,9 @@ def render_preview_frame(
     plan = plan_frame(project, frame, sources=sources)
     requests = plan.decodes()
     pictures = pool.pictures(requests)
-    gaps = tuple(request for request in requests if request.key not in pictures)
+    gaps = tuple(
+        dict.fromkeys(request.asset_id for request in requests if request.key not in pictures)
+    )
     return (
         composite_frame(plan, pictures, ops=ops, kernels=registry, luts=luts),
         gaps,

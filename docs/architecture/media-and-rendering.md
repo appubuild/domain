@@ -99,7 +99,7 @@ Where each stage lives now:
 | `FrameSourcePool` · `DecodeStage` | `services/render/pool.py` over `ports/media.py` | yes |
 | `EffectChain` | `services/render/kernels.py` over `services/effects/` | yes |
 | `TransformStage` · `Compositor` · `TransitionStage` · `ColourStage` | `services/render/composite.py` | yes |
-| Preview sink | the same loop, a JPEG sink | yes (§7.12) |
+| Preview sink | `services/render/preview.py` + `infra/preview.py` | yes (§7.14) |
 | Export sink | the same loop, an encoder sink | yes (`infra/render.py`, §7.7) |
 | `SpeedStage` | retiming, constant and ramped | not yet |
 | `OverlayStage` | text, captions, motion graphics | not yet (captions, stage 9) |
@@ -637,5 +637,80 @@ transparent, and one call twice gives one answer.
 and is bound at composition time — no renderer changes. `Interpolation.CUBIC`
 and `BorderMode.REPLICATE` are already declared for the cases that will want
 them.
+
+### 7.14 The preview service (`services/render/preview.py`, `infra/preview.py`)
+
+Everything above this section is about producing a `FrameBuffer`. This section is
+about the two things that happen next in the *preview* path only: making the
+frame small enough to send, and sending it.
+
+```
+ api/routers/render.py      GET  …/preview/frame   → image/jpeg + geometry headers
+                            POST …/preview/warm    → how much is decoded ahead
+                            DELETE …/preview/cache → drop pictures, keep decoders
+        │  Depends(workspace)
+        ▼
+ api/workspace.py           one PreviewRenderer per open project, closed with it
+        │
+        ▼
+ services/render/preview.py PreviewRenderer.frame(project, n, viewport=…, zoom=…)
+        │                     ├── render_preview_frame(…)   ← the export's compositor
+        │                     ├── plan_preview(…)           ← scale, offset, warm set
+        │                     ├── ops.resize(…, down only)
+        │                     └── encode(…)                 ← FrameEncoder, injected
+        ▼
+ infra/preview.py           encode_frame → Result[bytes]   (cv2.imencode, JPEG/PNG/WebP)
+```
+
+Decision | Why
+--- | ---
+**One renderer per open project, owned by the workspace** | It holds a `FrameSourcePool`: decoders that stay open and pictures that stay decoded. Built per request, a scrub reopens a file per frame; shared between projects, it decodes one project's assets into another's frames.
+**The frame endpoint answers an image, not JSON** | A base64 picture is a third larger and is decoded on the UI thread of a panel that is already busy. The parts a client *reads* — scale, offset, size, gaps — travel in headers.
+**Never upscaled** | Pixels above 1:1 are not information. Zoom buys detail up to the project's own size and no further; the panel scales the image it was given.
+**Two sizes, not one** | `PreviewFrame.size` is the encoded picture; `PreviewFrame.plan.size` is the rect the panel draws it into. At zoom they differ, and a panel that sized its `<img>` from the plan would stretch the picture by exactly the zoom factor.
+**Warming is its own request, and a batch** | Fifteen frames cost fifteen decodes and **one seek** when read together. Done inside the frame request, it would add the latency of work the user has not asked to see — and would warm the frames they are scrubbing away from.
+**Invalidation follows the command's own `invalidate` set** | Cache invalidation is a subscriber, never a call site (§7.8). A workspace that cleared the cache on every edit would throw away every decoded picture on a pure selection change.
+**`resolve_asset` returns `None` for a proxy or a thumbnail** | Generating them is the media layer's job, and features may not import each other (ADR-0002 rule 4). `None` becomes a gap, which is what lets an unlinked project still lay out and preview (ADR-0015 rule 3).
+
+Endpoint | Contract
+--- | ---
+`GET /api/v1/projects/{id}/preview/frame` | `?frame&width&height&zoom`. `200 image/jpeg`, `Cache-Control: no-store`, plus `X-Nova-Preview-{Scale,Offset,Size,Gaps}`. `404` when no such project is open; `422` at the boundary for a negative frame or a two-pixel panel.
+`POST /api/v1/projects/{id}/preview/warm` | `{frame, count?}`. Answers `warmed`, `cached_bytes`, `open_sources`, `seeks`, `gaps`. The seek count is the number to watch: one per clip per run, not one per frame.
+`DELETE /api/v1/projects/{id}/preview/cache` | `{cleared, cached_bytes, open_sources}`. Pictures go; decoders stay, because the files did not change.
+
+**Error handling.** A missing asset is not an error: the layer is skipped, the
+frame is drawn and the id appears in `X-Nova-Preview-Gaps`. A frame that cannot
+be *encoded* is, and comes back as `problem+json` through the same handler every
+other router uses. An unopened project is a `404` carrying `NS-PROJECT-4040`,
+which is the transport's verdict on the URL rather than the domain's opinion of
+the severity.
+
+**Caching.** Two caches, at two levels, with two different lifetimes: the pool's
+byte-budgeted picture cache (cleared by an edit, bounded in bytes so a 4K project
+cannot exhaust the machine) and nothing at all on the wire — a preview is a
+rendering of a timeline that is being edited and has no identity to be cached
+under.
+
+**Performance.** The whole strategy is *decode once, in order*: one renderer per
+project, decoders held open, warming in batches, and the composite done at the
+project's own size before a single downscale. The invariant is asserted, not
+hoped for — ten warmed frames of one clip is one seek, in the service test and
+over HTTP alike.
+
+**Testing.** `tests/services/test_preview_renderer.py` (29) drives the renderer
+on the seek-counting fake: never upscaled, zoom capped at the project size, a gap is
+not a failure, invalidation drops pictures and keeps decoders, warming ten frames
+costs one seek. `tests/api/test_render_api.py` (22) drives it through HTTP with a
+clip encoded in a temporary directory by PyAV — the frame arrives as JPEG with
+`no-store`, the headers describe it, closing a project closes its renderer and
+its file handles, and an edit invalidates the cache by itself.
+
+**Future expansion.** `FrameFormat.PNG` and `WEBP` are already implemented in
+`infra/preview.py` and selectable at the composition root; which one a session
+serves becomes an `ApiSettings` field the day a client needs it. The desktop
+shell replaces the JPEG sink with shared memory (§7.2) and nothing above
+`infra/` changes. Proxy and thumbnail resolution completes `SourcePlan` once
+`services/media/proxy.py` has a generator — the pool already asks for them by
+name.
 
 ---

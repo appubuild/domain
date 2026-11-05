@@ -76,7 +76,8 @@ api/
 │   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
 │   ├── projects.py  /api/v1/projects/* (§8)
 │   ├── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
-│   └── media.py     /api/v1/projects/{id}/media{,/import} (§10)
+│   ├── media.py     /api/v1/projects/{id}/media{,/import} (§10)
+│   └── render.py    /api/v1/projects/{id}/preview/{frame,warm,cache} (§7.14)
 └── (to come)     resources/ (render, captions, export, plugins)
 ```
 
@@ -592,6 +593,13 @@ What the API does instead of caching:
 
 * **`ETag` / `304` later, per resource**, once the resource routers land — for
   reads where the client already has the bytes (thumbnails, waveform peaks).
+* **Nothing on the preview.** `GET …/preview/frame` answers `Cache-Control:
+  no-store`, because a frame is a rendering of a timeline that is being edited
+  and has no identity to be cached under. The cache that makes scrubbing cheap
+  is the render pool's, it lives behind the endpoint, and an edit clears it —
+  which is the one invalidation rule that is never wrong, because the command
+  that changed the timeline is the thing that declared it (§10, and
+  `media-and-rendering.md` §7.14).
 * **Sequence numbers on the socket**, which let a client skip a refetch entirely
   rather than re-validate one.
 * **Capability negotiation once per session** (`/api/v1/system/capabilities`),
@@ -710,15 +718,15 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 | Next | Why the seam is already there |
 |---|---|
-| Resource routers (render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. The project, timeline and media rings are the worked example. |
+| Resource routers (captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. Render landed as `routers/render.py` (`media-and-rendering.md` §7.14) and is the model for the rest. |
 | Relinking missing media | `MediaAsset.relink` already couples the hash and the probe correctly; what is missing is a content hash at import (`ports/filesystem.py`) and the endpoint that offers a replacement path. |
-| `MediaDecoder`, `AudioResampler` | `infra/media.py` has the prober; the decoder and its frame/audio sources arrive with the render and preview slices, behind the same port. |
+| `AudioResampler` | `infra/media.py` has the prober and `PyAVDecoder` implements `MediaDecoder`; the audio half arrives with the audio slice, behind the same port. |
 | Replaying a journal | The entries already carry everything a replay needs: the wire name, the arguments, and `undo`/`redo` markers. What is missing is the fold itself (§9), and the recovery dialog that offers it (`services/projects/recovery.py` already returns the plan). |
 | A second editing scope (captions, colour) | `UndoScope` already separates the stacks, so a caption editor gets its own history next to the timeline's; `ProjectWorkspace` would hold one editor per scope per project. |
 | Multi-window | `ProjectWorkspace` is a value on `app.state`, not a global; two windows in one process would each get one, and the "already open here" rule (4090) is already per-workspace. |
 | Command endpoints (`POST /api/v1/timeline/commands`) | Commands are already the public editing API; a router that accepts a serialised command and returns the events it produced is a thin translation. |
 | Job endpoints (progress, cancel) | The job scheduler is already the only way long work runs (ADR-0010); progress arrives as events, so the socket carries it for free. |
-| Binary frame channels (preview, waveforms) | ADR-0005 §5 fixes the three sinks; the socket already separates text and binary frames. |
+| Binary frame channels (waveforms) | ADR-0005 §5 fixes the three sinks; the socket already separates text and binary frames. Preview chose HTTP-and-`no-store` over the socket for now, so a frame is one cacheable-by-nobody request rather than a subscription the server must keep up with. |
 | `ETag`/`304` on media reads | The resource routers will own the validators. |
 | PyWebView bridge (`apps/desktop`) | `serve()` runs in-process; `endpoint` is what the window is handed. The bridge carries window concerns only. |
 | A second window | `create_app` takes its session as an argument and holds no global; two apps in one process already have two tokens (there is a test). |

@@ -51,9 +51,16 @@ from nova_studio.core.ident import IdFactory, new_entity_id
 from nova_studio.core.result import Result, err, ok
 from nova_studio.domain.persistence import JournalEntry
 from nova_studio.domain.project import Project, ProjectMetadata
-from nova_studio.infra.media import PyAVProber
+from nova_studio.infra.imaging import OpenCVImageOps
+from nova_studio.infra.media import PyAVDecoder, PyAVProber
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION, ZipProjectArchive
 from nova_studio.infra.persistence.journal import open_journal
+from nova_studio.infra.preview import (
+    DEFAULT_QUALITY as DEFAULT_PREVIEW_QUALITY,
+    FrameFormat,
+    encoder_for,
+    media_type_for,
+)
 from nova_studio.services.media import MediaIngestor
 from nova_studio.services.projects import (
     DEFAULT_AUTOSAVE,
@@ -63,10 +70,14 @@ from nova_studio.services.projects import (
     RecoveryPlan,
     plan_recovery,
 )
+from nova_studio.services.render import PreviewRenderer, resolve_asset
 from nova_studio.services.timeline import TimelineEditor, TimelineStore
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping, Sequence
+    from nova_studio.ports.imaging import ImageOps
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator, Mapping, Sequence
     from pathlib import Path
 
     from nova_studio.core.commands import Command
@@ -80,6 +91,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "CHECKPOINT_ENTRY",
+    "DEFAULT_PREVIEW_QUALITY",
     "MEDIA_IMPORT_ENTRY",
     "NS_PROJECT_ALREADY_OPEN",
     "NS_PROJECT_JOURNAL_FAILED",
@@ -315,6 +327,9 @@ class ProjectWorkspace:
         app_version: str = __version__,
         autosave_policy: CheckpointPolicy | None = None,
         prober: MediaProber | None = None,
+        preview_ops: ImageOps | None = None,
+        preview_format: FrameFormat = FrameFormat.JPEG,
+        preview_quality: int = DEFAULT_PREVIEW_QUALITY,
     ) -> None:
         self._bus = bus
         self._data_dir = data_dir
@@ -326,6 +341,14 @@ class ProjectWorkspace:
         self._autosave_policy = autosave_policy or DEFAULT_AUTOSAVE
         self._media = MediaIngestor(prober=prober or PyAVProber(), ids=IdFactory())
         self._open: dict[str, _Entry] = {}
+        # One preview renderer per open project: it holds the decoders, and a
+        # scrub that reopened a file per frame would be a slideshow. Keyed
+        # beside the projects rather than inside `_Entry` because a renderer is
+        # a *consequence* of a project being open, not part of what it is.
+        self._previews: dict[str, PreviewRenderer] = {}
+        self._preview_format = preview_format
+        self._preview_quality = preview_quality
+        self._preview_ops: ImageOps = preview_ops or OpenCVImageOps()
         self._guard = threading.RLock()
 
     # -- asking ------------------------------------------------------------
@@ -416,6 +439,11 @@ class ProjectWorkspace:
         """
         with self._guard:
             entry = self._open.pop(project_id, None)
+            preview = self._previews.pop(project_id, None)
+        if preview is not None:
+            # First, and before the archive: the pool holds file handles, and a
+            # close that left them open would keep the file busy on Windows.
+            preview.close()
         if entry is None:
             return ok(False)
         with entry.lock:
@@ -438,6 +466,70 @@ class ProjectWorkspace:
         for project_id in project_ids:
             self.close(project_id)
         return len(project_ids)
+
+    # -- preview -----------------------------------------------------------
+
+    def preview(self, project_id: str) -> Result[PreviewRenderer]:
+        """The preview renderer for one open project, created on first ask.
+
+        One per project, because what it owns is a
+        :class:`~nova_studio.services.render.pool.FrameSourcePool`: decoders
+        that stay open between requests and pictures that stay decoded. Building
+        one per request would reopen a file per frame, and sharing one between
+        projects would decode the wrong assets.
+
+        Returns:
+            The renderer, or `Err` carrying `NS-PROJECT-4040` when no project
+            with that id is open — the transport's 404, not the domain's.
+        """
+        with self._guard:
+            existing = self._previews.get(project_id)
+            if existing is not None:
+                return ok(existing)
+            entry = self._open.get(project_id)
+            if entry is None:
+                return err(not_open(project_id))
+            renderer = PreviewRenderer(
+                decoder=PyAVDecoder(),
+                resolve=self._resolver_for(project_id),
+                ops=self._preview_ops,
+                encode=encoder_for(self._preview_format, quality=self._preview_quality),
+                media_type=media_type_for(self._preview_format),
+            )
+            self._previews[project_id] = renderer
+            return ok(renderer)
+
+    def invalidate_preview(self, project_id: str) -> bool:
+        """Drop the decoded pictures for one project. Whether there were any.
+
+        Called after every edit. The pictures in the cache are of a timeline
+        that no longer exists, and the decoders are of files that have not
+        changed — so this clears one and keeps the other.
+        """
+        with self._guard:
+            renderer = self._previews.get(project_id)
+        if renderer is None:
+            return False
+        renderer.invalidate()
+        return True
+
+    def _resolver_for(self, project_id: str) -> Callable[[str, str], str | None]:
+        """``(asset_id, source) -> path`` for one project, read live.
+
+        Live, and not captured at construction: a project is a frozen value the
+        workspace replaces on every edit, and a resolver that held the one from
+        ten minutes ago would not know about the file the user just imported.
+        """
+
+        def resolve(asset_id: str, source: str) -> str | None:
+            with self._guard:
+                entry = self._open.get(project_id)
+            if entry is None:
+                return None
+            path: str | None = resolve_asset(entry.project, asset_id, source)
+            return path
+
+        return resolve
 
     # -- media -------------------------------------------------------------
 
@@ -584,6 +676,11 @@ class ProjectWorkspace:
                 return err(failure)
             self._remember(entry, command.command_id, name)
             value = entry.as_value()
+        if "preview" in outcome.invalidate:
+            # The command said what it invalidated, and a workspace that
+            # guessed would clear the cache for a pure selection change —
+            # throwing away every decoded picture on every click.
+            self.invalidate_preview(project_id)
         self._publish("edited", project_id, name=name, pending=value.pending_commands)
         return ok(
             TimelineEdit(project=value, editor=editor, command=command, name=name, outcome=outcome)
@@ -648,6 +745,10 @@ class ProjectWorkspace:
                     return err(restored.unwrap_err())
                 return err(failure)
             value = entry.as_value()
+        # Unconditional, unlike `apply`: an undo has no outcome to consult, and
+        # a reverted edit changed the picture of every frame whether or not the
+        # command that is being reverted said so.
+        self.invalidate_preview(project_id)
         self._publish("edited", project_id, name=entry_name, pending=value.pending_commands)
         return ok(
             TimelineEdit(
