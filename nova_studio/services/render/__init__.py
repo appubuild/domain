@@ -22,8 +22,10 @@ services/render/
 ├── __init__.py   this file: the feature's contract
 ├── frames.py     FramePlan / LayerPlan / DecodeRequest — the compositing recipe
 ├── preview.py    Viewport · fit_scale · preview_size · warm_frames · PreviewPlan
+├── kernels.py    the arithmetic behind the effect catalogue, and its registry
 ├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
-└── kernels.py    the arithmetic behind the effect catalogue, and its registry
+├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
+└── loop.py       render_frames · render_preview_frame — one loop, any sink
 ```
 
 `composite.py` and `kernels.py` are split the way a specification and an
@@ -36,15 +38,20 @@ project on a machine where the plugin is not installed.
 
 **Backend / frontend.** One API per intent. The preview panel calls
 `plan_preview(...)` and gets the size, the scale, the letterbox offset and the
-frames to warm; the renderer calls `plan_frame(project, frame, sources=...)` per
-frame. Neither ever looks inside a `Project` to find out what a clip is wearing,
-and neither ever guesses a size — which is what keeps the preview panel and the
-export engine from drifting apart.
+frames to warm; a single frame on screen is one `render_preview_frame(...)`; an
+export is one `render_frames(project, frames, pool=..., ops=..., sink=...)`.
+Preview and export differ *only* in the sink — a JPEG sink and an encoder sink
+are the same `FrameSink` — which is what keeps the preview panel and the export
+engine from drifting apart.
 
-**State management.** Everything here is a frozen value. A `FramePlan` can be
-cached, handed to a worker process or compared in a test; none of it carries a
-decoder, a clock or a handle. `plan_frames` is a generator, because an export
-plans a hundred thousand frames and must not hold them all.
+**State management.** Everything on the planning side is a frozen value: a
+`FramePlan` can be cached, handed to a worker process or compared in a test, and
+`plan_frames` is a generator, because an export plans a hundred thousand frames
+and must not hold them all. Two pieces are stateful, and both are explicitly
+owned and explicitly bounded: `FrameSourcePool` holds a few open decoders and a
+byte-budgeted picture cache, and both are released by `close()` — a pool is a
+context manager because a render that forgets to close one leaks a file handle
+per asset.
 
 **Functions.**
 
@@ -61,6 +68,10 @@ plans a hundred thousand frames and must not hold them all.
 | `apply_grade(sample, buffer, *, luts)` | the same, for one picture and one grade |
 | `apply_chain(chain, buffer, *, registry, ops, frame)` | one effect stack, one picture |
 | `builtin_kernels()` / `kernel_types()` | which effect arithmetic exists |
+| `FrameSourcePool.pictures(requests)` | "give me these pictures" |
+| `FrameSourcePool.prefetch(requests)` | the same, warmed ahead of being asked |
+| `render_frames(project, frames, *, pool, ops, sink, ...)` | a range, into a sink |
+| `render_preview_frame(project, frame, *, pool, ops, ...)` | one frame, in hand |
 
 **Dependency injection.** The compositor takes its collaborators as arguments
 rather than importing them: `ops` (`ports/imaging.ImageOps`) is required,
@@ -81,17 +92,38 @@ not states of a project. Encoding failures are `ports/render.py`'s codes
 (`NS-RENDER-4001` unwritable, `NS-MEDIA-4002` no encoder, `-4003` encode failed,
 `-4004` unsupported spec, `-4005` cancelled), not this feature's.
 
-**Caching.** The plan *is* the cache design. `DecodeRequest.key` is
-`(asset_id, source_frame, source)`, so a preview cache keys on exactly what it
-decoded and not on a frame number that means something different after an edit;
-`warm_frames` is forward-only because work behind the playhead is the one kind
-certain to be wasted.
+**Caching.** Two caches, at two levels, for two different reasons.
+
+`DecodeRequest.key` is `(asset_id, source_frame, source)`, so nothing keys on a
+frame number that means something different after an edit. `warm_frames` is
+forward-only because work behind the playhead is the one kind certain to be
+wasted.
+
+The pool caches *decoded pictures*, bounded in bytes rather than in entries — a
+4K frame is thirty times a 720p one, and a cache of "64 frames" is either a
+rounding error or a third of the machine. Its real work is avoiding **seeks**:
+decoding frame *n* on its own can cost a whole GOP, so each stream keeps a live
+forward read and a render that walks forwards pays one seek per clip per run
+instead of one per frame. `clear_cache()` is what an edit calls — the pictures
+on screen are of a timeline that no longer exists — and it keeps the decoders.
+
+The loop caches nothing. A cache inside it would be a second opinion about what
+a frame is, and the caller (the preview panel, or the job) is the only thing
+that knows what is worth keeping.
 
 **Performance.** `plan_frame` is O(layers at this frame) — one `resolve` plus a
 few tuple lookups — and pure, so a renderer can plan a frame while the previous
 one composites. `decodes()` deduplicates, so a split clip left in place costs
 one read and not two. Neutral grades and empty chains are dropped at plan time
 rather than tested per frame.
+
+The composite is one `warpAffine` per layer and one float round trip per effect
+chain, and a neutral grade costs nothing at all. The number to watch is the
+pool's `seeks`: a sequential render of one clip reports **one**, and a report of
+one per frame means something is visiting frames out of order. Thirty frames of
+one clip costing thirty seeks produces perfectly correct pictures and takes
+thirty times as long, which is the bug this design exists to prevent and the
+only way to catch it is to count.
 
 **Testing.** `tests/services/test_render_frames.py` pins the recipe: layer order,
 per-layer effect and grade ordering, that generated clips ask for no decode,
@@ -104,8 +136,11 @@ the native cap, even dimensions, centred bars, and forward-only warm-up.
 anchor, layer order, that half-transparent white over black is 128, that a dip
 and a dissolve differ only by `fill`, that every effect in the catalogue has a
 kernel and a missing one is skipped, and that one frame twice is byte-identical.
-`tests/infra/test_imaging.py` pins the imaging port's adapter against a second,
-plain-NumPy implementation. No FFmpeg, no clock.
+`tests/services/test_render_pool.py` counts seeks against a decoder that can be
+asked how many it made, and `tests/services/test_render_loop.py` drives the loop
+into a fake sink to pin where an empty frame, a gap, a cancellation and an
+encoder failure each land. `tests/infra/test_imaging.py` pins the imaging port's
+adapter against a second, plain-NumPy implementation. No FFmpeg, no clock.
 
 **Database schema.** None — see the note in `docs/architecture/services.md` §1.
 
@@ -141,6 +176,14 @@ from nova_studio.services.render.kernels import (
     builtin_kernels,
     kernel_types,
 )
+from nova_studio.services.render.loop import RenderOutcome, render_frames, render_preview_frame
+from nova_studio.services.render.pool import (
+    DEFAULT_CACHE_BYTES,
+    DEFAULT_OPEN_SOURCES,
+    FrameSourcePool,
+    PoolStats,
+    SourceResolver,
+)
 from nova_studio.services.render.preview import (
     DEFAULT_WARM_COUNT,
     PreviewPlan,
@@ -153,12 +196,18 @@ from nova_studio.services.render.preview import (
 
 __all__ = [
     "DECODE_FROM_ORIGINAL",
+    "DEFAULT_CACHE_BYTES",
+    "DEFAULT_OPEN_SOURCES",
     "DEFAULT_WARM_COUNT",
     "DecodeRequest",
     "FramePlan",
+    "FrameSourcePool",
     "KernelRegistry",
     "LayerPlan",
+    "PoolStats",
     "PreviewPlan",
+    "RenderOutcome",
+    "SourceResolver",
     "Viewport",
     "apply_chain",
     "apply_grade",
@@ -170,5 +219,7 @@ __all__ = [
     "plan_frames",
     "plan_preview",
     "preview_size",
+    "render_frames",
+    "render_preview_frame",
     "warm_frames",
 ]

@@ -577,13 +577,13 @@ what makes a professional caption look automated. An emoji a human chose is kept
 
 **Purpose.** Own the three decisions that stand between a project and a picture:
 **what one composed frame is made of** (`frames.py`), **how big to draw it**
-(`preview.py`) and **what the composed frame looks like** (`composite.py` and
-`kernels.py`). `domain/` owns what a clip, an effect, a grade and a transition
-*are*; `ports/render.py` owns where composed frames *go*; `ports/imaging.py` owns
-the six pixel primitives a compositor borrows. This owns the recipe that all of
-them read from — which is what makes the `media-and-rendering.md` §7.2 promise
-structural rather than aspirational: **preview and export use the same code
-path.**
+(`preview.py`) and **what the composed frame looks like** (`composite.py`,
+`kernels.py`, `pool.py`, `loop.py`). `domain/` owns what a clip, an effect, a
+grade and a transition *are*; `ports/render.py` owns where composed frames *go*;
+`ports/imaging.py` owns the six pixel primitives a compositor borrows. This owns
+the recipe that all of them read from — which is what makes the
+`media-and-rendering.md` §7.2 promise structural rather than aspirational:
+**preview and export use the same code path.**
 
 Completing a transition is part of that. A transition is a recipe for *two*
 pictures, but the domain hangs it off one clip and `Timeline.resolve` only
@@ -592,213 +592,54 @@ would have one image and the first half none. `plan_frame` finds the clip on the
 other side of the cut and plans both, outgoing below incoming, carrying the same
 `TransitionMix`.
 
-**Backend / frontend.** One API per intent. The preview panel calls
+```
+services/render/
+├── frames.py     FramePlan · LayerPlan · DecodeRequest — the recipe
+├── preview.py    Viewport · fit_scale · preview_size · warm_frames · PreviewPlan
+├── kernels.py    the arithmetic behind the effect catalogue, and its registry
+├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
+├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
+└── loop.py       render_frames · render_preview_frame — one loop, any sink
+```
+
+**The full contract** — per-module responsibilities, the class diagram, the
+function table, dependency injection, error handling, performance and the test
+index — is the docstring of `nova_studio/services/render/__init__.py`, which is
+the file a contributor reads first and the one place a change has to be kept
+current. The reasoning behind the two decisions that are not obvious — why the
+compositor orders its passes the way it does, and why pixel primitives are a
+port at all — lives in `media-and-rendering.md` §7.12 and §7.13. What follows
+here is only what a reader needs in order to know which door to open.
+
+**Backend / frontend.** One API per intent: the preview panel calls
 `plan_preview(...)` and gets the size, the scale, the letterbox offset and the
-frames to warm. The renderer calls `plan_frame(project, frame, sources=...)`
-once per frame. Neither looks inside a `Project` to find out what a clip is
-wearing, and neither guesses a size.
+frames to warm; a single frame on screen is one `render_preview_frame(...)`; an
+export is one `render_frames(project, frames, pool=…, ops=…, sink=…)`. Preview
+and export differ *only* in the sink, which is the whole of the promise.
 
-**Class diagram.**
-
-```
-FramePlan                             frames.py
-├── frame · size                      the composition, in composition pixels
-├── layers: tuple[LayerPlan, ...]     bottom first
-│   └── LayerPlan
-│       ├── clip · track · source_frame
-│       ├── source        "original" | "proxy" | "thumbnail" (carried, not chosen)
-│       ├── transform     from the project, every clip has one
-│       ├── effects       clip chain, then track chain (empty ones dropped)
-│       ├── grades        clip grade, then track grade (neutral ones dropped)
-│       └── transition · transition_role   INCOMING | OUTGOING
-├── output_effects · output_grade     applied once, after compositing
-└── decodes() → tuple[DecodeRequest]  deduplicated, generated clips skipped
-
-PreviewPlan                           preview.py
-├── frame · size · scale · offset · warm
-Viewport · fit_scale · preview_size · warm_frames · plan_preview
-
-composite_frame(plan, pictures, *, ops, kernels, luts, colour)   composite.py
-├── per layer, bottom first
-│   ├── _crop          crop + mirror, source side, before anything else
-│   ├── _layer_source  clip effects, track effects, clip grade, track grade
-│   ├── _place         one affine transform (skew ∘ rotate ∘ scale, then move)
-│   ├── _alpha_of      opacity × transition opacity
-│   └── _over          source-over onto a float32 RGBA canvas
-└── once, over the result: output_effects, then output_grade
-
-KernelRegistry                        kernels.py
-├── has(type) · kernel(type) · register(type, fn) → new registry · types()
-├── builtin_kernels() · kernel_types()
-└── apply_chain(chain, buffer, *, registry, ops, frame)
-```
-
-**State management.** Everything is a frozen value. A `FramePlan` can be cached,
-handed to a worker process or compared in a test; none of it carries a decoder,
-a clock or a handle. `plan_frames` is a generator, because an export plans a
-hundred thousand frames and holds none of them.
-
-**Functions.**
-
-| Call | Answers |
-| --- | --- |
-| `plan_frame(project, frame, sources)` | "what is this frame made of" |
-| `plan_frames(project, frames, sources)` | the same, lazily, over a range |
-| `FramePlan.decodes()` | "which pictures do I need, deduplicated" |
-| `fit_scale(w, h, viewport)` | "how big can this be drawn" |
-| `preview_size(w, h, viewport, zoom)` | "what size do I composite at" |
-| `warm_frames(playhead, count, last_frame)` | "what should already be decoded" |
-| `plan_preview(...)` | all of the above, for one frame |
-| `composite_frame(plan, pictures, *, ops, ...)` | "what does this frame look like" |
-| `apply_grade(sample, buffer, *, luts)` | the same, for one picture and one grade |
-| `apply_chain(chain, buffer, *, registry, ops, frame)` | one effect stack, one picture |
-| `builtin_kernels()` / `kernel_types()` | which effect arithmetic exists |
-
-**Dependency injection.** The compositor takes its collaborators as arguments
-rather than importing them: `ops` (`ports/imaging.ImageOps`) is required,
-`kernels` defaults to the built-in registry, and `luts` is needed only by a grade
-that carries a LUT. Nothing here imports OpenCV, opens a LUT file or reaches into
-`infra`; the composition root binds them. That inversion is what lets a render be
-tested on a machine with no FFmpeg and moved to a GPU later.
+**State management.** Everything on the planning side is a frozen value: a
+`FramePlan` can be cached, handed to a worker or compared in a test, and
+`plan_frames` is a generator. The two stateful pieces are explicitly owned and
+explicitly bounded — `FrameSourcePool` holds a few open decoders and a
+byte-budgeted picture cache, and both are released by `close()`.
 
 **Events.** None yet. A render is a `Job` (ADR-0010) and reports `job.*`; the
 preview publishes nothing, because it is a loop the UI drives rather than a task
 the scheduler owns.
 
-**Error handling.** `composite_frame` is total over *projects* and strict about
-its own contract: a layer whose picture is missing is skipped rather than drawn
-as a black rectangle (ADR-0015 rule 3); an effect whose type has no kernel is
-skipped for the same reason; a kernel never raises over a bad, missing or unknown
-parameter but falls back to the spec default. It raises `NovaInvariantError` for
-two things only — a plan with no size, and a grade carrying a LUT that no reader
-was supplied for, because silently ignoring the second ships a file with the wrong
-look in it. Both planners are total over *frames*: a frame past the end
-of a timeline plans as empty, because a render runs past the end by design. They
-raise `NovaInvariantError` for a nonsensical argument — a negative frame, a
-zero-sized viewport, a non-positive zoom — because those are bugs in the caller,
-not states of a project. Encoding failures are `ports/render.py`'s codes
-(`NS-RENDER-4001` unwritable, `NS-MEDIA-4002` no encoder, `-4003` encode failed,
-`-4004` unsupported spec, `-4005` cancelled), never this feature's.
-
-**Caching.** The plan *is* the cache design. `DecodeRequest.key` is
-`(asset_id, source_frame, source)`, so a preview cache keys on exactly what it
-decoded rather than on a frame number that means something different after an
-edit; `warm_frames` is forward-only because work behind the playhead is the one
-kind certain to be wasted.
-
-**Performance.** `plan_frame` is O(layers at this frame) — one `resolve`, a
-transition scan, a few tuple lookups — and pure, so a renderer can plan a frame
-while the previous one composites. `decodes()` deduplicates, so a split clip
-left in place costs one read. Neutral grades and empty chains are dropped at
-plan time rather than tested per frame.
-
-**Performance.** One float round trip per effect chain, not per effect. One
-`warpAffine` per layer, because three warps would resample three times and soften
-the picture. Neutral grades are skipped before an array is touched. The frame is
-allocated once per layer and reused as the warp destination. Nothing is cached
-here — caching belongs to the caller (the preview loop's frame cache), because a
-cache inside a pure function is a second source of truth about what a frame is.
-
-**Testing.** `tests/services/test_render_frames.py` pins the recipe: layer order,
-per-layer effect and grade ordering, generated clips asking for no decode,
-duplicate reads collapsing, empty frames, and transitions planned as pairs —
-including the centred dissolve's first half, which the domain alone does not
-surface. `tests/services/test_render_preview.py` pins the geometry: contain not
-cover, the native cap, even dimensions, centred bars, cropped-when-zoomed, and
-forward-only warm-up. `tests/services/test_render_composite.py` pins the pixels
-at 64×48 — geometry and the anchor, layer order, that half-transparent white over
-black is 128, that a dip and a dissolve differ only by `fill`, that every effect
-in the catalogue has a kernel and a missing one is skipped, and that one frame
-twice is byte-identical. `tests/infra/test_imaging.py` pins the imaging port's
-adapter against a second, plain-NumPy implementation. No FFmpeg, no clock.
-
-**The reconciler (ADR-0009 §8).** A caption document is the authoring source of
-truth, and it is not the timeline — but captions have to be *on* the timeline to
-be trimmed, moved and exported with the picture. Two modules keep the two in
-step, and neither imports the other:
-
-```
-services/captions/commit.py       document + frame rate → the clips it implies
-services/timeline/sync.py         SyncReport · TrackSync · sync_tracks → applies
-                                  several of them as one transaction
-services/timeline/commands.py     ReplaceTrackClipsCommand → applies one
-        └── the application layer is the only place that knows about both
-            (ADR-0002 rule 4: a feature may not import a sibling feature)
-```
-
-Three modules, and the handshake between them is a plain value. `commit.py`
-answers *what* a document asks a track to hold; `sync.py` answers *how* the
-timeline is made to hold it, and its input — a `TrackSync` of a track id and some
-clips — names nothing about captions, which is why neither side imports the
-other. A caption layer, a chapter list and a beat grid all reconcile through the
-same door.
-
-One cue is one `Clip` of `ClipKind.CAPTION`, with no asset: its content is the
-document, which is why the kind counts as generated in the domain. A clip's id is
-**derived** from where the cue is, not minted per commit — so committing an
-unchanged document produces identical clips, `ReplaceTrackClipsCommand` reports
-that nothing changed, and a re-transcription of one cue replaces one clip instead
-of rebuilding the track. Applying a commit is one command, therefore one undo
-entry, therefore one transaction: Ctrl+Z after a forty-cue commit does not step
-through the track rebuilding itself. A locked track is never rewritten, and a
-commit of nothing creates no track at all.
-
-`sync_tracks(editor, tracks)` is that transaction for several tracks at once: a
-project with a primary caption layer and two translations is three tracks, and
-three separate commits would mean Ctrl+Z steps through the rebuild one language
-at a time — while a failure after the first would leave a timeline that is
-neither the old captions nor the new ones. One `CompositeCommand` gives both
-properties at once: all-or-nothing on failure, one undo entry on success. Two
-details earn their keep. The report is taken **before** the edit, because asked
-afterwards it could only ever answer "nothing changed" — true, useless, and
-hiding a re-render. And a command that was *refused* records `created = False`,
-so its undo cannot delete the track it never made: a composite rolls back by
-asking the failed child to undo itself, and a locked-track refusal that undid
-"the track I created" would delete the very track it was refused access to.
-
-**Refine, in one paragraph.** `Refiner` takes fillers ("um", "uh", "er"), false
-starts ("we're going to we're going to") and stutters ("I I I") out of a
-document — fillers first, so an "um" inside a false start does not hide it — and
-then tidies what is left: collapsed whitespace, no space before punctuation, a
-capital at the start of each sentence. It never changes a word it keeps, never
-re-times a segment, never raises a confidence, and never touches a locked line.
-Two rules keep it from doing damage: a word repeated **twice** is kept ("very
-very" is emphasis, not a stutter), and the filler sets are deliberately small —
-a missing entry costs a filler that survives, which a human deletes in a second,
-while a wrong entry deletes a real word, which a human may never notice. A
-stutter's surviving word keeps its start and stretches to the end of the run, so
-karaoke highlight sweeps across it instead of leaving a hole.
-
-**Highlight, in one paragraph.** `Highlighter` sets `CaptionWord.highlight` — the
-flag the templates and the animation baker consume — from five signals, each
-switchable: **numbers** ("47", "3.5", "30%"), the **unit** beside them ("5
-minutes"), words the speaker **held** (far longer than their own median word,
-which is the only signal here that hears the performance rather than reading
-it), a **name** the first time it is said, and a **term** said three or more
-times across the piece. Candidates are *scored*, not fired in order, and the
-best two win: a cue with six highlighted words is a cue with none. A highlight a
-human set is never unset and never spends the cap, and a filler is never the
-word of the line even with `Refine` switched off.
-
-**Emoji, in one paragraph.** `EmojiDecorator` sets `CaptionSegment.emoji` — a
-field on the *content* side of the model, so it travels with the text and
-survives a template change — from a **map** of words and phrases to emoji,
-matched longest-phrase-first ("happy birthday" is a cake, not a smiley and a
-cake). A map rather than a model, because a model would be a network call in the
-middle of a pure pipeline, wrong in ways nobody could predict, and uncorrectable
-by the user; a map is data a project extends with
-`EmojiRules().with_mapping({...})`. The default is deliberately concrete — nouns
-and unambiguous emotions, never "no" or "yes", because a cross on every "no" is
-what makes a professional caption look automated. An emoji a human chose is kept.
+**Testing.** `tests/services/test_render_frames.py` pins the recipe,
+`test_render_preview.py` the geometry, `test_render_composite.py` the pixels at
+64x48, `test_render_pool.py` the *seek counts* — a pool is a performance
+component, and thirty frames of one clip costing thirty seeks is the bug it
+exists to prevent — and `test_render_loop.py` the promise itself: the same
+compositor, one code path, preview frame and export frame byte-identical.
+`tests/infra/test_imaging.py` checks the OpenCV adapter against a second,
+plain-NumPy implementation of the port. No FFmpeg, no clock.
 
 **Database schema.** None — see the note in §1.
 
 **Future expansion.**
 
-* **Cost estimation.** Whether a frame fits a real-time budget needs the effect
-  *catalogue*, which belongs to `services/effects` — a feature this one may not
-  import. It belongs in `services/shared` when that lands, and it is what a
-  draft-quality preview mode will read.
 * **Blend modes and masks**, which the domain already models and the compositor
   does not yet apply: they slot into one step of one function.
 * **A GPU imaging adapter**, implementing the same six methods of

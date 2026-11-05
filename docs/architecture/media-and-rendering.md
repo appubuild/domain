@@ -91,6 +91,19 @@ Clip ─────────────────────────
                   or shared-mem in desktop)        audio muxed separately)
 ```
 
+Where each stage lives now:
+
+| Stage in the diagram | Module | Built |
+| --- | --- | --- |
+| `TimelineResolver` | `domain/timeline.py` + `services/render/frames.py` | yes |
+| `FrameSourcePool` · `DecodeStage` | `services/render/pool.py` over `ports/media.py` | yes |
+| `EffectChain` | `services/render/kernels.py` over `services/effects/` | yes |
+| `TransformStage` · `Compositor` · `TransitionStage` · `ColourStage` | `services/render/composite.py` | yes |
+| Preview sink | the same loop, a JPEG sink | yes (§7.12) |
+| Export sink | the same loop, an encoder sink | yes (`infra/render.py`, §7.7) |
+| `SpeedStage` | retiming, constant and ramped | not yet |
+| `OverlayStage` | text, captions, motion graphics | not yet (captions, stage 9) |
+
 Design invariants:
 
 * **Frame-accurate by construction.** Time is represented as integer frame numbers at a
