@@ -28,6 +28,12 @@ needed for frame-accurate compositing) and a **CLI implementation** (needed for 
 only exist in `libavfilter` graphs, and for multi-pass export). The `MediaBackend` port
 abstracts the choice; a probe cache means the discovery runs once per session.
 
+*Status:* the PyAV half is built — `infra/media.py` for decoding (§7.5) and
+`infra/render.py` for encoding (§7.7), both reading their capability answers from
+`PyAVCapabilityProbe`. Neither resolves a toolchain through the five steps above
+yet: they use the libraries PyAV links against, which is step 5. The CLI half,
+and the `MediaBackend` that picks between the two, are still to come.
+
 ### 7.2 Frame pipeline
 
 ```
@@ -288,11 +294,64 @@ Contract rules the port makes mechanical:
 5. **Progress is the job's business, not the sink's.** The sink counts;
    `RenderStats` is its answer at the end.
 
-*Still to build:* `infra/render/pyav_encoder.py` and `infra/render/cli_encoder.py`
-(the two adapters), the `ExportSink` wiring in §7.2, and
-`tests/render/test_gpu_cpu_parity.py` for ADR-0012 §5. The GPU half itself gets its
-own port — `ports/gpu.py`, `GpuBackend` with `supports/allocate/execute/release` —
-because a compute device has a different lifetime from an encoder.
+**`infra/render.py` — the PyAV renderer.** The encode half; the decode half is
+`infra/media.py` (§7.5). One module, matching the media adapter's shape rather
+than the two-package layout sketched below, because the split that matters is the
+one the port drew.
+
+| Class | Port | Lifetime |
+| --- | --- | --- |
+| `PyAVRenderer` | `Renderer` | stateless; `open(spec, path, *, is_cancelled=None)` |
+| `PyAVRenderTarget` | `RenderTarget` | writes to a sibling `.part`, publishes at `finish` |
+| `PyAVFrameSink` | `FrameSink` | RGB/RGBA/gray in, the spec's pixel format out |
+| `PyAVAudioSink` | `AudioSink` | resamples to the output's rate and layout |
+| `PyAVCapabilityProbe` | `CapabilityProbe` | measured, cached, re-probed on `refresh=True` |
+
+Six decisions, each pinned by `tests/infra/test_render_encode.py`, which writes a
+file and decodes it back with the other half of the media layer:
+
+1. **The destination does not exist until it is finished.** Frames go to
+   `<name>.<random>.part` beside the output and are `replace`d at `finish`. A
+   failure, a cancellation or a crash leaves the previous export intact, and a
+   test asserts that a sentinel file at the destination is still there while
+   frames are being written.
+2. **A spec is proven by opening the encoder.** `open` builds a throwaway context
+   with the real width, height, pixel format, rate and options and opens it:
+   DNxHD exists only for a handful of size/rate/bitrate triples, a hardware
+   encoder can be listed and unusable, and `gbrp` is a format `swscale` can make
+   that H.264 cannot hold. One context open — milliseconds — before frame one.
+3. **Hardware is proven, not listed.** `hwaccels` holds only the families whose
+   encoders actually opened, because FFmpeg compiled against NVENC and a machine
+   with a usable NVIDIA driver are different facts (ADR-0012 §7). It measures
+   `[]` on the CI sandbox, which is the honest answer for it.
+4. **Colour is converted once, here, and tagged.** `swscale` is told the matrix
+   the frame declares and the one the output wants; the four tags are written to
+   the encoder context, and an unspecified tag is left unspecified rather than
+   guessed. One measured limit: PyAV 18's `reformat` takes no destination
+   *range*, so a conversion between two different ranges is not expressible and
+   belongs to the compositor, which works in RGB.
+5. **Audio is resampled per source shape.** One libswresample per (rate,
+   channels), each flushed at `finish`, because libswresample carries delay and a
+   shared instance would leak one block's tail into the next block's head.
+6. **Cancellation is a callable, not a job.** `is_cancelled: Callable[[], bool]`
+   is injected at `open` — a bare callable, like every other collaborator here —
+   so the renderer never learns what a job is. Once it answers `True`, every
+   later write fails with `NS-RENDER-4005`.
+
+Rate control is mapped per codec against the bundled FFmpeg: `crf` for x264,
+x265 and VP9 (which also needs an explicit zero budget or it treats `crf` as a
+ceiling under a default bit rate), `qscale` for MPEG-4, a profile for ProRes —
+`4444xq` with alpha and `hq` without, because asking for 4444 XQ on a 4:2:2
+stream silently promotes it to twelve bits — and `b`/`minrate`/`maxrate` for the
+bit-rate modes.
+
+*Still to build:* `infra/render/cli_encoder.py`, the FFmpeg-CLI adapter the
+multi-pass and libavfilter-graph exports need; the `MediaBackend` binding that
+chooses between the two at composition time (ADR-0007 §3); the `ExportSink`
+wiring in §7.2; and `tests/render/test_gpu_cpu_parity.py` for ADR-0012 §5. The
+GPU compute half gets its own port — `ports/gpu.py`, `GpuBackend` with
+`supports/allocate/execute/release` — because a compute device has a different
+lifetime from an encoder.
 
 ### 7.8 The edit decision list (`domain/timeline.py`)
 
