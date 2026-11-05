@@ -501,3 +501,128 @@ about mid-grey, temperature and tint are -1 to +1 in white-balance space, and
 imports no NumPy (ADR-0012).
 
 ---
+
+### 7.12 The compositor (`services/render/composite.py`)
+
+One function turns a plan and a set of decoded pictures into a frame, and both
+the preview loop and the exporter call that one function. This is the invariant
+§7.2 promises — "the preview looks different from the export" is structurally
+impossible — and it is why the compositor is a *function of a value*: a
+`FramePlan` plus the pictures it asked for, nothing else. No clock, no cache,
+no I/O, no state. Given the same inputs it returns the same bytes, which is
+what lets a resumed render produce the file it would have produced (ADR-0002
+rule 1) and what lets a preview frame be compared pixel for pixel against its
+export in a test.
+
+```
+   FramePlan  ──┐                        ┌── per layer, bottom first ─────────┐
+                │                        │  1. crop + mirror   (source side)  │
+   pictures  ───┼──► composite_frame ────┤  2. clip effects, then track        │
+                │        │               │  3. clip grades, then track         │
+   ImageOps  ───┘        │               │  4. one affine transform            │
+   kernels ──────────────┤               │  5. opacity × transition opacity    │
+   luts ─────────────────┘               │  6. source-over onto the canvas     │
+                                         └─────────────────────────────────────┘
+                                                        │
+                         ┌── once, over the result ─────┴──────────┐
+                         │  7. output effect chain  8. output grade │
+                         └───────────────────┬─────────────────────┘
+                                             ▼
+                                      FrameBuffer (rgb24)
+```
+
+Decision | Why
+--- | ---
+**Crop and mirror are source-side** | A pixel that is cropped away must not have been blurred, sharpened or graded on its way to being thrown out. Mirroring is an array flip rather than a negative scale in the matrix, because a flip is exact and a negative scale lands the picture a fraction of a pixel off its own centre.
+**One affine matrix per layer** | Scale ∘ rotation ∘ skew, composed about the anchor and then positioned. Three warps would resample three times and soften the picture; one warp resamples once.
+**Transitions are not a special case** | A mix is an opacity, an offset and a scale carried on *both* layers, plus `fill` for a dip. The compositor reads them where it already reads geometry and alpha, so a push and a dissolve are the same code path — and a transition that runs out of partner degrades to a plain cut instead of a crash.
+**The canvas starts transparent** | Video has no alpha channel, so the canvas is baked against the transition fill (or black) at the very end. Baking earlier would mean a lower layer could never show through a translucent upper one.
+**A missing picture skips its layer** | An offline asset must not cost the frame: the layer is omitted, the layers under it still draw, and the export records the gap. A black rectangle over everything beneath it would be a worse lie than the gap (ADR-0015 rule 3).
+**A LUT with no reader raises** | Silently ignoring it would ship a file with the wrong look in it. `luts` is injected, so the compositor never opens a file, and a project with no LUT needs no reader at all.
+**No colour conversion between sources** | The working space is whatever the decoder produced; the compositor cannot know whether two clips were tagged the same, and guessing would be a silent error. The caller tags the *result* (`colour=`), which is the only tag that reaches the file. This is recorded as a limit, not a bug: cross-source conversion belongs at the decode boundary, once, where the tags live.
+
+The working space is **float32, 0..1, straight alpha**: one conversion in, one
+out, per chain — not per effect. Colours are clipped once, at the end, because
+clipping between passes is how a highlight turns into a flat white patch.
+
+`apply_grade` is public and separate so a thumbnail, a still export or a
+captions overlay can grade a single picture without compositing a frame. Its
+order is fixed and pinned by tests: exposure (×2^e) → contrast about mid-grey →
+white balance → gain/lift → gamma → saturation about Rec.709 luma → curves
+(one 256-entry table per channel) → LUT last, trilinear over the eight corners
+of a cube, mixed by `lut_strength`.
+
+Public API (everything else is private and may move):
+
+Symbol | What it does
+--- | ---
+`composite_frame(plan, pictures, *, ops, kernels=None, luts=None, colour=None)` | The frame. `ops` is required; the rest default to the built-ins and to "no LUT reader".
+`apply_grade(sample, buffer, *, luts=None)` | One `GradeSample` over one picture. Returns the *same object* when the grade is neutral.
+`LutTableReader` | `Callable[[Lut], Any]` — how to turn a LUT into a table.
+
+**Performance.** The frame is allocated once per layer and reused as the
+destination; the transform is a single `warpAffine`; effects share one float
+round trip per chain; a neutral grade is skipped by `is_neutral` before any
+array is touched. Nothing is cached — caching belongs to the caller (the
+preview loop's frame cache, §7.2), because a cache inside a pure function is a
+second source of truth about what a frame is.
+
+**Testing.** `tests/services/test_render_composite.py` asserts on pixels at
+64×48, because a property that needs a megapixel to demonstrate is a property
+nobody can debug: geometry and the anchor, layer order, that half-transparent
+white over black is 128, that a dip and a dissolve differ only by `fill`, that
+grain is reproducible per frame and different between frames, and that the same
+frame twice is byte-identical.
+
+**Future expansion.** Blend modes and masks (already in the domain, not yet
+applied here) slot in at step 6; a 32-bit float pipeline changes only the
+working-space constants; tile-based rendering for 8K changes the caller, not
+this function.
+
+### 7.13 The imaging port (`ports/imaging.py`, `infra/imaging.py`)
+
+A compositor is arithmetic on arrays, and nearly all of it is NumPy. Six
+operations are not: resampling, warping, convolution, blurring and padding are
+where a real implementation earns its speed, and they are the only reason an
+effect engine would reach for a library. `ImageOps` is that reach.
+
+```
+ services/render/kernels.py ──┐
+ services/render/composite.py ─┼──► ports.imaging.ImageOps  ◄── infra/imaging.py (OpenCV)
+        (declare only)         │         (6 methods)         └── a GPU adapter (ADR-0012)
+                               │                             └── tests/media/numpy_imaging.py
+```
+
+Decision | Why
+--- | ---
+**A port, not an import** | OpenCV is confined to `infra` by `scripts/check_layering.py`, but the rule is only half the reason: there are two implementations we intend to ship (CPU and GPU, ADR-0012 §2). A renderer that imports `cv2` can have neither, and its unit tests cannot run without it.
+**Six operations, no more** | Every entry is something NumPy cannot do well and a kernel genuinely needs. A port that grows an operation per effect has become OpenCV with extra steps.
+**Float in, float out, never clipped** | Clipping is a compositing decision made once, by the caller. An operation that clipped would silently change the look of anything downstream of it.
+**Rank is preserved** | OpenCV collapses `HxWx1` to `HxW`. The adapter puts the axis back, so a caller that built a one-channel mask does not have to inspect what came back before indexing it.
+**Borders are stated, not inherited** | OpenCV defaults differ per function; inheriting two different defaults is how a blurred frame gets a dark rim while a warped one does not. Blurs replicate, warps are constant — and a constant border fades rather than crops, so a layer dragged half off the frame softens at its own edge.
+**Degenerate inputs are handled in the adapter** | A zero sigma, a box of one, an empty kernel: each returns the input. No kernel has to guard against them.
+
+Method | Contract
+--- | ---
+`resize(pixels, size, *, interpolation)` | Exact `(width, height)`; the caller has already decided the rounding. Nearest never invents a value — the one mode safe for a mask.
+`warp_affine(pixels, matrix, size, *, interpolation, border)` | The matrix maps **source → destination** (OpenCV's default, without `WARP_INVERSE_MAP`); an adapter inverts it internally, because a gather can only ask where each output came from.
+`gaussian(pixels, sigma)` / `box(pixels, size)` | Kernel size is the adapter's business. Edge replicated: a dark rim is an artefact, not a picture.
+`convolve(pixels, kernel)` | The escape hatch — motion blur is a rotated line. An unnormalised kernel is normalised, so a hand-built one cannot become a brightness change.
+`edge_pad(pixels, top, bottom, left, right)` | Grow by repeating edge pixels: what a channel scaled *down* needs to be fitted back to its frame.
+
+**Testing.** `tests/infra/test_imaging.py` checks the OpenCV adapter against
+`tests/media/numpy_imaging.py`, a second implementation in plain NumPy — no
+SIMD, no fixed-point, explicit loops. Where they agree, OpenCV is not quietly
+doing something else; where they disagree by more than rounding, one of them is
+wrong. Comparing an implementation against itself would prove nothing, and a
+reference that shares an optimisation with the thing it checks shares its bugs.
+The contract is then asserted without a tolerance: dtype preserved, one- and
+four-channel inputs both work, blur replicates its edge, warp leaves outside
+transparent, and one call twice gives one answer.
+
+**Future expansion.** A GPU adapter (ADR-0012) implements the same six methods
+and is bound at composition time — no renderer changes. `Interpolation.CUBIC`
+and `BorderMode.REPLICATE` are already declared for the cases that will want
+them.
+
+---

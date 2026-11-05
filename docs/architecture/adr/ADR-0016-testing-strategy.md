@@ -59,6 +59,25 @@ inputs (Hypothesis-style generators implemented in-house to avoid a heavy depend
 * Caption pipeline determinism: same transcript input → byte-identical `CaptionDocument`.
 * Compositor determinism: same `(timeline, t)` → identical frame hash, twice, in any order.
 
+### A port is proven by a second implementation
+
+A seam that only one implementation has ever satisfied is not a seam, it is an
+indirection — so every port that performs **arithmetic** rather than I/O gets a
+second, deliberately naive implementation under `tests/`, and the adapter is
+compared against it with a tolerance. `ports/imaging.py` is the first:
+`tests/media/numpy_imaging.py` is a plain-NumPy `ImageOps`, and
+`tests/infra/test_imaging.py` measures the OpenCV adapter against it. The
+reference is written the way the maths is written — no SIMD, no fixed point,
+explicit loops — because a reference that shares an optimisation with the thing
+it checks shares its bugs with it. Where the two agree, the adapter is not
+quietly doing something else; where they disagree by more than rounding, one of
+them is wrong.
+
+The **contract** is then asserted with no tolerance at all: dtype preserved,
+rank preserved, one- and four-channel inputs both accepted, borders behaving as
+declared, and one call twice giving one answer. Two adapters may differ in the
+last bit — they use different arithmetic — but neither may differ from itself.
+
 ### Golden frames, with tolerance
 
 Rendered output is compared against golden hashes stored as **JSON** (hash + tolerance +

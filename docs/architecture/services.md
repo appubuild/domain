@@ -575,13 +575,15 @@ what makes a professional caption look automated. An emoji a human chose is kept
 
 ## 7. Feature: `services/render/`
 
-**Purpose.** Own the two decisions that stand between a project and a picture:
-**what one composed frame is made of** (`frames.py`) and **how big to draw it**
-(`preview.py`). `domain/` owns what a clip, an effect, a grade and a transition
-*are*; `ports/render.py` owns where composed frames *go*. This owns the recipe
-that both read from — which is what makes the `media-and-rendering.md` §7.2
-promise structural rather than aspirational: **preview and export use the same
-code path.**
+**Purpose.** Own the three decisions that stand between a project and a picture:
+**what one composed frame is made of** (`frames.py`), **how big to draw it**
+(`preview.py`) and **what the composed frame looks like** (`composite.py` and
+`kernels.py`). `domain/` owns what a clip, an effect, a grade and a transition
+*are*; `ports/render.py` owns where composed frames *go*; `ports/imaging.py` owns
+the six pixel primitives a compositor borrows. This owns the recipe that all of
+them read from — which is what makes the `media-and-rendering.md` §7.2 promise
+structural rather than aspirational: **preview and export use the same code
+path.**
 
 Completing a transition is part of that. A transition is a recipe for *two*
 pictures, but the domain hangs it off one clip and `Timeline.resolve` only
@@ -615,6 +617,20 @@ FramePlan                             frames.py
 PreviewPlan                           preview.py
 ├── frame · size · scale · offset · warm
 Viewport · fit_scale · preview_size · warm_frames · plan_preview
+
+composite_frame(plan, pictures, *, ops, kernels, luts, colour)   composite.py
+├── per layer, bottom first
+│   ├── _crop          crop + mirror, source side, before anything else
+│   ├── _layer_source  clip effects, track effects, clip grade, track grade
+│   ├── _place         one affine transform (skew ∘ rotate ∘ scale, then move)
+│   ├── _alpha_of      opacity × transition opacity
+│   └── _over          source-over onto a float32 RGBA canvas
+└── once, over the result: output_effects, then output_grade
+
+KernelRegistry                        kernels.py
+├── has(type) · kernel(type) · register(type, fn) → new registry · types()
+├── builtin_kernels() · kernel_types()
+└── apply_chain(chain, buffer, *, registry, ops, frame)
 ```
 
 **State management.** Everything is a frozen value. A `FramePlan` can be cached,
@@ -633,12 +649,30 @@ hundred thousand frames and holds none of them.
 | `preview_size(w, h, viewport, zoom)` | "what size do I composite at" |
 | `warm_frames(playhead, count, last_frame)` | "what should already be decoded" |
 | `plan_preview(...)` | all of the above, for one frame |
+| `composite_frame(plan, pictures, *, ops, ...)` | "what does this frame look like" |
+| `apply_grade(sample, buffer, *, luts)` | the same, for one picture and one grade |
+| `apply_chain(chain, buffer, *, registry, ops, frame)` | one effect stack, one picture |
+| `builtin_kernels()` / `kernel_types()` | which effect arithmetic exists |
+
+**Dependency injection.** The compositor takes its collaborators as arguments
+rather than importing them: `ops` (`ports/imaging.ImageOps`) is required,
+`kernels` defaults to the built-in registry, and `luts` is needed only by a grade
+that carries a LUT. Nothing here imports OpenCV, opens a LUT file or reaches into
+`infra`; the composition root binds them. That inversion is what lets a render be
+tested on a machine with no FFmpeg and moved to a GPU later.
 
 **Events.** None yet. A render is a `Job` (ADR-0010) and reports `job.*`; the
 preview publishes nothing, because it is a loop the UI drives rather than a task
 the scheduler owns.
 
-**Error handling.** Both planners are total over *frames*: a frame past the end
+**Error handling.** `composite_frame` is total over *projects* and strict about
+its own contract: a layer whose picture is missing is skipped rather than drawn
+as a black rectangle (ADR-0015 rule 3); an effect whose type has no kernel is
+skipped for the same reason; a kernel never raises over a bad, missing or unknown
+parameter but falls back to the spec default. It raises `NovaInvariantError` for
+two things only — a plan with no size, and a grade carrying a LUT that no reader
+was supplied for, because silently ignoring the second ships a file with the wrong
+look in it. Both planners are total over *frames*: a frame past the end
 of a timeline plans as empty, because a render runs past the end by design. They
 raise `NovaInvariantError` for a nonsensical argument — a negative frame, a
 zero-sized viewport, a non-positive zoom — because those are bugs in the caller,
@@ -658,14 +692,25 @@ while the previous one composites. `decodes()` deduplicates, so a split clip
 left in place costs one read. Neutral grades and empty chains are dropped at
 plan time rather than tested per frame.
 
+**Performance.** One float round trip per effect chain, not per effect. One
+`warpAffine` per layer, because three warps would resample three times and soften
+the picture. Neutral grades are skipped before an array is touched. The frame is
+allocated once per layer and reused as the warp destination. Nothing is cached
+here — caching belongs to the caller (the preview loop's frame cache), because a
+cache inside a pure function is a second source of truth about what a frame is.
+
 **Testing.** `tests/services/test_render_frames.py` pins the recipe: layer order,
 per-layer effect and grade ordering, generated clips asking for no decode,
 duplicate reads collapsing, empty frames, and transitions planned as pairs —
 including the centred dissolve's first half, which the domain alone does not
 surface. `tests/services/test_render_preview.py` pins the geometry: contain not
 cover, the native cap, even dimensions, centred bars, cropped-when-zoomed, and
-forward-only warm-up. No FFmpeg, no numpy beyond what the domain carries, no
-clock.
+forward-only warm-up. `tests/services/test_render_composite.py` pins the pixels
+at 64×48 — geometry and the anchor, layer order, that half-transparent white over
+black is 128, that a dip and a dissolve differ only by `fill`, that every effect
+in the catalogue has a kernel and a missing one is skipped, and that one frame
+twice is byte-identical. `tests/infra/test_imaging.py` pins the imaging port's
+adapter against a second, plain-NumPy implementation. No FFmpeg, no clock.
 
 **The reconciler (ADR-0009 §8).** A caption document is the authoring source of
 truth, and it is not the timeline — but captions have to be *on* the timeline to
@@ -754,8 +799,11 @@ what makes a professional caption look automated. An emoji a human chose is kept
   *catalogue*, which belongs to `services/effects` — a feature this one may not
   import. It belongs in `services/shared` when that lands, and it is what a
   draft-quality preview mode will read.
-* **The compositor itself**, once `infra/render` exists: it consumes these plans
-  and nothing else.
+* **Blend modes and masks**, which the domain already models and the compositor
+  does not yet apply: they slot into one step of one function.
+* **A GPU imaging adapter**, implementing the same six methods of
+  `ports/imaging.py` and bound at composition time — no renderer changes
+  (ADR-0012 §2).
 * **Audio**, which resolves the same timeline into a sample graph rather than a
   layer stack (`media-and-rendering.md` §7.4).
 

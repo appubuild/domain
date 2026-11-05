@@ -41,6 +41,8 @@ Modules (populated in Stage 3)::
     media.py       probing, decoding, frame access, audio resampling
     persistence.py project store, crash-recovery log, asset cache
     render.py      frame/audio sinks, render targets, toolchain capability probe
+    imaging.py     the six pixel primitives a renderer borrows: resample, warp,
+                   blur, convolve, pad
     gpu.py         GpuBackend: per-operation acceleration (ADR-0012 §2)
     asr.py         transcription, alignment, translation
     jobs.py        JobContext, JobHandle, JobObserver, JobExecutor, JobStore

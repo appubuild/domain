@@ -128,6 +128,9 @@ ignore = [
 # unused parameter is expected rather than a smell.
 "tests/**" = ["S101", "ARG001", "ARG005", "PLR2004", "B011"]
 "**/__init__.py" = ["F401"]
+# A kernel receives `frame` and `seed` because the protocol hands them to every
+# kernel; most of them need neither.
+"nova_studio/services/render/kernels.py" = ["ARG001"]
 # The one module allowed to import the driver. Everything else gets SQLite
 # through this gateway, which is the point of the ban.
 "nova_studio/infra/persistence/sqlite.py" = ["TID251"]
