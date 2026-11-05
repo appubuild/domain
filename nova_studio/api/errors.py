@@ -76,6 +76,33 @@ def error_responses() -> dict[int | str, dict[str, Any]]:
     return responses
 
 
+#: Where the transport, not the domain, knows which status is truthful.
+#:
+#: A severity-derived status says how bad a failure is; the URL says whether the
+#: thing exists. Both matter, and they are not the same question: "no project
+#: with that id is open here" is a 404 however severely the domain regards it,
+#: and a command refused because the state will not allow it is a 409, not the
+#: 400 its severity would suggest.
+#:
+#: One table, because two routers that each decided would eventually disagree —
+#: and a frontend that has to know which router it called in order to interpret a
+#: status is a frontend with a bug waiting.
+STATUS_FOR_CODE: dict[str, int] = {
+    # The projects ring.
+    "NS-PROJECT-4040": 404,  # no such open project
+    "NS-PROJECT-4041": 404,  # no such file
+    "NS-PROJECT-4220": 422,  # the archive refused the file
+    # The timeline ring: a command refused because the state will not allow it.
+    "NS-COMMAND-4104": 409,
+    "NS-TIMELINE-4090": 409,  # the timeline was replaced behind the editor's back
+}
+
+
+def status_for(error: NovaError) -> int | None:
+    """The status this code is served as, or `None` to let severity decide."""
+    return STATUS_FOR_CODE.get(error.code)
+
+
 def _description_for(status: int) -> str:
     """What each failure means here, in the words the schema should use."""
     return {
@@ -92,12 +119,14 @@ def _description_for(status: int) -> str:
 __all__ = [
     "ERROR_STATUSES",
     "PROBLEM_MEDIA_TYPE",
+    "STATUS_FOR_CODE",
     "UNPROCESSABLE_ENTITY",
     "error_responses",
     "install_error_handlers",
     "problem_body",
     "problem_response",
     "respond",
+    "status_for",
 ]
 
 #: The media type every error response uses, success or failure.

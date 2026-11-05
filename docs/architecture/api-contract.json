@@ -171,6 +171,245 @@
         "title": "CheckpointResponse",
         "type": "object"
       },
+      "ClipKind": {
+        "description": "What a clip *is*, which decides what a decoder or generator is asked for.",
+        "enum": [
+          "video",
+          "audio",
+          "image",
+          "text",
+          "caption",
+          "solid",
+          "adjustment"
+        ],
+        "title": "ClipKind",
+        "type": "string"
+      },
+      "ClipSpec": {
+        "additionalProperties": false,
+        "description": "One clip to place: the input to a track replacement.",
+        "properties": {
+          "asset_id": {
+            "description": "The media bin entry it shows.",
+            "minLength": 1,
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "clip_id": {
+            "default": "",
+            "description": "Id to use; generated when empty.",
+            "maxLength": 64,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "description": "Whether it is part of the output.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "in_frame": {
+            "default": 0,
+            "description": "First source frame shown.",
+            "minimum": 0.0,
+            "title": "In Frame",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ClipKind",
+            "default": "caption",
+            "description": "What kind of clip it is."
+          },
+          "name": {
+            "default": "",
+            "description": "What to call it.",
+            "maxLength": 200,
+            "title": "Name",
+            "type": "string"
+          },
+          "source_frames": {
+            "default": 1,
+            "description": "How many source frames it shows.",
+            "minimum": 1.0,
+            "title": "Source Frames",
+            "type": "integer"
+          },
+          "start_frame": {
+            "default": 0,
+            "description": "Where it starts on the timeline.",
+            "minimum": 0.0,
+            "title": "Start Frame",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_id"
+        ],
+        "title": "ClipSpec",
+        "type": "object"
+      },
+      "ClipSummary": {
+        "additionalProperties": false,
+        "description": "One clip, as a block on a track.\n\n`start_frame` and `duration_frames` are where it sits and how long it plays;\n`in_frame` and `out_frame` are which part of the source it shows. Trimming\nmoves one of the second pair; moving the clip moves the first.",
+        "properties": {
+          "asset_id": {
+            "description": "The media bin entry this clip shows.",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "clip_id": {
+            "description": "Stable id; the key every clip command uses.",
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "duration_frames": {
+            "description": "How long it plays.",
+            "title": "Duration Frames",
+            "type": "integer"
+          },
+          "enabled": {
+            "description": "Whether it is part of the output.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "end_frame": {
+            "description": "Where it ends, exclusive.",
+            "title": "End Frame",
+            "type": "integer"
+          },
+          "in_frame": {
+            "description": "First source frame shown.",
+            "title": "In Frame",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ClipKind",
+            "description": "What kind of clip it is."
+          },
+          "name": {
+            "description": "What to call it in the timeline; may be empty.",
+            "title": "Name",
+            "type": "string"
+          },
+          "out_frame": {
+            "description": "Last source frame shown, exclusive.",
+            "title": "Out Frame",
+            "type": "integer"
+          },
+          "speed": {
+            "description": "Playback rate; 1.0 is normal, 0.5 is half.",
+            "title": "Speed",
+            "type": "number"
+          },
+          "start_frame": {
+            "description": "Where it starts on the timeline.",
+            "title": "Start Frame",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "clip_id",
+          "asset_id",
+          "kind",
+          "name",
+          "start_frame",
+          "end_frame",
+          "duration_frames",
+          "in_frame",
+          "out_frame",
+          "speed",
+          "enabled"
+        ],
+        "title": "ClipSummary",
+        "type": "object"
+      },
+      "CommandResponse": {
+        "additionalProperties": false,
+        "description": "What one command did.\n\n`affected` and `invalidate` are how the frontend avoids refetching: the ids\nit must redraw, and the caches it must drop. `summary` is the sentence the\nstatus bar shows, written by the command that knows what it changed.",
+        "properties": {
+          "affected": {
+            "description": "Ids the command touched.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected",
+            "type": "array"
+          },
+          "command_id": {
+            "description": "The command's own id, for telemetry and logs.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "dirty": {
+            "description": "Whether the edit differs from the file.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "What undo and redo would do now."
+          },
+          "invalidate": {
+            "description": "Cache namespaces that must be dropped.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Invalidate",
+            "type": "array"
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence; 0 for none.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "marks_dirty": {
+            "description": "Whether the project is now unsaved.",
+            "title": "Marks Dirty",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "What was asked for, e.g. `move-clip`.",
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_commands": {
+            "description": "Edits since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project that was edited.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "rerender": {
+            "description": "Whether the preview must be redrawn.",
+            "title": "Rerender",
+            "type": "boolean"
+          },
+          "summary": {
+            "description": "What happened, as one sentence.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "command_id",
+          "name",
+          "summary",
+          "affected",
+          "invalidate",
+          "rerender",
+          "marks_dirty",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty"
+        ],
+        "title": "CommandResponse",
+        "type": "object"
+      },
       "ComponentStatus": {
         "additionalProperties": false,
         "description": "Whether one optional component is installed here.",
@@ -275,6 +514,129 @@
           "pid"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HistorySummary": {
+        "additionalProperties": false,
+        "description": "What the Edit menu and the history panel need, in one round trip.",
+        "properties": {
+          "can_redo": {
+            "description": "Whether there is an edit to redo.",
+            "title": "Can Redo",
+            "type": "boolean"
+          },
+          "can_undo": {
+            "description": "Whether there is an edit to undo.",
+            "title": "Can Undo",
+            "type": "boolean"
+          },
+          "recent": {
+            "description": "The newest commands, oldest first.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "redo_depth": {
+            "description": "Edits that can be redone.",
+            "title": "Redo Depth",
+            "type": "integer"
+          },
+          "redo_label": {
+            "description": "What redoing would do, as a localisable key.",
+            "title": "Redo Label",
+            "type": "string"
+          },
+          "undo_depth": {
+            "description": "Edits that can be undone.",
+            "title": "Undo Depth",
+            "type": "integer"
+          },
+          "undo_label": {
+            "description": "What undoing would do, as a localisable key.",
+            "title": "Undo Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "can_undo",
+          "can_redo",
+          "undo_label",
+          "redo_label",
+          "undo_depth",
+          "redo_depth",
+          "recent"
+        ],
+        "title": "HistorySummary",
+        "type": "object"
+      },
+      "LiftClipRequest": {
+        "additionalProperties": false,
+        "description": "Remove a clip and leave the gap behind.",
+        "properties": {
+          "clip_id": {
+            "description": "The clip to lift out.",
+            "minLength": 1,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "lift-clip",
+            "default": "lift-clip",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id"
+        ],
+        "title": "LiftClipRequest",
+        "type": "object"
+      },
+      "MoveClipRequest": {
+        "additionalProperties": false,
+        "description": "Move a clip to a position, on its own track or another.",
+        "properties": {
+          "clip_id": {
+            "description": "The clip to move.",
+            "minLength": 1,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "gesture": {
+            "default": "",
+            "description": "Drag id: consecutive moves sharing one collapse into a single undo.",
+            "maxLength": 64,
+            "title": "Gesture",
+            "type": "string"
+          },
+          "to_start_frame": {
+            "description": "Where its first frame should land.",
+            "minimum": 0.0,
+            "title": "To Start Frame",
+            "type": "integer"
+          },
+          "to_track_id": {
+            "default": "",
+            "description": "Track to move it to; empty keeps it.",
+            "title": "To Track Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "move-clip",
+            "default": "move-clip",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id",
+          "to_start_frame"
+        ],
+        "title": "MoveClipRequest",
         "type": "object"
       },
       "OpenProjectRequest": {
@@ -550,6 +912,138 @@
         "title": "RecoveryResponse",
         "type": "object"
       },
+      "RedoResponse": {
+        "additionalProperties": false,
+        "description": "The outcome of Ctrl+Shift+Z, in the same shape as :class:`UndoResponse`.",
+        "properties": {
+          "command_id": {
+            "description": "The command that was redone, or empty.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "dirty": {
+            "description": "Whether the edit differs from the file.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "What undo and redo would do now."
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence; 0 for none.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "name": {
+            "description": "What was redone, e.g. `move-clip`; empty for nothing.",
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_commands": {
+            "description": "Edits since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project that was edited.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "redone": {
+            "description": "Whether anything was redone.",
+            "title": "Redone",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_id",
+          "redone",
+          "command_id",
+          "name",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty"
+        ],
+        "title": "RedoResponse",
+        "type": "object"
+      },
+      "ReplaceTrackClipsRequest": {
+        "additionalProperties": false,
+        "description": "Make one track hold exactly these clips — nothing added, nothing kept.\n\nThe caption engine's door, and the only command that writes a whole track at\nonce: a transcript that arrives 400 cues at a time must not become 400\nundoable edits.",
+        "properties": {
+          "clips": {
+            "description": "What the track should hold, in order.",
+            "items": {
+              "$ref": "#/components/schemas/ClipSpec"
+            },
+            "title": "Clips",
+            "type": "array"
+          },
+          "create": {
+            "default": true,
+            "description": "Create the track when it does not exist.",
+            "title": "Create",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TrackKind",
+            "default": "caption",
+            "description": "Kind of track to use."
+          },
+          "track_id": {
+            "description": "The track to make hold them.",
+            "minLength": 1,
+            "title": "Track Id",
+            "type": "string"
+          },
+          "track_name": {
+            "default": "",
+            "description": "Name to give a new track.",
+            "maxLength": 200,
+            "title": "Track Name",
+            "type": "string"
+          },
+          "type": {
+            "const": "replace-track-clips",
+            "default": "replace-track-clips",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "track_id",
+          "clips"
+        ],
+        "title": "ReplaceTrackClipsRequest",
+        "type": "object"
+      },
+      "RippleDeleteRequest": {
+        "additionalProperties": false,
+        "description": "Remove a clip and close the gap on every unlocked track.",
+        "properties": {
+          "clip_id": {
+            "description": "The clip to delete.",
+            "minLength": 1,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "ripple-delete",
+            "default": "ripple-delete",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id"
+        ],
+        "title": "RippleDeleteRequest",
+        "type": "object"
+      },
       "SaveAsRequest": {
         "additionalProperties": false,
         "description": "Save to a new location.",
@@ -599,6 +1093,81 @@
           "format_version"
         ],
         "title": "SaveProjectResponse",
+        "type": "object"
+      },
+      "SlipClipRequest": {
+        "additionalProperties": false,
+        "description": "Slide the source window inside a clip, moving neither end in time.",
+        "properties": {
+          "clip_id": {
+            "description": "The clip to slip.",
+            "minLength": 1,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "delta_frames": {
+            "description": "How far to slide the source window; may be negative.",
+            "title": "Delta Frames",
+            "type": "integer"
+          },
+          "gesture": {
+            "default": "",
+            "description": "Drag id: consecutive slips sharing one collapse into a single undo.",
+            "maxLength": 64,
+            "title": "Gesture",
+            "type": "string"
+          },
+          "type": {
+            "const": "slip-clip",
+            "default": "slip-clip",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id",
+          "delta_frames"
+        ],
+        "title": "SlipClipRequest",
+        "type": "object"
+      },
+      "SplitClipRequest": {
+        "additionalProperties": false,
+        "description": "Cut a clip in two at a frame.",
+        "properties": {
+          "at_frame": {
+            "description": "Where to cut, in timeline frames.",
+            "exclusiveMinimum": 0.0,
+            "title": "At Frame",
+            "type": "integer"
+          },
+          "clip_id": {
+            "description": "The clip to cut.",
+            "minLength": 1,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "new_clip_id": {
+            "default": "",
+            "description": "Id for the second half; the server generates one when empty.",
+            "maxLength": 64,
+            "title": "New Clip Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "split-clip",
+            "default": "split-clip",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id",
+          "at_frame"
+        ],
+        "title": "SplitClipRequest",
         "type": "object"
       },
       "SystemInfoResponse": {
@@ -669,6 +1238,313 @@
           "port"
         ],
         "title": "SystemInfoResponse",
+        "type": "object"
+      },
+      "TimebaseSummary": {
+        "additionalProperties": false,
+        "description": "The project's frame rate, in the two forms a UI needs.",
+        "properties": {
+          "den": {
+            "description": "Denominator, e.g. 1001. 1 for whole rates.",
+            "title": "Den",
+            "type": "integer"
+          },
+          "fps": {
+            "description": "Frames per second, for display only.",
+            "title": "Fps",
+            "type": "number"
+          },
+          "num": {
+            "description": "Numerator of the frame rate, e.g. 30000.",
+            "title": "Num",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "num",
+          "den",
+          "fps"
+        ],
+        "title": "TimebaseSummary",
+        "type": "object"
+      },
+      "TimelineResponse": {
+        "additionalProperties": false,
+        "description": "The edit, its history, and how much of it is on disk.",
+        "properties": {
+          "dirty": {
+            "description": "Whether the edit differs from the file.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "What undo and redo would do."
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence; 0 for none.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "pending_commands": {
+            "description": "Edits since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project this timeline belongs to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "timeline": {
+            "$ref": "#/components/schemas/TimelineSummary",
+            "description": "The edit as it stands."
+          }
+        },
+        "required": [
+          "project_id",
+          "timeline",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty"
+        ],
+        "title": "TimelineResponse",
+        "type": "object"
+      },
+      "TimelineSummary": {
+        "additionalProperties": false,
+        "description": "The edit: its rate, its tracks, and how long it is.",
+        "properties": {
+          "clip_count": {
+            "description": "How many clips there are, in total.",
+            "title": "Clip Count",
+            "type": "integer"
+          },
+          "duration_frames": {
+            "description": "Length of the whole edit, in frames.",
+            "title": "Duration Frames",
+            "type": "integer"
+          },
+          "timebase": {
+            "$ref": "#/components/schemas/TimebaseSummary",
+            "description": "The project's frame rate."
+          },
+          "track_count": {
+            "description": "How many tracks there are.",
+            "title": "Track Count",
+            "type": "integer"
+          },
+          "tracks": {
+            "description": "Tracks in display order.",
+            "items": {
+              "$ref": "#/components/schemas/TrackSummary"
+            },
+            "title": "Tracks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "timebase",
+          "tracks",
+          "track_count",
+          "clip_count",
+          "duration_frames"
+        ],
+        "title": "TimelineSummary",
+        "type": "object"
+      },
+      "TrackKind": {
+        "description": "What a track carries, which decides how it is composited and mixed.",
+        "enum": [
+          "video",
+          "audio",
+          "caption",
+          "overlay",
+          "adjustment"
+        ],
+        "title": "TrackKind",
+        "type": "string"
+      },
+      "TrackSummary": {
+        "additionalProperties": false,
+        "description": "One track, with the clips on it in timeline order.",
+        "properties": {
+          "clip_count": {
+            "description": "Clips on this track.",
+            "title": "Clip Count",
+            "type": "integer"
+          },
+          "clips": {
+            "description": "Its clips, in timeline order.",
+            "items": {
+              "$ref": "#/components/schemas/ClipSummary"
+            },
+            "title": "Clips",
+            "type": "array"
+          },
+          "duration_frames": {
+            "description": "End of the last clip on it.",
+            "title": "Duration Frames",
+            "type": "integer"
+          },
+          "hidden": {
+            "description": "Whether it is left out of the output.",
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "index": {
+            "description": "Display order, 0 at the top.",
+            "title": "Index",
+            "type": "integer"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TrackKind",
+            "description": "What this track carries."
+          },
+          "locked": {
+            "description": "Whether edits are refused on it.",
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "muted": {
+            "description": "Whether its audio is muted.",
+            "title": "Muted",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "What to call it; may be empty.",
+            "title": "Name",
+            "type": "string"
+          },
+          "track_id": {
+            "description": "Stable id; the key track commands use.",
+            "title": "Track Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "track_id",
+          "kind",
+          "name",
+          "index",
+          "muted",
+          "locked",
+          "hidden",
+          "clip_count",
+          "duration_frames",
+          "clips"
+        ],
+        "title": "TrackSummary",
+        "type": "object"
+      },
+      "TrimClipRequest": {
+        "additionalProperties": false,
+        "description": "Move one end of a clip to a frame.",
+        "properties": {
+          "clip_id": {
+            "description": "The clip to trim.",
+            "minLength": 1,
+            "title": "Clip Id",
+            "type": "string"
+          },
+          "edge": {
+            "$ref": "#/components/schemas/TrimEdge",
+            "default": "end",
+            "description": "Which end moves."
+          },
+          "gesture": {
+            "default": "",
+            "description": "Drag id: consecutive trims sharing one collapse into a single undo.",
+            "maxLength": 64,
+            "title": "Gesture",
+            "type": "string"
+          },
+          "to_frame": {
+            "description": "Where the chosen end should land.",
+            "minimum": 0.0,
+            "title": "To Frame",
+            "type": "integer"
+          },
+          "type": {
+            "const": "trim-clip",
+            "default": "trim-clip",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "clip_id",
+          "to_frame"
+        ],
+        "title": "TrimClipRequest",
+        "type": "object"
+      },
+      "TrimEdge": {
+        "description": "Which end of a clip a trim moves.",
+        "enum": [
+          "start",
+          "end"
+        ],
+        "title": "TrimEdge",
+        "type": "string"
+      },
+      "UndoResponse": {
+        "additionalProperties": false,
+        "description": "The outcome of Ctrl+Z.\n\n`undone` is false when there was nothing to undo, which is **not** an error:\na user pressing undo on a fresh timeline has made no mistake.",
+        "properties": {
+          "command_id": {
+            "description": "The command that was undone, or empty.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "dirty": {
+            "description": "Whether the edit differs from the file.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "What undo and redo would do now."
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence; 0 for none.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "name": {
+            "description": "What was undone, e.g. `move-clip`; empty for nothing.",
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_commands": {
+            "description": "Edits since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "The project that was edited.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "undone": {
+            "description": "Whether anything was undone.",
+            "title": "Undone",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_id",
+          "undone",
+          "command_id",
+          "name",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty"
+        ],
+        "title": "UndoResponse",
         "type": "object"
       },
       "ValidationField": {
@@ -1640,6 +2516,159 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/commands": {
+      "post": {
+        "description": "Execute one command and journal it, or say precisely why not.\n\nA refused edit costs the user nothing — not even their redo future: the\ncommand is only recorded once it has succeeded. A journalling failure rolls\nthe edit back and says so, because an edit we cannot replay is an edit we\nmust not pretend to have kept.",
+        "operationId": "apply_command_api_v1_projects__project_id__commands_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "lift-clip": "#/components/schemas/LiftClipRequest",
+                    "move-clip": "#/components/schemas/MoveClipRequest",
+                    "replace-track-clips": "#/components/schemas/ReplaceTrackClipsRequest",
+                    "ripple-delete": "#/components/schemas/RippleDeleteRequest",
+                    "slip-clip": "#/components/schemas/SlipClipRequest",
+                    "split-clip": "#/components/schemas/SplitClipRequest",
+                    "trim-clip": "#/components/schemas/TrimClipRequest"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/MoveClipRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TrimClipRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SlipClipRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/SplitClipRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LiftClipRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RippleDeleteRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ReplaceTrackClipsRequest"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommandResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Apply one edit",
+        "tags": [
+          "timeline"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/recovery": {
       "get": {
         "description": "The offers for this project's journal, best first.\n\nAsked at startup when a journal is found for a project that was open when the\nprocess died, and by the recovery dialog when the user asks.",
@@ -1745,6 +2774,114 @@
         "summary": "What can be recovered after a crash",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/redo": {
+      "post": {
+        "description": "Redo one edit, in the same shape as the undo that undid it.",
+        "operationId": "redo_command_api_v1_projects__project_id__redo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Redo the last undone edit",
+        "tags": [
+          "timeline"
         ]
       }
     },
@@ -1971,6 +3108,222 @@
         "summary": "Save a project somewhere else",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/timeline": {
+      "get": {
+        "description": "The whole edit: its rate, its tracks, its clips, and its history.\n\nOne request rather than one per track: the timeline is the thing the user is\nlooking at, and a screen that needs six round trips before it can draw is a\nscreen that flickers on every undo.",
+        "operationId": "get_timeline_api_v1_projects__project_id__timeline_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "The edit as it stands",
+        "tags": [
+          "timeline"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/undo": {
+      "post": {
+        "description": "Undo one edit, and journal the undo.\n\nAn empty stack answers `undone: false` with a 200: pressing Ctrl+Z on a\nfresh timeline is not a mistake, and a 404 there would be a lie about what\nhappened.",
+        "operationId": "undo_command_api_v1_projects__project_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UndoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Undo the last edit",
+        "tags": [
+          "timeline"
         ]
       }
     },

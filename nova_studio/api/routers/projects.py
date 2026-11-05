@@ -31,7 +31,7 @@ from fastapi import APIRouter, Depends, Query, status
 from starlette.responses import Response
 
 from nova_studio.api.dependencies import workspace
-from nova_studio.api.errors import error_responses, problem_response, respond
+from nova_studio.api.errors import error_responses, problem_response, respond, status_for
 from nova_studio.api.mappers.projects import (
     audit_response,
     checkpoint_response,
@@ -51,36 +51,16 @@ from nova_studio.api.schemas.projects import (
     SaveAsRequest,
     SaveProjectResponse,
 )
-from nova_studio.api.workspace import (
-    NS_PROJECT_NO_SUCH_FILE,
-    NS_PROJECT_NOT_OPEN,
-    NS_PROJECT_REFUSED,
-    ProjectWorkspace,
-    not_open,
-)
+from nova_studio.api.workspace import ProjectWorkspace, not_open
 from nova_studio.core.result import Result, err, ok
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from nova_studio.core.errors import NovaError
 
 __all__ = ["router"]
 
 router = APIRouter(tags=["projects"])
-
-#: Where the transport, not the domain, knows which status is truthful. A
-#: severity-derived status says how bad a failure is; the URL says whether the
-#: thing exists. Both matter, and they are not the same question.
-_STATUS_FOR_CODE: dict[str, int] = {
-    NS_PROJECT_NOT_OPEN: status.HTTP_404_NOT_FOUND,
-    NS_PROJECT_NO_SUCH_FILE: status.HTTP_404_NOT_FOUND,
-    NS_PROJECT_REFUSED: 422,
-}
-
-
-def _status_for(error: NovaError) -> int | None:
-    return _STATUS_FOR_CODE.get(error.code)
 
 
 def _answer(
@@ -96,7 +76,7 @@ def _answer(
         to_body=to_body,
         status_code=code,
         instance=instance,
-        status_for=_status_for,
+        status_for=status_for,
     )
 
 

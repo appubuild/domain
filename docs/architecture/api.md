@@ -64,14 +64,17 @@ api/
 ├── schemas/      DTOs: the wire contract, documented field by field
 │   ├── system.py    health, identity, capabilities
 │   ├── projects.py  the project DTOs: summary, open, save, checkpoint, audit
+│   ├── timeline.py  the edit, its history, and the seven commands (§9)
 │   └── problem.py   the error body (RFC 9457)
 ├── mappers/      entity ↔ DTO translation, one module per resource
-│   └── projects.py  Project ↔ ProjectSummary, ProjectAudit → sentences
+│   ├── projects.py  Project ↔ ProjectSummary, ProjectAudit → sentences
+│   └── timeline.py  Timeline → summary, wire command → domain command
 ├── routers/      HTTP endpoints
 │   ├── system.py    /healthz, /api/v1/system/{info,capabilities}
 │   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
-│   └── projects.py  /api/v1/projects/* (§8)
-└── (to come)     resources/ (timeline, media, render, captions, export, plugins)
+│   ├── projects.py  /api/v1/projects/* (§8)
+│   └── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
+└── (to come)     resources/ (media, render, captions, export, plugins)
 ```
 
 Two rules for `schemas/`, stated in that package's `__init__.py`:
@@ -125,12 +128,14 @@ when startup failed.
    ├ host, port, started_ms             │                     ├ heartbeat_seconds
    └ app_version                        │                     └ serve(websocket)
                                         ▼
-                              routers/system.py   routers/events.py
-                                        │                │
-                                        └────────────────┴──► /api/v1/*
-                                                     │
-                                        LoopbackGuard (middleware + handshake)
-                                        SessionToken  (constant-time compare)
+               routers/system.py    routers/events.py
+               routers/projects.py  routers/timeline.py
+                                        │
+                                        ├────────────► /api/v1/*  (token required)
+                                        │
+                                        ▼
+                        LoopbackGuard (middleware + handshake)
+                        SessionToken  (constant-time compare)
 ```
 
 ---
@@ -348,9 +353,10 @@ A crash between 1 and 2 is recovered from; a crash between 2 and 1 is a lie.
 | `NS-PROJECT-4005` | 400 | The journal could not be written; the edit was not acknowledged. |
 | `NS-PROJECT-4220` | 422 | The archive refused the file (corrupt, or not a Nova Studio project). |
 
-The status is the transport's choice, not the domain's: `routers/projects.py`
+The status is the transport's choice, not the domain's: `errors.STATUS_FOR_CODE`
 maps a code to a status where the severity-derived default would mislead, and
-falls through to `errors.ERROR_STATUSES` everywhere else.
+every router falls through to `errors.ERROR_STATUSES` otherwise — one table, so
+two routers cannot end up serving the same code as two different statuses.
 
 ### Caching and performance
 
@@ -367,7 +373,119 @@ falls through to `errors.ERROR_STATUSES` everywhere else.
 
 ---
 
-## 9. Running the service (`server.py`, `cli.py`)
+## 9. The timeline ring (`routers/timeline.py`, the editing half of `workspace.py`)
+
+The edit, over HTTP. If §8 is the file menu, this is the keyboard and the mouse —
+and it is built on one rule, because every other rule follows from it:
+
+    **The timeline is changed by commands and by nothing else.**
+
+A client that could `PUT` a whole new edit would step around validation, undo,
+the journal and the preview cache in one request, and each of those is a
+guarantee the rest of the system is built on. So what crosses the wire is *what
+the user did* — "move this clip to frame 40" — in the domain's own vocabulary,
+and `services/timeline` decides whether it is allowed.
+
+### Endpoints
+
+| Method and path | Returns | Notes |
+|---|---|---|
+| `GET /api/v1/projects/{id}/timeline` | `TimelineResponse` | The edit, its tracks and clips, and the history — one request, because a screen that needs six round trips before it can draw is a screen that flickers on every undo. |
+| `POST /api/v1/projects/{id}/commands` | `CommandResponse` | One command, journalled. 409 when the edit is refused; 422 when the command does not exist. |
+| `POST /api/v1/projects/{id}/undo` | `UndoResponse` | `undone: false` on an empty stack, which is a 200 and not a mistake. |
+| `POST /api/v1/projects/{id}/redo` | `RedoResponse` | The same shape as the undo that undid it. |
+
+### The commands
+
+| `type` | Command | Notes |
+|---|---|---|
+| `move-clip` | `MoveClipCommand` | `gesture` coalesces a drag into one undo step. |
+| `trim-clip` | `TrimClipCommand` | `edge` is `start` or `end`. |
+| `slip-clip` | `SlipClipCommand` | Slides the source window; neither end moves. |
+| `split-clip` | `SplitClipCommand` | `new_clip_id` is generated when the client leaves it blank, and recorded in the journal so a replay does not invent another. |
+| `lift-clip` | `LiftClipCommand` | Removes the clip and leaves the gap. |
+| `ripple-delete` | `RippleDeleteCommand` | Closes the gap **the clip left**, not the space the editor put between two clips. |
+| `replace-track-clips` | `ReplaceTrackClipsCommand` | Makes one track hold exactly these clips: the caption engine's door, and the only command that writes a whole track at once. |
+
+The union is discriminated by `type`, and `type` is also the name the journal
+records — one vocabulary, so a replay rebuilds the command the frontend asked
+for rather than looking it up in a second table that could drift.
+
+### Class diagram
+
+```
+  routers/timeline.py            mappers/timeline.py            api/workspace.py
+  ┌──────────────────────┐  decode  ┌──────────────┐   apply    ┌──────────────────┐
+  │ CommandRequest       │─────────►│ DecodedCommand│──────────►│ editor_for(entry) │
+  │  (discriminated)     │          │ command/name/ │           │  TimelineEditor   │
+  └──────────────────────┘          │ payload       │           │  ├ TimelineStore  │
+                                    └──────────────┘           │  └ CommandHistory │
+                                                                └────────┬─────────┘
+                                                            1. execute   │
+   timeline_response ◄── TimelineSummary ◄── Timeline        2. with_timeline
+   command_response  ◄── CommandOutcome                      3. journal (fsync)
+   undo/redo_response                                        4. publish
+```
+
+### The one transaction, again
+
+`ProjectWorkspace.apply` is the project ring's `store` with a command in front of
+it, and the order is the whole method:
+
+1. **Run the command.** It validates itself against the timeline as it stands
+   and changes the editor's store, or refuses and changes nothing.
+2. **Move the project onto the new timeline** (`with_timeline`, which also prunes
+   effects, transforms, masks and blends belonging to clips that are gone).
+3. **Journal it**, fsynced, so a crash replays it.
+4. **Publish**, last, so a listener reading the project sees the edit.
+
+If the journal write fails the edit is **rolled back** — the command is undone
+and the project put back — and the caller is told. An editor that kept an edit it
+could not replay would be an editor that lies after a crash: the user would be
+shown work that the recovery dialog cannot offer them.
+
+### Undo and redo are edits
+
+Both are journalled, as `undo` and `redo` entries. The journal is append-only and
+its sequences are never reused, so a reverted command becomes *another* entry
+rather than a deletion — and a replay, which folds the journal onto the last
+checkpoint (command → apply, `undo` → drop the last command applied, `redo` →
+re-apply it), reproduces the edit **including what the user threw away**. A
+replay that skipped the undo would hand back work they deliberately discarded.
+
+The undo stack belongs to the session, not to the request: `ProjectWorkspace`
+keeps one `TimelineEditor` per open project, created on first use and held until
+the project closes. An editor rebuilt per request is an undo stack that is always
+empty.
+
+### Errors
+
+| Code | Status | Meaning |
+|---|---|---|
+| `NS-COMMAND-4104` | 409 | The command was refused: the clip is not there, the frame is outside it, the move would overlap. A conflict with what is on the timeline, which is what 409 means — the domain calls it a warning because for the domain it is a normal answer. |
+| `NS-TIMELINE-4090` | 409 | Somebody tried to replace the timeline wholesale while an editor owns it. |
+| `NS-PROJECT-4005` | 500 | The journal could not be written; the edit was rolled back. |
+| `NS-PROJECT-4040` | 404 | The project is not open in this session. |
+
+Which status a code is served as is decided once, in `errors.py::STATUS_FOR_CODE`.
+Two routers that each decided would eventually disagree, and a frontend that has
+to know which router it called in order to read a status is a frontend with a bug
+waiting.
+
+### Caching and performance
+
+* **One editor per project**, so the history is not rebuilt on every call.
+* **Commands carry what changed.** `affected`, `invalidate` and `rerender` let the
+  frontend redraw two clips instead of refetching the timeline, which is what
+  makes a drag feel like a drag.
+* **Gestures coalesce.** A drag sends a command per frame; `merge_key` collapses
+  the ones sharing a `gesture` into a single undo step, so one drag is one Ctrl+Z.
+* **Handlers are `def`**, so a long command runs in the thread pool and does not
+  stall the socket carrying render progress.
+
+---
+
+## 10. Running the service (`server.py`, `cli.py`)
 
 ```bash
 make serve                     # or: python -m nova_studio serve
@@ -392,7 +510,7 @@ thing in the process.
 
 ---
 
-## 10. Caching strategy
+## 11. Caching strategy
 
 None in this layer, on purpose. A cache in front of a service is a second copy of
 the service's truth with an invalidation rule that is always slightly wrong. The
@@ -411,7 +529,7 @@ What the API does instead of caching:
 
 ---
 
-## 11. Performance strategy
+## 12. Performance strategy
 
 | Concern | Approach |
 |---|---|
@@ -429,7 +547,7 @@ optimistic UI on the frontend and binary frames rather than JSON.
 
 ---
 
-## 12. Events
+## 13. Events
 
 | Topic | Published by | Payload |
 |---|---|---|
@@ -450,15 +568,20 @@ They are session events: what the window's title, dirty marker and recent-files
 list are driven by. They are not domain events and they are never journalled —
 a replay does not re-open projects.
 
+The timeline ring adds no topics of its own. `CommandHistory` already publishes
+`command.executed`, `command.reverted` and `command.failed`, and an edit also
+publishes `project.edited` once it is journalled. Two families, because they
+answer different questions: what a command did, and what that means for the file.
+
 The REST read `/api/v1/events?since=&limit=` returns the same frames the socket
 would have sent, so a client that cannot hold a socket open — a CLI, a test, a
 recovery path after a long gap — is not a second-class citizen.
 
 ---
 
-## 13. Testing
+## 14. Testing
 
-`tests/api/`, 199 tests, all of which run in `make check`.
+`tests/api/`, 228 tests, all of which run in `make check`.
 
 | File | What it pins |
 |---|---|
@@ -468,6 +591,7 @@ recovery path after a long gap — is not a second-class citizen.
 | `test_events_router.py` | The tail of history; a gap older than the retained history is a 416 that names the oldest sequence kept. |
 | `test_ws_bridge.py` | hello → event → ping/pong → resync → goodbye; `complete: false` is honest; heartbeats carry the dropped count; a malformed frame does not kill the socket. |
 | `test_projects_router.py` | The file menu: a close saves nothing; a second close is a 404; reopening forgets the dirty flag; a checkpoint truncates exactly `sequence - checkpoint_sequence - 1` entries; an edit that cannot be journalled is refused rather than acknowledged; a broken journal arrives through the injected factory, not by reaching inside. |
+| `test_timeline_router.py` | The edit: every command applies and is journalled under its wire name with replayable arguments; a split's generated id is recorded; a refused command is a 409 that changes nothing (not even the redo future); undo and redo are journalled too; an edit that cannot be recorded is rolled back; the editor is the same object on the next request, so Ctrl+Z still has something to undo. |
 | `test_server.py` | A real server on a real port: the port it reports is the port it is on, the token it announces is the token it accepts, the endpoint file is private. |
 | `test_openapi.py` | The committed contract matches the routes (`make openapi` after a route change); every path is versioned or public; every field is documented. |
 
@@ -485,7 +609,7 @@ without a sleep and a hope.
 
 ---
 
-## 14. Frontend architecture notes
+## 15. Frontend architecture notes
 
 The frontend (stage 4) consumes this layer under rules that fall out of the above:
 
@@ -509,12 +633,13 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 15. Future expansion
+## 16. Future expansion
 
 | Next | Why the seam is already there |
 |---|---|
-| Resource routers (timeline, media, render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs. The project ring is the worked example. |
-| Editing over the wire (`POST /api/v1/projects/{id}/commands`) | Commands are already the public editing API and are already journalled; an endpoint that accepts a serialised command, executes it through the workspace and returns the events it produced is a thin translation of what `ProjectWorkspace.store` does today. |
+| Resource routers (media, render, captions, export, plugins) | `include_router` with the token dependency; `respond()` for the mapping; `schemas/` + `mappers/` for the DTOs; `ProjectWorkspace.apply` for anything that edits. The project and timeline rings are the worked example. |
+| Replaying a journal | The entries already carry everything a replay needs: the wire name, the arguments, and `undo`/`redo` markers. What is missing is the fold itself (§9), and the recovery dialog that offers it (`services/projects/recovery.py` already returns the plan). |
+| A second editing scope (captions, colour) | `UndoScope` already separates the stacks, so a caption editor gets its own history next to the timeline's; `ProjectWorkspace` would hold one editor per scope per project. |
 | Multi-window | `ProjectWorkspace` is a value on `app.state`, not a global; two windows in one process would each get one, and the "already open here" rule (4090) is already per-workspace. |
 | Command endpoints (`POST /api/v1/timeline/commands`) | Commands are already the public editing API; a router that accepts a serialised command and returns the events it produced is a thin translation. |
 | Job endpoints (progress, cancel) | The job scheduler is already the only way long work runs (ADR-0010); progress arrives as events, so the socket carries it for free. |
@@ -525,7 +650,7 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 
 ---
 
-## 16. Where to read next
+## 17. Where to read next
 
 * [`ARCHITECTURE.md`](ARCHITECTURE.md) §4 — where L4 sits in the ring model.
 * [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the transport decision and its alternatives.

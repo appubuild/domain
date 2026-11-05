@@ -24,6 +24,12 @@ stall every other client, including the socket carrying export progress. FastAPI
 runs a plain `def` handler in its worker thread pool instead, which is what these
 want — so the guards here are `threading` locks, not `asyncio` ones.
 
+**Editing.** A timeline is changed by commands and by nothing else — see
+:meth:`ProjectWorkspace.apply`. The workspace is what pairs a project with the
+editor that changes it: one project, one store, one undo stack, one lock. Undo and
+redo are journalled like any other edit, because a recovery that replayed an
+already-undone command would hand the user back work they threw away.
+
 **Events.** Every lifecycle change is published, because the window is not the
 only thing that cares: the autosave indicator, the recent-projects list and a
 future "this file changed on disk" watcher all need to know, and none of them
@@ -39,6 +45,7 @@ from typing import TYPE_CHECKING, Any, Final
 
 from nova_studio import __version__
 from nova_studio.core.clock import SystemClock
+from nova_studio.core.commands import CommandHistory, CommandOutcome
 from nova_studio.core.errors import ErrorDomain, ErrorSeverity, NovaError
 from nova_studio.core.ident import new_entity_id
 from nova_studio.core.result import Result, err, ok
@@ -54,11 +61,13 @@ from nova_studio.services.projects import (
     RecoveryPlan,
     plan_recovery,
 )
+from nova_studio.services.timeline import TimelineEditor, TimelineStore
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
     from pathlib import Path
 
+    from nova_studio.core.commands import Command
     from nova_studio.core.events import EventBus
     from nova_studio.domain.persistence import CheckpointPolicy, ProjectManifest, RevisionRef
     from nova_studio.ports.clock import Clock
@@ -72,15 +81,21 @@ __all__ = [
     "NS_PROJECT_NOT_OPEN",
     "NS_PROJECT_NO_SUCH_FILE",
     "NS_PROJECT_REFUSED",
+    "NS_TIMELINE_OUT_OF_SYNC",
+    "REDO_ENTRY",
+    "UNDO_ENTRY",
     "Checkpoint",
     "OpenProject",
     "ProjectWorkspace",
     "SavedProject",
+    "TimelineEdit",
+    "TimelineSession",
     "already_open",
     "journal_failed",
     "never_saved",
     "no_such_file",
     "not_open",
+    "out_of_sync",
     "refused",
 ]
 
@@ -106,6 +121,20 @@ NS_PROJECT_NO_SUCH_FILE: Final[str] = "NS-PROJECT-4041"
 
 #: The project the caller asked for could not be constructed (an empty name).
 NS_PROJECT_REFUSED: Final[str] = "NS-PROJECT-4220"
+
+#: The project the caller asked for could not be constructed (an empty name).
+NS_TIMELINE_OUT_OF_SYNC: Final[str] = "NS-TIMELINE-4090"
+
+#: How an undo and a redo are recorded. The journal is append-only and its
+#: sequences are never reused, so a reverted command becomes *another* entry
+#: rather than a deletion — and a replay undoes what the user undid.
+UNDO_ENTRY: Final[str] = "undo"
+REDO_ENTRY: Final[str] = "redo"
+
+#: How many command names one open project remembers. A name is needed only to
+#: tell the frontend which command an undo reverted, so the oldest are the ones
+#: worth forgetting.
+_NAMES_REMEMBERED: Final[int] = 512
 
 #: The journal name of a checkpoint entry, so a recovery read can find it.
 CHECKPOINT_ENTRY: Final[str] = "checkpoint"
@@ -163,6 +192,36 @@ class Checkpoint:
     truncated: int
 
 
+@dataclass(frozen=True, slots=True)
+class TimelineSession:
+    """One project's edit: the project as it stands, and the door it is edited through.
+
+    Handed out as a pair because the two are only meaningful together: the
+    editor's store holds the timeline, and the project is the timeline's owner. A
+    caller holding one without the other can ask a question that has already been
+    answered differently.
+    """
+
+    project: OpenProject
+    editor: TimelineEditor
+
+
+@dataclass(frozen=True, slots=True)
+class TimelineEdit:
+    """The outcome of one edit — a command applied, undone or redone.
+
+    `command` is `None` and `name` is empty when there was nothing to undo or
+    redo, which is a state and not a failure: pressing Ctrl+Z on a fresh
+    timeline is not a mistake the user made.
+    """
+
+    project: OpenProject
+    editor: TimelineEditor
+    command: Command | None
+    name: str
+    outcome: CommandOutcome
+
+
 @dataclass(slots=True)
 class _Entry:
     """The mutable half: what the workspace keeps, always under its lock."""
@@ -176,6 +235,12 @@ class _Entry:
     dirty: bool = False
     journal_sequence: int = 0
     checkpoint_sequence: int = 0
+    #: The door this project's timeline is edited through, made on first use and
+    #: kept for the life of the entry: the undo stack is part of the session.
+    editor: TimelineEditor | None = None
+    #: Wire name by command id, so an undo can say which command it reverted.
+    #: Bounded, because a long session executes more commands than a menu needs.
+    command_names: dict[str, str] = field(default_factory=dict)
     #: One lock per project, not one per workspace: two windows editing two
     #: projects must not serialise on each other.
     lock: threading.RLock = field(default_factory=threading.RLock)
@@ -361,6 +426,8 @@ class ProjectWorkspace:
         with self._entry_for(project_id) as entry:
             if entry is None:
                 return err(not_open(project_id))
+            if entry.editor is not None and project.timeline is not entry.editor.store.current():
+                return err(out_of_sync(project_id))
             now_ms = self._clock.now_ms()
             previous_project = entry.project
             previous_autosave = entry.autosave
@@ -378,6 +445,143 @@ class ProjectWorkspace:
             value = entry.as_value()
         self._publish("edited", project_id, name=project.name, pending=value.pending_commands)
         return ok(value)
+
+    def timeline(self, project_id: str) -> Result[TimelineSession]:
+        """The project's edit, and the door it is edited through.
+
+        The editor is made on first use and kept for as long as the project is
+        open, because the undo stack *is* the session: re-creating it per request
+        would leave Ctrl+Z with nothing to undo.
+        """
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            return ok(TimelineSession(project=entry.as_value(), editor=self._editor_for(entry)))
+
+    def apply(
+        self,
+        project_id: str,
+        command: Command,
+        *,
+        name: str = "edit",
+        payload: Mapping[str, object] | None = None,
+    ) -> Result[TimelineEdit]:
+        """Execute one command, then make it durable.
+
+        The order is the whole method:
+
+        1. **Run the command.** It validates itself against the timeline as it
+           stands and changes the editor's store, or refuses and changes nothing.
+        2. **Move the project onto the new timeline** and mark it dirty.
+        3. **Journal the command**, fsynced, so a crash replays it.
+        4. **Publish**, last, so a listener reading the project sees the edit.
+
+        If the journal write fails the edit is *rolled back* — the command is
+        undone and the project is put back — and the caller is told, rather than
+        being reassured about an edit that a crash would lose. An editor that
+        keeps an edit it cannot guarantee is an editor that lies after a crash.
+        """
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            editor = self._editor_for(entry)
+            executed = editor.execute(command)
+            if executed.is_err():
+                return err(executed.unwrap_err())
+            outcome = executed.unwrap()
+            now_ms = self._clock.now_ms()
+            previous_project = entry.project
+            previous_autosave = entry.autosave
+            previous_dirty = entry.dirty
+            entry.project = previous_project.with_timeline(editor.store.current())
+            entry.dirty = True
+            entry.autosave = entry.autosave.recorded(at_ms=now_ms)
+            failure = self._append(entry, name, now_ms, payload or {})
+            if failure is not None:
+                reverted = editor.undo()
+                entry.project = previous_project
+                entry.autosave = previous_autosave
+                entry.dirty = previous_dirty
+                if reverted.is_err():
+                    # Worse than the journal failure: the edit may be half done.
+                    return err(reverted.unwrap_err())
+                return err(failure)
+            self._remember(entry, command.command_id, name)
+            value = entry.as_value()
+        self._publish("edited", project_id, name=name, pending=value.pending_commands)
+        return ok(
+            TimelineEdit(project=value, editor=editor, command=command, name=name, outcome=outcome)
+        )
+
+    def undo(self, project_id: str) -> Result[TimelineEdit]:
+        """Undo the last edit, and journal that it was undone.
+
+        The undo is journalled like any other edit: the journal is append-only
+        and its sequences are never reused, so a reverted command is recorded as
+        an `undo` entry rather than deleted. A replay that skipped the undo would
+        hand the user back work they deliberately threw away.
+
+        An empty stack is `Ok` with `command=None`, not a failure.
+        """
+        return self._revert(project_id, entry_name=UNDO_ENTRY, undo=True)
+
+    def redo(self, project_id: str) -> Result[TimelineEdit]:
+        """Redo the last undone edit, journalled the same way as an undo."""
+        return self._revert(project_id, entry_name=REDO_ENTRY, undo=False)
+
+    def _revert(self, project_id: str, *, entry_name: str, undo: bool) -> Result[TimelineEdit]:
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            editor = self._editor_for(entry)
+            reverted = editor.undo() if undo else editor.redo()
+            if reverted.is_err():
+                return err(reverted.unwrap_err())
+            command = reverted.unwrap()
+            if command is None:
+                nothing = TimelineEdit(
+                    project=entry.as_value(),
+                    editor=editor,
+                    command=None,
+                    name="",
+                    outcome=CommandOutcome.none(),
+                )
+                return ok(nothing)
+            name = self._name_of(entry, command)
+            now_ms = self._clock.now_ms()
+            previous_project = entry.project
+            previous_autosave = entry.autosave
+            previous_dirty = entry.dirty
+            entry.project = previous_project.with_timeline(editor.store.current())
+            entry.dirty = True
+            entry.autosave = entry.autosave.recorded(at_ms=now_ms)
+            failure = self._append(
+                entry,
+                entry_name,
+                now_ms,
+                {"command_id": command.command_id, "name": name},
+            )
+            if failure is not None:
+                # Put the edit back: an undo we cannot record is an undo that
+                # would be replayed as if it never happened.
+                restored = editor.redo() if undo else editor.undo()
+                entry.project = previous_project
+                entry.autosave = previous_autosave
+                entry.dirty = previous_dirty
+                if restored.is_err():
+                    return err(restored.unwrap_err())
+                return err(failure)
+            value = entry.as_value()
+        self._publish("edited", project_id, name=entry_name, pending=value.pending_commands)
+        return ok(
+            TimelineEdit(
+                project=value,
+                editor=editor,
+                command=command,
+                name=name,
+                outcome=CommandOutcome(),
+            )
+        )
 
     def audit(self, project_id: str) -> Result[ProjectAudit]:
         """What a user would want to know about the state of this project."""
@@ -497,6 +701,37 @@ class ProjectWorkspace:
             return
         with entry.lock:
             yield entry
+
+    def _editor_for(self, entry: _Entry) -> TimelineEditor:
+        """The editor for one entry, made on first use from the project's timeline.
+
+        Seeded from `entry.project` rather than from a second source, so "which
+        timeline am I editing" has one answer however many times it is asked.
+        """
+        if entry.editor is None:
+            entry.editor = TimelineEditor(
+                store=TimelineStore(timeline=entry.project.timeline),
+                # The history is built here rather than defaulted, because a
+                # default `CommandHistory` carries no bus: `command.executed`
+                # would never be published, and the frontend would have to poll
+                # for changes the bus was built to announce.
+                history=CommandHistory(bus=self._bus, clock=self._clock.monotonic),
+                project_id=str(entry.project.project_id),
+                bus=self._bus,
+                clock=self._clock.monotonic,
+            )
+        return entry.editor
+
+    @staticmethod
+    def _remember(entry: _Entry, command_id: str, name: str) -> None:
+        """Note what a command was called, so its undo can be named."""
+        entry.command_names[command_id] = name
+        while len(entry.command_names) > _NAMES_REMEMBERED:
+            entry.command_names.pop(next(iter(entry.command_names)))
+
+    @staticmethod
+    def _name_of(entry: _Entry, command: Command) -> str:
+        return entry.command_names.get(command.command_id, "")
 
     def _new_session(self, path: Path, *, manifest: ProjectManifest | None) -> ProjectSession:
         archive: ProjectArchive = self._archive_factory(
@@ -624,6 +859,18 @@ def already_open(project_id: str) -> NovaError:
         domain=ErrorDomain.PROJECT,
         severity=ErrorSeverity.WARNING,
         remedy="Close it first, or open it in a new window.",
+    )
+
+
+def out_of_sync(project_id: str) -> NovaError:
+    """The timeline was replaced wholesale while an editor owns it."""
+    return NovaError(
+        NS_TIMELINE_OUT_OF_SYNC,
+        f"the timeline of '{project_id}' cannot be replaced while it is being edited",
+        domain=ErrorDomain.PROJECT,
+        severity=ErrorSeverity.WARNING,
+        remedy="Edit the timeline with a command, not by replacing it.",
+        retryable=False,
     )
 
 

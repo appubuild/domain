@@ -737,7 +737,7 @@ CI runs these in order and stops at the first failure. `make check` runs all of 
 | `api-contract.md` | REST + WebSocket surface |
 | `database-schema.md` | Normalised DDL, indexes, migrations |
 | `project-file-format.md` | `.nova` container specification · **written** |
-| `api.md` | The L4 API layer: the loopback service, the session token and guard, `problem+json`, the WebSocket protocol, the project ring (§8: open/save/checkpoint/close), the generated contract · **written** |
+| `api.md` | The L4 API layer: the loopback service, the session token and guard, `problem+json`, the WebSocket protocol, the project ring (§8: open/save/checkpoint/close), the timeline ring (§9: commands, undo, journalling), the generated contract · **written** |
 | `api-contract.json` | The OpenAPI contract, generated from the routes by `make openapi` · **generated** |
 | `services.md` | The L3 service layer: conventions, effects, project lifecycle, media ingest, timeline commands, the render plan, the caption pipeline and house styles · **written** |
 | `media-and-rendering.md` | §7 of this document: the frame pipeline, the domain model, the render port · **written** |
