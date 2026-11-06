@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { EVENTS_PATH } from './src/core/events/url';
 import type { ClientRequest } from 'node:http';
 import { defineConfig } from 'vitest/config';
 import type { ProxyOptions } from 'vite';
@@ -57,7 +58,7 @@ function sessionToken(): string | undefined {
 function authorise(proxyReq: ClientRequest): void {
   const token = sessionToken();
   if (token === undefined) return;
-  if (proxyReq.path.startsWith('/ws')) {
+  if (proxyReq.path.startsWith(EVENTS_PATH)) {
     proxyReq.path += proxyReq.path.includes('?') ? `&token=${token}` : `?token=${token}`;
     return;
   }
@@ -74,8 +75,12 @@ export default defineConfig({
   server: {
     strictPort: true,
     proxy: {
+      // Before `/api`, and necessarily so: Vite matches a proxy by prefix and
+      // takes the first one that matches, so a socket entry registered after
+      // the REST entry would be handled by a proxy that cannot upgrade — which
+      // answers an upgrade request with a 200 and a closed connection.
+      '/api/v1/ws': serviceProxy({ ws: true }),
       '/api': serviceProxy({}),
-      '/ws': serviceProxy({ ws: true }),
       // Unauthenticated by design: it is the one endpoint the shell polls
       // before it has a token anywhere to keep one.
       '/healthz': serviceProxy({}),
@@ -126,9 +131,16 @@ function serviceProxy(
     changeOrigin: true,
     ...extra,
     configure: (proxy) => {
-      proxy.on('proxyReq', (proxyReq) => {
+      // Both events, and the second is easy to miss: http-proxy emits
+      // `proxyReq` for an ordinary request and `proxyReqWs` for an upgrade, so
+      // a proxy that only hooked the first would attach the token to every
+      // REST call and to no WebSocket — which fails as a 403 on the handshake
+      // rather than as anything that mentions a token.
+      const attach = (proxyReq: ClientRequest): void => {
         authorise(proxyReq);
-      });
+      };
+      proxy.on('proxyReq', attach);
+      proxy.on('proxyReqWs', attach);
     },
   };
 }

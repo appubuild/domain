@@ -313,9 +313,19 @@ Dev server proxy (`vite.config.ts`):
 
 | Prefix | Target | Notes |
 | --- | --- | --- |
+| `/api/v1/ws` | `API_ORIGIN` | the socket, with the token in the query string |
 | `/api` | `API_ORIGIN` | the REST surface, with the token attached |
-| `/ws` | `API_ORIGIN` | WebSocket, proxy-enabled, token in the query string |
 | `/healthz` | `API_ORIGIN` | readiness probe; unauthenticated by design |
+
+Two details in that table are easy to get wrong, and both fail as a mysterious
+403 rather than as anything that mentions a token:
+
+* **The socket entry comes first.** Vite matches a proxy by prefix and takes the
+  first that matches, so `/api/v1/ws` registered *after* `/api` is handled by a
+  proxy that cannot upgrade — which answers a handshake with a 200 and a closed
+  connection.
+* **http-proxy emits `proxyReqWs` for an upgrade, not `proxyReq`.** Hook only the
+  first and the token is attached to every REST call and to no WebSocket.
 
 `changeOrigin` rewrites `Host` to the target, because the service checks Host and
 Origin and a dev server reached from anywhere but loopback would otherwise be
