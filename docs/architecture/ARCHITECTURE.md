@@ -628,6 +628,11 @@ must never take down the editor: every entrypoint call is guarded and counted.
 
 ## 10. Frontend architecture
 
+**Detail:** [`frontend.md`](frontend.md) — the toolchain, the contract seam, the client,
+the error model, the layering rules, testing and the performance budget. What follows
+here is the normative short form: the tree the window grows into, and the four decisions
+a contributor needs before opening an editor.
+
 ```
 frontend/src
 ├── app/            shell: routing, providers, window chrome, dock manager host
@@ -724,8 +729,10 @@ a schema version; API is versioned under `/api/v1`. Deprecation policy: two mino
 | Layering | `scripts/check_layering.py` | 0 violations |
 | Unit tests | `pytest -m "unit or integration"` | pass, ≥ 85% branch coverage on `core/`, `domain/`, `services/` |
 | Media tests | `pytest -m media` | pass (real encoded assets, generated not committed) |
+| Contract freshness | `make contract-check` | no drift between routes, `api-contract.json` and `contract.ts` |
 | Frontend types | `tsc --noEmit` (strict, `exactOptionalPropertyTypes`) | 0 errors |
 | Frontend lint | `eslint` | 0 errors |
+| Frontend tests | `vitest run` | pass |
 | Frontend build | `vite build` | succeeds |
 | Perf | `scripts/bench_*` | regression budget vs baseline JSON |
 | Packaging | `apps/desktop` smoke | window opens, project loads |
@@ -751,7 +758,7 @@ CI runs these in order and stops at the first failure. `make check` runs all of 
 | `media-and-rendering.md` | §7 of this document: the frame pipeline, the domain model, the render port · **written** |
 | `services.md` | L3: feature layout, `Result` discipline, the effect, project, media, timeline, render and caption catalogues |
 | `plugin-sdk.md` | How to write a plugin |
-| `frontend-architecture.md` | UI layer detail |
+| `frontend.md` | §10 of this document: the window's toolchain, the contract seam, the API client, the error model, state management, theming, testing and performance · **written** |
 | `render-pipeline.md` | Frame pipeline detail |
 | `testing-strategy.md` | Test pyramid, fixtures, media generation |
 | `performance-budgets.md` | Measured budgets per subsystem |

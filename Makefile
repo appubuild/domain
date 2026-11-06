@@ -114,8 +114,83 @@ openapi: ## Regenerate docs/architecture/api-contract.json from the routes
 test-cov: ## Run tests with a branch-coverage report
 	$(PYTEST) $(PYTEST_DEFAULT) --cov=nova_studio --cov-report=term-missing --cov-report=xml
 
+# ---------------------------------------------------------------------------
+# Frontend (stage 4)
+#
+# The frontend owns its own toolchain and lockfile (ADR-0001): npm is the only
+# thing this Makefile reaches for, and it reaches for it from frontend/. Nothing
+# here installs into the backend venv, and nothing in the venv reaches back.
+#
+# `contract` is the seam between the two halves. The OpenAPI document is
+# generated from the routes, `contract.ts` is generated from the document, and
+# `contract-check` fails when either is stale — so a route that changes without
+# the frontend hearing about it cannot pass `make check`.
+# ---------------------------------------------------------------------------
+
+# Present when node/npm is on this machine, empty otherwise. A backend-only
+# contributor is not blocked by a toolchain the backend does not need; CI has
+# both, so CI always runs the frontend gates.
+NODE := $(shell command -v npm >/dev/null 2>&1 && echo npm)
+# Every frontend recipe is run from frontend/, so npm reads that package.json
+# and that lockfile and nothing else (ADR-0001).
+NPM  := npm
+NPNX := npm exec --
+
+.PHONY: contract
+contract: ## Generate api-contract.json from the routes, then contract.ts from it
+	$(PY) -m nova_studio openapi --out docs/architecture/api-contract.json
+	$(PY) scripts/codegen_contract.py
+
+.PHONY: contract-check
+contract-check: ## Fail if the committed API contract or generated client is stale
+	$(PY) scripts/codegen_contract.py --check
+	$(PY) -m nova_studio openapi --check docs/architecture/api-contract.json
+
+frontend/node_modules: frontend/package.json frontend/package-lock.json
+	cd frontend && $(NPM) install
+	@touch frontend/node_modules
+
+.PHONY: frontend-install
+frontend-install: frontend/node_modules ## Install the frontend dependencies
+
+.PHONY: frontend-types
+frontend-types: frontend/node_modules ## Type-check the frontend (tsc strict)
+	cd frontend && $(NPNX) tsc --noEmit
+
+.PHONY: frontend-lint
+frontend-lint: frontend/node_modules ## Lint the frontend and verify formatting
+	cd frontend && $(NPNX) eslint .
+	cd frontend && $(NPNX) prettier --check .
+
+.PHONY: frontend-format
+frontend-format: frontend/node_modules ## Format the frontend and apply safe lint fixes
+	cd frontend && $(NPNX) prettier --write .
+	cd frontend && $(NPNX) eslint . --fix
+
+.PHONY: frontend-test
+frontend-test: frontend/node_modules ## Run the frontend unit and component tests
+	cd frontend && $(NPNX) vitest run
+
+.PHONY: frontend-build
+frontend-build: frontend/node_modules ## Build the production frontend bundle
+	cd frontend && $(NPNX) vite build
+
+.PHONY: frontend-check
+frontend-check: contract-check frontend-types frontend-lint frontend-test ## Run every frontend gate
+
+.PHONY: dev
+dev: frontend/node_modules ## Run the API service and the Vite dev server together
+	@echo "starting the service on $(or $(NOVA_API_ORIGIN),http://127.0.0.1:8765)"
+	@echo "the Vite dev server proxies /api, /ws and /healthz to it"
+	$(PY) -m nova_studio serve & \
+	  trap 'kill %1 2>/dev/null' EXIT; \
+	  cd frontend && $(NPNX) vite
+
 .PHONY: check
-check: lint types layering hygiene test ## Run the full local gate before opening a PR
+# The frontend gates run where npm exists and are skipped where it does not, so
+# a backend-only contributor is never blocked by a toolchain the backend does
+# not use. CI always has both, so CI always runs the whole thing.
+check: lint types layering hygiene test $(if $(NODE),frontend-check,) ## Run the full local gate before opening a PR
 	@echo ""
 	@echo "all gates passed"
 
@@ -141,10 +216,8 @@ distclean: clean ## Also remove the virtualenv
 # Deliberately absent rather than stubbed. When the stage lands, so does its
 # target:
 #
-#   Stage 4  frontend/       frontend-types, frontend-lint, frontend-test,
-#                            frontend-build, dev
 #   Stage 5  infra/persist   migrate
 #   Stage 8  render engine   bench, goldens
-#   Stage 12 api/            serve, smoke, openapi
+#   Stage 12 api/            smoke
 #   Stage 14 packaging       package, package-smoke, desktop
 # ---------------------------------------------------------------------------
