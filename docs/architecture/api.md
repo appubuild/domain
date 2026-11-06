@@ -765,8 +765,16 @@ rewrites the sentence.
 ```bash
 make serve                     # or: python -m nova_studio serve
 python -m nova_studio serve --endpoint-file /tmp/session.json
+python -m nova_studio serve --allow-host tablet.local      # adds, never replaces
 python -m nova_studio openapi --out docs/architecture/api-contract.json
+python -m nova_studio openapi --check docs/architecture/api-contract.json
 ```
+
+`--allow-host` is for a development server reached from another machine, and it
+**adds to** the guard's loopback set rather than replacing it
+(`allowed_hosts_for`): a flag that quietly removed `127.0.0.1` would turn "let
+me test from my tablet" into "the service is down". `make dev` passes it when
+`DEV_HOST` is set, and a packaged shell passes nothing.
 
 | Piece | Responsibility |
 |---|---|

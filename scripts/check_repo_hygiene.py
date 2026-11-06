@@ -147,6 +147,14 @@ ALLOWLIST: Final[dict[str, str]] = {
         "the L3 service catalogue: one entry per service, prose, and read by "
         "reference rather than start to finish"
     ),
+    # A lockfile is generated and committed on purpose: an install that resolves
+    # `^19.1.0` differently on Tuesday than it did on Monday is an install that
+    # breaks on Tuesday with no code change anywhere. It is text, it diffs, and
+    # it is the only artefact here whose size *should* grow.
+    "frontend/package-lock.json": (
+        "the frontend's dependency lock: committed so an install is reproducible, "
+        "which is the one case where a generated file belongs in git"
+    ),
 }
 
 #: Source files scanned for untracked TODO markers.

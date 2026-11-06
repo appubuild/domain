@@ -290,13 +290,37 @@ delivered:
 `ShellLocation` is a two-field seam (`search`, `path`) with a `replace` callback, so the
 token-stripping logic is tested without a browser (`config.test.ts`).
 
+**The session token in development.** The service hands out a fresh 256-bit token
+per launch and refuses anything without one (ADR-0005 §4). In production the
+shell puts that token in the window's URL, where the app reads it and takes it
+out again. A dev server has no shell, so **the proxy is the shell's stand-in**:
+`make dev` starts the service with `--endpoint-file .nova/dev-endpoint.json`,
+and the proxy reads the token from that file on every request and attaches it —
+an `Authorization` header for HTTP, a `token` query parameter for the WebSocket,
+which cannot carry a header on its handshake. The app itself never learns that
+development is different, which is the point: a dev-only branch in `main.tsx` is
+a branch production never exercises.
+
+The file is read per request rather than once at start-up, because the two
+processes start together and the file does not exist for the first few hundred
+milliseconds; a missing token is a 401 the window can explain, not a crash.
+
 Dev server proxy (`vite.config.ts`):
 
 | Prefix | Target | Notes |
 | --- | --- | --- |
-| `/api` | `NOVA_API_ORIGIN` | the REST surface |
-| `/ws` | `NOVA_API_ORIGIN` | WebSocket, proxy-enabled |
-| `/healthz` | `NOVA_API_ORIGIN` | readiness probe |
+| `/api` | `API_ORIGIN` | the REST surface, with the token attached |
+| `/ws` | `API_ORIGIN` | WebSocket, proxy-enabled, token in the query string |
+| `/healthz` | `API_ORIGIN` | readiness probe; unauthenticated by design |
+
+`changeOrigin` rewrites `Host` to the target, because the service checks Host and
+Origin and a dev server reached from anywhere but loopback would otherwise be
+refused by the very guard that protects it. `allowedHosts` is open for the same
+reason — this server is a development tool, never shipped — and `NOVA_DEV_HOST`
+pins it to one host when you would rather it were strict. `make dev` binds the
+service to a known port (`DEV_PORT`, 8765) instead of an ephemeral one: the proxy
+has to be pointed at it once, at start-up, and an ephemeral port is one the proxy
+learns too late.
 
 ## 10.9 State management
 
@@ -415,7 +439,7 @@ anyone who lives inside that folder.
 | `make frontend-test` | `npm test` | `vitest run` |
 | `make frontend-build` | `npm run build` | `tsc --noEmit && vite build` |
 | `make frontend-check` | — | contract-check + types + lint + test |
-| `make dev` | `npm run dev` | Service and Vite dev server together, proxied |
+| `make dev` | `npm run dev` | Service and Vite dev server together, proxied, with the token attached |
 
 `make check` runs the backend gates and, **where npm is installed**, `frontend-check` —
 so a backend-only contributor is not blocked by a toolchain the backend does not use,
