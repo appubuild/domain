@@ -174,8 +174,12 @@ Add the site to Google Search Console and submit
 
 Build command `npm run build`, output directory `dist/`.
 
+A step-by-step walkthrough for each host (including cPanel and WordPress-style
+shared hosting) lives in **[docs/HOSTING.md](docs/HOSTING.md)**.
+
 SPA rewrites are included for the common hosts:
 
+- **Apache / cPanel / LiteSpeed** — `public/.htaccess` ships inside `dist/` with the rewrite, HTTPS redirect, caching, compression and security headers.
 - **Netlify / Cloudflare Pages** — `netlify.toml` and `public/_redirects` (`/* → /index.html 200`).
 - **Vercel** — `vercel.json` rewrite + cache/security headers.
 - **Amazon S3 + CloudFront** — set the error document to `/index.html` with a 200
@@ -230,10 +234,9 @@ Owner decisions / tasks before going live:
    Accessibility pages must be reviewed by counsel for your entity, the states you
    operate in, and any advertising or call-tracking you enable. Then set
    `SITE.showLaunchNotices = false` to remove the setup notices.
-6. **Imagery licensing** — replace the placeholder imagery in `public/images/`
-   with your licensed photography (keep the same filenames or update
-   `services.ts`). Six categories currently use a branded placeholder tile:
-   `bedroom-remodeling`, `electrical`, `window-installation`,
-   `door-installation`, `concrete-paving` and `locksmith`.
+6. **Imagery licensing** — all 15 categories and the hero currently use
+   generated placeholder photography. Replace it with your licensed images
+   before launch (keep the same filenames in `public/images/`, or update the
+   `image` field in `services.ts`).
 7. **Search Console / analytics** — verify the domain, submit the sitemap, and add
    your GA4 measurement id if desired.
