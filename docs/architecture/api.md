@@ -520,7 +520,8 @@ only thing that makes the endpoint fail at all is the project not being open.
 | `POST /api/v1/projects/{id}/media/import` | `ImportResponse` | `assets`, `failures`, `duplicates` and a `summary` sentence — whatever the files turned out to be. |
 | `POST /api/v1/projects/{id}/media/ensure` | 202 `EnsureMediaResponse` | Queue whatever the project is missing: one job per proxy, one per thumbnail strip. |
 | `GET /api/v1/system/cache` | `MediaCacheResponse` | What the install is holding, oldest use first. |
-| `DELETE /api/v1/system/cache` | `MediaCacheDroppedResponse` | Free it — `?kind=proxy|thumbnail` to free one kind. |
+| `DELETE /api/v1/system/cache` | `MediaCacheDroppedResponse` | Free it — `?kind=proxy` or `?kind=thumbnail` to free one kind. |
+| `POST /api/v1/system/cache/trim` | `MediaCacheTrimResponse` | Bring it back within the budget: LRU first, and `shortfall_bytes` when even that was not enough. |
 
 ### Where the probe happens
 
@@ -622,11 +623,20 @@ its verbs live on the system router.
 |---|---|---|
 | `GET /api/v1/system/cache` | `MediaCacheResponse` | Entries oldest-use-first, plus the `total` and the bytes they name. |
 | `DELETE /api/v1/system/cache?kind=` | `MediaCacheDroppedResponse` | How many entries and bytes went. `kind` may be `proxy` or `thumbnail`; a kind we do not have is a 422. |
+| `POST /api/v1/system/cache/trim` | `MediaCacheTrimResponse` | Evict least-recently-used entries until the budget is met. |
+
+**The budget is enforced where the bytes arrive, not on a timer.** Every job
+carries it (`MediaJobFactory.budget`) and calls `enforce_budget` the moment it
+has recorded a new artefact, naming that artefact in `keep` so a job cannot
+evict its own work — an entry is least-recently-used the instant it is created.
+`trim` is therefore for the two states a job is not running to fix: **a budget
+that was just lowered**, and **bytes admitted before there was a budget at all**.
 
 What is deliberately missing: **no per-project delete.** An entry belongs to the
 install, not to a project, so deleting by project would leave entries no project
-claims and reclaim nothing. `GET` is the read an inspector needs today and the
-input byte-budgeted eviction will need tomorrow (§7.18).
+claims and reclaim nothing. And **no "evict this entry"**: a cache is derived
+data, and a user picking individual files out of it is a user doing the LRU
+policy's job worse (§7.19).
 
 ---
 
@@ -801,6 +811,14 @@ What the API does instead of caching:
   (`media-and-rendering.md` §7.17).
 * **Sequence numbers on the socket**, which let a client skip a refetch entirely
   rather than re-validate one.
+* **The derived-media cache is budgeted, and admission enforces it.** A job that
+  has just recorded bytes evicts least-recently-used entries until the install
+  is back within `CacheBudget` (8 GiB by default), so the cache cannot be the
+  reason a disk filled up. `POST /api/v1/system/cache/trim` is the manual half.
+* **`GET …/preview/sources` says which copy is being decoded.** A proxy is
+  transparent, which is right for a frame and wrong for a status line: the panel
+  cannot tell which copy it drew, so it polls this instead of guessing — and it
+  is the same question `ensure` answers with jobs, asked without starting any.
 * **Capability negotiation once per session** (`/api/v1/system/capabilities`),
   not per operation.
 

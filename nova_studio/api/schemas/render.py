@@ -23,6 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 __all__ = [
     "PreviewCacheResponse",
+    "PreviewSourcesResponse",
     "PreviewWarmRequest",
     "PreviewWarmResponse",
 ]
@@ -84,6 +85,32 @@ class PreviewWarmResponse(_Strict):
     gaps: list[str] = Field(
         default_factory=list,
         description="Assets that could not be decoded, by id.",
+    )
+
+
+class PreviewSourcesResponse(_Strict):
+    """Which copy of each asset the preview is decoding, and what is missing.
+
+    The read behind a status line: **the panel can say what it is showing**.
+    `sources` names every asset on the timeline — `original` included, because
+    "this clip is decoding the original" is exactly what a user has to be able
+    to read while a proxy transcodes — and `pending` names the ones whose proxy
+    is missing but worth having, which is the same answer the panel gets by
+    asking `POST …/media/ensure`, minus the jobs.
+
+    `scale` travels with it so the client can tell why: a preview zoomed past
+    1:1 has *asked* for the original, and a panel that showed "proxy missing"
+    there would be lying.
+    """
+
+    project_id: str = Field(description="Whose timeline was asked about.")
+    scale: float = Field(description="The preview scale the answer is for.")
+    sources: dict[str, str] = Field(
+        description="`asset_id -> original | proxy | thumbnail`, for every asset on the timeline."
+    )
+    pending: list[str] = Field(
+        default_factory=list,
+        description="Assets whose proxy is missing and worth having, by id.",
     )
 
 

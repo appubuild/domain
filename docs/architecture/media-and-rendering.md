@@ -948,12 +948,10 @@ sparse seek into long-GOP footage costs a whole group of pictures and at
 thumbnail scale frame 20 stands in for frame 37 exactly. That mapping is a pure
 function of the file, which is what keeps the cache stable across a reopen.
 
-**Future expansion.** Byte-budgeted eviction over `select_for_eviction` is the
-other half of `record`, and the reason every row carries a size — the API to
-serve it (`entries`, `drop`) already exists (§7.18). Nothing in `MediaCache` has
-to change for it: the producer calls `record()` when the file is complete, and
-the planner calls `forget()` when the budget says so. Audio in the proxy waits
-on the mixer (§7.4): the frame pool is video-only today, so a proxy is too.
+**Future expansion.** Audio in the proxy waits on the mixer (§7.4): the frame
+pool is video-only today, so a proxy is too. Nothing in `MediaCache` has to
+change for it — the producer calls `record()` when the file is complete, and
+eviction (§7.19) calls `forget()` when the budget says so.
 
 ### 7.18 Asking for the media a project needs (`api/media_jobs.py`)
 
@@ -1012,7 +1010,7 @@ bytes went. Both are on the system router rather than under a project, because
 one project's proxies are not another's and deleting by project would leave
 entries no project claims.
 
-**Testing.** `tests/api/test_media_jobs_api.py` (19) pins the response — 202
+**Testing.** `tests/api/test_media_jobs_api.py` (23) pins the response — 202
 with the jobs, nothing queued when everything is held, `proxies=false` and
 `thumbnails=false`, 404 for a project that is not open, 503 for a full pool —
 and one test runs the real executor end to end: two jobs settle as `succeeded`,
@@ -1020,5 +1018,60 @@ the cache then lists one proxy and one thumbnail, a second ask queues nothing,
 and the delete frees both. `tests/services/test_media_cache.py` (42) pins
 `entries`/`drop` against the dict index, including the rule that a row whose
 file has gone is not something we hold.
+
+### 7.19 How much we keep (`services/media/eviction.py`)
+
+A cache nobody trims is a disk that fills up, and the user finds out during an
+export. The budget is a number — `CacheBudget(max_bytes)`, 8 GiB by default —
+and the rule is enforced **where the bytes arrive**: a job records a finished
+artefact and then calls `enforce_budget(cache, budget, keep={key})` before it
+returns. No sweeper, no timer, no daemon: the only moment that can exceed the
+budget is the moment that adds to it.
+
+```
+   ProxyJob / ThumbnailJob            services/media/eviction.py        domain
+  ┌──────────────────────┐  record   ┌────────────────────┐
+  │ bytes promoted, row  │──────────►│ enforce_budget(    │
+  │ written — now enforce│           │   cache, budget,   │  ┌────────────────────┐
+  └──────────────────────┘           │   keep={my key})   │─►│ select_for_eviction│
+                                     └─────────┬──────────┘  │  LRU · skip pinned │
+                                               │             │  smallest set that │
+                                               ▼ forget(key) │  fits              │
+                                        EvictionReport       └────────────────────┘
+                                        freed · freed_bytes
+                                        shortfall · failures
+```
+
+Four decisions, each one a bug going the other way:
+
+1. **`keep` is not optional.** An entry is least-recently-used the instant it is
+   created, so the job that wrote a proxy would otherwise be first in line to
+   evict it — and a transcode that deleted its own output is a bug nobody would
+   believe. Keys in `keep` are never chosen, but their bytes are still counted,
+   or the policy would think there was more room than there is.
+2. **The smallest set that fits, never everything old.** Emptying a thumbnail
+   cache to admit one proxy is how an editor feels slow for an hour.
+3. **A failure to forget is counted, not raised.** Eviction is housekeeping: a
+   job that made a perfectly good proxy must not fail because an unrelated entry
+   could not be deleted. But it is reported — a cache that silently stopped
+   reclaiming is a bug nobody would find otherwise.
+4. **A shortfall is reported, not hidden.** When everything evictable is pinned,
+   or the budget is smaller than one artefact, `shortfall` says how many bytes
+   are still over. A caller that cannot hear about it cannot do anything about
+   it either.
+
+**Where the trim endpoint fits.** Admission sees every artefact *from now on*,
+so `POST /api/v1/system/cache/trim` exists for the two states it cannot see: a
+budget that was just lowered, and bytes admitted before there was a budget at
+all. Both are ordinary states for an install that has been running for a year.
+
+**Testing.** `tests/services/test_media_eviction.py` (14) pins the choice — LRU
+order, ties by key, smallest set that fits, pinned entries spared, `keep` never
+chosen but still counted — and the carrying out: what goes is forgotten and
+counted, a refusal to forget lands in `failures` rather than in an exception,
+and a shortfall is reported when every entry is pinned.
+`tests/services/test_media_generation.py` (61) gained the two that matter most:
+a full cache is trimmed **by** the job that filled it, and the artefact that job
+just made is still there afterwards.
 
 ---

@@ -16,7 +16,8 @@ services/media/
 ├── keys.py         the cache key vocabulary: what a derived artefact is called
 ├── cache.py        MediaCache — which *file* that key means, per asset
 ├── thumbnails.py   thumbnail_indices — the frames a strip should ask for
-└── generation.py   ProxyJob / ThumbnailJob — how the bytes get made
+├── generation.py   ProxyJob / ThumbnailJob — how the bytes get made
+└── eviction.py     the byte budget: what to throw away, and how much of it
 ```
 
 **Backend / frontend.** One API per intent. The frontend drops forty files on a
@@ -49,6 +50,7 @@ spawned here.
 | `thumbnail_requests(project, cache=…)` | "which thumbnails are missing" |
 | `ProxyJob(request, …)(context)` | "make this proxy, as a job" |
 | `ThumbnailJob(asset_id, source, requests, …)(context)` | "make these stills, as a job" |
+| `enforce_budget(cache, budget, …)` | "what has to go so this fits, and did it fit" |
 
 **Transparency.** `MediaCache` is why §7.2's promise holds. `resolve` falls back
 *towards the original* — a missing thumbnail answers with a proxy, a missing
@@ -80,6 +82,14 @@ Proxies are planned for the assets the **timeline references**, thumbnails for
 every asset in the project: transcoding two hundred files somebody imported but
 never cut is how a cache becomes forty gigabytes, while eight decodes of each is
 how a media bin becomes browsable.
+
+**The budget is enforced where bytes arrive.** `record` is half of a contract:
+the other half is `enforce_budget` (`eviction.py`), called by a job the moment
+it has admitted new bytes, with the key it just wrote named in `keep` so the
+artefact is never evicted by the job that made it. The choice itself is the
+domain's `select_for_eviction` — least-recently-used, pinned entries spared,
+smallest set that fits — because the index that describes entries and the
+worker that admits them must share one rule.
 
 **Caching.** None in the code — but the *output* is the cache key.
 `thumbnail_indices` is deterministic, so a strip laid out today and the same
@@ -114,9 +124,8 @@ FFmpeg, no filesystem, no numpy beyond what the domain already carries.
 * **Submission**, once `services/jobs/` exists: `proxy_requests` and
   `thumbnail_requests` are the pure half a scheduler needs — "what is missing",
   asked as often as it likes, because a request for something already held is
-  simply not made.
-* **Byte-budgeted eviction** over `select_for_eviction`, which is the other half
-  of `MediaCache.record` and the reason every row carries a size.
+  simply not made. What exists today is the ask (`POST …/media/ensure`), not
+  the judgement of *when* to ask it.
 * **Audio in the proxy.** The frame pool is video-only today, so a proxy is too;
   the day a mixer exists, `proxy_output_spec` gains an audio stream and nothing
   else changes.
@@ -125,6 +134,12 @@ FFmpeg, no filesystem, no numpy beyond what the domain already carries.
 from __future__ import annotations
 
 from nova_studio.services.media.cache import ExistsFn, MediaCache, SourceResolver, UnlinkFn
+from nova_studio.services.media.eviction import (
+    DEFAULT_CACHE_BUDGET,
+    EvictionReport,
+    enforce_budget,
+    plan_eviction,
+)
 from nova_studio.services.media.generation import (
     DEFAULT_THUMBNAIL_WIDTH,
     PROXY_JOB_KIND,
@@ -167,6 +182,7 @@ from nova_studio.services.media.proxy import (
 from nova_studio.services.media.thumbnails import DEFAULT_STRIP_COUNT, thumbnail_indices
 
 __all__ = [
+    "DEFAULT_CACHE_BUDGET",
     "DEFAULT_PROXY_POLICY",
     "DEFAULT_STRIP_COUNT",
     "DEFAULT_THUMBNAIL_WIDTH",
@@ -178,6 +194,7 @@ __all__ = [
     "THUMBNAIL_JOB_KIND",
     "THUMBNAIL_PREFIX",
     "DecodeSource",
+    "EvictionReport",
     "ExistsFn",
     "GenerationStage",
     "IngestFailure",
@@ -193,6 +210,7 @@ __all__ = [
     "ThumbnailJob",
     "ThumbnailRequest",
     "UnlinkFn",
+    "enforce_budget",
     "is_safe_key",
     "kind_of",
     "proxy_job_spec",

@@ -26,12 +26,14 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Depends, Query
 
 from nova_studio import __version__
-from nova_studio.api.dependencies import session_state, workspace
+from nova_studio.api.dependencies import media_factory, session_state, workspace
 from nova_studio.api.errors import error_responses, respond
+from nova_studio.api.media_jobs import MediaJobFactory  # noqa: TC001 — FastAPI resolves it
 from nova_studio.api.schemas.media import (
     MediaCacheDroppedResponse,
     MediaCacheEntrySummary,
     MediaCacheResponse,
+    MediaCacheTrimResponse,
 )
 from nova_studio.api.schemas.system import (
     CapabilitiesResponse,
@@ -52,6 +54,7 @@ from nova_studio.api.workspace import ProjectWorkspace  # noqa: TC001 — FastAP
 from nova_studio.core.result import ok
 from nova_studio.domain.persistence import CacheKind  # noqa: TC001 — FastAPI resolves it
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION
+from nova_studio.services.media import enforce_budget
 
 if TYPE_CHECKING:
     from nova_studio.api.state import SessionState
@@ -149,6 +152,38 @@ async def read_cache(projects: ProjectWorkspace = Depends(workspace)) -> Any:
         ],
         total=len(entries),
         size_bytes=sum(entry.size_bytes for entry in entries),
+    )
+
+
+@router.post(
+    "/api/v1/system/cache/trim",
+    response_model=MediaCacheTrimResponse,
+    responses=error_responses(),
+    summary="Bring the cache back within its budget",
+)
+async def trim_cache(
+    factory: MediaJobFactory = Depends(media_factory),
+    projects: ProjectWorkspace = Depends(workspace),
+) -> Any:
+    """Evict least-recently-used derived media until the budget is met.
+
+    Admission does this by itself — a job enforces the budget the moment it
+    records new bytes — so this endpoint is for the two cases admission cannot
+    see: **a budget that was just lowered**, and **bytes admitted before there
+    was a budget at all**. Both are states the install can be in; neither is
+    one a job is running to fix.
+
+    What it will not do is evict a pinned entry, or empty the cache to satisfy
+    a budget: the smallest set that fits is the whole policy, because a cache
+    emptied to make room is a cache rebuilt while the user waits.
+    """
+    report = enforce_budget(projects.media_cache, factory.budget)
+    return MediaCacheTrimResponse(
+        entries=len(report.freed),
+        size_bytes=report.freed_bytes,
+        shortfall_bytes=report.shortfall,
+        failures=len(report.failures),
+        summary=report.summary,
     )
 
 

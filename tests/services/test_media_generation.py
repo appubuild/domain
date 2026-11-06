@@ -29,6 +29,7 @@ filesystem.
 from __future__ import annotations
 
 import pickle
+from dataclasses import replace
 from fractions import Fraction
 from functools import partial
 from typing import TYPE_CHECKING, Any
@@ -48,7 +49,7 @@ from nova_studio.domain.media import (
     MediaInfo,
     VideoStreamInfo,
 )
-from nova_studio.domain.persistence import CacheEntry
+from nova_studio.domain.persistence import CacheBudget, CacheEntry, derived_path
 from nova_studio.domain.project import Project
 from nova_studio.domain.timeline import Clip, Timeline, Track, TrackKind
 from nova_studio.ports.imaging import Interpolation
@@ -143,17 +144,17 @@ class FakeIndex:
     """The `CacheIndex` port, as a dictionary. Can refuse to write, on cue."""
 
     def __init__(self, *, fail_put: bool = False) -> None:
-        self.entries: dict[str, CacheEntry] = {}
+        self.rows: dict[str, CacheEntry] = {}
         self.removed: list[str] = []
         self.fail_put = fail_put
 
     def get(self, key: str) -> CacheEntry | None:
-        return self.entries.get(key)
+        return self.rows.get(key)
 
     def put(self, entry: CacheEntry) -> Result[None]:
         if self.fail_put:
             return err(NovaError("NS-PERSIST-5001", "the cache index is unavailable"))
-        self.entries[entry.key] = entry
+        self.rows[entry.key] = entry
         return ok(None)
 
     def touch(self, key: str, *, at_ms: int) -> Result[None]:
@@ -161,14 +162,14 @@ class FakeIndex:
 
     def remove(self, key: str) -> Result[None]:
         self.removed.append(key)
-        self.entries.pop(key, None)
+        self.rows.pop(key, None)
         return ok(None)
 
     def entries(self, kind: Any = None) -> tuple[CacheEntry, ...]:
-        return tuple(self.entries.values())
+        return tuple(self.rows.values())
 
     def total_bytes(self) -> int:
-        return sum(entry.size_bytes for entry in self.entries.values())
+        return sum(entry.size_bytes for entry in self.rows.values())
 
     def close(self) -> None:
         return None
@@ -691,7 +692,7 @@ class TestTheProxyJob:
         cache, index, _disk = cache_in(tmp_path)
         request = proxy_requests(cut(asset("a1")), cache=cache)[0]
         self._job(request, cache=cache)(FakeContext())
-        assert index.entries[request.key].size_bytes == 30 * 4_096
+        assert index.rows[request.key].size_bytes == 30 * 4_096
 
     def test_the_job_reports_what_it_is_doing(self, tmp_path: Path) -> None:
         cache, _index, _disk = cache_in(tmp_path)
@@ -712,6 +713,22 @@ class TestTheProxyJob:
         self._job(request, cache=cache)(context)
         assert len(context.reports) < 10
 
+    def test_a_full_cache_is_trimmed_and_never_of_what_was_just_made(self, tmp_path: Path) -> None:
+        """Admission is the moment to enforce the budget — and the artefact
+        being admitted is exempt, or a job would delete its own work."""
+        cache, index, disk = cache_in(tmp_path)
+        request = proxy_requests(cut(asset("a1")), cache=cache)[0]
+        stale = row_for("thumb-a9-f0-w320.jpg")
+        index.put(stale)
+        disk.there.add(str(derived_path(tmp_path, stale.kind, stale.key)))
+
+        job = replace(self._job(request, cache=cache), budget=CacheBudget(max_bytes=1))
+        outcome = job(FakeContext())
+
+        assert outcome.is_ok(), outcome.unwrap_err()
+        assert stale.key not in index.rows
+        assert request.key in index.rows
+
     def test_a_file_that_will_not_open_leaves_nothing(self, tmp_path: Path) -> None:
         cache, index, _disk = cache_in(tmp_path)
         request = proxy_requests(cut(asset("a1")), cache=cache)[0]
@@ -721,7 +738,7 @@ class TestTheProxyJob:
 
         assert outcome.is_err()
         assert outcome.unwrap_err().code == MediaErrorCode.UNREADABLE
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_a_file_with_no_video_stream_is_refused(self, tmp_path: Path) -> None:
         cache, index, _disk = cache_in(tmp_path)
@@ -732,7 +749,7 @@ class TestTheProxyJob:
 
         assert outcome.is_err()
         assert outcome.unwrap_err().code == MediaErrorCode.UNSUPPORTED
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_an_encoder_that_will_not_open_leaves_nothing(self, tmp_path: Path) -> None:
         cache, index, _disk = cache_in(tmp_path)
@@ -745,7 +762,7 @@ class TestTheProxyJob:
         )(FakeContext())
 
         assert outcome.is_err()
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_a_frame_the_encoder_rejects_aborts_the_target(self, tmp_path: Path) -> None:
         """The point of staging: a half-written proxy is not a proxy."""
@@ -757,7 +774,7 @@ class TestTheProxyJob:
 
         assert outcome.is_err()
         assert sink.aborted
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_a_stream_that_fails_midway_is_reported_as_a_decode_failure(
         self, tmp_path: Path
@@ -772,7 +789,7 @@ class TestTheProxyJob:
 
         assert outcome.is_err()
         assert outcome.unwrap_err().code == MediaErrorCode.DECODE_FAILED
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_cancelling_stops_between_frames_and_aborts(self, tmp_path: Path) -> None:
         cache, index, _disk = cache_in(tmp_path)
@@ -786,7 +803,7 @@ class TestTheProxyJob:
         assert outcome.is_err()
         assert outcome.unwrap_err().code == JobErrorCode.CANCELLED
         assert sink.aborted
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_a_cache_that_will_not_record_takes_the_bytes_with_it(self, tmp_path: Path) -> None:
         """A complete file no row names is disk eviction will never reclaim, so
@@ -799,7 +816,7 @@ class TestTheProxyJob:
 
         assert outcome.is_err()
         assert disk.deleted == [request.destination]
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_the_decoder_is_closed_even_when_the_encode_fails(self, tmp_path: Path) -> None:
         """A decoder holds memory the OS will not reclaim for us."""
@@ -861,13 +878,28 @@ class TestTheThumbnailJob:
         cache, index, _disk = cache_in(tmp_path)
         requests = thumbnail_requests(project_with(asset("a1")), cache=cache)
         store = StillStore()
-
         outcome = self._job(requests, cache=cache, store=store)(FakeContext())
 
         assert outcome.is_ok()
         assert len(store.files) == 8
-        assert set(index.entries) == {request.key for request in requests}
+        assert set(index.rows) == {request.key for request in requests}
         assert outcome.unwrap().artefacts == tuple(request.destination for request in requests)
+
+    def test_a_full_cache_is_trimmed_once_the_last_still_lands(self, tmp_path: Path) -> None:
+        """Once per strip, not once per picture: eight passes to admit eight
+        JPEGs would be eight times the work for the same outcome."""
+        cache, index, disk = cache_in(tmp_path)
+        requests = thumbnail_requests(project_with(asset("a1")), cache=cache)
+        stale = row_for("proxy-a9-h720.mkv", size_bytes=8 * 1_048_576)
+        index.put(stale)
+        disk.there.add(str(derived_path(tmp_path, stale.kind, stale.key)))
+
+        job = replace(self._job(requests, cache=cache), budget=CacheBudget(max_bytes=1))
+        outcome = job(FakeContext())
+
+        assert outcome.is_ok(), outcome.unwrap_err()
+        assert stale.key not in index.rows
+        assert set(index.rows) == {request.key for request in requests}
 
     def test_a_still_is_snapped_back_to_a_keyframe(self, tmp_path: Path) -> None:
         """A sparse seek into long-GOP footage costs a whole group of pictures;
@@ -906,7 +938,7 @@ class TestTheThumbnailJob:
 
         assert outcome.is_err()
         assert outcome.unwrap_err().code == MediaErrorCode.DECODE_FAILED
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_a_destination_that_cannot_be_written_stops_the_job(self, tmp_path: Path) -> None:
         """The still sink renames into place, so nothing was half-written; the
@@ -918,7 +950,7 @@ class TestTheThumbnailJob:
         outcome = self._job(requests, cache=cache, store=store)(FakeContext())
 
         assert outcome.is_err()
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_cancelling_stops_between_stills(self, tmp_path: Path) -> None:
         cache, index, _disk = cache_in(tmp_path)
@@ -930,7 +962,7 @@ class TestTheThumbnailJob:
 
         assert outcome.is_err()
         assert outcome.unwrap_err().code == JobErrorCode.CANCELLED
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_five_stills_that_landed_before_a_failure_are_five_the_panel_can_show(
         self, tmp_path: Path
@@ -942,7 +974,7 @@ class TestTheThumbnailJob:
 
         self._job(requests, cache=cache, store=store)(FakeContext())
 
-        assert len(index.entries) == 5
+        assert len(index.rows) == 5
 
     def test_a_cache_that_will_not_record_deletes_the_still(self, tmp_path: Path) -> None:
         cache, index, disk = cache_in(tmp_path, fail_put=True)
@@ -952,7 +984,7 @@ class TestTheThumbnailJob:
 
         assert outcome.is_err()
         assert disk.deleted == [requests[0].destination]
-        assert index.entries == {}
+        assert index.rows == {}
 
     def test_the_decoder_is_closed_even_when_a_still_fails(self, tmp_path: Path) -> None:
         cache, _index, _disk = cache_in(tmp_path)

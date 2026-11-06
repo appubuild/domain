@@ -34,16 +34,20 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 
-from nova_studio.api.dependencies import workspace
+from nova_studio.api.dependencies import media_factory, workspace
 from nova_studio.api.errors import error_responses, problem_response, status_for
+
+# Runtime, not just for typing: `isinstance` is how the handlers narrow the
+# "renderer or refusal" union, and that needs the class itself. `MediaJobFactory`
+# is a dependency FastAPI resolves, and a name that exists only for mypy is not
+# a dependency — it is a query parameter.
+from nova_studio.api.media_jobs import MediaJobFactory  # noqa: TC001 — FastAPI resolves it
 from nova_studio.api.schemas.render import (
     PreviewCacheResponse,
+    PreviewSourcesResponse,
     PreviewWarmRequest,
     PreviewWarmResponse,
 )
-
-# Runtime, not just for typing: `isinstance` is how the handlers narrow the
-# "renderer or refusal" union, and that needs the class itself.
 from nova_studio.api.workspace import OpenProject, not_open
 from nova_studio.services.render import PreviewRenderer, Viewport, plan_preview
 
@@ -262,6 +266,53 @@ def warm_preview(
         open_sources=renderer.open_sources,
         seeks=stats.seeks,
         gaps=_gap_ids(renderer),
+    )
+
+
+@router.get(
+    "/api/v1/projects/{project_id}/preview/sources",
+    response_model=PreviewSourcesResponse,
+    responses=error_responses(),
+    summary="Which copy of each asset the preview is decoding",
+)
+def preview_sources(
+    request: Request,
+    project_id: str,
+    width: int = Query(960, ge=2, description="The panel's width, in device pixels."),
+    height: int = Query(540, ge=2, description="The panel's height, in device pixels."),
+    zoom: float = Query(1.0, gt=0, description="A deliberate multiplier on the fitted scale."),
+    factory: MediaJobFactory = Depends(media_factory),
+    projects: ProjectWorkspace = Depends(workspace),
+) -> Any:
+    """Say what the preview is showing, including when it is the original.
+
+    A proxy is transparent by design: the frame endpoint answers with a picture
+    whichever copy it decoded, and the panel cannot tell — which is right for a
+    frame and wrong for a status line. This is the read that lets the editor say
+    "decoding original" while a proxy transcodes, and it is the same question
+    `POST …/media/ensure` answers with jobs, asked without starting any.
+
+    Cheap and idempotent, so a panel may poll it: the scale is integer
+    arithmetic and the pending list is one index lookup per asset on the
+    timeline. Nothing is decoded and no file is opened.
+    """
+    path = request.url.path
+    shown = projects.get(project_id)
+    if shown is None:
+        return _refusal(not_open(project_id), path)
+
+    size = shown.project.settings.frame_size
+    plan = plan_preview(size.width, size.height, Viewport(width=width, height=height), zoom=zoom)
+    sources = projects.preview_sources(project_id, scale=plan.scale)
+    pending = [
+        job.asset_id
+        for job in factory.plan(shown.project, projects.media_cache, proxies=True, thumbnails=False)
+    ]
+    return PreviewSourcesResponse(
+        project_id=project_id,
+        scale=plan.scale,
+        sources=sources,
+        pending=sorted(pending),
     )
 
 

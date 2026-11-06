@@ -90,6 +90,12 @@ def put_on_a_track(
     assert response.status_code == 200, response.json()
 
 
+def asset_ids(client: TestClient, auth: dict[str, str], project_id: str) -> list[str]:
+    """The ids in the bin, in import order."""
+    body = client.get(f"/api/v1/projects/{project_id}/media", headers=auth).json()
+    return [str(asset["asset_id"]) for asset in body["assets"]]
+
+
 def clip_ids(client: TestClient, auth: dict[str, str], project_id: str) -> list[str]:
     """The ids of the clips on the video track, in order."""
     body = client.get(f"/api/v1/projects/{project_id}/timeline", headers=auth).json()
@@ -111,6 +117,20 @@ def project(client: TestClient, auth: dict[str, str], clip: Path) -> str:
 @pytest.fixture
 def clip(tmp_path: Path) -> Path:
     return write_video(tmp_path / "clip.mp4")
+
+
+def _settles(client: TestClient, auth: dict[str, str], job_id: str) -> str:
+    """Watch one job to its end. A test may poll; a client may not."""
+    import time
+
+    deadline = time.monotonic() + 120.0
+    row: dict[str, Any] = {}
+    while time.monotonic() < deadline:
+        row = client.get(f"/api/v1/jobs/{job_id}", headers=auth).json()
+        if not row.get("active"):
+            break
+        time.sleep(0.05)
+    return str(row.get("status", ""))
 
 
 def decode(image: bytes) -> Any:
@@ -312,6 +332,81 @@ class TestWarming:
             headers=auth,
         )
         assert response.status_code == 404
+
+
+class TestSayingWhatIsBeingDecoded:
+    """`GET /api/v1/projects/{id}/preview/sources`.
+
+    A proxy is transparent, which is right for a frame and wrong for a status
+    line: the panel cannot tell which copy it drew, and the user cannot tell
+    whether the editor is slow because a proxy is missing. This is the read
+    that lets it say so — the same question `ensure` answers with jobs, asked
+    without starting any.
+    """
+
+    def test_it_names_the_original_too(
+        self, client: TestClient, auth: dict[str, str], clip: Path
+    ) -> None:
+        """Absence would be ambiguous: not on the timeline, or on it and
+        decoding the original?"""
+        project_id = project(client, auth, clip)
+        response = client.get(
+            f"/api/v1/projects/{project_id}/preview/sources",
+            params=PANEL,
+            headers=auth,
+        )
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["project_id"] == project_id
+        assert list(body["sources"].values()) == ["original"]
+        # The fitted scale, not a guess: a 640-wide panel on a 1920-wide project
+        # asks for a third, and at a third the proxy is what is wanted.
+        assert body["scale"] == pytest.approx(640 / 1920)
+
+    def test_the_asset_whose_proxy_is_missing_is_pending(
+        self, client: TestClient, auth: dict[str, str], clip: Path
+    ) -> None:
+        """The word a panel needs in order to call `ensure` — and to show
+        "proxy building" instead of nothing."""
+        project_id = project(client, auth, clip)
+        body = client.get(
+            f"/api/v1/projects/{project_id}/preview/sources",
+            params=PANEL,
+            headers=auth,
+        ).json()
+        assert body["pending"] == asset_ids(client, auth, project_id)
+
+    def test_nothing_is_pending_once_the_work_has_been_done(
+        self, client: TestClient, auth: dict[str, str], clip: Path, app: Any
+    ) -> None:
+        """Idempotent by construction: what is held is not asked for again."""
+        project_id = project(client, auth, clip)
+        ensured = client.post(
+            f"/api/v1/projects/{project_id}/media/ensure",
+            json={},
+            headers=auth,
+        )
+        assert ensured.status_code == 202, ensured.json()
+        for job in ensured.json()["jobs"]:
+            _settles(client, auth, str(job["job_id"]))
+
+        body = client.get(
+            f"/api/v1/projects/{project_id}/preview/sources",
+            params=PANEL,
+            headers=auth,
+        ).json()
+
+        assert body["pending"] == []
+        assert set(body["sources"].values()) == {"proxy"}
+
+    def test_a_project_that_is_not_open_has_nothing_to_say(
+        self, client: TestClient, auth: dict[str, str]
+    ) -> None:
+        response = client.get("/api/v1/projects/nope/preview/sources", params=PANEL, headers=auth)
+        assert response.status_code == 404
+
+    def test_it_needs_a_token(self, client: TestClient, clip: Path) -> None:
+        assert client.get("/api/v1/projects/any/preview/sources", params=PANEL).status_code == 401
 
 
 class TestForgetting:

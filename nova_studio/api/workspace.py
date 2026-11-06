@@ -68,7 +68,7 @@ from nova_studio.infra.preview import (
     encoder_for,
     media_type_for,
 )
-from nova_studio.services.media import MediaCache, MediaIngestor
+from nova_studio.services.media import DecodeSource, MediaCache, MediaIngestor
 from nova_studio.services.projects import (
     DEFAULT_AUTOSAVE,
     AutosaveState,
@@ -637,6 +637,32 @@ class ProjectWorkspace:
         if entry is None:
             return {}
         return self._media_cache.sources_for(entry.project, scale=scale)
+
+    def preview_sources(self, project_id: str, *, scale: float) -> dict[str, str]:
+        """Which copy every asset **on the timeline** would decode, at ``scale``.
+
+        The read behind a status line, not the one behind a frame: it names the
+        originals too, because "this clip is decoding the original" is exactly
+        what a panel has to be able to say — and an asset that is absent from
+        :meth:`sources_for` is indistinguishable from one that is not on the
+        timeline at all.
+
+        An unknown project gets an empty mapping, for the reason
+        :meth:`sources_for` does: the router has already excluded it, and a
+        `Result` here would put error handling on a read a panel polls.
+        """
+        with self._guard:
+            entry = self._open.get(project_id)
+        if entry is None:
+            return {}
+        chosen = self._media_cache.sources_for(entry.project, scale=scale)
+        sources: dict[str, str] = {}
+        for track in entry.project.timeline.tracks:
+            for clip in track.clips:
+                if entry.project.asset(clip.asset_id) is None:
+                    continue
+                sources[clip.asset_id] = chosen.get(clip.asset_id, str(DecodeSource.ORIGINAL))
+        return sources
 
     # -- media -------------------------------------------------------------
 

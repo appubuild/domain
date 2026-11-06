@@ -29,6 +29,11 @@ to the worker is a few qualified names, a path and the request.
 question about the project *and* the cache, and the answer is a list of
 `(spec, body)` pairs the router then submits. Keeping it here means the router
 stays a transport: it maps HTTP words to one call, and maps the answer back.
+
+**Why the budget is chosen here.** A job enforces it the moment it admits bytes,
+and the budget is a property of the install, not of a request — so it is bound
+once, at startup, and carried into every body. A worker that had to look it up
+would need a settings service it does not have.
 """
 
 from __future__ import annotations
@@ -50,7 +55,7 @@ from nova_studio.infra.persistence.paths import (
 )
 from nova_studio.infra.preview import still_sink
 from nova_studio.infra.render import PyAVRenderer
-from nova_studio.services.media import MediaCache
+from nova_studio.services.media import DEFAULT_CACHE_BUDGET, MediaCache
 from nova_studio.services.media.generation import (
     ClockFactory,
     DecoderFactory,
@@ -67,6 +72,7 @@ from nova_studio.services.media.generation import (
 
 if TYPE_CHECKING:
     from nova_studio.core.jobs import JobSpec
+    from nova_studio.domain.persistence import CacheBudget
     from nova_studio.domain.project import Project
     from nova_studio.infra.preview import StillSink
     from nova_studio.ports.imaging import ImageOps
@@ -184,7 +190,9 @@ class MediaJobFactory:
         ops: The pixel primitives a transcode resamples with.
         decoder: How to open the original.
         still: How to encode and write one still.
-        thumbnail_quality: JPEG quality for a generated thumbnail.
+        budget: How much derived data the install will keep. Carried into every
+            body, because the moment bytes are admitted is the moment to
+            enforce it — and a job that knows the budget cannot forget it.
     """
 
     data_dir: Path
@@ -193,6 +201,7 @@ class MediaJobFactory:
     decoder: DecoderFactory = field(default_factory=lambda: new_decoder)
     still: StillSinkFactory = field(default_factory=lambda: new_still)
     clock: ClockFactory = field(default_factory=lambda: SystemClock)
+    budget: CacheBudget = DEFAULT_CACHE_BUDGET
 
     def plan(
         self,
@@ -234,6 +243,7 @@ class MediaJobFactory:
                 decoder_factory=self.decoder,
                 cache_factory=partial(new_cache, self.data_dir),
                 clock_factory=self.clock,
+                budget=self.budget,
             ),
             kind="proxy",
             asset_id=request.asset_id,
@@ -257,6 +267,7 @@ class MediaJobFactory:
                 still_factory=self.still,
                 cache_factory=partial(new_cache, self.data_dir),
                 clock_factory=self.clock,
+                budget=self.budget,
             ),
             kind="thumbnail",
             asset_id=asset_id,

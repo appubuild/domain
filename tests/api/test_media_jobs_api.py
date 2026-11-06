@@ -18,6 +18,12 @@ pinned is a response. The last one uses the application's real executor and
 waits — the only way to prove the pieces are connected at all: that the body
 pickles, that a worker builds its own cache index, and that the artefact it
 promotes is the one the cache then lists.
+
+Trimming (`POST /api/v1/system/cache/trim`) is the odd one out: admission
+enforces the budget by itself, so the endpoint exists for the two states a job
+is not running to fix — a budget that was just lowered, and bytes admitted
+before there was a budget at all. Both are pinned here against a factory whose
+budget the test chose.
 """
 
 from __future__ import annotations
@@ -30,7 +36,7 @@ from fastapi.testclient import TestClient
 
 from nova_studio.api.app import create_app
 from nova_studio.core.errors import NovaError
-from nova_studio.domain.persistence import CacheKind
+from nova_studio.domain.persistence import CacheEntry, CacheKind
 from nova_studio.infra.persistence.jobs import JsonJobStore, job_history_path
 from nova_studio.ports.jobs import JobErrorCode
 from tests.api.conftest import BASE_URL
@@ -368,6 +374,101 @@ class TestTheCacheEndpoints:
     def test_both_need_a_token(self, client: TestClient) -> None:
         assert client.get("/api/v1/system/cache").status_code == 401
         assert client.delete("/api/v1/system/cache").status_code == 401
+
+
+class TestTrimming:
+    """`POST /api/v1/system/cache/trim`."""
+
+    def test_a_cache_within_budget_loses_nothing(
+        self, client: TestClient, auth: dict[str, str], media_app: FastAPI
+    ) -> None:
+        """The ordinary answer: admission already did this."""
+        cache = media_app.state.workspace.media_cache
+        path = cache.path_for("proxy-a1-h720.mkv")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"x" * 128)
+        cache.record("proxy-a1-h720.mkv", size_bytes=128)
+
+        response = client.post("/api/v1/system/cache/trim", headers=auth)
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["entries"] == 0
+        assert body["shortfall_bytes"] == 0
+        assert cache.total_bytes() == 128
+
+    def test_the_oldest_goes_and_the_budget_is_met(
+        self, client: TestClient, auth: dict[str, str], media_app: FastAPI, bus: EventBus
+    ) -> None:
+        """Least-recently-used first — and only what the budget needs, not
+        everything old. Two entries recorded in the same millisecond tie, and a
+        tie is broken by key, so the order is deterministic either way."""
+        from nova_studio.api.media_jobs import MediaJobFactory
+        from nova_studio.domain.persistence import CacheBudget
+
+        media_app.state.media_jobs = MediaJobFactory(
+            data_dir=media_app.state.session.data_dir,
+            budget=CacheBudget(max_bytes=1_024),
+        )
+        cache = media_app.state.workspace.media_cache
+        for key in ("proxy-a1-h720.mkv", "proxy-a2-h720.mkv"):
+            path = cache.path_for(key)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"x" * 1_024)
+            cache.record(key, size_bytes=1_024)
+
+        response = client.post("/api/v1/system/cache/trim", headers=auth)
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["entries"] == 1
+        assert body["size_bytes"] == 1_024
+        assert not body["shortfall_bytes"]
+        assert [
+            entry["key"]
+            for entry in client.get("/api/v1/system/cache", headers=auth).json()["entries"]
+        ] == ["proxy-a2-h720.mkv"]
+
+    def test_a_shortfall_is_reported_not_hidden(
+        self, client: TestClient, auth: dict[str, str], media_app: FastAPI
+    ) -> None:
+        """Every entry pinned: the cache is still over, and the caller hears
+        by how much rather than being told nothing happened."""
+        from nova_studio.api.media_jobs import MediaJobFactory
+        from nova_studio.domain.persistence import CacheBudget
+
+        media_app.state.media_jobs = MediaJobFactory(
+            data_dir=media_app.state.session.data_dir,
+            budget=CacheBudget(max_bytes=64),
+        )
+        cache = media_app.state.workspace.media_cache
+        path = cache.path_for("proxy-a1-h720.mkv")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"x" * 1_024)
+        cache.record("proxy-a1-h720.mkv", size_bytes=1_024)
+        # Pinned by a job that is writing it right now: in use, and never a
+        # candidate however old it is.
+        cache.index.put(
+            CacheEntry(
+                key="proxy-a1-h720.mkv",
+                kind=CacheKind.PROXY,
+                size_bytes=1_024,
+                created_ms=1_000,
+                last_used_ms=1_000,
+                pinned=True,
+            )
+        )
+
+        response = client.post("/api/v1/system/cache/trim", headers=auth)
+
+        assert response.status_code == 200, response.json()
+        body = response.json()
+        assert body["entries"] == 0
+        assert body["shortfall_bytes"] == 960
+        assert "still over budget" in body["summary"]
+
+    def test_it_needs_a_token(self, client: TestClient) -> None:
+        assert client.post("/api/v1/system/cache/trim").status_code == 401
 
 
 class TestTheWiring:

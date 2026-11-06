@@ -42,6 +42,7 @@ __all__ = [
     "MediaCacheDroppedResponse",
     "MediaCacheEntrySummary",
     "MediaCacheResponse",
+    "MediaCacheTrimResponse",
     "MediaJobSummary",
     "MediaListResponse",
     "VideoSummary",
@@ -217,6 +218,25 @@ class MediaCacheResponse(_Strict):
     entries: list[MediaCacheEntrySummary] = Field(description="What we hold, oldest use first.")
     total: int = Field(description="How many entries there are.")
     size_bytes: int = Field(description="What they cost in total, as recorded.")
+
+
+class MediaCacheTrimResponse(_Strict):
+    """What one eviction pass cost, and whether it was enough.
+
+    Admission enforces the budget by itself, so this is the endpoint for the two
+    cases admission cannot see: a budget that was just lowered, and bytes that
+    were admitted before there was a budget at all.
+
+    `shortfall_bytes` is the honest part: when every evictable entry is pinned,
+    the cache is still over and the caller hears by how much rather than being
+    told nothing happened.
+    """
+
+    entries: int = Field(description="How many entries were evicted.")
+    size_bytes: int = Field(description="How many bytes they had named.")
+    shortfall_bytes: int = Field(description="Bytes still over budget; zero when it fit.")
+    failures: int = Field(description="Entries chosen but not removable. Still on the disk.")
+    summary: str = Field(description="One sentence for the status bar.")
 
 
 class MediaCacheDroppedResponse(_Strict):

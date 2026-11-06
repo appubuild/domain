@@ -269,11 +269,12 @@ every 200 commands rather than every one (ADR-0015 §6).
 
 ## 5. Feature: `services/media/`
 
-**Purpose.** Own the three decisions that stand between a file on a disk and a
+**Purpose.** Own the four decisions that stand between a file on a disk and a
 clip on a timeline: **does this file belong here** (ingest), **which copy of it
-should we decode** (the proxy policy), and **which frames should we draw** (the
-thumbnail plan). What a file *is* lives in `domain/media.py`; reading bytes is
-`infra/`'s job through `ports/media.py`. This layer decides and reports.
+should we decode** (the proxy policy), **which frames should we draw** (the
+thumbnail plan), and **how much of it we keep** (the byte budget). What a file
+*is* lives in `domain/media.py`; reading bytes is `infra/`'s job through
+`ports/media.py`. This layer decides and reports.
 
 **Backend / frontend.** One API per intent. The frontend drops forty files on a
 panel and gets one `IngestReport` back: `assets` to add to the project,
@@ -319,6 +320,15 @@ MediaCache (frozen)                       cache.py
 
 MediaJobFactory (frozen)              api/media_jobs.py  (composition root)
 └── plan(project, cache, *, proxies, thumbnails) → tuple[PlannedJob, …]
+        budget: CacheBudget — carried into every body it builds
+
+EvictionReport (frozen)               eviction.py
+├── freed · freed_bytes               what went, and what it was worth
+├── shortfall                         bytes still over the budget
+└── failures                          chosen, and refused to be forgotten
+
+enforce_budget(cache, budget, *, needed_bytes, keep) → EvictionReport
+plan_eviction(entries, budget, *, needed_bytes, keep) → tuple[CacheEntry, …]
 
 ProxyJob (frozen, callable)                 generation.py
 └── (context) → Result[JobOutcome]          factories, not collaborators
@@ -364,6 +374,7 @@ goes to the scheduler as a `NORMAL` job (ADR-0010) — never a thread spawned he
 | `MediaJobFactory.plan(project, cache, …)` | "which jobs would close the gap, and what are they called" |
 | `MediaCache.entries(kind=None)` | "what do we hold, in the order eviction would take it" |
 | `MediaCache.drop(kind=None)` | "free a kind, or everything — and say how much went" |
+| `enforce_budget(cache, budget, …, keep=…)` | "what has to go so this fits, and did it fit" |
 
 **Events.** None yet. Generation publishes `job.*` through the scheduler — a
 proxy is `media.proxy`, a thumbnail strip is `media.thumbnail`, and both are
@@ -416,6 +427,14 @@ target back to a keyframe so a ten-minute 4K clip costs eight cheap seeks
 instead of eight GOP walks. The proxy plan is the other half of the same
 argument: never decode more pixels than the preview can show.
 
+**Eviction is admission's other half.** A job that has recorded bytes calls
+`enforce_budget` before it returns, naming the key it just wrote in `keep`; the
+choice belongs to the domain's `select_for_eviction`, so the index that
+describes entries and the worker that admits them cannot disagree. The default
+budget is 8 GiB (`DEFAULT_CACHE_BUDGET`), bound once by the composition root and
+carried into every body, because a worker that had to look it up would need a
+settings service it does not have.
+
 **Testing.** `tests/services/test_media_ingest.py` pins the batch rules against
 a fake prober and a deterministic id source — including that a duplicate is not
 probed twice and that no id is minted for a file that failed.
@@ -429,8 +448,12 @@ four rules of the cache: the fallback towards the original, entry-and-file,
 forget-bytes-then-row, and the throttled touch, plus taking stock, which is the
 half an inspector and a byte budget both read: `entries` oldest-use-first, a row
 whose file has gone is not listed, and `drop` frees the bytes *and* the rows,
-one kind or every kind. Its doubles are a dict, a set and a clock. `tests/infra/test_persistence_sqlite.py` pins the shared gateway.
-`tests/services/test_media_generation.py` (59) pins the planners — that a proxy
+one kind or every kind. Its doubles are a dict, a set and a clock.
+`tests/services/test_media_eviction.py` (14) pins the byte budget — LRU order,
+the smallest set that fits, pinned entries spared, `keep` never chosen but still
+counted, and a shortfall reported rather than hidden.
+`tests/infra/test_persistence_sqlite.py` pins the shared gateway.
+`tests/services/test_media_generation.py` (61) pins the planners — that a proxy
 is planned for the timeline and a thumbnail for every asset, that neither is
 planned twice — and every way the two jobs fail: a file that will not open, a
 stream that dies midway, an encoder that rejects a frame, a cancel between
@@ -439,11 +462,13 @@ resizer double asserts the transcode shrinks with **area** averaging, and a
 pickling test proves the bodies can cross a process boundary.
 `tests/services/test_media_generation_real.py` does the opposite on purpose: it
 runs both jobs through PyAV and OpenCV, then opens what came out.
-`tests/api/test_media_jobs_api.py` (19) pins the submission contract — 202 with
+`tests/api/test_media_jobs_api.py` (23) pins the submission contract — 202 with
 the jobs it started, nothing queued when everything is already held, 404 for a
 project that is not open, 503 for a full pool — and one test runs the real
 executor end to end: both jobs settle, the cache then lists what was made, a
-second ask queues nothing, and the delete frees it.
+second ask queues nothing, and the delete frees it. Four more pin the trim: a
+cache within budget loses nothing, the oldest goes when it is not, and a cache
+of pinned entries reports a shortfall instead of pretending it fit.
 
 **Future expansion.**
 
@@ -454,9 +479,6 @@ second ask queues nothing, and the delete frees it.
   watches the preview loop and asks at a moment that is not mid-scrub. The
   question is free and idempotent, so the only thing to write is the judgement
   of when.
-* **Byte-budgeted eviction** over `select_for_eviction` — the other half of
-  `record`, and the reason every row carries a size. `entries` and `drop` are
-  its read and its write, already there.
 * **Content hashing** once `ports/filesystem.py` exists: duplicates will then be
   matched by bytes, and a relink will be provable rather than hopeful. Until
   then duplicates are matched by path, and the panel says so.
@@ -464,6 +486,11 @@ second ask queues nothing, and the delete frees it.
   plan: indices in, samples out.
 * **A real scheduler in `services/jobs/`** — the thing that decides *when* to
   ask. `infra/jobs.py` is the pools; the judgement is still to come.
+* **Pinned entries, pinned by someone.** `CacheEntry.pinned` and
+  `select_for_eviction` already honour it; nothing sets it yet, because nothing
+  holds a proxy open across an edit. The preview loop is where it should come
+  from: a proxy the pool is decoding right now must not be evicted from under
+  it.
 
 ---
 

@@ -32,10 +32,16 @@ promotes on `finish`, and the still sink renames into place; both bodies abort
 on failure, and neither records a row for bytes that are not on the disk. A
 cache entry is a promise, and the promise is only made after the file exists.
 
+**Eviction is part of admitting, not an afterthought.** A job that has just
+written and recorded a file enforces the byte budget itself, naming the key it
+made in `keep`: a cache nobody trims is a disk that fills up, and an artefact
+evicted by the very job that made it would be a bug nobody would believe. The
+*choice* is `services/media/eviction.py`'s, over the domain's
+`select_for_eviction`.
+
 **What this module does not do:** decide when to run (the scheduler, and until
-it exists, the composition root), evict (the byte budget over
-`select_for_eviction`), or probe (that happened at import, and every decision
-here is made from the `MediaInfo` already in the project).
+it exists, the composition root), or probe (that happened at import, and every
+decision here is made from the `MediaInfo` already in the project).
 """
 
 from __future__ import annotations
@@ -69,6 +75,7 @@ from nova_studio.domain.media import FrameBuffer, VideoStreamInfo
 from nova_studio.ports.imaging import Interpolation
 from nova_studio.ports.jobs import JobErrorCode
 from nova_studio.ports.media import MediaErrorCode
+from nova_studio.services.media.eviction import DEFAULT_CACHE_BUDGET, enforce_budget
 from nova_studio.services.media.keys import proxy_key, thumbnail_key
 from nova_studio.services.media.proxy import DEFAULT_PROXY_POLICY, ProxyPlan, ProxyPolicy
 from nova_studio.services.media.thumbnails import (
@@ -82,6 +89,7 @@ if TYPE_CHECKING:
 
     from nova_studio.core.temporal import Timebase
     from nova_studio.domain.media import MediaAsset, MediaInfo
+    from nova_studio.domain.persistence import CacheBudget
     from nova_studio.domain.project import Project
     from nova_studio.ports.clock import Clock
     from nova_studio.ports.jobs import JobContext
@@ -90,6 +98,7 @@ if TYPE_CHECKING:
     from nova_studio.services.media.cache import MediaCache
 
 __all__ = [
+    "DEFAULT_CACHE_BUDGET",
     "DEFAULT_THUMBNAIL_WIDTH",
     "PROGRESS_INTERVAL_MS",
     "PROXY_JOB_KIND",
@@ -461,6 +470,9 @@ class ProxyJob:
     cache_factory: CacheFactory
     clock_factory: ClockFactory | None = None
     report_every_ms: int = PROGRESS_INTERVAL_MS
+    #: How much derived data the install will keep. Admission is the moment to
+    #: enforce it, and the key just written is named in `keep` so it survives.
+    budget: CacheBudget = DEFAULT_CACHE_BUDGET
 
     def __call__(self, context: JobContext) -> Result[JobOutcome]:
         """Decode the original, scale it, encode the proxy, record it."""
@@ -516,6 +528,7 @@ class ProxyJob:
             cache.forget(request.key)
             return err(recorded.unwrap_err())
 
+        _trim(cache, self.budget, keep=request.key)
         detail = _proxy_summary(stats, request)
         progress.emit(_forced(GenerationStage.DONE, detail))
         return ok(JobOutcome(value=stats, artefacts=(request.destination,), detail=detail))
@@ -581,6 +594,10 @@ class ThumbnailJob:
     cache_factory: CacheFactory
     clock_factory: ClockFactory | None = None
     report_every_ms: int = PROGRESS_INTERVAL_MS
+    #: How much derived data the install will keep. Enforced once, after the
+    #: last still of the strip, rather than per picture: eight eviction passes
+    #: to admit eight JPEGs would be eight times the work for no difference.
+    budget: CacheBudget = DEFAULT_CACHE_BUDGET
 
     def __call__(self, context: JobContext) -> Result[JobOutcome]:
         """Seek to each frame, scale it, write it, record it."""
@@ -619,6 +636,7 @@ class ThumbnailJob:
         finally:
             media.close()
 
+        _trim(cache, self.budget, keep=frozenset(request.key for request in self.requests))
         detail = f"{len(written)} thumbnail(s)"
         progress.emit(_forced(GenerationStage.DONE, detail))
         return ok(JobOutcome(value=len(written), artefacts=tuple(written), detail=detail))
@@ -704,6 +722,21 @@ def _forced(stage: str, detail: str, *, fraction: float = 1.0) -> JobProgress:
 
 
 # -- messages ----------------------------------------------------------------
+
+
+def _trim(cache: MediaCache, budget: CacheBudget, *, keep: str | frozenset[str]) -> None:
+    """Bring the cache back within budget, and say nothing about it.
+
+    Eviction is housekeeping, so a failure here is *counted by the report and
+    swallowed*: a job that made a perfectly good proxy must not fail because an
+    unrelated entry could not be deleted. The bytes are on the disk either way,
+    and the next admission will try again.
+    """
+    enforce_budget(
+        cache,
+        budget,
+        keep=frozenset({keep}) if isinstance(keep, str) else keep,
+    )
 
 
 def _proxy_summary(stats: RenderStats, request: ProxyRequest) -> str:
