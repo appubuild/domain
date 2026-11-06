@@ -356,14 +356,30 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 
 def cmd_openapi(args: argparse.Namespace) -> int:
-    """Print the API contract, or write it to a file.
+    """Print the API contract, write it to a file, or verify a committed one.
 
     The frontend's client is generated from this, so it is generated from the
-    routes that actually run rather than maintained beside them.
+    routes that actually run rather than maintained beside them. ``--check`` is
+    what makes that claim load-bearing: a route that changes without the contract
+    being regenerated fails the gate instead of drifting into the next release.
     """
     from nova_studio.api.openapi import contract_json
 
     document = contract_json()
+    if args.check:
+        committed = Path(args.check)
+        if not committed.exists():
+            print(f"{args.check} is missing; run 'make contract'", file=sys.stderr)
+            return 1
+        if committed.read_text(encoding="utf-8") != document:
+            print(
+                f"{args.check} is stale: the routes have changed since it was written",
+                file=sys.stderr,
+            )
+            print("run 'make contract' and commit the result", file=sys.stderr)
+            return 1
+        print(f"{args.check} is up to date")
+        return 0
     if args.out:
         Path(args.out).write_text(document, encoding="utf-8")
         print(f"wrote {args.out} ({len(document)} bytes)", file=sys.stderr)
@@ -447,8 +463,16 @@ def build_parser() -> argparse.ArgumentParser:
             "to the frontend, and both are reviewed together."
         ),
     )
-    openapi_parser.add_argument(
+    # Mutually exclusive: writing the file you were asked to check would make
+    # the check pass by construction.
+    openapi_what = openapi_parser.add_mutually_exclusive_group()
+    openapi_what.add_argument(
         "--out", metavar="PATH", help="write the document to PATH instead of stdout"
+    )
+    openapi_what.add_argument(
+        "--check",
+        metavar="PATH",
+        help="exit 1 if PATH does not match the contract the routes generate",
     )
     openapi_parser.set_defaults(func=cmd_openapi)
 

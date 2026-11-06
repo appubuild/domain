@@ -283,6 +283,64 @@ class TestLayeringSubcommand:
         assert "frozen build" in message
 
 
+class TestOpenapiSubcommand:
+    """The contract is the seam with the frontend, so it has a gate of its own."""
+
+    def test_plain_output_is_the_whole_document(self, capsys: Any) -> None:
+        assert main(["openapi"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        assert payload["openapi"].startswith("3.1")
+        assert payload["paths"]
+
+    def test_out_writes_the_document_verbatim(self, tmp_path: Path, capsys: Any) -> None:
+        target = tmp_path / "api-contract.json"
+        assert main(["openapi", "--out", str(target)]) == 0
+        document = target.read_text(encoding="utf-8")
+        assert json.loads(document)["paths"]
+        assert f"wrote {target}" in capsys.readouterr().err
+
+    def test_check_passes_on_the_committed_contract(self, capsys: Any) -> None:
+        """This is the gate `make contract-check` runs, against the real file."""
+        contract = Path(__file__).resolve().parent.parent / "docs/architecture/api-contract.json"
+        assert main(["openapi", "--check", str(contract)]) == 0
+        assert "up to date" in capsys.readouterr().out
+
+    def test_check_fails_when_a_route_has_changed(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: Any
+    ) -> None:
+        import nova_studio.api.openapi as openapi
+
+        real = openapi.contract_json
+        monkeypatch.setattr(
+            openapi,
+            "contract_json",
+            lambda: real().replace('"openapi": "3.1.0"', '"openapi": "3.1.1"'),
+        )
+        stale = tmp_path / "api-contract.json"
+        stale.write_text(real(), encoding="utf-8")
+        assert main(["openapi", "--check", str(stale)]) == 1
+        assert "stale" in capsys.readouterr().err
+
+    def test_check_reports_a_missing_file_rather_than_crashing(
+        self, tmp_path: Path, capsys: Any
+    ) -> None:
+        assert main(["openapi", "--check", str(tmp_path / "nope.json")]) == 1
+        assert "missing" in capsys.readouterr().err
+
+    def test_check_does_not_write_the_file_it_was_asked_about(self, tmp_path: Path) -> None:
+        target = tmp_path / "api-contract.json"
+        main(["openapi", "--check", str(target)])
+        assert not target.exists()
+
+    def test_out_and_check_cannot_be_combined(self, tmp_path: Path) -> None:
+        """Checking a file you have just overwritten would always pass."""
+        with pytest.raises(SystemExit) as caught:
+            main(
+                ["openapi", "--out", str(tmp_path / "a.json"), "--check", str(tmp_path / "b.json")]
+            )
+        assert caught.value.code == 2
+
+
 class TestModuleEntryPoint:
     def test_python_dash_m_runs_the_cli(self) -> None:
         """``python -m nova_studio`` and the console script must not diverge."""
