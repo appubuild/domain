@@ -143,9 +143,22 @@ def _open_project(projects: ProjectWorkspace, project_id: str, path: str) -> Ope
     return shown
 
 
+#: What a frame is, and what a failure is. Spelled out because FastAPI would
+#: otherwise describe this endpoint as `application/json` with an empty schema —
+#: a contract that tells the frontend to parse a JPEG as a document (and a
+#: generated client that tries).
+FRAME_RESPONSES: dict[int | str, dict[str, object]] = {
+    200: {
+        "content": {"image/jpeg": {"schema": {"type": "string", "format": "binary"}}},
+        "description": "One composited frame, scaled to the panel, never up.",
+    },
+    **error_responses(),
+}
+
+
 @router.get(
     "/api/v1/projects/{project_id}/preview/frame",
-    responses=error_responses(),
+    responses=FRAME_RESPONSES,
     summary="One frame of the preview, as an image",
 )
 def preview_frame(

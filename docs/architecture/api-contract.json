@@ -4769,9 +4769,15 @@
                 "schema": {
                   "title": "Response Preview Frame Api V1 Projects  Project Id  Preview Frame Get"
                 }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
               }
             },
-            "description": "Successful Response"
+            "description": "One composited frame, scaled to the panel, never up."
           },
           "401": {
             "content": {
