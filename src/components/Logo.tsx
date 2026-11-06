@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import { Link } from 'react-router-dom'
 import { SITE } from '@/config/site'
 
@@ -7,7 +8,11 @@ interface LogoProps {
   className?: string
 }
 
-export const LogoMark = ({ className = 'h-10 w-10' }: { className?: string }) => (
+export const LogoMark = ({ className = 'h-10 w-10' }: { className?: string }) => {
+  // Unique gradient id so multiple logo instances never collide in the DOM.
+  const gradientId = `shn-mark-${useId().replace(/:/g, '')}`
+
+  return (
   <svg
     viewBox="0 0 48 48"
     className={className}
@@ -17,12 +22,12 @@ export const LogoMark = ({ className = 'h-10 w-10' }: { className?: string }) =>
     xmlns="http://www.w3.org/2000/svg"
   >
     <defs>
-      <linearGradient id="shn-mark" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <linearGradient id={gradientId} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
         <stop stopColor="#2563EB" />
         <stop offset="1" stopColor="#1D4ED8" />
       </linearGradient>
     </defs>
-    <rect x="1" y="1" width="46" height="46" rx="13" fill="url(#shn-mark)" />
+    <rect x="1" y="1" width="46" height="46" rx="13" fill={`url(#${gradientId})`} />
     <path
       d="M24 11.5 12.5 21.2v13.3c0 1.1.9 2 2 2h19c1.1 0 2-.9 2-2V21.2L24 11.5Z"
       stroke="#fff"
@@ -39,7 +44,8 @@ export const LogoMark = ({ className = 'h-10 w-10' }: { className?: string }) =>
       strokeLinejoin="round"
     />
   </svg>
-)
+  )
+}
 
 export const Logo = ({ variant = 'default', className = '' }: LogoProps) => (
   <Link

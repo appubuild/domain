@@ -142,8 +142,7 @@ const ServiceDetail = () => {
                   className="h-56 w-full object-cover sm:h-72 lg:h-[21rem]"
                   width={1376}
                   height={768}
-                  fetchPriority="high"
-                  decoding="async"
+                          decoding="async"
                 />
               </div>
             </div>

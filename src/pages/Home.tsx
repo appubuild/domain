@@ -120,7 +120,6 @@ const Home = () => {
           src="/images/hero-home.jpg"
           alt="Modern American single-family home with a newly installed roof and landscaped front yard"
           className="absolute inset-0 h-full w-full object-cover object-center"
-          fetchPriority="high"
           decoding="async"
           width={1376}
           height={768}

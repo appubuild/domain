@@ -199,8 +199,9 @@ Verify a deep link (e.g. `/services/locksmith`) after deploying, not just the ho
 
 - `npx tsc -b` — clean, zero errors under `strict` + `noUnusedLocals`.
 - `npm run build` — production build succeeds.
-- SSR render smoke test across all 26 routes + 404 cases
-  (`scripts/smoke.tsx`, run with `vite build --ssr`).
+- `npm run smoke` — SSR render test across all 26 routes plus 404 cases.
+- `npm run audit` — link, in-page anchor, image-source, duplicate-id and
+  single-`h1` audit across every route (26 routes, all passing).
 - All internal links resolve to real routes; all CTA buttons are wired to a
   working action (dialog, navigation or form).
 - Availability states tested: available (e.g. `30301` for roofing), unavailable
@@ -231,8 +232,8 @@ Owner decisions / tasks before going live:
    `SITE.showLaunchNotices = false` to remove the setup notices.
 6. **Imagery licensing** — replace the placeholder imagery in `public/images/`
    with your licensed photography (keep the same filenames or update
-   `services.ts`). The five gradient placeholders
-   (`bedroom-remodeling`, `window-installation`, `door-installation`,
-   `concrete-paving`, `locksmith`) must be replaced before launch.
+   `services.ts`). Six categories currently use a branded placeholder tile:
+   `bedroom-remodeling`, `electrical`, `window-installation`,
+   `door-installation`, `concrete-paving` and `locksmith`.
 7. **Search Console / analytics** — verify the domain, submit the sitemap, and add
    your GA4 measurement id if desired.

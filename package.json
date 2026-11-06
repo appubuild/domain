@@ -10,7 +10,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc -b --force",
-    "lint": "tsc --noEmit -p tsconfig.app.json"
+    "lint": "tsc --noEmit -p tsconfig.app.json",
+    "audit": "vite build --ssr scripts/audit.tsx --outDir .smoke --logLevel error && node .smoke/audit.js",
+    "smoke": "vite build --ssr scripts/smoke.tsx --outDir .smoke-smoke --logLevel error && node .smoke-smoke/smoke.js"
   },
   "dependencies": {
     "lucide-react": "^0.454.0",
