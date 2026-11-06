@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import contextlib
+import os
+import uuid
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, TypeAlias
 
 import cv2
@@ -20,13 +24,23 @@ if TYPE_CHECKING:
 #: exception thrown across a layer (see `api/errors.py`).
 FrameEncoder: TypeAlias = "Callable[[FrameBuffer], Result[bytes]]"
 
+#: What the media feature asks for: "put this picture at this path, and tell me
+#: how many bytes it cost". One callable rather than an encoder plus a writer
+#: because the two are one act here — a still that is encoded but not written
+#: is not a thumbnail, and the caller that would have to remember to write it
+#: is a job body running in another process.
+StillSink: TypeAlias = "Callable[[FrameBuffer, str], Result[int]]"
+
 __all__ = [
     "DEFAULT_QUALITY",
     "FrameEncoder",
     "FrameFormat",
+    "StillSink",
     "encode_frame",
     "encoder_for",
     "media_type_for",
+    "still_sink",
+    "write_still",
 ]
 
 
@@ -142,6 +156,78 @@ def encode_frame(
             )
         )
     return ok(serialised.tobytes())
+
+
+def write_still(
+    buffer: FrameBuffer,
+    path: str,
+    *,
+    format: FrameFormat = FrameFormat.JPEG,
+    quality: int = DEFAULT_QUALITY,
+) -> Result[int]:
+    """Encode one frame as one image and leave it at ``path``.
+
+    The write is **atomic**: the bytes are staged beside the target under a
+    unique name and renamed into place. A thumbnail is read by a panel that
+    opens whatever it finds, so a half-written JPEG is not a missing thumbnail
+    — it is a broken one, and a broken one is served.
+
+    Returns the number of bytes written, which is what the cache index wants to
+    record: the cost of keeping this artefact, as the disk actually measured
+    it, not as an estimate.
+
+    Raises:
+        NovaInvariantError: If the frame has two channels — the one shape no
+            image format can represent.
+    """
+    encoded = encode_frame(buffer, format=format, quality=quality)
+    if encoded.is_err():
+        return err(encoded.unwrap_err())
+    data = encoded.unwrap()
+
+    destination = Path(path)
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        # Unique per write, not per process: two thumbnail jobs for the same
+        # asset in the same session would otherwise race to rename the same
+        # staging file, and one of the renames would fail on a file the other
+        # had already moved.
+        staged = destination.parent / f".{destination.name}.{os.getpid()}.{uuid.uuid4().hex}.part"
+        with staged.open("wb") as handle:
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        staged.replace(destination)
+    except OSError as error:
+        with contextlib.suppress(OSError):
+            staged.unlink(missing_ok=True)
+        return err(
+            NovaError(
+                RenderErrorCode.SINK_UNWRITABLE,
+                f"could not write the still image at {path}: {error}",
+                details={"path": path},
+            )
+        )
+    return ok(len(data))
+
+
+def still_sink(
+    *,
+    format: FrameFormat = FrameFormat.JPEG,
+    quality: int = DEFAULT_QUALITY,
+) -> StillSink:
+    """A :data:`StillSink` closed over one format and one quality.
+
+    The media feature takes a *factory* for one of these rather than a bound
+    encoder, because a job body is pickled and sent to a worker process: what
+    crosses the boundary is ``functools.partial(still_sink, quality=78)``,
+    which is a reference to this function and an argument, not a closure.
+    """
+
+    def sink(buffer: FrameBuffer, path: str) -> Result[int]:
+        return write_still(buffer, path, format=format, quality=quality)
+
+    return sink
 
 
 def encoder_for(

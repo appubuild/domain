@@ -79,6 +79,11 @@ class Interpolation(StrEnum):
     LINEAR = "linear"
     #: Bicubic. Sharper on a still; slower, and it rings on an edge.
     CUBIC = "cubic"
+    #: Pixel-area averaging. The mode to *shrink* with: a frame halved with a
+    #: bilinear filter aliases — fine detail turns into shimmer, and shimmer is
+    #: a lie about the picture the user is judging. Area averaging cannot
+    #: enlarge, which is why it is not the default.
+    AREA = "area"
 
 
 class BorderMode(StrEnum):

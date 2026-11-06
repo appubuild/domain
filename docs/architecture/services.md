@@ -49,7 +49,8 @@ derived index rebuilt from `timeline/document.json`, and its schema belongs to
 services/
 ├── shared/       cross-feature helpers (the sanctioned exception to rule 2)
 ├── projects/     open, save, autosave, crash recovery
-├── media/        ingest, probing, thumbnails, proxy generation, the media cache
+├── media/        ingest, probing, thumbnails, proxy generation, the media cache,
+│                 and the two jobs that make the derived copies
 ├── timeline/     edit operations as commands, undo scopes, ripple logic
 ├── render/       the frame pipeline: decode → graph → composite → encode
 ├── captions/     the caption pipeline: transcript → cues → styles → timeline
@@ -312,6 +313,17 @@ MediaCache (frozen)                       cache.py
 ├── resolve(project, id, source) → str | None    fallback → the original
 ├── resolver_for(project)       → SourceResolver live, not captured
 └── sources_for(project, scale) → Mapping[str, str]   one frame, one question
+
+ProxyJob (frozen, callable)                 generation.py
+└── (context) → Result[JobOutcome]          factories, not collaborators
+        request: ProxyRequest   source · destination · key · OutputSpec
+
+ThumbnailJob (frozen, callable)             generation.py
+└── (context) → Result[JobOutcome]          one job per asset, one write per still
+
+proxy_requests(project, cache=…)    → tuple[ProxyRequest, …]     what is missing
+thumbnail_requests(project, cache=…) → tuple[ThumbnailRequest, …]
+proxy_output_spec(info, plan)       → OutputSpec                 what to encode
 ```
 
 **State management.** `MediaIngestor` holds an injected prober and id source and
@@ -339,10 +351,16 @@ goes to the scheduler as a `NORMAL` job (ADR-0010) — never a thread spawned he
 | `has(key)` | "do we actually hold it" (an entry *and* a file) |
 | `resolve(project, asset_id, source)` | "which file is this decode's copy" |
 | `sources_for(project, scale)` | "which copy should every asset on the timeline use" |
+| `proxy_requests(project, cache=…)` | "which proxies are missing" |
+| `thumbnail_requests(project, cache=…)` | "which thumbnails are missing" |
+| `ProxyJob(request, …)(context)` | "make this proxy, as a job" |
+| `ThumbnailJob(asset_id, source, requests, …)(context)` | "make these stills, as a job" |
 
-**Events.** None yet. Proxy transcodes will publish `job.*` through the
-scheduler; ingest will emit `media.imported` once the media panel needs to
-refresh live, and `media.relinked` when the relink flow lands — which is when
+**Events.** None yet. Generation publishes `job.*` through the scheduler — a
+proxy is `media.proxy`, a thumbnail strip is `media.thumbnail`, and both are
+submitted `NORMAL` and idempotent so a retry after a lost worker is safe.
+Ingest will emit `media.imported` once the media panel needs to refresh live,
+and `media.relinked` when the relink flow lands — which is when
 `services/projects` starts listening (see §4).
 
 **Error handling.** Ingest never returns a `Result`, because a batch cannot fail
@@ -351,7 +369,11 @@ the probe produced (`NS-MEDIA-4001` unreadable, `-4003` unsupported codec,
 `-4004` decode failed). Empty paths are refused without I/O under `-4001`.
 `ProxyPolicy` and `thumbnail_indices` raise `NovaInvariantError` for a
 nonsensical argument (a non-positive scale, a negative frame count), because
-those are bugs in the caller and not states of a file.
+those are bugs in the caller and not states of a file. A job body, by contrast,
+turns every failure into a `Result` — a file that will not open, a stream that
+dies at frame *n*, an encoder that rejects a picture, a cache that refuses to
+record — and all four end the same way: the partial output is removed and no row
+is written.
 
 **Caching.** None in the code — but the *output* is the cache key.
 `thumbnail_indices` is deterministic, so a strip laid out today and the same
@@ -397,16 +419,26 @@ derived, stable and refuses anything that is not a single file name — and the
 four rules of the cache: the fallback towards the original, entry-and-file,
 forget-bytes-then-row, and the throttled touch. Its doubles are a dict, a set
 and a clock. `tests/infra/test_persistence_sqlite.py` pins the shared gateway.
-No FFmpeg, no filesystem, no numpy beyond what the domain already carries.
+`tests/services/test_media_generation.py` (59) pins the planners — that a proxy
+is planned for the timeline and a thumbnail for every asset, that neither is
+planned twice — and every way the two jobs fail: a file that will not open, a
+stream that dies midway, an encoder that rejects a frame, a cancel between
+frames, and a cache that refuses to record (in which case the bytes go too). A
+resizer double asserts the transcode shrinks with **area** averaging, and a
+pickling test proves the bodies can cross a process boundary.
+`tests/services/test_media_generation_real.py` does the opposite on purpose: it
+runs both jobs through PyAV and OpenCV, then opens what came out.
 
 **Future expansion.**
 
-* **Generation**, which is the half of this feature that does not exist yet: a
-  `ProxyJob` built from `ProxyPlan`, the thumbnail strips from
-  `thumbnail_indices`, and byte-budgeted eviction over `select_for_eviction`.
-  All of it as `NORMAL` jobs, and none of it requires a change to `MediaCache` —
-  the producer calls `record()` when the file is complete and the planner calls
-  `forget()` when the budget says so.
+* **Submission**, once `services/jobs/` exists. The bodies and the planners are
+  in place; what is missing is the thing that decides *when* — and the honest
+  answer is "not while the user is scrubbing". `proxy_requests` and
+  `thumbnail_requests` are the pure half a scheduler needs, because they can be
+  asked as often as it likes: a request for something already held is simply not
+  made.
+* **Byte-budgeted eviction** over `select_for_eviction` — the other half of
+  `record`, and the reason every row carries a size.
 * **Content hashing** once `ports/filesystem.py` exists: duplicates will then be
   matched by bytes, and a relink will be provable rather than hopeful. Until
   then duplicates are matched by path, and the panel says so.

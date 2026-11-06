@@ -15,7 +15,8 @@ services/media/
 ├── proxy.py        ProxyPolicy — which source to decode, and whether to make one
 ├── keys.py         the cache key vocabulary: what a derived artefact is called
 ├── cache.py        MediaCache — which *file* that key means, per asset
-└── thumbnails.py   thumbnail_indices — the frames a strip should ask for
+├── thumbnails.py   thumbnail_indices — the frames a strip should ask for
+└── generation.py   ProxyJob / ThumbnailJob — how the bytes get made
 ```
 
 **Backend / frontend.** One API per intent. The frontend drops forty files on a
@@ -44,6 +45,10 @@ spawned here.
 | `MediaCache.resolve(project, asset_id, source)` | "which file *is* that copy" |
 | `MediaCache.sources_for(project, scale)` | "which copy should everything decode, at this preview scale" |
 | `thumbnail_indices(count, wanted, keyframes)` | "which frames does a strip ask for" |
+| `proxy_requests(project, cache=…)` | "which proxies are missing" |
+| `thumbnail_requests(project, cache=…)` | "which thumbnails are missing" |
+| `ProxyJob(request, …)(context)` | "make this proxy, as a job" |
+| `ThumbnailJob(asset_id, source, requests, …)(context)` | "make these stills, as a job" |
 
 **Transparency.** `MediaCache` is why §7.2's promise holds. `resolve` falls back
 *towards the original* — a missing thumbnail answers with a proxy, a missing
@@ -65,6 +70,17 @@ under `NS-MEDIA-4001`. `ProxyPolicy` and `thumbnail_indices` raise
 negative frame count) because those are bugs in the caller, not states of a
 file.
 
+**Generation is a job, and a job leaves nothing behind on failure.** `ProxyJob`
+and `ThumbnailJob` are frozen bodies holding *factories*, so they can be
+pickled and run in a worker process (ADR-0010 §1); the renderer stages beside
+the target and promotes on `finish`, the still sink renames into place, and
+neither records a row until the bytes are complete — a cache entry is a promise
+eviction will collect on, and bytes no row names are bytes nobody can reclaim.
+Proxies are planned for the assets the **timeline references**, thumbnails for
+every asset in the project: transcoding two hundred files somebody imported but
+never cut is how a cache becomes forty gigabytes, while eight decodes of each is
+how a media bin becomes browsable.
+
 **Caching.** None in the code — but the *output* is the cache key.
 `thumbnail_indices` is deterministic, so a strip laid out today and the same
 strip laid out after a reopen ask for the same frames and hit the same cache
@@ -81,8 +97,11 @@ costs eight cheap seeks instead of eight GOP walks.
 against a fake prober and a deterministic id source.
 `tests/services/test_media_proxy.py` pins the fidelity budget and the even-dimension
 arithmetic. `tests/services/test_media_thumbnails.py` pins the spread, the
-keyframe snapping and the deduplication. No FFmpeg, no filesystem, no numpy
-beyond what the domain already carries.
+keyframe snapping and the deduplication. `tests/services/test_media_cache.py`
+pins which file a key means. `tests/services/test_media_generation.py` pins the
+planners (reach, idempotence, geometry) and both job bodies against a fake
+decoder, a fake renderer and a still sink that writes to a dictionary — no
+FFmpeg, no filesystem, no numpy beyond what the domain already carries.
 
 **Database schema.** None — see the note in `docs/architecture/services.md` §1.
 
@@ -92,17 +111,36 @@ beyond what the domain already carries.
   matched by bytes, and relink will be provable rather than hopeful.
 * **Waveform and audio-analysis planning**, which is the same shape as the
   thumbnail plan — indices in, samples out.
-* **A `ProxyJob` builder** turning `ProxyPlan` into a scheduler submission —
-  the scheduler has landed (`infra/jobs.py`), so what is missing is the body.
-  `MediaCache` already answers where the result would go and whether we have
-  it, which is everything the job needs to be idempotent.
-* **Thumbnail generation**, the same shape as a proxy job with a still-image
-  encoder on the end.
+* **Submission**, once `services/jobs/` exists: `proxy_requests` and
+  `thumbnail_requests` are the pure half a scheduler needs — "what is missing",
+  asked as often as it likes, because a request for something already held is
+  simply not made.
+* **Byte-budgeted eviction** over `select_for_eviction`, which is the other half
+  of `MediaCache.record` and the reason every row carries a size.
+* **Audio in the proxy.** The frame pool is video-only today, so a proxy is too;
+  the day a mixer exists, `proxy_output_spec` gains an audio stream and nothing
+  else changes.
 """
 
 from __future__ import annotations
 
 from nova_studio.services.media.cache import ExistsFn, MediaCache, SourceResolver, UnlinkFn
+from nova_studio.services.media.generation import (
+    DEFAULT_THUMBNAIL_WIDTH,
+    PROXY_JOB_KIND,
+    THUMBNAIL_JOB_KIND,
+    GenerationStage,
+    ProxyJob,
+    ProxyRequest,
+    ThumbnailJob,
+    ThumbnailRequest,
+    proxy_job_spec,
+    proxy_output_spec,
+    proxy_requests,
+    thumbnail_geometry,
+    thumbnail_job_spec,
+    thumbnail_requests,
+)
 from nova_studio.services.media.ingest import (
     IngestedAsset,
     IngestFailure,
@@ -131,25 +169,39 @@ from nova_studio.services.media.thumbnails import DEFAULT_STRIP_COUNT, thumbnail
 __all__ = [
     "DEFAULT_PROXY_POLICY",
     "DEFAULT_STRIP_COUNT",
+    "DEFAULT_THUMBNAIL_WIDTH",
     "EDIT_FRIENDLY_CODECS",
     "PROXY_EXTENSION",
+    "PROXY_JOB_KIND",
     "PROXY_PREFIX",
     "THUMBNAIL_EXTENSION",
+    "THUMBNAIL_JOB_KIND",
     "THUMBNAIL_PREFIX",
     "DecodeSource",
     "ExistsFn",
+    "GenerationStage",
     "IngestFailure",
     "IngestReport",
     "IngestedAsset",
     "MediaCache",
     "MediaIngestor",
+    "ProxyJob",
     "ProxyPlan",
     "ProxyPolicy",
+    "ProxyRequest",
     "SourceResolver",
+    "ThumbnailJob",
+    "ThumbnailRequest",
     "UnlinkFn",
     "is_safe_key",
     "kind_of",
+    "proxy_job_spec",
     "proxy_key",
+    "proxy_output_spec",
+    "proxy_requests",
+    "thumbnail_geometry",
     "thumbnail_indices",
+    "thumbnail_job_spec",
     "thumbnail_key",
+    "thumbnail_requests",
 ]

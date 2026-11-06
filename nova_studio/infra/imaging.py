@@ -41,6 +41,7 @@ _INTERPOLATION: Final[dict[Interpolation, int]] = {
     Interpolation.NEAREST: cv2.INTER_NEAREST,
     Interpolation.LINEAR: cv2.INTER_LINEAR,
     Interpolation.CUBIC: cv2.INTER_CUBIC,
+    Interpolation.AREA: cv2.INTER_AREA,
 }
 
 _BORDER: Final[dict[BorderMode, int]] = {

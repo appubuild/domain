@@ -50,7 +50,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from nova_studio.domain.persistence import is_valid_document_name
+from nova_studio.domain.persistence import CacheKind, is_valid_document_name
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -65,6 +65,7 @@ __all__ = [
     "backup_path",
     "cache_database_path",
     "cache_root",
+    "ensure_cache_layout",
     "is_journal_name",
     "is_safe_project_id",
     "journal_dir",
@@ -171,6 +172,25 @@ def cache_root(data_root: Path) -> Path:
     a user who wants their disk back.
     """
     return data_root / CACHE_SUBDIR
+
+
+def ensure_cache_layout(data_root: Path) -> None:
+    """Create the cache root and one subdirectory per kind of derived artefact.
+
+    Called once, by the composition root, before anything can be asked to write
+    a proxy or a thumbnail. Not by the writer: an encoder that made its own
+    directories would be making a decision about the layout, and the layout is
+    documented in one place — this module — so that a support engineer can tell
+    a user what to delete.
+
+    Why it must happen before, and not on demand: a proxy transcode runs in a
+    worker process that was handed a path. If the directory is missing, the
+    encoder's staging file cannot be created, and the job fails with an error
+    about a path the user has never seen.
+    """
+    root = cache_root(data_root)
+    for kind in CacheKind:
+        (root / str(kind)).mkdir(parents=True, exist_ok=True)
 
 
 def backup_path(project_path: Path) -> Path:

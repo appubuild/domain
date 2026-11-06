@@ -917,10 +917,44 @@ the shared gateway: a private connection is refused from another thread, a
 shared one is not, twenty-four concurrent writers leave twenty-four rows, and a
 reader never sees another thread's cursor.
 
-**Future expansion.** Generation — the `ProxyJob` over `ProxyPlan`, the
-thumbnail strips, and byte-budgeted eviction, all as `NORMAL` jobs on the
-scheduler (ADR-0010). Nothing in this module has to change for any of them: the
+**Making the copies** (`services/media/generation.py`) is the other half, and it
+is *jobs*, not calls. `ProxyJob` and `ThumbnailJob` are frozen bodies holding
+**factories** — a decoder, a renderer, pixel operations, a still sink, a cache
+index — so the body can be pickled and run in a worker process (ADR-0010 §1),
+where it builds its own collaborators. Nothing runs on the request path: a
+service that transcoded while the user was dragging a clip is how an editor
+earns a reputation for freezing.
+
+The two jobs deliberately reach different things. **Proxies are planned for the
+assets the timeline references; thumbnails for every asset in the project.**
+Transcoding two hundred files somebody imported but never cut is how a cache
+becomes forty gigabytes, while eight decodes of each is how a media bin becomes
+browsable — and eight decodes cost less than the probe that found the file.
+
+Three rules the bodies hold to:
+
+1. **A job that fails leaves nothing.** The renderer stages beside its target
+   and promotes on `finish`, the still sink renames into place, and both bodies
+   abort on failure. Neither records a row until the bytes are complete, because
+   a row is a promise eviction will collect on.
+2. **A cancelled job is "stopped", not "failed"** — `NS-JOB-5005`, polled
+   between frames (between stills), never fatal.
+3. **Stills are recorded as they land.** A job interrupted after five thumbnails
+   has left five the panel can show, which is better than none.
+
+The thumbnail key names the frame the strip *asked* for, not the frame the
+decoder landed on: a still is snapped back to the nearest keyframe, because a
+sparse seek into long-GOP footage costs a whole group of pictures and at
+thumbnail scale frame 20 stands in for frame 37 exactly. That mapping is a pure
+function of the file, which is what keeps the cache stable across a reopen.
+
+**Future expansion.** Submission — once `services/jobs/` exists,
+`proxy_requests` and `thumbnail_requests` are the pure half a scheduler needs,
+"what is missing", asked as often as it likes — and byte-budgeted eviction over
+`select_for_eviction`, which is the other half of `record` and the reason every
+row carries a size. Nothing in `MediaCache` has to change for either: the
 producer calls `record()` when the file is complete, and the planner calls
-`forget()` when the budget says so.
+`forget()` when the budget says so. Audio in the proxy waits on the mixer
+(§7.4): the frame pool is video-only today, so a proxy is too.
 
 ---

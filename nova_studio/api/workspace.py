@@ -57,7 +57,11 @@ from nova_studio.infra.media import PyAVDecoder, PyAVProber
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION, ZipProjectArchive
 from nova_studio.infra.persistence.cache import open_shared_cache_index
 from nova_studio.infra.persistence.journal import open_journal
-from nova_studio.infra.persistence.paths import cache_database_path, cache_root
+from nova_studio.infra.persistence.paths import (
+    cache_database_path,
+    cache_root,
+    ensure_cache_layout,
+)
 from nova_studio.infra.preview import (
     DEFAULT_QUALITY as DEFAULT_PREVIEW_QUALITY,
     FrameFormat,
@@ -382,7 +386,25 @@ class ProjectWorkspace:
         # proxy the moment one exists. Built here rather than passed in by the
         # shell because it is a consequence of `data_dir`, and two workspaces
         # in one process — a test, a second window — each get their own.
-        self._media_cache: MediaCache = media_cache or MediaCache(
+        self._media_cache: MediaCache = media_cache or self._build_cache(data_dir)
+
+        self._owns_cache = media_cache is None
+        self._guard = threading.RLock()
+
+    def _build_cache(self, data_dir: Path) -> MediaCache:
+        """The one derived-artefact cache this session reads and writes.
+
+        Built here, and not passed in, because it is a consequence of
+        ``data_dir``: two workspaces in one process — a test, a second window —
+        each get their own.
+
+        The layout is created *now*, before anything can ask for a proxy: a
+        transcode runs in a worker process that was handed a path, and if the
+        directory is missing the encoder's staging file cannot be created and
+        the job fails with an error about a directory the user has never seen.
+        """
+        ensure_cache_layout(data_dir)
+        return MediaCache(
             # Shared, because a preview reads it from the request thread pool
             # while a proxy job writes from its own thread.
             index=open_shared_cache_index(cache_database_path(data_dir)),
@@ -391,8 +413,6 @@ class ProjectWorkspace:
             exists=_file_exists,
             unlink=_unlink_if_there,
         )
-        self._owns_cache = media_cache is None
-        self._guard = threading.RLock()
 
     # -- asking ------------------------------------------------------------
 
