@@ -1,0 +1,10 @@
+# Safe Home Network — robots.txt
+# https://safehomenetwork.com/robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /404
+
+# No crawl-delay directives: crawl rate is controlled in Google Search Console.
+
+Sitemap: https://safehomenetwork.com/sitemap.xml

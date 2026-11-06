@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10243A" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#09111C" media="(prefers-color-scheme: dark)" />
+
+    <title>Safe Home Network | Find Trusted Home Service Options in Your Area</title>
+    <meta
+      name="description"
+      content="Safe Home Network helps homeowners explore home service categories, check service availability by ZIP code, and connect with independent local providers."
+    />
+    <link rel="canonical" href="https://safehomenetwork.com/" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Safe Home Network" />
+    <meta property="og:url" content="https://safehomenetwork.com/" />
+    <meta property="og:title" content="Safe Home Network | Find Trusted Home Service Options in Your Area" />
+    <meta
+      property="og:description"
+      content="Explore home service categories, check availability by ZIP code, and connect with independent providers in your area."
+    />
+    <meta property="og:image" content="https://safehomenetwork.com/images/hero-home.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Safe Home Network | Home Service Discovery by ZIP Code" />
+    <meta
+      name="twitter:description"
+      content="Explore home service categories, check availability by ZIP code, and connect with independent providers in your area."
+    />
+    <meta name="twitter:image" content="https://safehomenetwork.com/images/hero-home.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash of the wrong theme.
+      (function () {
+        try {
+          var stored = localStorage.getItem('shn-theme')
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+          var dark = stored === 'dark' || (!stored && systemDark)
+          document.documentElement.classList.toggle('dark', dark)
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>
+      <div style="font-family: system-ui, sans-serif; padding: 2rem; max-width: 40rem; margin: 0 auto">
+        <h1>Safe Home Network</h1>
+        <p>
+          Safe Home Network helps homeowners explore home service categories, check availability by ZIP
+          code, and connect with independent providers. Please enable JavaScript to use the ZIP code
+          availability checker and browse service pages, or reach our team at
+          <a href="mailto:support@safehomenetwork.com">support@safehomenetwork.com</a>.
+        </p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
