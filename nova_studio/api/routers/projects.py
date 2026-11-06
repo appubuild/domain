@@ -172,6 +172,10 @@ def get_project(
     "/api/v1/projects/{project_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     response_class=Response,
+    # `response_model=None`: the handler answers 204 with no body, and without
+    # this FastAPI would document the `Response` annotation as a 200 carrying
+    # one — a contract that promises bytes nobody sends.
+    response_model=None,
     responses={
         **error_responses(),
         status.HTTP_204_NO_CONTENT: {"description": "The project was closed."},
@@ -181,7 +185,7 @@ def get_project(
 def close_project(
     project_id: str,
     projects: ProjectWorkspace = Depends(workspace),
-) -> None:
+) -> Response:
     """Close a project without saving it.
 
     Deliberately does *not* write first: a close that silently saved would

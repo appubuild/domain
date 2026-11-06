@@ -88,8 +88,11 @@ class RecentEventsResponse(_Strict):
     cannot tell those apart will show the first as the second.
     """
 
+    # Required rather than defaulted: a history read with no `events` key is a
+    # client that cannot tell "nothing happened" from "the field was missing",
+    # and an optional list is a list every caller has to default again.
     events: list[EventEnvelopeWire] = Field(
-        default_factory=list, description="The envelopes after `since`, oldest first."
+        description="The envelopes after `since`, oldest first."
     )
     last_seq: int = Field(description="Newest sequence in the session; 0 when nothing yet.")
     oldest_seq: int | None = Field(

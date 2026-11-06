@@ -1828,6 +1828,9 @@
             "type": "array"
           }
         },
+        "required": [
+          "projects"
+        ],
         "title": "ProjectListResponse",
         "type": "object"
       },
@@ -1949,6 +1952,7 @@
           }
         },
         "required": [
+          "events",
           "last_seq",
           "count"
         ],

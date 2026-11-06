@@ -100,8 +100,11 @@ class ProjectListResponse(_Strict):
     hint can grow without becoming a different response. A bare array cannot.
     """
 
+    # Required, not defaulted: a list endpoint that might omit its list is a
+    # client that has to invent the empty case, and inventing it in two places
+    # is how the two places disagree.
     projects: list[ProjectSummary] = Field(
-        default_factory=list, description="The open projects, in the order they were opened."
+        description="The open projects, in the order they were opened."
     )
 
 

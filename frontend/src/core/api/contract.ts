@@ -720,7 +720,7 @@ export interface ProblemResponse {
  */
 export interface ProjectListResponse {
   /** The open projects, in the order they were opened. */
-  projects?: ProjectSummary[];
+  projects: ProjectSummary[];
 }
 
 /** One project, as a row in a list or a heading in a window. */
@@ -760,7 +760,7 @@ export interface RecentEventsResponse {
   /** How many envelopes are in `events`. */
   count: number;
   /** The envelopes after `since`, oldest first. */
-  events?: EventEnvelopeWire[];
+  events: EventEnvelopeWire[];
   /** Newest sequence in the session; 0 when nothing yet. */
   last_seq: number;
   /** Oldest sequence still retained; null when nothing is. */

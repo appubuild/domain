@@ -154,11 +154,15 @@ frontend/
     │   │   └── context.ts     ApiContext + useApi() (DI at the window's edge)
     │   ├── result.ts          Result<T, E> and its combinators (§10.6)
     │   ├── shell/config.ts    how this window was started (§10.8)
-    │   ├── events/            (stage 5) WS bridge → store dispatch
+    │   ├── events/            the WS bridge: protocol.ts, bridge.ts, url.ts,
+    │   │                      useEventStream.ts (§10.9.1)
     │   ├── timecode/          (stage 7) frame math shared with backend semantics
     │   └── utils/
-    ├── stores/                (stage 5–7) one slice per domain: project, timeline,
-    │                          media, playback, captions, export, ai, settings, ui
+    ├── stores/                one slice per domain, each a vanilla zustand store
+    │   │                      behind a context (§10.9.2)
+    │   ├── project.ts         the file menu, as state — the first slice
+    │   ├── timeline/  media/  playback/  captions/  export/  ai/  settings/  ui/
+    │                          (stages 6–11, one per feature that needs one)
     ├── ui/                    (stage 6) design system: Button, Slider, Menu, Modal,
     │                          Tooltip, VirtualList, Dock, Splitter, Icon, Toast
     ├── features/              one folder per screen or panel group
@@ -322,7 +326,62 @@ service to a known port (`DEV_PORT`, 8765) instead of an ephemeral one: the prox
 has to be pointed at it once, at start-up, and an ephemeral port is one the proxy
 learns too late.
 
-## 10.9 State management
+## 10.9 Events and state
+
+Two halves: `core/events/` is how the world reaches the window, and `stores/` is
+what the window remembers. Both are built; both are small on purpose.
+
+### 10.9.1 The event bridge (`core/events/`)
+
+One socket at `/api/v1/ws` carries every event, with the session token in the
+query string because a browser cannot set a header on a handshake (`api.md` §6).
+
+| Direction | Frames |
+| --- | --- |
+| Server → client | `hello` (once: `seq`, `topics`, `heartbeat_seconds`), `event`, `heartbeat` (with `dropped`), `pong`, `resync` (`since`, `events`, `last_seq`, `oldest_seq`, `complete`), `goodbye` |
+| Client → server | `ping`, `resync {since}`, `unsubscribe` |
+
+Four rules carry the bridge, and each is the backend's own rule honoured on this
+side:
+
+* **Every frame is sequence-checked.** A client that sees `…41, 42, 47` knows it
+  lost four events and *which* four, so recovery is a request rather than a
+  guess. The arithmetic lives here because nothing downstream can do it: a store
+  sees a stream, not a sequence.
+* **An event that arrives ahead of the sequence is held, not delivered.** A
+  `clip.deleted` that arrives before the `clip.moved` it follows is a timeline
+  the user never had. Held events are bounded (512, as the bus bounds its own
+  buffer) and drained the moment the hole is filled.
+* **A gap is repaired from history, or admitted.** `resync {since}` asks for the
+  hole; `complete: false` means history could not reach back that far, and the
+  bridge says so through `onStale` instead of pretending. The caller refetches.
+  The same callback fires if a replay never arrives, because events held forever
+  are worse than events delivered late.
+* **A frame we do not recognise is skipped, never fatal.** A server one version
+  ahead sends frames this client has never heard of, and closing the socket over
+  one is a bug the user pays for.
+
+`protocol.ts` is the only file in `src/` written by hand against the backend
+rather than generated from the OpenAPI document — a WebSocket has nowhere in that
+document to live. It is therefore the only file that can drift silently, so
+`WS_PROTOCOL_VERSION` and the frame kinds are asserted against
+`nova_studio.api.ws` by a Python test (`tests/api/test_ws_protocol_mirror.py`):
+the same trick as `make contract-check`, applied where the generator cannot reach.
+
+Two more that are the bridge's own:
+
+* **A handler that throws does not take the socket with it.** One panel's bug is
+  not an editor-wide outage; the error is reported and delivery continues.
+* **Reconnection backs off** (doubling with jitter, reset by a `hello`), and a
+  socket that has gone quiet for three heartbeat intervals is presumed dead —
+  silence is the only evidence there is, because nothing arrives to say a socket
+  has died.
+
+Handlers subscribe by pattern: an exact topic, a prefix (`timeline.*`), or the
+whole stream (`*`). A panel that cares about the timeline is not rewritten when a
+topic is added under it.
+
+### 10.9.2 Stores
 
 MVVM as §4.1 specifies it, mapped onto React:
 
@@ -330,31 +389,52 @@ MVVM as §4.1 specifies it, mapped onto React:
 | --- | --- | --- |
 | View | `features/**/*.tsx` — renders state, no decisions | `Splash.tsx` |
 | View-model | `features/**/use*.ts` — owns one screen's state machine | `useServiceInfo.ts` |
-| Model | `stores/*` (stage 5+) — domain state, one slice per aggregate | — |
-| Service | `core/api` + `core/events` — the world outside the window | `client.ts` |
+| Model | `stores/*.ts` — domain state, one slice per aggregate | `stores/project.ts` |
+| Service | `core/api` + `core/events` — the world outside the window | `client.ts`, `bridge.ts` |
 
-`useServiceInfo` is the smallest complete example, and its state machine is the pattern
-every screen follows — each state is spelled out rather than implied:
+A store is a **zustand vanilla store** (`createStore`) handed to the tree through
+a context, the same way the API client is (`useApi`). Two reasons for the
+indirection rather than a global: a component that imported a singleton store
+could not be rendered in a test, and a store built at module scope cannot be
+given the client it should be calling. `useProjectStore(selector)` throws without
+a provider, because a store that is not there is a silent no-op and a silent
+no-op is the failure nobody traces.
 
-```ts
-type ServiceState =
-  | { kind: 'connecting' }                              // not an error: it is booting
-  | { kind: 'ready'; info: SystemInfoResponse }
-  | { kind: 'unreachable'; problem: ApiProblem };
-```
+`stores/project.ts` is the first slice — the file menu, as state:
 
-Rules that will hold for the stores when they arrive:
+| | |
+| --- | --- |
+| `refresh()` | `listProjects`, replacing the list with the answer |
+| `create(name, path?)` / `open(path)` | adds the project and makes it current; open carries its `warnings` |
+| `close(id)` | removes it, and clears the current one if it was |
+| `save(id)` / `saveAs(id, path)` | writes, then asks for the summary |
+| `checkpoint(id)` | writes a checkpoint now rather than waiting for autosave to owe one |
+| `select(id)` | which project the window is showing — the store's own business, no request |
+| `applyEvent(envelope)` | a `project.*` event means "ask again" |
 
-* **Server state and UI state are different stores.** Selection, hover and panel sizes
-  never share a slice with the project.
-* **The service is the source of truth.** A store is a cache of what the service said,
-  plus optimistic state that the command log can roll back (§5.3). Nothing writes to the
-  project except a command.
-* **Events, not polling.** `core/events/` (stage 5) bridges the WebSocket to store
-  dispatch with a topic → handler map, and re-syncs from REST after a reconnect gap,
-  because a WS that dropped for two seconds is a store that is two seconds wrong.
-* **Undo/redo is not frontend state.** The journal lives in the service; the window sends
-  commands and receives events (§5.3).
+Four rules, and each is a bug going the other way:
+
+* **The service is the source of truth.** Nothing writes a project except a
+  command or a call, and the answer that comes back replaces what we had. A
+  `save` response names the file, not the project's new state — so the store asks
+  for the summary rather than flipping `dirty` itself, which would be guessing at
+  numbers the service owns.
+* **A failed read keeps what it had.** A refresh that failed is not evidence that
+  the list is empty, and a UI that claims the user's work is gone because of a
+  network hiccup is a UI that lies. The problem is recorded, the list is kept.
+* **An event is a notification, not a payload.** `project.*` means "ask again",
+  never "here is the new state": the socket carries small envelopes by design,
+  and a store that treated them as data would be wrong whenever one is dropped.
+* **Refreshes coalesce.** A refresh while one is running *joins* it, and at most
+  one catch-up follows — an event that landed mid-request may or may not be in
+  the snapshot, so asking once more is honest. Ten events in a tick are two
+  requests, not ten.
+
+Still to come, and why they are not here yet: commands, undo/redo and optimistic
+updates (stage 7 — the journal lives in the service, and an optimistic update is
+only safe once the command log can roll it back), and server state versus UI
+state living in separate slices (`stores/` gains `ui`, `timeline`, `media`, … as
+those features arrive).
 
 ## 10.10 Theming and the design system
 
@@ -395,13 +475,16 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (33 tests, 4 files, ≈ 2 s):
+Suites today (100 tests, 7 files, ≈ 3 s):
 
 | Suite | Covers |
 | --- | --- |
 | `core/result.test.ts` (7) | The combinators, including that `map` leaves a failure untouched |
 | `core/api/client.test.ts` (16) | URL building, path params, headers, token, JSON and blob reads, timeouts, cancellation, and every `ApiProblem` kind — against a `fetch` double, so no service is needed |
 | `core/shell/config.test.ts` (5) | Token consumption, URL rewriting, `VITE_API_BASE` |
+| `core/events/protocol.test.ts` (25) | Every frame kind, and that each shape of nonsense — a newer server's frame, malformed JSON, an event with no topic — comes back as `null` rather than an exception |
+| `core/events/bridge.test.ts` (24) | The sequence arithmetic against a socket double: a gap is held and requested, a replay fills the hole, an incomplete replay is admitted, a handler that throws does not kill the stream, silence reconnects, and the retry backs off |
+| `stores/project.test.ts` (18) | The service's answer wins, a failed refresh keeps the list, refreshes coalesce, ten events are two requests, and a save asks for the summary instead of inventing one |
 | `features/splash/Splash.test.tsx` (5) | All three splash states, including that a timeout is not reported as a crash |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
@@ -447,10 +530,9 @@ while CI, which has both, always runs the whole thing.
 
 ## 10.14 What is not built yet
 
-| Order | What | Stage |
-| --- | --- | --- |
-| `core/events/` — WS bridge, topic → handler map, reconnect re-sync | 5 |
-| `stores/project` — the first slice, and the command/undo loop | 5, 7 |
+| What | Stage |
+| --- | --- |
+| Commands, undo/redo and optimistic updates in `stores/` — the loop the timeline is edited through | 7 |
 | `ui/` — the design system, then the dock tree and window chrome | 6 |
 | `features/editor/` — preview panel, inspector, status bar | 6 |
 | `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping | 7 |
@@ -468,3 +550,4 @@ while CI, which has both, always runs the whole thing.
 | [`api.md`](api.md) | The service side of every request, `problem+json`, and the WS protocol |
 | [`api-contract.json`](api-contract.json) | The generated contract |
 | `scripts/codegen_contract.py` | The generator, and `tests/scripts/test_codegen_contract.py` its tests |
+| `tests/api/test_ws_protocol_mirror.py` | The WebSocket frames, held against `nova_studio/api/ws.py` because they cannot be generated |
