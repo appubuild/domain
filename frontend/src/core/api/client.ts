@@ -49,9 +49,18 @@ export type BodyOf<Id extends OperationId> = Spec<Id>['requestBody'] extends key
   ? Schemas[Spec<Id>['requestBody']]
   : undefined;
 
+/** What a successful call resolves to.
+ *
+ *  A route with no response schema has no body to parse: `204` resolves to
+ *  `undefined`, and a 2xx that promised nothing is `unknown` rather than `Blob`
+ *  — a client that called `.blob()` on it would have been told a lie by the
+ *  contract, and the lie would surface as an empty file instead of an error.
+ */
 export type ResponseOf<Id extends OperationId> = Spec<Id>['response'] extends keyof Schemas
   ? Schemas[Spec<Id>['response']]
-  : Blob;
+  : Spec<Id>['success'] extends 204
+    ? undefined
+    : unknown;
 
 export interface ApiRequest<Id extends OperationId> {
   readonly params?: PathParamsOf<Id>;

@@ -249,6 +249,30 @@ export interface EnsureMediaResponse {
   summary: string;
 }
 
+/**
+ * One event, exactly as the socket sends it.
+ *
+ * `payload` is a free object because the bus can carry any payload, and a
+ * client that refused to parse an unknown one would be a client that drops
+ * the socket the first time the backend learns a new topic.
+ */
+export interface EventEnvelopeWire {
+  /** The command that produced it, so a client can match its optimistic update. */
+  command_id?: string | null;
+  /** The event's body; its shape follows the topic. */
+  payload?: Record<string, unknown> | null;
+  /** Monotonic per session; a gap here is lost events. */
+  seq: number;
+  /** Which subsystem published it, for diagnostics. */
+  source?: string | null;
+  /** Dot-namespaced, e.g. `timeline.clip.moved`. */
+  topic: string;
+  /** Publication time, unix milliseconds. */
+  ts: number;
+  /** The frame kind. */
+  type?: "event";
+}
+
 /** What comes back: a job id, and where to watch it. */
 export interface ExportSubmission {
   /** One line for the status bar: destination and length. */
@@ -687,6 +711,18 @@ export interface ProblemResponse {
   type: string;
 }
 
+/**
+ * Every project open in this session.
+ *
+ * A wrapper rather than a bare list, for the reason every collection in this
+ * API is one: a response that may later carry a cursor, a count or a recovery
+ * hint can grow without becoming a different response. A bare array cannot.
+ */
+export interface ProjectListResponse {
+  /** The open projects, in the order they were opened. */
+  projects?: ProjectSummary[];
+}
+
 /** One project, as a row in a list or a heading in a window. */
 export interface ProjectSummary {
   /** Whether a checkpoint is owed right now. */
@@ -711,6 +747,24 @@ export interface ProjectSummary {
   pending_commands: number;
   /** Stable id; the key every other project call uses. */
   project_id: string;
+}
+
+/**
+ * The tail of the history, as the socket would have sent it.
+ *
+ * The numbers around the events are the point: without `oldest_seq` a client
+ * cannot tell "nothing has happened" from "history forgot", and a client that
+ * cannot tell those apart will show the first as the second.
+ */
+export interface RecentEventsResponse {
+  /** How many envelopes are in `events`. */
+  count: number;
+  /** The envelopes after `since`, oldest first. */
+  events?: EventEnvelopeWire[];
+  /** Newest sequence in the session; 0 when nothing yet. */
+  last_seq: number;
+  /** Oldest sequence still retained; null when nothing is. */
+  oldest_seq?: number | null;
 }
 
 /** What to offer the user after a crash, as the domain phrased it. */
@@ -1042,6 +1096,7 @@ export interface Schemas {
   readonly CreateProjectRequest: CreateProjectRequest;
   readonly EnsureMediaRequest: EnsureMediaRequest;
   readonly EnsureMediaResponse: EnsureMediaResponse;
+  readonly EventEnvelopeWire: EventEnvelopeWire;
   readonly ExportSubmission: ExportSubmission;
   readonly HealthResponse: HealthResponse;
   readonly HistorySummary: HistorySummary;
@@ -1068,7 +1123,9 @@ export interface Schemas {
   readonly PreviewWarmRequest: PreviewWarmRequest;
   readonly PreviewWarmResponse: PreviewWarmResponse;
   readonly ProblemResponse: ProblemResponse;
+  readonly ProjectListResponse: ProjectListResponse;
   readonly ProjectSummary: ProjectSummary;
+  readonly RecentEventsResponse: RecentEventsResponse;
   readonly RecoveryResponse: RecoveryResponse;
   readonly RedoResponse: RedoResponse;
   readonly ReplaceTrackClipsRequest: ReplaceTrackClipsRequest;
@@ -1193,7 +1250,7 @@ export const OPERATIONS = {
     queryParams: [],
     requestBody: null,
     response: null,
-    success: 200,
+    success: 204,
     responseFormat: "json",
   },
   createProject: {
@@ -1313,7 +1370,7 @@ export const OPERATIONS = {
     pathParams: [],
     queryParams: [],
     requestBody: null,
-    response: null,
+    response: "ProjectListResponse",
     success: 200,
     responseFormat: "json",
   },
@@ -1368,7 +1425,7 @@ export const OPERATIONS = {
     pathParams: [],
     queryParams: ["since", "limit"],
     requestBody: null,
-    response: null,
+    response: "RecentEventsResponse",
     success: 200,
     responseFormat: "json",
   },

@@ -17,7 +17,7 @@ resource an unauthenticated caller should not be able to take.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, status
 
@@ -31,6 +31,7 @@ from starlette.websockets import WebSocket  # noqa: TC002
 from nova_studio.api.auth import LoopbackGuard, authorize_websocket
 from nova_studio.api.dependencies import session_state
 from nova_studio.api.errors import error_responses
+from nova_studio.api.schemas.events import EventEnvelopeWire, RecentEventsResponse
 
 if TYPE_CHECKING:
     from nova_studio.api.state import SessionState
@@ -74,6 +75,7 @@ def install(
 
 @router.get(
     "/api/v1/events",
+    response_model=RecentEventsResponse,
     responses=error_responses(),
     summary="Recent events, for a client that fell behind",
 )
@@ -81,7 +83,7 @@ async def recent_events(
     state: SessionState = Depends(session_state),
     since: int = Query(0, ge=0, description="Return events after this sequence number."),
     limit: int = Query(200, ge=1, le=2_000, description="Maximum events to return."),
-) -> dict[str, Any]:
+) -> RecentEventsResponse:
     """The tail of the event history, as the WebSocket would have sent it.
 
     A client that detects a gap too large for the bus's retained history calls
@@ -95,10 +97,10 @@ async def recent_events(
                 f"events before {bus.oldest_seq} are no longer retained; refetch the state you need"
             ),
         )
-    events = [{"type": "event", **envelope.to_wire()} for envelope in bus.replay_from(since)]
-    return {
-        "events": events[:limit],
-        "last_seq": bus.last_seq,
-        "oldest_seq": bus.oldest_seq,
-        "count": min(len(events), limit),
-    }
+    envelopes = [EventEnvelopeWire(**envelope.to_wire()) for envelope in bus.replay_from(since)]
+    return RecentEventsResponse(
+        events=envelopes[:limit],
+        last_seq=bus.last_seq,
+        oldest_seq=bus.oldest_seq,
+        count=min(len(envelopes), limit),
+    )

@@ -46,6 +46,7 @@ from nova_studio.api.schemas.projects import (
     CreateProjectRequest,
     OpenProjectRequest,
     OpenProjectResponse,
+    ProjectListResponse,
     ProjectSummary,
     RecoveryResponse,
     SaveAsRequest,
@@ -80,17 +81,24 @@ def _answer(
     )
 
 
-@router.get("/api/v1/projects", summary="The projects open in this session")
+@router.get(
+    "/api/v1/projects",
+    response_model=ProjectListResponse,
+    responses=error_responses(),
+    summary="The projects open in this session",
+)
 def list_projects(
     projects: ProjectWorkspace = Depends(workspace),
-) -> dict[str, list[ProjectSummary]]:
+) -> ProjectListResponse:
     """Every open project, in the order they were opened.
 
     Summaries, not projects: a list that carried whole timelines would be a
     request that grows without bound as the user works.
     """
     open_now = projects.open_projects()
-    return {"projects": [project_summary(item, now_ms=projects.now_ms()) for item in open_now]}
+    return ProjectListResponse(
+        projects=[project_summary(item, now_ms=projects.now_ms()) for item in open_now]
+    )
 
 
 @router.post(
@@ -162,6 +170,8 @@ def get_project(
 
 @router.delete(
     "/api/v1/projects/{project_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
     responses={
         **error_responses(),
         status.HTTP_204_NO_CONTENT: {"description": "The project was closed."},
@@ -171,7 +181,7 @@ def get_project(
 def close_project(
     project_id: str,
     projects: ProjectWorkspace = Depends(workspace),
-) -> Response:
+) -> None:
     """Close a project without saving it.
 
     Deliberately does *not* write first: a close that silently saved would

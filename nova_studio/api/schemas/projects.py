@@ -33,6 +33,7 @@ __all__ = [
     "CreateProjectRequest",
     "OpenProjectRequest",
     "OpenProjectResponse",
+    "ProjectListResponse",
     "ProjectSummary",
     "RecoveryResponse",
     "SaveAsRequest",
@@ -89,6 +90,19 @@ class ProjectSummary(_Strict):
     autosave_due: bool = Field(description="Whether a checkpoint is owed right now.")
     journal_sequence: int = Field(description="Newest journalled sequence; 0 when nothing yet.")
     checkpoint_sequence: int = Field(description="Sequence of the newest checkpoint; 0 for none.")
+
+
+class ProjectListResponse(_Strict):
+    """Every project open in this session.
+
+    A wrapper rather than a bare list, for the reason every collection in this
+    API is one: a response that may later carry a cursor, a count or a recovery
+    hint can grow without becoming a different response. A bare array cannot.
+    """
+
+    projects: list[ProjectSummary] = Field(
+        default_factory=list, description="The open projects, in the order they were opened."
+    )
 
 
 class OpenProjectResponse(_Strict):
