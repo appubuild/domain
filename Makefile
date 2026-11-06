@@ -178,11 +178,22 @@ frontend-build: frontend/node_modules ## Build the production frontend bundle
 .PHONY: frontend-check
 frontend-check: contract-check frontend-types frontend-lint frontend-test ## Run every frontend gate
 
+# The host a browser will reach the dev server on, when it is not this machine.
+# `make dev DEV_HOST=tablet.local` lets the service accept it (ADR-0005 §4);
+# a packaged shell passes nothing and accepts loopback only.
+DEV_HOST ?=
+# A known port, unlike `make serve`: the dev proxy has to be pointed at it once,
+# at start-up, and an ephemeral port would be one the proxy learned too late.
+# Something already listening on 8765 is worth hearing about rather than
+# working around.
+DEV_PORT ?= 8765
+
 .PHONY: dev
 dev: frontend/node_modules ## Run the API service and the Vite dev server together
-	@echo "starting the service on $(or $(NOVA_API_ORIGIN),http://127.0.0.1:8765)"
-	@echo "the Vite dev server proxies /api, /ws and /healthz to it"
-	$(PY) -m nova_studio serve & \
+	@mkdir -p .nova
+	@echo "the service writes its endpoint (URL and session token) to .nova/dev-endpoint.json"
+	@echo "the Vite dev server proxies /api, /ws and /healthz to it and attaches the token"
+	$(PY) -m nova_studio serve --port $(DEV_PORT) --endpoint-file .nova/dev-endpoint.json $(if $(DEV_HOST),--allow-host $(DEV_HOST),) & \
 	  trap 'kill %1 2>/dev/null' EXIT; \
 	  cd frontend && $(NPNX) vite
 

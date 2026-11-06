@@ -311,6 +311,24 @@ def cmd_layering(args: argparse.Namespace) -> int:
     return subprocess.run(command, check=False).returncode
 
 
+def allowed_hosts_for(extra: list[str] | None) -> tuple[str, ...] | None:
+    """The hosts a `serve` invocation accepts: loopback, plus whatever was named.
+
+    `--allow-host` **adds**; it never replaces. A flag that quietly removed
+    `127.0.0.1` would turn "let me test from my tablet" into "the service is
+    down" in a way nobody would think to look for — and `None` means the
+    guard's own default rather than an empty set, because an empty set of
+    allowed hosts is a service that refuses everything.
+
+    Imported lazily: the CLI must stay importable without the API stack.
+    """
+    if not extra:
+        return None
+    from nova_studio.api.auth import LOOPBACK_HOSTS
+
+    return tuple(dict.fromkeys((*LOOPBACK_HOSTS, *extra)))
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     """Run the local service on loopback until it is told to stop.
 
@@ -325,13 +343,16 @@ def cmd_serve(args: argparse.Namespace) -> int:
     """
     import asyncio
 
-    from nova_studio.api.app import create_app
+    from nova_studio.api.app import ApiSettings, create_app
     from nova_studio.api.server import serve, write_endpoint_file
     from nova_studio.core.events import EventBus
 
     async def run() -> None:
         bus = EventBus(autostart=False)
-        app = create_app(bus)
+        # Only the hosts the command line named, and loopback is always among
+        # them: `allowed_hosts_for` never lets `--allow-host` remove one.
+        settings = ApiSettings(allowed_hosts=allowed_hosts_for(args.allow_hosts))
+        app = create_app(bus, settings=settings)
         async with serve(app, host=args.host, port=args.port) as running:
             endpoint = running.endpoint
             if args.endpoint_file:
@@ -451,6 +472,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--endpoint-file",
         metavar="PATH",
         help="write the endpoint to PATH (mode 0600) instead of printing it",
+    )
+    serve_parser.add_argument(
+        "--allow-host",
+        action="append",
+        dest="allow_hosts",
+        metavar="HOST",
+        help=(
+            "accept this host in a Host or Origin header as well as loopback; "
+            "repeatable, and for a development server reached from another "
+            "machine. A packaged shell passes nothing."
+        ),
     )
     serve_parser.set_defaults(func=cmd_serve)
 

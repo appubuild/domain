@@ -20,6 +20,7 @@ from typing import Any
 import pytest
 
 import nova_studio
+from nova_studio import cli
 from nova_studio.cli import (
     DATA_DIR_ENV,
     OPTIONAL_COMPONENTS,
@@ -281,6 +282,41 @@ class TestLayeringSubcommand:
         message = capsys.readouterr().err
         assert "unavailable" in message
         assert "frozen build" in message
+
+
+class TestAllowedHosts:
+    """`--allow-host` widens the guard. It must never narrow it."""
+
+    def test_nothing_named_means_the_guards_own_default(self) -> None:
+        """`None`, not an empty tuple: an empty set of hosts refuses everything."""
+        assert cli.allowed_hosts_for(None) is None
+        assert cli.allowed_hosts_for([]) is None
+
+    def test_a_named_host_is_added_to_loopback(self) -> None:
+        hosts = cli.allowed_hosts_for(["dev.local"])
+        assert hosts is not None
+        assert set(hosts) >= {"127.0.0.1", "localhost", "[::1]"}
+        assert "dev.local" in hosts
+
+    def test_loopback_cannot_be_argued_away(self) -> None:
+        """The bug this helper exists for: naming a host used to *replace* the set,
+        which turned 'let me test from my tablet' into 'the service is down'."""
+        hosts = cli.allowed_hosts_for(["127.0.0.1"])
+        assert hosts is not None
+        assert set(hosts) == {"127.0.0.1", "localhost", "[::1]"}
+
+    def test_a_host_named_twice_appears_once(self) -> None:
+        hosts = cli.allowed_hosts_for(["dev.local", "dev.local"])
+        assert hosts is not None
+        assert len(hosts) == len(set(hosts))
+
+    def test_the_flag_collects_every_occurrence(self) -> None:
+        args = build_parser().parse_args(["serve", "--allow-host", "a", "--allow-host", "b"])
+        assert args.allow_hosts == ["a", "b"]
+
+    def test_the_flag_is_absent_by_default(self) -> None:
+        args = build_parser().parse_args(["serve"])
+        assert args.allow_hosts is None
 
 
 class TestOpenapiSubcommand:
