@@ -1278,8 +1278,24 @@
             "minimum": 0.0,
             "title": "Frame",
             "type": "integer"
+          },
+          "height": {
+            "description": "The panel's height, in device pixels.",
+            "minimum": 2.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "width": {
+            "description": "The panel's width, in device pixels.",
+            "minimum": 2.0,
+            "title": "Width",
+            "type": "integer"
           }
         },
+        "required": [
+          "width",
+          "height"
+        ],
         "title": "PreviewWarmRequest",
         "type": "object"
       },

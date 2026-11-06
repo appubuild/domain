@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-__all__ = ["CACHE_INDEX_DDL", "SqliteCacheIndex", "open_cache_index"]
+__all__ = ["CACHE_INDEX_DDL", "SqliteCacheIndex", "open_cache_index", "open_shared_cache_index"]
 
 #: The one table this adapter owns.
 #:
@@ -72,8 +72,35 @@ _SELECT: Final[str] = f"SELECT {', '.join(_COLUMNS)} FROM cache_index"
 
 
 def open_cache_index(path: Path) -> SqliteCacheIndex:
-    """Open (or create) the install-wide cache index at ``path``."""
+    """Open (or create) the install-wide cache index at ``path``.
+
+    One owner, one thread — the ordinary case, and the one a unit of work wants.
+
+    The directory is created if it is not there: on a first run, or on a
+    portable build started from a fresh machine, the data directory does not
+    exist yet, and "cannot open the cache index" is not a useful thing to tell
+    someone who has only just installed the editor.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
     return SqliteCacheIndex(SqliteGateway(path))
+
+
+def open_shared_cache_index(path: Path) -> SqliteCacheIndex:
+    """Open the install-wide cache index for use from **several threads**.
+
+    The cache index is the one adapter that is read on the request path — a
+    preview asking "does this asset have a proxy" runs in FastAPI's thread pool
+    — while a proxy job writes from its own thread and the eviction planner
+    reads from whichever tick reaches it first. So this opens the gateway
+    ``shared=True``: one connection, ``check_same_thread=False``, and a lock
+    around every statement (see ``sqlite.py``).
+
+    One shared connection rather than one per thread, because a request-thread
+    pool is dozens of threads and a connection each would be dozens of WAL
+    readers on a database whose entire content is a few hundred rows.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return SqliteCacheIndex(SqliteGateway(path, shared=True))
 
 
 class SqliteCacheIndex:

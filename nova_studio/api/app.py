@@ -245,6 +245,9 @@ def _lifespan(
             unsubscribe()
             executor.shutdown()
             workspace.close_all()
+            # Last, because the cache index outlives any one project: closing
+            # every project does not end the session.
+            workspace.close_cache()
             bus.publish("api.stopped", {"port": state.port})
             bus.shutdown()
 

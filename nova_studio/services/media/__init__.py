@@ -13,6 +13,8 @@ services/media/
 ├── __init__.py     this file: the feature's contract
 ├── ingest.py       MediaIngestor — paths in, assets plus per-file failures out
 ├── proxy.py        ProxyPolicy — which source to decode, and whether to make one
+├── keys.py         the cache key vocabulary: what a derived artefact is called
+├── cache.py        MediaCache — which *file* that key means, per asset
 └── thumbnails.py   thumbnail_indices — the frames a strip should ask for
 ```
 
@@ -39,7 +41,15 @@ spawned here.
 | `MediaIngestor.ingest(paths, existing)` | "what did we get, what failed, what was already here" |
 | `ProxyPolicy.decide(scale, available)` | "which copy do I decode at this preview scale" |
 | `ProxyPolicy.plan(info)` | "is a proxy worth building, and how big" |
+| `MediaCache.resolve(project, asset_id, source)` | "which file *is* that copy" |
+| `MediaCache.sources_for(project, scale)` | "which copy should everything decode, at this preview scale" |
 | `thumbnail_indices(count, wanted, keyframes)` | "which frames does a strip ask for" |
+
+**Transparency.** `MediaCache` is why §7.2's promise holds. `resolve` falls back
+*towards the original* — a missing thumbnail answers with a proxy, a missing
+proxy with the original — so a copy that has not been generated yet degrades
+the picture instead of removing it. Only a missing original removes a layer,
+which is a relink and not a cache miss.
 
 **Events.** None yet. Proxy transcodes will publish `job.*` through the
 scheduler; ingest will emit `media.imported` once the media panel needs to
@@ -82,17 +92,32 @@ beyond what the domain already carries.
   matched by bytes, and relink will be provable rather than hopeful.
 * **Waveform and audio-analysis planning**, which is the same shape as the
   thumbnail plan — indices in, samples out.
-* **A `ProxyJob` builder** turning `ProxyPlan` into a scheduler submission, once
-  `services/jobs/` lands.
+* **A `ProxyJob` builder** turning `ProxyPlan` into a scheduler submission —
+  the scheduler has landed (`infra/jobs.py`), so what is missing is the body.
+  `MediaCache` already answers where the result would go and whether we have
+  it, which is everything the job needs to be idempotent.
+* **Thumbnail generation**, the same shape as a proxy job with a still-image
+  encoder on the end.
 """
 
 from __future__ import annotations
 
+from nova_studio.services.media.cache import ExistsFn, MediaCache, SourceResolver, UnlinkFn
 from nova_studio.services.media.ingest import (
     IngestedAsset,
     IngestFailure,
     IngestReport,
     MediaIngestor,
+)
+from nova_studio.services.media.keys import (
+    PROXY_EXTENSION,
+    PROXY_PREFIX,
+    THUMBNAIL_EXTENSION,
+    THUMBNAIL_PREFIX,
+    is_safe_key,
+    kind_of,
+    proxy_key,
+    thumbnail_key,
 )
 from nova_studio.services.media.proxy import (
     DEFAULT_PROXY_POLICY,
@@ -107,12 +132,24 @@ __all__ = [
     "DEFAULT_PROXY_POLICY",
     "DEFAULT_STRIP_COUNT",
     "EDIT_FRIENDLY_CODECS",
+    "PROXY_EXTENSION",
+    "PROXY_PREFIX",
+    "THUMBNAIL_EXTENSION",
+    "THUMBNAIL_PREFIX",
     "DecodeSource",
+    "ExistsFn",
     "IngestFailure",
     "IngestReport",
     "IngestedAsset",
+    "MediaCache",
     "MediaIngestor",
     "ProxyPlan",
     "ProxyPolicy",
+    "SourceResolver",
+    "UnlinkFn",
+    "is_safe_key",
+    "kind_of",
+    "proxy_key",
     "thumbnail_indices",
+    "thumbnail_key",
 ]

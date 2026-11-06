@@ -37,7 +37,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from nova_studio.core.errors import NovaInvariantError
 from nova_studio.domain._wire import (
@@ -46,6 +46,9 @@ from nova_studio.domain._wire import (
     wire_str as _wire_str,
 )
 from nova_studio.domain.media import ContentHash
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 __all__ = [
     "CAPTION_PREFIX",
@@ -70,6 +73,7 @@ __all__ = [
     "RevisionRef",
     "caption_document",
     "caption_document",
+    "derived_path",
     "is_valid_document_name",
     "revision_document",
     "revisions_to_prune",
@@ -510,6 +514,36 @@ class CacheBudget:
     def needs_eviction(self, used_bytes: int, needed_bytes: int) -> bool:
         """Whether admitting ``needed_bytes`` would break the budget."""
         return used_bytes + needed_bytes > self.max_bytes
+
+
+def derived_path(root: Path, kind: CacheKind, key: str) -> Path:
+    """Where one derived artefact lives: ``<root>/<kind>/<key>``.
+
+    One rule, in the domain, because two layers need it and they may not
+    communicate directly: ``services/media`` decides *which* copy of a file a
+    decode should read, and ``infra/persistence`` owns the cache index that
+    records whether we still have it. A rule each of them spelled out would
+    drift, and the drift would show up as a cache that reports entries it
+    cannot find.
+
+    The kind is a subdirectory so that "clear the thumbnail cache" is one
+    ``rm`` and not a query, and so that a user cleaning up can see what they
+    are about to delete.
+
+    Args:
+        root: The cache directory — what the app data layout decides.
+        kind: Which family of artefact: the subdirectory.
+        key: The artefact's key, which is also its file name.
+
+    Raises:
+        NovaInvariantError: The key is not safe to use as a file name. A cache
+            key is built by a service from strings that came, ultimately, from
+            a file the user picked, so the check is not paranoia — it is the
+            same guard a project-id gets, for the same reason.
+    """
+    if not is_valid_document_name(key):
+        raise NovaInvariantError(f"cache key {key!r} cannot be used as a file name")
+    return root / str(kind) / key
 
 
 def select_for_eviction(

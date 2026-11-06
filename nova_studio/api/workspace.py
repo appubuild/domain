@@ -39,8 +39,9 @@ should have to poll.
 from __future__ import annotations
 
 import threading
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 from nova_studio import __version__
@@ -54,14 +55,16 @@ from nova_studio.domain.project import Project, ProjectMetadata
 from nova_studio.infra.imaging import OpenCVImageOps
 from nova_studio.infra.media import PyAVDecoder, PyAVProber
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION, ZipProjectArchive
+from nova_studio.infra.persistence.cache import open_shared_cache_index
 from nova_studio.infra.persistence.journal import open_journal
+from nova_studio.infra.persistence.paths import cache_database_path, cache_root
 from nova_studio.infra.preview import (
     DEFAULT_QUALITY as DEFAULT_PREVIEW_QUALITY,
     FrameFormat,
     encoder_for,
     media_type_for,
 )
-from nova_studio.services.media import MediaIngestor
+from nova_studio.services.media import MediaCache, MediaIngestor
 from nova_studio.services.projects import (
     DEFAULT_AUTOSAVE,
     AutosaveState,
@@ -70,7 +73,7 @@ from nova_studio.services.projects import (
     RecoveryPlan,
     plan_recovery,
 )
-from nova_studio.services.render import PreviewRenderer, resolve_asset
+from nova_studio.services.render import PreviewRenderer
 from nova_studio.services.timeline import TimelineEditor, TimelineStore
 
 if TYPE_CHECKING:
@@ -78,7 +81,6 @@ if TYPE_CHECKING:
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Mapping, Sequence
-    from pathlib import Path
 
     from nova_studio.core.commands import Command
     from nova_studio.core.events import EventBus
@@ -162,6 +164,28 @@ _NAMES_REMEMBERED: Final[int] = 512
 CHECKPOINT_ENTRY: Final[str] = "checkpoint"
 
 _TOPIC_PREFIX: Final[str] = "project"
+
+
+def _file_exists(path: str) -> bool:
+    """The `ExistsFn` the media cache is built with: is this file still there?
+
+    Here, and not in `services`, because this is the one question the cache asks
+    about the disk and a service that stat()ed the filesystem could not be
+    tested without one. `is_file` rather than `exists`: a directory where a
+    proxy should be is not a proxy.
+    """
+    return Path(path).is_file()
+
+
+def _unlink_if_there(path: str) -> None:
+    """The `UnlinkFn` the media cache is built with: delete it, or do not.
+
+    A file that is already gone is not a failure. Eviction may be racing a user
+    who cleared the cache directory by hand, and the loser of that race has
+    still got what they wanted.
+    """
+    with suppress(FileNotFoundError):
+        Path(path).unlink()
 
 
 @dataclass(frozen=True, slots=True)
@@ -309,6 +333,10 @@ class ProjectWorkspace:
         prober: What import probes files with. Injected because it is the one
             thing here that reads a user's disk outside the project file, and a
             test must be able to answer without one.
+        media_cache: Which copy of an asset a decode should read. Built from
+            `data_dir` when omitted — one cache index for the session, opened
+            here and closed by :meth:`close`. Injected so a test can say "we
+            have a proxy" without a disk.
 
     Every method returns a `Result`: refusing is an answer, not an exception,
     because "this project is already open" and "this file is not a project" are
@@ -330,6 +358,7 @@ class ProjectWorkspace:
         preview_ops: ImageOps | None = None,
         preview_format: FrameFormat = FrameFormat.JPEG,
         preview_quality: int = DEFAULT_PREVIEW_QUALITY,
+        media_cache: MediaCache | None = None,
     ) -> None:
         self._bus = bus
         self._data_dir = data_dir
@@ -349,6 +378,20 @@ class ProjectWorkspace:
         self._preview_format = preview_format
         self._preview_quality = preview_quality
         self._preview_ops: ImageOps = preview_ops or OpenCVImageOps()
+        # Which copy of an asset a decode reads: the original today, and a
+        # proxy the moment one exists. Built here rather than passed in by the
+        # shell because it is a consequence of `data_dir`, and two workspaces
+        # in one process — a test, a second window — each get their own.
+        self._media_cache: MediaCache = media_cache or MediaCache(
+            # Shared, because a preview reads it from the request thread pool
+            # while a proxy job writes from its own thread.
+            index=open_shared_cache_index(cache_database_path(data_dir)),
+            root=cache_root(data_dir),
+            clock=self._clock,
+            exists=_file_exists,
+            unlink=_unlink_if_there,
+        )
+        self._owns_cache = media_cache is None
         self._guard = threading.RLock()
 
     # -- asking ------------------------------------------------------------
@@ -454,6 +497,20 @@ class ProjectWorkspace:
         self._publish("closed", project_id, name=entry.project.name, dirty=entry.dirty)
         return ok(True)
 
+    def close_cache(self) -> None:
+        """Release the session-wide cache index, if this workspace opened one.
+
+        Separate from :meth:`close_all` because the two are about different
+        lifetimes: closing every project does not end the session, and the cache
+        is install-wide — it outlives any one project. Called by the lifespan.
+
+        A cache handed in from outside is left alone: whoever built it owns it,
+        and a workspace that closed a caller's object would be a surprising
+        kind of rude.
+        """
+        if self._owns_cache:
+            self._media_cache.index.close()
+
     def close_all(self) -> int:
         """Close every open project. Returns how many there were.
 
@@ -519,17 +576,36 @@ class ProjectWorkspace:
         Live, and not captured at construction: a project is a frozen value the
         workspace replaces on every edit, and a resolver that held the one from
         ten minutes ago would not know about the file the user just imported.
+
+        Answered by the media cache, which is what makes proxies transparent
+        (§7.2): asked for a copy that is not there, it falls back *towards the
+        original* rather than answering "nothing to decode" — a preview that
+        vanished because a thumbnail was still being generated would be the
+        opposite of transparent.
         """
+        with self._guard:
+            entry = self._open.get(project_id)
+        if entry is None:
+            return lambda _asset_id, _source: None
+        return self._media_cache.resolver_for(entry.project)
 
-        def resolve(asset_id: str, source: str) -> str | None:
-            with self._guard:
-                entry = self._open.get(project_id)
-            if entry is None:
-                return None
-            path: str | None = resolve_asset(entry.project, asset_id, source)
-            return path
+    def sources_for(self, project_id: str, *, scale: float) -> Mapping[str, str]:
+        """Which copy of each asset a preview at ``scale`` should decode.
 
-        return resolve
+        Asked once per frame and handed to the frame planner, because a frame is
+        composited from several clips and the decision is one number's worth of
+        arithmetic — the policy is a pure function of the preview scale.
+
+        An unknown project gets an empty mapping, which every caller reads as
+        "decode the original": a preview of a project that is not open cannot
+        happen, and refusing it here would put a `Result` on the hot path for a
+        case the router has already excluded.
+        """
+        with self._guard:
+            entry = self._open.get(project_id)
+        if entry is None:
+            return {}
+        return self._media_cache.sources_for(entry.project, scale=scale)
 
     # -- media -------------------------------------------------------------
 

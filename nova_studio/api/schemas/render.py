@@ -54,6 +54,13 @@ class PreviewWarmRequest(_Strict):
         ge=0,
         description="How many frames ahead. The session's default when omitted.",
     )
+    #: The panel being warmed *for*, which is why it is required rather than
+    #: defaulted: warming decodes from the copy of each asset the panel's scale
+    #: earns — a proxy at a half-scale preview, the original at full — and a
+    #: warm that guessed would fill the pool with frames nobody will ask for,
+    #: because a decode is cached under the copy it came from.
+    width: int = Field(ge=2, description="The panel's width, in device pixels.")
+    height: int = Field(ge=2, description="The panel's height, in device pixels.")
 
 
 class PreviewWarmResponse(_Strict):

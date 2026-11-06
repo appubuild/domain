@@ -16,11 +16,20 @@ gateway, and the reasons it is one module with one job are not stylistic:
 * **One place that decides what a row is.** Rows come back as plain mappings, so
   no caller can end up depending on a driver type it would then have to import.
 
-There is deliberately **no connection pool and no threading here**. SQLite
-serialises writers itself, and a desktop editor writes from one place at a time;
-a pool would add a failure mode (leaked connections) to solve a problem we do
-not have. Multiple readers, when they arrive, get their own gateway instance
-pointed at the same file — WAL is what makes that safe, not Python.
+There is deliberately **no connection pool and no threading here** — with one
+exception, and it is opt-in. SQLite serialises writers itself and a desktop
+editor writes from one place at a time, so a pool would add a failure mode
+(leaked connections) to solve a problem we do not have. Multiple readers get
+their own gateway instance pointed at the same file, and WAL is what makes that
+safe.
+
+The exception is an adapter that is genuinely shared between threads: the cache
+index, which the API reads from the request thread pool while a job writes from
+its own. Such a gateway is opened with ``shared=True``, which sets
+``check_same_thread=False`` and guards every statement with a lock. It is opt-in
+because the default is the safer promise — one connection, one owner — and
+because a reader who has to ask "is this one shared?" deserves an answer in the
+constructor rather than a surprise in production.
 
 The gateway raises, it does not return `Result`. A failure here is a bug or a
 dead disk, and the caller that can turn that into a sentence for the user is the
@@ -32,6 +41,7 @@ from __future__ import annotations
 
 import contextlib
 import sqlite3
+import threading
 from typing import TYPE_CHECKING, Final
 
 if TYPE_CHECKING:
@@ -85,10 +95,19 @@ class SqliteGateway:
     the kind of invisible decision this gateway exists to remove.
     """
 
-    def __init__(self, path: Path, *, create: bool = True) -> None:
+    def __init__(self, path: Path, *, create: bool = True, shared: bool = False) -> None:
+        """Args:
+        path: The file to open.
+        create: Whether to open it when it does not exist yet.
+        shared: Whether several threads will use this gateway. See the
+            module docstring: the cache index does, everything else does
+            not, and the difference is one lock plus one connect flag.
+        """
         self._path = path
         self._connection: sqlite3.Connection | None = None
         self._create = create
+        self._shared = shared
+        self._lock = threading.RLock() if shared else None
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -102,21 +121,27 @@ class SqliteGateway:
             return
         if not self._create and not self._path.exists():
             raise SqliteError(f"no database at {self._path}")
-        try:
-            connection = sqlite3.connect(
-                self._path,
-                isolation_level=None,  # transactions are ours, not Python's
-            )
-        except sqlite3.Error as error:
-            raise SqliteError(f"could not open {self._path}: {error}") from error
-        connection.row_factory = sqlite3.Row
-        for pragma in _PRAGMAS:
+        with self._guarded():
             try:
-                connection.execute(pragma)
+                connection = sqlite3.connect(
+                    self._path,
+                    isolation_level=None,  # transactions are ours, not Python's
+                    # A shared gateway is used from several threads; SQLite
+                    # binds a connection to the thread that created it unless
+                    # told otherwise, and the lock is what makes "otherwise"
+                    # safe rather than merely allowed.
+                    check_same_thread=not self._shared,
+                )
             except sqlite3.Error as error:
-                connection.close()
-                raise SqliteError(f"could not apply {pragma!r}: {error}", sql=pragma) from error
-        self._connection = connection
+                raise SqliteError(f"could not open {self._path}: {error}") from error
+            connection.row_factory = sqlite3.Row
+            for pragma in _PRAGMAS:
+                try:
+                    connection.execute(pragma)
+                except sqlite3.Error as error:
+                    connection.close()
+                    raise SqliteError(f"could not apply {pragma!r}: {error}", sql=pragma) from error
+            self._connection = connection
 
     def close(self) -> None:
         """Close the connection. Safe to call twice; never raises."""
@@ -149,57 +174,80 @@ class SqliteGateway:
 
     def begin(self) -> None:
         """Start a unit of work. Nested begins are refused, not stacked."""
-        self._run("BEGIN")
+        with self._guarded():
+            self._run("BEGIN")
 
     def commit(self) -> None:
         """Make the current unit of work durable."""
-        self._run("COMMIT")
+        with self._guarded():
+            self._run("COMMIT")
 
     def rollback(self) -> None:
         """Discard the current unit of work. Safe when none is open."""
         connection = self._require()
-        try:
-            connection.execute("ROLLBACK")
-        except sqlite3.Error as error:
-            # "cannot rollback - no transaction is active" is the expected state
-            # after a rollback triggered by an exception on a read-only path.
-            if "no transaction is active" not in str(error):
-                raise SqliteError(f"rollback failed: {error}", sql="ROLLBACK") from error
+        with self._guarded():
+            try:
+                connection.execute("ROLLBACK")
+            except sqlite3.Error as error:
+                # "cannot rollback - no transaction is active" is the expected state
+                # after a rollback triggered by an exception on a read-only path.
+                if "no transaction is active" not in str(error):
+                    raise SqliteError(f"rollback failed: {error}", sql="ROLLBACK") from error
 
     def in_transaction(self) -> bool:
         """Whether a transaction is currently open."""
-        return bool(self._require().in_transaction)
+        with self._guarded():
+            return bool(self._require().in_transaction)
 
     # -- statements --------------------------------------------------------
 
     def script(self, sql: str) -> None:
         """Execute one or more statements — DDL, or a batch of writes."""
         connection = self._require()
-        try:
-            connection.executescript(sql)
-        except sqlite3.Error as error:
-            raise SqliteError(f"{error}", sql=sql) from error
+        with self._guarded():
+            try:
+                connection.executescript(sql)
+            except sqlite3.Error as error:
+                raise SqliteError(f"{error}", sql=sql) from error
 
     def run(self, sql: str, params: Sequence[object] = ()) -> int:
         """Execute one statement and return the rows it changed."""
         connection = self._require()
-        try:
-            cursor = connection.execute(sql, tuple(params))
-        except sqlite3.Error as error:
-            raise SqliteError(f"{error}", sql=sql) from error
-        return int(cursor.rowcount or 0)
+        with self._guarded():
+            try:
+                cursor = connection.execute(sql, tuple(params))
+            except sqlite3.Error as error:
+                raise SqliteError(f"{error}", sql=sql) from error
+            return int(cursor.rowcount or 0)
 
     def rows(self, sql: str, params: Sequence[object] = ()) -> tuple[Mapping[str, object], ...]:
         """Run a query and return every row as a plain mapping."""
-        return tuple(self._query(sql, params))
+        with self._guarded():
+            return tuple(self._query(sql, params))
 
     def value(self, sql: str, params: Sequence[object] = ()) -> object | None:
         """Run a query and return the first column of the first row, if any."""
-        for row in self._query(sql, params):
-            return next(iter(row.values()))
+        with self._guarded():
+            for row in self._query(sql, params):
+                return next(iter(row.values()))
         return None
 
     # -- internals ---------------------------------------------------------
+
+    @contextlib.contextmanager
+    def _guarded(self) -> Iterator[None]:
+        """Serialise a statement, when this gateway is shared between threads.
+
+        A lock held for the whole statement rather than around the driver call
+        only: ``rows`` and ``value`` both iterate a cursor, and a second thread
+        mutating the connection mid-iteration would not raise — it would return
+        someone else's rows, which is worse.
+        """
+        if self._lock is None:
+            yield
+            return
+        with self._lock:
+            yield
 
     def _require(self) -> sqlite3.Connection:
         if self._connection is None:

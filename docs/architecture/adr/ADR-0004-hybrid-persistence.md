@@ -39,7 +39,11 @@ crash recovery that never leaves a half-written project.
 4. **SQLite pragmas:** `journal_mode=WAL`, `synchronous=NORMAL`, `foreign_keys=ON`,
    `busy_timeout=5000`, `cache_size=-65536` (64 MiB), `temp_store=MEMORY`,
    `mmap_size=268435456`. One writer connection serialised by an in-process lock; readers
-   are concurrent.
+   are concurrent. Exactly one adapter shares a single connection between threads — the
+   cache index, because it is read from the request thread pool while a job writes from its
+   own — and it says so in its constructor (`SqliteGateway(shared=True)`) rather than
+   quietly: the default remains one connection, one owner, and a private connection used
+   from another thread is refused.
 5. **No ORM.** Hand-written SQL in repository adapters behind `ports/persistence.py`, with
    typed row mappers. (The port module is named `persistence` rather than `repositories`
    because it declares more than repositories: the project archive, the crash-recovery

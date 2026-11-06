@@ -49,7 +49,7 @@ derived index rebuilt from `timeline/document.json`, and its schema belongs to
 services/
 ├── shared/       cross-feature helpers (the sanctioned exception to rule 2)
 ├── projects/     open, save, autosave, crash recovery
-├── media/        ingest, probing, thumbnails, proxy generation
+├── media/        ingest, probing, thumbnails, proxy generation, the media cache
 ├── timeline/     edit operations as commands, undo scopes, ripple logic
 ├── render/       the frame pipeline: decode → graph → composite → encode
 ├── captions/     the caption pipeline: transcript → cues → styles → timeline
@@ -299,15 +299,33 @@ ProxyPolicy (frozen)                  proxy.py
 
 thumbnail_indices(count, wanted, keyframes) → tuple[int, ...]   thumbnails.py
 snap_to_keyframe(index, keyframes)          → int
+
+proxy_key(asset_id, height) → str                              keys.py
+thumbnail_key(asset_id, frame, width) → str
+kind_of(key) → CacheKind · is_safe_key(key) → bool
+
+MediaCache (frozen)                       cache.py
+├── has(key)                    → bool           entry AND file
+├── record(key, size_bytes)     → Result[None]   when the bytes are complete
+├── acknowledge(key)                             throttled LRU touch
+├── forget(key)                 → Result[None]   file first, then row
+├── resolve(project, id, source) → str | None    fallback → the original
+├── resolver_for(project)       → SourceResolver live, not captured
+└── sources_for(project, scale) → Mapping[str, str]   one frame, one question
 ```
 
 **State management.** `MediaIngestor` holds an injected prober and id source and
 nothing else; every import is independent and repeatable. `ProxyPolicy`,
 `ProxyPlan` and the index tuple are frozen values, safe to hand to a render
-worker or to cache as part of a job payload. No cache, no handles, no threads:
+worker or to cache as part of a job payload. `MediaCache` is frozen too, and the
+only mutable thing it carries is the small in-memory note of when each key's use
+was last written down — an approximation by design, since two threads racing to
+note the same key would write the same value. Everything else is injected: the
+bookkeeping is a `CacheIndex` port, the bytes are files under a root, the time is
+a `Clock`, and the only two facts about the disk this module needs — *is it still
+there*, *delete it* — arrive as `exists` and `unlink`. No handles, no threads:
 the only long-running work this feature *causes* is a proxy transcode, and that
-goes to the scheduler as a `NORMAL` job (ADR-0010) — never a thread spawned
-here.
+goes to the scheduler as a `NORMAL` job (ADR-0010) — never a thread spawned here.
 
 **Functions and APIs.**
 
@@ -317,6 +335,10 @@ here.
 | `decide(scale, available)` | "which copy do I decode at this preview scale" |
 | `plan(info)` | "is a proxy worth building, and how big" |
 | `thumbnail_indices(...)` | "which frames does a strip ask for" |
+| `proxy_key(...) / thumbnail_key(...)` | "what this derived artefact is *called*" |
+| `has(key)` | "do we actually hold it" (an entry *and* a file) |
+| `resolve(project, asset_id, source)` | "which file is this decode's copy" |
+| `sources_for(project, scale)` | "which copy should every asset on the timeline use" |
 
 **Events.** None yet. Proxy transcodes will publish `job.*` through the
 scheduler; ingest will emit `media.imported` once the media panel needs to
@@ -337,6 +359,25 @@ strip laid out after a reopen ask for the same frames and hit the same cache
 entries instead of repopulating them (ADR-0015 rule 6: the cache is disposable,
 and a stable key is what makes a disposable cache useful).
 
+`MediaCache` is where that key becomes a file, and it is deliberately not a
+store: bytes live in files, bookkeeping lives in a `CacheIndex`, and both are
+handed in. Its one interesting decision is a **fallback towards the original** —
+a missing thumbnail answers with the proxy, a missing proxy answers with the
+original. The alternative, a cache miss as a *gap* in the composite, would make
+a preview disappear because a thumbnail had not been generated yet.
+
+The index is read on the request path and written from a job thread, so the
+composition root binds `open_shared_cache_index()`: one connection,
+`check_same_thread=False`, and a lock around every statement (§7.17). An ordinary
+adapter still gets the single-owner gateway, and that default is a promise rather
+than an accident — a private connection used from another thread is refused,
+which is how a caller learns it needed the shared one.
+
+A use is noted at most once per key per five seconds. "Which copy should I
+decode" is asked sixty times a second while scrubbing, and an `UPDATE` per answer
+would make the cache a net cost to the disk it exists to spare: **LRU is a
+ranking, not a log.**
+
 **Performance.** Ingest is one container open per file and no frame decode — the
 probe port is defined that way on purpose. The thumbnail plan is integer
 arithmetic; it exists precisely to keep the decode count down, snapping each
@@ -350,11 +391,22 @@ probed twice and that no id is minted for a file that failed.
 `tests/services/test_media_proxy.py` pins the fidelity budget, the single
 edit-friendly codec vocabulary and the even-dimension arithmetic.
 `tests/services/test_media_thumbnails.py` pins the spread, the backwards-only
-keyframe snapping and the deduplication. No FFmpeg, no filesystem, no numpy
-beyond what the domain already carries.
+keyframe snapping and the deduplication.
+`tests/services/test_media_cache.py` (36) pins the naming — that a key is
+derived, stable and refuses anything that is not a single file name — and the
+four rules of the cache: the fallback towards the original, entry-and-file,
+forget-bytes-then-row, and the throttled touch. Its doubles are a dict, a set
+and a clock. `tests/infra/test_persistence_sqlite.py` pins the shared gateway.
+No FFmpeg, no filesystem, no numpy beyond what the domain already carries.
 
 **Future expansion.**
 
+* **Generation**, which is the half of this feature that does not exist yet: a
+  `ProxyJob` built from `ProxyPlan`, the thumbnail strips from
+  `thumbnail_indices`, and byte-budgeted eviction over `select_for_eviction`.
+  All of it as `NORMAL` jobs, and none of it requires a change to `MediaCache` —
+  the producer calls `record()` when the file is complete and the planner calls
+  `forget()` when the budget says so.
 * **Content hashing** once `ports/filesystem.py` exists: duplicates will then be
   matched by bytes, and a relink will be provable rather than hopeful. Until
   then duplicates are matched by path, and the panel says so.

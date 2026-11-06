@@ -145,7 +145,7 @@ class TestTheWorkspaceHoldsTheRenderers:
         renderer = workspace.preview(project_id).unwrap()
         client.post(
             f"/api/v1/projects/{project_id}/preview/warm",
-            json={"frame": 0, "count": 5},
+            json={"frame": 0, "count": 5, "width": 640, "height": 360},
             headers=auth,
         )
         assert renderer.open_sources == 1
@@ -258,7 +258,7 @@ class TestWarming:
         project_id = project(client, auth, clip)
         response = client.post(
             f"/api/v1/projects/{project_id}/preview/warm",
-            json={"frame": 0, "count": 10},
+            json={"frame": 0, "count": 10, "width": 640, "height": 360},
             headers=auth,
         )
         assert response.status_code == 200
@@ -275,7 +275,7 @@ class TestWarming:
         project_id = project(client, auth, clip)
         response = client.post(
             f"/api/v1/projects/{project_id}/preview/warm",
-            json={"frame": 0, "count": 10_000},
+            json={"frame": 0, "count": 10_000, "width": 640, "height": 360},
             headers=auth,
         )
         assert response.status_code == 200
@@ -286,7 +286,9 @@ class TestWarming:
     def test_count_is_optional(self, client: TestClient, auth: dict[str, str], clip: Path) -> None:
         project_id = project(client, auth, clip)
         response = client.post(
-            f"/api/v1/projects/{project_id}/preview/warm", json={"frame": 0}, headers=auth
+            f"/api/v1/projects/{project_id}/preview/warm",
+            json={"frame": 0, "width": 640, "height": 360},
+            headers=auth,
         )
         assert response.status_code == 200
         assert response.json()["warmed"] > 0
@@ -295,14 +297,19 @@ class TestWarming:
         self, client: TestClient, auth: dict[str, str], clip: Path
     ) -> None:
         project_id = project(client, auth, clip)
-        response = client.post(f"/api/v1/projects/{project_id}/preview/warm", json={"frame": 0})
+        response = client.post(
+            f"/api/v1/projects/{project_id}/preview/warm",
+            json={"frame": 0, "width": 640, "height": 360},
+        )
         assert response.status_code == 401
 
     def test_an_unopened_project_warms_nothing(
         self, client: TestClient, auth: dict[str, str]
     ) -> None:
         response = client.post(
-            "/api/v1/projects/nope/preview/warm", json={"frame": 0}, headers=auth
+            "/api/v1/projects/nope/preview/warm",
+            json={"frame": 0, "width": 640, "height": 360},
+            headers=auth,
         )
         assert response.status_code == 404
 
@@ -314,7 +321,7 @@ class TestForgetting:
         project_id = project(client, auth, clip)
         client.post(
             f"/api/v1/projects/{project_id}/preview/warm",
-            json={"frame": 0, "count": 10},
+            json={"frame": 0, "count": 10, "width": 640, "height": 360},
             headers=auth,
         )
         response = client.delete(f"/api/v1/projects/{project_id}/preview/cache", headers=auth)
@@ -327,7 +334,7 @@ class TestForgetting:
         project_id = project(client, auth, clip)
         client.post(
             f"/api/v1/projects/{project_id}/preview/warm",
-            json={"frame": 0, "count": 10},
+            json={"frame": 0, "count": 10, "width": 640, "height": 360},
             headers=auth,
         )
         client.delete(f"/api/v1/projects/{project_id}/preview/cache", headers=auth)
@@ -342,7 +349,7 @@ class TestForgetting:
         project_id = project(client, auth, clip)
         client.post(
             f"/api/v1/projects/{project_id}/preview/warm",
-            json={"frame": 0, "count": 10},
+            json={"frame": 0, "count": 10, "width": 640, "height": 360},
             headers=auth,
         )
         (clip_id,) = clip_ids(client, auth, project_id)

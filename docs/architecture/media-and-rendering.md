@@ -96,6 +96,7 @@ Where each stage lives now:
 | Stage in the diagram | Module | Built |
 | --- | --- | --- |
 | `TimelineResolver` | `domain/timeline.py` + `services/render/frames.py` | yes |
+| `SourceResolver` (which copy of an asset) | `services/media/cache.py` over `ports/persistence.py::CacheIndex` | yes (§7.17) |
 | `FrameSourcePool` · `DecodeStage` | `services/render/pool.py` over `ports/media.py` | yes |
 | `EffectChain` | `services/render/kernels.py` over `services/effects/` | yes |
 | `TransformStage` · `Compositor` · `TransitionStage` · `ColourStage` | `services/render/composite.py` | yes |
@@ -111,7 +112,12 @@ Design invariants:
   accumulate across the timeline (ADR-0006).
 * **Proxies are transparent.** A clip references an asset; the asset resolves to
   `original | proxy | thumbnail` by a `ProxyPolicy` decided from the preview scale factor.
-  Nothing downstream knows which it decoded.
+  Nothing downstream knows which it decoded. The resolver that answers is
+  `MediaCache` (§7.17), and it holds one rule above all the others: **the
+  fallback runs towards the original**. Asked for a proxy that is not there it
+  answers with the original — a cache miss degrades the picture, it never
+  removes it, because a preview that turned into a gap while a proxy was still
+  transcoding would be the opposite of transparent.
 * **The compositor is pure.** Given `(timeline, t, resolution)` it returns a frame and
   mutates nothing. This is what makes the preview cache, the export, the thumbnail service
   and the test-suite all use the *same* code path — the classic NLE bug class "preview looks
@@ -833,8 +839,88 @@ never has to know about.
 `infra/preview.py` and selectable at the composition root; which one a session
 serves becomes an `ApiSettings` field the day a client needs it. The desktop
 shell replaces the JPEG sink with shared memory (§7.2) and nothing above
-`infra/` changes. Proxy and thumbnail resolution completes `SourcePlan` once
-`services/media/proxy.py` has a generator — the pool already asks for them by
-name.
+`infra/` changes.
+
+### 7.17 Which copy of a file a decode reads (`services/media/cache.py`)
+
+`SourcePlan` is `asset_id -> source name` (`services/render/loop.py`), and the
+`FrameSourcePool` translates it with an injected `SourceResolver` —
+`(asset_id, source) -> path | None`. For a long time the only implementation
+answered "the original, and nothing else". `MediaCache` is the real one, and it
+is the object that keeps §7.2's transparency promise.
+
+```
+                 sources_for(project, scale)          one Mapping for one frame
+                              │
+              ┌───────────────┴────────────────┐
+              ▼                                ▼
+     ProxyPolicy.decide(scale, available)   _available(asset)
+     "which copy is wanted"                 "which copies we hold"
+              └───────────────┬────────────────┘
+                              ▼
+                    asset_id -> "proxy"
+                              │
+     resolve(asset_id, source) ── fallback towards the original
+                              │
+                    <cache>/<kind>/<key>
+```
+
+**Where the bytes live.** `<data_root>/cache.sqlite3` is the index;
+`<data_root>/cache/proxy/proxy-<asset_id>-h<height>.mkv` and
+`<data_root>/cache/thumbnail/thumb-<asset_id>-f<frame>-w<width>.jpg` are the
+bytes — one subdirectory per `CacheKind`, so "clear the thumbnail cache" is a
+`rm` and not a query. Keys come from `services/media/keys.py` and are *derived,
+never assigned*: the same asset at the same size produces the same name for the
+life of the install, which is what makes a disposable cache worth having
+(ADR-0015 rule 6). A name is refused if it is not a single file name — the
+domain's document-name predicate allows `clips/a.json`, and a cache key is not
+an archive entry.
+
+**Four rules, each one a bug going the other way.**
+
+1. **A missing copy degrades the picture; it does not remove it.** The fallback
+   chain runs thumbnail → proxy → original. Only a missing *original* yields
+   `None`, and that is a relink, not a cache miss.
+2. **Holding a copy needs an entry *and* a file.** An entry with no file
+   promises pictures that cannot be produced; a file with no entry is disk
+   eviction will never reclaim.
+3. **Bytes first, row second — in that order — when forgetting.** An interrupted
+   removal then leaves an entry pointing at nothing, which rule 2 already reads
+   as a miss, rather than unreachable bytes no entry names.
+4. **The read path does not write.** "Which copy should I decode" is asked sixty
+   times a second while scrubbing, so a use is noted at most once per key per
+   five seconds: LRU is a *ranking*, not a log.
+
+**The index is shared between threads, and that was not obvious until it broke.**
+A `def` route handler runs in FastAPI's thread pool, so the cache index was being
+read from whichever thread picked up the request by a connection opened at
+startup — a `sqlite3.ProgrammingError` under load. `SqliteGateway(shared=True)`
+opens with `check_same_thread=False` and serialises every statement behind a
+lock, and `open_shared_cache_index()` is what the composition root binds. The
+gateway's default is still one owner and one thread, and that default is a
+promise rather than an accident: a private connection used elsewhere is refused,
+which is how a caller learns it needed the shared one.
+
+**The session closes it.** `ProjectWorkspace.close_cache()` closes the index it
+opened — last, after `close_all()`, because the cache outlives any one project.
+A cache opened somewhere else and handed in is not closed by the workspace.
+
+**Warming is told the panel size.** `POST …/preview/warm` requires `width` and
+`height`: a frame is decoded from one copy and cached under it, so a warm that
+guessed the scale would fill the pool with frames nobody will ask for.
+
+**Testing.** `tests/services/test_media_cache.py` (36) pins the fallback, the
+entry-and-file rule, the throttled touch, and `sources_for` against a dict
+index, a set-backed disk and a clock that only moves when a test moves it — no
+SQLite, no filesystem, no decoder. `tests/infra/test_persistence_sqlite.py` pins
+the shared gateway: a private connection is refused from another thread, a
+shared one is not, twenty-four concurrent writers leave twenty-four rows, and a
+reader never sees another thread's cursor.
+
+**Future expansion.** Generation — the `ProxyJob` over `ProxyPlan`, the
+thumbnail strips, and byte-budgeted eviction, all as `NORMAL` jobs on the
+scheduler (ADR-0010). Nothing in this module has to change for any of them: the
+producer calls `record()` when the file is complete, and the planner calls
+`forget()` when the budget says so.
 
 ---

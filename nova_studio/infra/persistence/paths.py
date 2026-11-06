@@ -10,6 +10,9 @@ by a user who wants to clean up, and impossible to write into the wrong place:
 │   └── <project_id>/
 │       └── cmds-<ms>-<token>.ndjson   the journal for one project
 ├── cache.sqlite3                  one install-wide index of derived bytes
+├── cache/                         the derived bytes themselves
+│   ├── proxy/                     proxy-<asset_id>-h<height>.mkv
+│   └── thumbnail/                 thumb-<asset_id>-f<frame>-w<width>.jpg
 └── jobs.json                      the install-wide job history (ADR-0010 §6)
 
 <project path>.nova.bak            the previous version of a project file
@@ -34,7 +37,10 @@ Two rules make this more than a pile of constants:
 A project id becomes a directory name, which makes it untrusted input in exactly
 the way an archive entry name is: `../../etc` as a project id is the zip-slip
 attack wearing a different hat. The same domain predicate is the guard, because
-the two problems are the same problem.
+the two problems are the same problem. So is a **cache key**, which is why
+:func:`~nova_studio.domain.persistence.derived_path` runs the same check: a key
+is a string a service built, and a service that ever builds one from a filename
+the user chose is one edit away from writing outside the cache.
 
 Nothing here touches the filesystem: every function is path arithmetic, so the
 layout is testable without a temp directory and reviewable in one screen.
@@ -53,10 +59,12 @@ __all__ = [
     "AUTOSAVE_SUBDIR",
     "BACKUP_SUFFIX",
     "CACHE_DATABASE_NAME",
+    "CACHE_SUBDIR",
     "JOURNAL_PREFIX",
     "JOURNAL_SUFFIX",
     "backup_path",
     "cache_database_path",
+    "cache_root",
     "is_journal_name",
     "is_safe_project_id",
     "journal_dir",
@@ -71,6 +79,13 @@ AUTOSAVE_SUBDIR: Final[str] = "autosave"
 
 #: One install-wide SQLite database of derived artefacts.
 CACHE_DATABASE_NAME: Final[str] = "cache.sqlite3"
+
+#: Where the derived bytes themselves live, one subdirectory per
+#: :class:`~nova_studio.domain.persistence.CacheKind`. Separate directories
+#: rather than one, because "clear the thumbnail cache" should be an `rm` and
+#: not a query, and because a user cleaning up should be able to see what they
+#: are about to delete.
+CACHE_SUBDIR: Final[str] = "cache"
 
 #: Journal files are `cmds-<started_ms>-<token>.ndjson`.
 JOURNAL_PREFIX: Final[str] = "cmds-"
@@ -146,6 +161,16 @@ def journal_started_ms(name: str) -> int:
 def cache_database_path(data_root: Path) -> Path:
     """The one cache index for this install."""
     return data_root / CACHE_DATABASE_NAME
+
+
+def cache_root(data_root: Path) -> Path:
+    """The directory holding every derived artefact this install has made.
+
+    Beside the index rather than inside it: the database is metadata about
+    files, and a directory that lived *in* the database could not be deleted by
+    a user who wants their disk back.
+    """
+    return data_root / CACHE_SUBDIR
 
 
 def backup_path(project_path: Path) -> Path:

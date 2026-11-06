@@ -45,7 +45,7 @@ from nova_studio.api.schemas.render import (
 # Runtime, not just for typing: `isinstance` is how the handlers narrow the
 # "renderer or refusal" union, and that needs the class itself.
 from nova_studio.api.workspace import OpenProject, not_open
-from nova_studio.services.render import PreviewRenderer, Viewport
+from nova_studio.services.render import PreviewRenderer, Viewport, plan_preview
 
 if TYPE_CHECKING:
     from nova_studio.api.workspace import ProjectWorkspace
@@ -101,6 +101,31 @@ def _gap_ids(renderer: PreviewRenderer) -> list[str]:
     return ids
 
 
+def _sources(
+    projects: ProjectWorkspace,
+    project_id: str,
+    shown: OpenProject,
+    *,
+    viewport: Viewport,
+    zoom: float,
+) -> dict[str, str]:
+    """Which copy of each asset this preview should decode.
+
+    The scale is the fitted one, zoom included: a user who zoomed in asked to
+    see more detail, and decoding a quarter-scale proxy into a full-screen
+    preview would be the policy's promise broken at exactly the moment it
+    mattered.
+
+    Answered from the workspace rather than computed here, because which file a
+    proxy *is* belongs to the media feature, and a router that knew the cache
+    layout would be a second copy of it. The plan is integer arithmetic — the
+    frame has not been touched yet.
+    """
+    size = shown.project.settings.frame_size
+    plan = plan_preview(size.width, size.height, viewport, zoom=zoom)
+    return dict(projects.sources_for(project_id, scale=plan.scale))
+
+
 def _open_project(projects: ProjectWorkspace, project_id: str, path: str) -> OpenProject | Any:
     """The open project, or the 404 that says there is not one.
 
@@ -148,11 +173,13 @@ def preview_frame(
     if not isinstance(shown, OpenProject):
         return shown
 
+    viewport = Viewport(width=width, height=height)
     result = renderer.frame(
         shown.project,
         frame,
-        viewport=Viewport(width=width, height=height),
+        viewport=viewport,
         zoom=zoom,
+        sources=_sources(projects, project_id, shown, viewport=viewport, zoom=zoom),
     )
     problem = result.error()
     if problem is not None:
@@ -215,6 +242,17 @@ def warm_preview(
         body.frame,
         count=body.count,
         last_frame=shown.project.timeline.duration_frames,
+        # The same question the frame endpoint asks, so the warmed frames are
+        # the ones the pool will be asked for — a decode is cached under the
+        # copy it came from, and warming the original while previewing a proxy
+        # would be fifteen decodes of nothing.
+        sources=_sources(
+            projects,
+            project_id,
+            shown,
+            viewport=Viewport(width=body.width, height=body.height),
+            zoom=1.0,
+        ),
     )
     stats = renderer.stats
     return PreviewWarmResponse(

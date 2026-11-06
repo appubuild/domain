@@ -730,6 +730,11 @@ What the API does instead of caching:
   which is the one invalidation rule that is never wrong, because the command
   that changed the timeline is the thing that declared it (§10, and
   `media-and-rendering.md` §7.14).
+* **Warming is told the panel size.** `POST …/preview/warm` requires `width` and
+  `height` rather than guessing them: a frame is decoded from one copy of an
+  asset and cached under it, so a warm that picked a different scale would fill
+  the pool with frames nobody will ask for and evict the ones they will
+  (`media-and-rendering.md` §7.17).
 * **Sequence numbers on the socket**, which let a client skip a refetch entirely
   rather than re-validate one.
 * **Capability negotiation once per session** (`/api/v1/system/capabilities`),
