@@ -1,6 +1,6 @@
 # The service layer (L3)
 
-**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-03
+**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-06
 
 The layer between *what a project is* (`domain`) and *how the mechanics work*
 (`infra`). This document is the house style for every feature package under
@@ -310,9 +310,15 @@ MediaCache (frozen)                       cache.py
 ├── record(key, size_bytes)     → Result[None]   when the bytes are complete
 ├── acknowledge(key)                             throttled LRU touch
 ├── forget(key)                 → Result[None]   file first, then row
+├── entries(kind=None)          → tuple[…]       what we hold, oldest use first
+├── total_bytes()               → int            what the rows name
+├── drop(kind=None)             → CacheDrop      free a kind, or everything
 ├── resolve(project, id, source) → str | None    fallback → the original
 ├── resolver_for(project)       → SourceResolver live, not captured
 └── sources_for(project, scale) → Mapping[str, str]   one frame, one question
+
+MediaJobFactory (frozen)              api/media_jobs.py  (composition root)
+└── plan(project, cache, *, proxies, thumbnails) → tuple[PlannedJob, …]
 
 ProxyJob (frozen, callable)                 generation.py
 └── (context) → Result[JobOutcome]          factories, not collaborators
@@ -355,6 +361,9 @@ goes to the scheduler as a `NORMAL` job (ADR-0010) — never a thread spawned he
 | `thumbnail_requests(project, cache=…)` | "which thumbnails are missing" |
 | `ProxyJob(request, …)(context)` | "make this proxy, as a job" |
 | `ThumbnailJob(asset_id, source, requests, …)(context)` | "make these stills, as a job" |
+| `MediaJobFactory.plan(project, cache, …)` | "which jobs would close the gap, and what are they called" |
+| `MediaCache.entries(kind=None)` | "what do we hold, in the order eviction would take it" |
+| `MediaCache.drop(kind=None)` | "free a kind, or everything — and say how much went" |
 
 **Events.** None yet. Generation publishes `job.*` through the scheduler — a
 proxy is `media.proxy`, a thumbnail strip is `media.thumbnail`, and both are
@@ -414,11 +423,13 @@ probed twice and that no id is minted for a file that failed.
 edit-friendly codec vocabulary and the even-dimension arithmetic.
 `tests/services/test_media_thumbnails.py` pins the spread, the backwards-only
 keyframe snapping and the deduplication.
-`tests/services/test_media_cache.py` (36) pins the naming — that a key is
+`tests/services/test_media_cache.py` (42) pins the naming — that a key is
 derived, stable and refuses anything that is not a single file name — and the
 four rules of the cache: the fallback towards the original, entry-and-file,
-forget-bytes-then-row, and the throttled touch. Its doubles are a dict, a set
-and a clock. `tests/infra/test_persistence_sqlite.py` pins the shared gateway.
+forget-bytes-then-row, and the throttled touch, plus taking stock, which is the
+half an inspector and a byte budget both read: `entries` oldest-use-first, a row
+whose file has gone is not listed, and `drop` frees the bytes *and* the rows,
+one kind or every kind. Its doubles are a dict, a set and a clock. `tests/infra/test_persistence_sqlite.py` pins the shared gateway.
 `tests/services/test_media_generation.py` (59) pins the planners — that a proxy
 is planned for the timeline and a thumbnail for every asset, that neither is
 planned twice — and every way the two jobs fail: a file that will not open, a
@@ -428,24 +439,31 @@ resizer double asserts the transcode shrinks with **area** averaging, and a
 pickling test proves the bodies can cross a process boundary.
 `tests/services/test_media_generation_real.py` does the opposite on purpose: it
 runs both jobs through PyAV and OpenCV, then opens what came out.
+`tests/api/test_media_jobs_api.py` (19) pins the submission contract — 202 with
+the jobs it started, nothing queued when everything is already held, 404 for a
+project that is not open, 503 for a full pool — and one test runs the real
+executor end to end: both jobs settle, the cache then lists what was made, a
+second ask queues nothing, and the delete frees it.
 
 **Future expansion.**
 
-* **Submission**, once `services/jobs/` exists. The bodies and the planners are
-  in place; what is missing is the thing that decides *when* — and the honest
-  answer is "not while the user is scrubbing". `proxy_requests` and
-  `thumbnail_requests` are the pure half a scheduler needs, because they can be
-  asked as often as it likes: a request for something already held is simply not
-  made.
+* **Submission** is in place: `api/media_jobs.py::MediaJobFactory.plan` turns
+  the two planners into jobs and `POST …/media/ensure` queues them (§7.18 of
+  `media-and-rendering.md`), deduped by artefact and grouped so one asset's
+  strip is one job. What is still missing is the *decider*: a scheduler that
+  watches the preview loop and asks at a moment that is not mid-scrub. The
+  question is free and idempotent, so the only thing to write is the judgement
+  of when.
 * **Byte-budgeted eviction** over `select_for_eviction` — the other half of
-  `record`, and the reason every row carries a size.
+  `record`, and the reason every row carries a size. `entries` and `drop` are
+  its read and its write, already there.
 * **Content hashing** once `ports/filesystem.py` exists: duplicates will then be
   matched by bytes, and a relink will be provable rather than hopeful. Until
   then duplicates are matched by path, and the panel says so.
 * **Waveform and audio-analysis planning** — the same shape as the thumbnail
   plan: indices in, samples out.
-* **A `ProxyJob` builder** turning `ProxyPlan` into a scheduler submission, once
-  `services/jobs/` lands.
+* **A real scheduler in `services/jobs/`** — the thing that decides *when* to
+  ask. `infra/jobs.py` is the pools; the judgement is still to come.
 
 ---
 

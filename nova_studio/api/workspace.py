@@ -609,6 +609,17 @@ class ProjectWorkspace:
             return lambda _asset_id, _source: None
         return self._media_cache.resolver_for(entry.project)
 
+    @property
+    def media_cache(self) -> MediaCache:
+        """The derived-artefact cache this session reads and writes.
+
+        Handed out rather than reaching into the workspace, because two callers
+        that need it — a planner asking what is missing, a resolver asking which
+        file a key means — must be talking about the same one. It is not the
+        caller's to close: the workspace opened it and the workspace closes it.
+        """
+        return self._media_cache
+
     def sources_for(self, project_id: str, *, scale: float) -> Mapping[str, str]:
         """Which copy of each asset a preview at ``scale`` should decode.
 

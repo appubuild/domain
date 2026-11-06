@@ -1,6 +1,6 @@
 # The API layer (L4)
 
-**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-04
+**Status:** Living document · **Owner:** Architecture Group · **Last reviewed:** 2026-11-06
 
 The layer that turns Nova Studio from a library into an application. Everything
 the frontend can do, it does through this layer, over one loopback HTTP socket
@@ -61,6 +61,7 @@ api/
 ├── ws.py         EventBridge — one bus, many sockets, recoverable loss
 ├── workspace.py ProjectWorkspace — every open project in this session (§8)
 ├── exports.py   ExportJobFactory — how a worker's job body is built (§11)
+├── media_jobs.py  MediaJobFactory — how a proxy/thumbnail job body is built (§10, §7.18)
 ├── job_events.py   JobEventBridge — the executor's events, onto the bus (§11)
 ├── dependencies.py  the FastAPI dependencies (session, workspace, jobs, exports)
 ├── schemas/      DTOs: the wire contract, documented field by field
@@ -78,11 +79,11 @@ api/
 │   ├── export.py    "MP4, high quality" → an OutputSpec the domain can build
 │   └── jobs.py      JobRecord → the row the panel draws
 ├── routers/      HTTP endpoints
-│   ├── system.py    /healthz, /api/v1/system/{info,capabilities}
+│   ├── system.py    /healthz, /api/v1/system/{info,capabilities,cache}
 │   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
 │   ├── projects.py  /api/v1/projects/* (§8)
 │   ├── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
-│   ├── media.py     /api/v1/projects/{id}/media{,/import} (§10)
+│   ├── media.py     /api/v1/projects/{id}/media{,/import,/ensure} (§10)
 │   ├── render.py    /api/v1/projects/{id}/preview/{frame,warm,cache} (§7.14)
 │   ├── export.py    POST /api/v1/projects/{id}/exports (§11)
 │   └── jobs.py      /api/v1/jobs{,/{id},/{id}/cancel} (§11)
@@ -115,6 +116,7 @@ app = create_app(bus, session=state, settings=ApiSettings(...))
 | `app.state.workspace` | The `ProjectWorkspace`: every project open in this session (§8). Created *before* the app, closed by the lifespan, handed to routers by a dependency. |
 | `app.state.jobs` | The `ConcurrentJobExecutor`: the pools, and the job history behind them (§11). Created before the app, shut down by the lifespan. |
 | `app.state.exports` | The `ExportJobFactory`: how the body of an export job is built for a worker (§11). |
+| `app.state.media_jobs` | The `MediaJobFactory`: how the bodies of proxy and thumbnail jobs are built (§10, §7.18). |
 | `install_error_handlers(app)` | Three handlers: `HTTPException`, `RequestValidationError`, `Exception`. |
 | `guard.as_middleware()` | Host/Origin check on every HTTP request (§4). |
 | `dependencies=[Depends(token_dependency(...))]` | Applied to the *router*, not to handlers, so an endpoint cannot forget to ask. |
@@ -501,7 +503,7 @@ waiting.
 
 ## 10. The media ring (`routers/media.py`, `infra/media.py`)
 
-The bin: getting footage into a project and showing it once it is there. Two
+The bin: getting footage into a project and showing it once it is there. Three
 endpoints, and one rule that decides what the second returns.
 
     **An import is a report, never a failure.**
@@ -516,6 +518,9 @@ only thing that makes the endpoint fail at all is the project not being open.
 |---|---|---|
 | `GET /api/v1/projects/{id}/media` | `MediaListResponse` | Every asset, in import order, each row carrying the probe that was stored with it. |
 | `POST /api/v1/projects/{id}/media/import` | `ImportResponse` | `assets`, `failures`, `duplicates` and a `summary` sentence — whatever the files turned out to be. |
+| `POST /api/v1/projects/{id}/media/ensure` | 202 `EnsureMediaResponse` | Queue whatever the project is missing: one job per proxy, one per thumbnail strip. |
+| `GET /api/v1/system/cache` | `MediaCacheResponse` | What the install is holding, oldest use first. |
+| `DELETE /api/v1/system/cache` | `MediaCacheDroppedResponse` | Free it — `?kind=proxy|thumbnail` to free one kind. |
 
 ### Where the probe happens
 
@@ -563,6 +568,65 @@ the domain already reads as "unknown" rather than "empty".
 * **Nothing is recorded when nothing changed.** An import that added no assets
   does not journal and does not make the project dirty; an autosave indicator
   that counted failed imports as work would be a liar.
+
+### Ensuring the media a project needs
+
+Importing a file does not make it playable. A 4K long-GOP clip is hostile to
+scrubbing and a media bin without tiles is a list of file names, so the editor
+needs proxies and thumbnails — minutes of work that cannot happen inside a
+request.
+
+    **Asking what is missing is a question, not a command.**
+
+`POST .../media/ensure` is therefore *idempotent and cheap*:
+`MediaJobFactory.plan(project, cache)` runs the two pure planners of §7.18,
+groups the stills per asset, and returns a `PlannedJob` per unit of work; the
+router submits them
+and answers `202` with what it started. A project that already holds everything
+queues nothing and says so in `summary`, which is why the frontend may call it
+on an import, on a repaint, or on a timer without counting or debouncing
+anything itself.
+
+```
+  routers/media.py        api/media_jobs.py          services/media        worker
+  ┌───────────────┐ plan  ┌────────────────┐  ┌──────────────────┐  ┌──────────────┐
+  │ EnsureMedia-  │──────►│ MediaJobFactory│─►│ proxy_requests   │  │ own decoder, │
+  │  Request      │       │ (frozen, holds │  │ thumbnail_reque- │  │ own cache    │
+  └───────┬───────┘       │  data_dir and  │  │ sts (pure)       │  │ index from   │
+          │ 202           │  module-level  │  └────────┬─────────┘  │ data_dir     │
+          ▼               │  factories)    │           ▼            └──────▲───────┘
+  jobs.submit(spec, body) │                │  ProxyJob / ThumbnailJob      │ pickled
+          │               └────────────────┘                               │
+          ▼                                                                │
+  EnsureMediaResponse{ jobs, proxies, strips, summary } ───────────────────┘
+```
+
+| Decision | Why |
+|---|---|
+| 202, never a wait | A transcode is minutes. A handler that did the work inline would hold a connection and be indistinguishable from a hang (ADR-0010). |
+| One job per proxy, one per strip | A proxy is minutes of CPU on the process pool; a strip of eight stills is eight seeks on the thread pool. A job per frame would pay eight pickles to open one file eight times. |
+| Deduped by artefact | The key is `proxy:<cache key>`, so a different target size is different work, and twenty panels asking for the same clip share one transcode. |
+| `data_dir`, not a `MediaCache` | The workspace's cache holds a SQLite connection, and a connection does not pickle. `partial(new_cache, data_dir)` runs inside the worker. |
+| A mid-list refusal answers at once | 503 says "ask again"; the jobs already queued are named in the caller's previous response, not in this one. |
+
+The two flags exist because the two halves are needed at different moments:
+after an import the bin wants tiles now and proxies can wait, and a panel that
+only draws tiles should not be able to start a transcode.
+
+### What the cache holds, and how to let it go
+
+The cache is **install-wide** — one project's proxies are not another's — so
+its verbs live on the system router.
+
+| Method and path | Returns | Notes |
+|---|---|---|
+| `GET /api/v1/system/cache` | `MediaCacheResponse` | Entries oldest-use-first, plus the `total` and the bytes they name. |
+| `DELETE /api/v1/system/cache?kind=` | `MediaCacheDroppedResponse` | How many entries and bytes went. `kind` may be `proxy` or `thumbnail`; a kind we do not have is a 422. |
+
+What is deliberately missing: **no per-project delete.** An entry belongs to the
+install, not to a project, so deleting by project would leave entries no project
+claims and reclaim nothing. `GET` is the read an inspector needs today and the
+input byte-budgeted eviction will need tomorrow (§7.18).
 
 ---
 

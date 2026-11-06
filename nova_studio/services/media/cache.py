@@ -45,7 +45,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Final, TypeAlias
 
-from nova_studio.domain.persistence import CacheEntry, derived_path
+from nova_studio.domain.persistence import CacheEntry, CacheKind, derived_path
 from nova_studio.services.media.keys import kind_of, proxy_key
 from nova_studio.services.media.proxy import DEFAULT_PROXY_POLICY, DecodeSource, ProxyPolicy
 
@@ -69,7 +69,7 @@ ExistsFn: TypeAlias = "Callable[[str], bool]"
 #: belong to whoever wrote them.
 UnlinkFn: TypeAlias = "Callable[[str], None]"
 
-__all__ = ["ExistsFn", "MediaCache", "SourceResolver", "UnlinkFn"]
+__all__ = ["CacheDrop", "ExistsFn", "MediaCache", "SourceResolver", "UnlinkFn"]
 
 #: What the render feature asks for and this object supplies. Restated here so
 #: a reader of this module sees the contract it is satisfying.
@@ -82,6 +82,20 @@ SourceResolver: TypeAlias = "Callable[[str, str], str | None]"
 #: `UPDATE` the row of every asset on the timeline, which is a write per read —
 #: the one thing a cache must never do to the disk it exists to spare.
 TOUCH_INTERVAL_MS: Final[int] = 5_000
+
+
+@dataclass(frozen=True, slots=True)
+class CacheDrop:
+    """What forgetting cost.
+
+    Two numbers, because the two questions a panel asks are "how many" and "how
+    much disk", and a caller given one would immediately recompute the other.
+    """
+
+    #: Entries that were actually removed.
+    entries: int = 0
+    #: Bytes those entries had named.
+    size_bytes: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -175,6 +189,49 @@ class MediaCache:
         """
         self.unlink(str(self.path_for(key)))
         return self.index.remove(key)
+
+    def entries(self, kind: CacheKind | None = None) -> tuple[CacheEntry, ...]:
+        """What we hold, oldest use first — the order eviction will take them.
+
+        Read-mostly: an inspector, a panel asking how much disk the proxies
+        cost, and the byte budget. Nothing here opens a file, and an entry whose
+        file has gone missing is not listed — a row without bytes is not
+        something we hold.
+        """
+        held = [
+            entry
+            for entry in self.index.entries(kind)
+            if self.exists(str(self.path_for(entry.key)))
+        ]
+        return tuple(sorted(held, key=lambda entry: (entry.last_used_ms, entry.key)))
+
+    def total_bytes(self) -> int:
+        """How much disk the entries name, whether or not the files are there.
+
+        The index's own total, not a walk of the directory: a file no row names
+        is not ours to count, and the difference between the two numbers is
+        exactly what an inspector wants to see.
+        """
+        return self.index.total_bytes()
+
+    def drop(self, kind: CacheKind | None = None) -> CacheDrop:
+        """Forget everything of one kind, or everything.
+
+        ``kind=None`` is "the user wants their disk back"; a single kind is
+        "the thumbnails are stale" and costs nothing else. Either way the bytes
+        go before the row, per entry, for the reason written in :meth:`forget`.
+
+        An entry that refused to be removed stays held and is absent from the
+        count, so a caller that asked to drop twelve and hears eleven knows one
+        is still on the disk instead of assuming it worked.
+        """
+        dropped = 0
+        freed = 0
+        for entry in self.entries(kind):
+            if self.forget(entry.key).is_ok():
+                dropped += 1
+                freed += entry.size_bytes
+        return CacheDrop(entries=dropped, size_bytes=freed)
 
     # -- what a decode should read -----------------------------------------
 

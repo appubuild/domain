@@ -1,7 +1,7 @@
 # §7 — Media & rendering architecture
 
 **Part of:** [`ARCHITECTURE.md`](ARCHITECTURE.md) · **Owner:** Architecture Group
-**Last reviewed:** 2026-11-02
+**Last reviewed:** 2026-11-06
 
 This file is section 7 of the system architecture, kept separate because the
 section outgrew the 64 KiB single-file budget (`scripts/check_repo_hygiene.py`)
@@ -948,13 +948,77 @@ sparse seek into long-GOP footage costs a whole group of pictures and at
 thumbnail scale frame 20 stands in for frame 37 exactly. That mapping is a pure
 function of the file, which is what keeps the cache stable across a reopen.
 
-**Future expansion.** Submission — once `services/jobs/` exists,
-`proxy_requests` and `thumbnail_requests` are the pure half a scheduler needs,
-"what is missing", asked as often as it likes — and byte-budgeted eviction over
-`select_for_eviction`, which is the other half of `record` and the reason every
-row carries a size. Nothing in `MediaCache` has to change for either: the
-producer calls `record()` when the file is complete, and the planner calls
-`forget()` when the budget says so. Audio in the proxy waits on the mixer
-(§7.4): the frame pool is video-only today, so a proxy is too.
+**Future expansion.** Byte-budgeted eviction over `select_for_eviction` is the
+other half of `record`, and the reason every row carries a size — the API to
+serve it (`entries`, `drop`) already exists (§7.18). Nothing in `MediaCache` has
+to change for it: the producer calls `record()` when the file is complete, and
+the planner calls `forget()` when the budget says so. Audio in the proxy waits
+on the mixer (§7.4): the frame pool is video-only today, so a proxy is too.
+
+### 7.18 Asking for the media a project needs (`api/media_jobs.py`)
+
+§7.17 answers "which copy should I decode", and this section answers the
+question underneath it: *who made that copy*. `MediaJobFactory` is the
+composition-root twin of `ExportJobFactory` (§11): it knows nothing about HTTP,
+takes a project and a cache, and answers with a tuple of `PlannedJob` — a body,
+the spec to run it under, and the `kind`/`asset_id`/`count` a caller needs to
+describe it without importing the service's vocabulary.
+
+```
+  routers/media.py            api/media_jobs.py            services/media
+  ┌──────────────────┐  plan  ┌────────────────────┐  ┌───────────────────┐
+  │ EnsureMediaRequ- │───────►│ MediaJobFactory    │─►│ proxy_requests    │
+  │  est {proxies,   │        │  renderer/ops/     │  │ thumbnail_requests│
+  │  thumbnails}     │        │  decoder/still =   │  └─────────┬─────────┘
+  └────────┬─────────┘        │  module-level fns  │            │ grouping
+           │ 202 + jobs       └─────────┬──────────┘            ▼
+           ▼                            │              ProxyJob / ThumbnailJob
+   jobs.submit(spec, body)  ◄───────────┘                       │ pickled
+           │                                                    ▼
+           ▼                                          worker: its own decoder,
+   ┌──────────────────────────────────────┐           its own cache index
+   │ EnsureMediaResponse                  │
+   │  jobs: [ {job_id, kind, asset_id,    │
+   │           count, status, detail} ]   │
+   │  proxies, strips, summary            │
+   └──────────────────────────────────────┘
+```
+
+Four decisions, and each is the difference between a cache and a liability:
+
+1. **Asking is free, and asking twice is free.** `plan` is a read — the
+   planners are pure, and a hit costs one index lookup per asset — so the
+   endpoint may be called on an import, on a repaint or on a timer. A project
+   that is up to date queues nothing and says so in `summary`.
+2. **One job per asset, not one per still.** A strip of eight thumbnails is
+   eight seeks inside *one* job on the thread pool: a job per frame would spend
+   eight pickles and eight scheduler hand-offs to open the same file eight
+   times. Proxies, which are minutes of CPU, get one job each in the process
+   pool.
+3. **A job is deduped by artefact, not by asset.** The dedupe key is
+   `proxy:<cache key>`, so a request for a different target size is different
+   work rather than a duplicate to be dropped — and twenty panels asking for
+   the same clip share one transcode.
+4. **A worker builds its own cache.** `MediaJobFactory` holds `data_dir`, not a
+   live `MediaCache`: the workspace's cache holds a SQLite connection, and a
+   connection does not pickle. `partial(new_cache, data_dir)` runs inside the
+   worker, which is also why the index is opened shared (§7.17).
+
+**The cache is install-wide, so its verbs live there too.** `GET
+/api/v1/system/cache` lists what is held — oldest use first, which is the order
+eviction will take them in — and `DELETE /api/v1/system/cache` (optionally
+`?kind=proxy|thumbnail`) frees it, answering with how many entries and how many
+bytes went. Both are on the system router rather than under a project, because
+one project's proxies are not another's and deleting by project would leave
+entries no project claims.
+
+**Testing.** `tests/api/test_media_jobs_api.py` (19) pins the response — 202
+with the jobs, nothing queued when everything is held, `proxies=false` and
+`thumbnails=false`, 404 for a project that is not open, 503 for a full pool —
+and one test runs the real executor end to end: two jobs settle as `succeeded`,
+the cache then lists one proxy and one thumbnail, a second ask queues nothing,
+and the delete frees both. `tests/services/test_media_cache.py` (42) pins
+`entries`/`drop` against the dict index, including the rule that a row whose
+file has gone is not something we hold.
 
 ---

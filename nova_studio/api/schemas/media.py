@@ -33,10 +33,16 @@ from nova_studio.domain.media import AssetKind  # noqa: TC001 — see above
 
 __all__ = [
     "AudioSummary",
+    "EnsureMediaRequest",
+    "EnsureMediaResponse",
     "ImportFailure",
     "ImportRequest",
     "ImportResponse",
     "MediaAssetSummary",
+    "MediaCacheDroppedResponse",
+    "MediaCacheEntrySummary",
+    "MediaCacheResponse",
+    "MediaJobSummary",
     "MediaListResponse",
     "VideoSummary",
 ]
@@ -143,3 +149,84 @@ class ImportResponse(_Strict):
     summary: str = Field(description="One sentence for the status bar.")
     journal_sequence: int = Field(description="Newest journalled sequence; 0 for none.")
     pending_commands: int = Field(description="Edits since the last checkpoint.")
+
+
+class EnsureMediaRequest(_Strict):
+    """Ask for the derived copies the project is missing.
+
+    Both halves are on by default and each can be turned off, because the two
+    answers cost wildly different amounts: a thumbnail strip is eight seeks, a
+    proxy is minutes of CPU. A panel that only needs tiles should be able to say
+    so, and "give me everything" should still be one call.
+    """
+
+    proxies: bool = Field(default=True, description="Transcode the proxies the timeline needs.")
+    thumbnails: bool = Field(
+        default=True, description="Make the thumbnail strips that are missing."
+    )
+
+
+class MediaJobSummary(_Strict):
+    """One job the request started.
+
+    The id is what the client watches: progress, completion and failure arrive
+    on the socket, not in this response, and a job is the only handle that ties
+    the two together (ADR-0010 §7).
+    """
+
+    job_id: str = Field(description="The job to watch on /api/v1/ws.")
+    kind: str = Field(description="`proxy` or `thumbnail`.")
+    asset_id: str = Field(description="The asset the job is working for.")
+    count: int = Field(description="How many artefacts it will produce: one proxy, or a strip.")
+    status: str = Field(description="The status at the moment it was accepted.")
+    detail: str = Field(description="One line for the status bar.")
+
+
+class EnsureMediaResponse(_Strict):
+    """What asking for derived media produced.
+
+    202, and a list that may be empty: an up-to-date project has nothing to
+    make, and that is the ordinary case after the first pass rather than an
+    error. The counts are what a panel shows while the work runs.
+    """
+
+    project_id: str = Field(description="The project the jobs were planned against.")
+    jobs: list[MediaJobSummary] = Field(description="What was queued, in submission order.")
+    proxies: int = Field(description="How many transcodes were queued.")
+    strips: int = Field(description="How many thumbnail strips were queued.")
+    summary: str = Field(description="One sentence for the status bar.")
+
+
+class MediaCacheEntrySummary(_Strict):
+    """One derived artefact the install is holding."""
+
+    key: str = Field(description="Its cache key, which is also its file name.")
+    kind: str = Field(description="`proxy`, `thumbnail`, and so on.")
+    size_bytes: int = Field(description="What it costs on disk, as recorded.")
+    created_ms: int = Field(description="When it was made.")
+    last_used_ms: int = Field(description="When a decode last asked for it.")
+
+
+class MediaCacheResponse(_Strict):
+    """What the derived-media cache holds, oldest use first.
+
+    The order is the order eviction will take them in, which is the one thing
+    an inspector and a byte budget both want to read off the same list.
+    """
+
+    entries: list[MediaCacheEntrySummary] = Field(description="What we hold, oldest use first.")
+    total: int = Field(description="How many entries there are.")
+    size_bytes: int = Field(description="What they cost in total, as recorded.")
+
+
+class MediaCacheDroppedResponse(_Strict):
+    """What deleting derived media freed.
+
+    The count is what actually went, not what was asked for: an entry that
+    refused to be deleted is still on the disk, and a caller that hears eleven
+    when it asked for twelve needs to be able to tell.
+    """
+
+    entries: int = Field(description="How many entries were removed.")
+    size_bytes: int = Field(description="How many bytes they had named.")
+    summary: str = Field(description="One sentence for the status bar.")

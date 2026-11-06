@@ -144,6 +144,18 @@
         "title": "AuditResponse",
         "type": "object"
       },
+      "CacheKind": {
+        "description": "What a cache entry holds.\n\nKinds are separate so that a \"clear video cache\" action can leave the\nwaveform peaks alone, and so that a budget can be reasoned about per kind.",
+        "enum": [
+          "proxy",
+          "thumbnail",
+          "waveform",
+          "analysis",
+          "preview"
+        ],
+        "title": "CacheKind",
+        "type": "string"
+      },
       "CapabilitiesResponse": {
         "additionalProperties": false,
         "description": "What this machine can do, and what it is missing.",
@@ -537,6 +549,69 @@
           "name"
         ],
         "title": "CreateProjectRequest",
+        "type": "object"
+      },
+      "EnsureMediaRequest": {
+        "additionalProperties": false,
+        "description": "Ask for the derived copies the project is missing.\n\nBoth halves are on by default and each can be turned off, because the two\nanswers cost wildly different amounts: a thumbnail strip is eight seeks, a\nproxy is minutes of CPU. A panel that only needs tiles should be able to say\nso, and \"give me everything\" should still be one call.",
+        "properties": {
+          "proxies": {
+            "default": true,
+            "description": "Transcode the proxies the timeline needs.",
+            "title": "Proxies",
+            "type": "boolean"
+          },
+          "thumbnails": {
+            "default": true,
+            "description": "Make the thumbnail strips that are missing.",
+            "title": "Thumbnails",
+            "type": "boolean"
+          }
+        },
+        "title": "EnsureMediaRequest",
+        "type": "object"
+      },
+      "EnsureMediaResponse": {
+        "additionalProperties": false,
+        "description": "What asking for derived media produced.\n\n202, and a list that may be empty: an up-to-date project has nothing to\nmake, and that is the ordinary case after the first pass rather than an\nerror. The counts are what a panel shows while the work runs.",
+        "properties": {
+          "jobs": {
+            "description": "What was queued, in submission order.",
+            "items": {
+              "$ref": "#/components/schemas/MediaJobSummary"
+            },
+            "title": "Jobs",
+            "type": "array"
+          },
+          "project_id": {
+            "description": "The project the jobs were planned against.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "proxies": {
+            "description": "How many transcodes were queued.",
+            "title": "Proxies",
+            "type": "integer"
+          },
+          "strips": {
+            "description": "How many thumbnail strips were queued.",
+            "title": "Strips",
+            "type": "integer"
+          },
+          "summary": {
+            "description": "One sentence for the status bar.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "jobs",
+          "proxies",
+          "strips",
+          "summary"
+        ],
+        "title": "EnsureMediaResponse",
         "type": "object"
       },
       "ExportSubmission": {
@@ -1098,6 +1173,151 @@
           "audio"
         ],
         "title": "MediaAssetSummary",
+        "type": "object"
+      },
+      "MediaCacheDroppedResponse": {
+        "additionalProperties": false,
+        "description": "What deleting derived media freed.\n\nThe count is what actually went, not what was asked for: an entry that\nrefused to be deleted is still on the disk, and a caller that hears eleven\nwhen it asked for twelve needs to be able to tell.",
+        "properties": {
+          "entries": {
+            "description": "How many entries were removed.",
+            "title": "Entries",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "description": "How many bytes they had named.",
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "summary": {
+            "description": "One sentence for the status bar.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entries",
+          "size_bytes",
+          "summary"
+        ],
+        "title": "MediaCacheDroppedResponse",
+        "type": "object"
+      },
+      "MediaCacheEntrySummary": {
+        "additionalProperties": false,
+        "description": "One derived artefact the install is holding.",
+        "properties": {
+          "created_ms": {
+            "description": "When it was made.",
+            "title": "Created Ms",
+            "type": "integer"
+          },
+          "key": {
+            "description": "Its cache key, which is also its file name.",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`proxy`, `thumbnail`, and so on.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_used_ms": {
+            "description": "When a decode last asked for it.",
+            "title": "Last Used Ms",
+            "type": "integer"
+          },
+          "size_bytes": {
+            "description": "What it costs on disk, as recorded.",
+            "title": "Size Bytes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "kind",
+          "size_bytes",
+          "created_ms",
+          "last_used_ms"
+        ],
+        "title": "MediaCacheEntrySummary",
+        "type": "object"
+      },
+      "MediaCacheResponse": {
+        "additionalProperties": false,
+        "description": "What the derived-media cache holds, oldest use first.\n\nThe order is the order eviction will take them in, which is the one thing\nan inspector and a byte budget both want to read off the same list.",
+        "properties": {
+          "entries": {
+            "description": "What we hold, oldest use first.",
+            "items": {
+              "$ref": "#/components/schemas/MediaCacheEntrySummary"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "size_bytes": {
+            "description": "What they cost in total, as recorded.",
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "total": {
+            "description": "How many entries there are.",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "total",
+          "size_bytes"
+        ],
+        "title": "MediaCacheResponse",
+        "type": "object"
+      },
+      "MediaJobSummary": {
+        "additionalProperties": false,
+        "description": "One job the request started.\n\nThe id is what the client watches: progress, completion and failure arrive\non the socket, not in this response, and a job is the only handle that ties\nthe two together (ADR-0010 §7).",
+        "properties": {
+          "asset_id": {
+            "description": "The asset the job is working for.",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "count": {
+            "description": "How many artefacts it will produce: one proxy, or a strip.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "detail": {
+            "description": "One line for the status bar.",
+            "title": "Detail",
+            "type": "string"
+          },
+          "job_id": {
+            "description": "The job to watch on /api/v1/ws.",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "kind": {
+            "description": "`proxy` or `thumbnail`.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "description": "The status at the moment it was accepted.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "kind",
+          "asset_id",
+          "count",
+          "status",
+          "detail"
+        ],
+        "title": "MediaJobSummary",
         "type": "object"
       },
       "MediaListResponse": {
@@ -4052,6 +4272,124 @@
         ]
       }
     },
+    "/api/v1/projects/{project_id}/media/ensure": {
+      "post": {
+        "description": "Plan what the project needs, submit it, and answer with the jobs.\n\nCalled as often as it likes — on an import, on a panel repaint, on a timer —\nbecause **what is missing is a pure question**: an artefact already held is\nsimply not planned, so a second call when nothing has changed queues nothing\nand is nearly free.\n\nReturns:\n    202 with the jobs that were queued — possibly an empty list, which is\n    the ordinary answer for a project that is already up to date; 404 when\n    no project with that id is open; 503 when the executor has no room, in\n    which case the jobs that did fit are named and the rest are not queued.",
+        "operationId": "ensure_media_api_v1_projects__project_id__media_ensure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnsureMediaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnsureMediaResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Queue the proxies and thumbnails this project is missing",
+        "tags": [
+          "media"
+        ]
+      }
+    },
     "/api/v1/projects/{project_id}/media/import": {
       "post": {
         "description": "Probe every path, add the ones that read, and report on the rest.\n\nA 200 whatever the files turned out to be: one unreadable file is one entry\nin `failures`, and the user gets to see the other thirty-nine arrive. Paths\nalready in the project — or offered twice in one selection — come back as\n`duplicates` rather than as a second asset pointing at the same file.",
@@ -5211,6 +5549,218 @@
         "summary": "Undo the last edit",
         "tags": [
           "timeline"
+        ]
+      }
+    },
+    "/api/v1/system/cache": {
+      "delete": {
+        "description": "Forget derived bytes, and say how much disk came back.\n\nLosing the cache costs a rebuild and nothing else (ADR-0015 rule 6: it is\ndisposable), which is why this is a button and not a confirmation about\nprojects. Proxies and thumbnails come back the next time something asks for\nthem.\n\nThe bytes go before the row, per entry, so an interrupted deletion leaves an\nentry pointing at nothing — which the cache already reads as a miss — rather\nthan unreachable bytes no entry names and no eviction will ever reclaim.",
+        "operationId": "drop_cache_api_v1_system_cache_delete",
+        "parameters": [
+          {
+            "description": "Delete only this kind — `proxy`, `thumbnail` — instead of everything.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/CacheKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Delete only this kind — `proxy`, `thumbnail` — instead of everything.",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaCacheDroppedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Delete derived media",
+        "tags": [
+          "system"
+        ]
+      },
+      "get": {
+        "description": "Every derived artefact this install has made, oldest use first.\n\nHere rather than under a project, because the cache **is** install-wide:\ntwo projects that share a source share its proxy, and a user asking \"how\nmuch disk is this costing me\" is asking about the machine, not about a\nfile.\n\nThe order is the order eviction will take them in, which is what an\ninspector and a byte budget both want to read off the same list.",
+        "operationId": "read_cache_api_v1_system_cache_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaCacheResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "What the derived-media cache is holding",
+        "tags": [
+          "system"
         ]
       }
     },

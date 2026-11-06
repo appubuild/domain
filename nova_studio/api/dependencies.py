@@ -21,11 +21,12 @@ from fastapi import Request  # noqa: TC002 — runtime import, see the module do
 
 if TYPE_CHECKING:
     from nova_studio.api.exports import ExportJobFactory
+    from nova_studio.api.media_jobs import MediaJobFactory
     from nova_studio.api.state import SessionState
     from nova_studio.api.workspace import ProjectWorkspace
     from nova_studio.infra.jobs import ConcurrentJobExecutor
 
-__all__ = ["export_factory", "jobs", "session_state", "workspace"]
+__all__ = ["export_factory", "jobs", "media_factory", "session_state", "workspace"]
 
 
 def session_state(request: Request) -> SessionState:
@@ -49,6 +50,18 @@ def export_factory(request: Request) -> ExportJobFactory:
     happened to build.
     """
     factory: ExportJobFactory = request.app.state.exports
+    return factory
+
+
+def media_factory(request: Request) -> MediaJobFactory:
+    """How this session builds the bodies of its media jobs.
+
+    Read at request time, for the same reason as the export factory: which
+    adapters a worker uses is a property of *this* application, and a second
+    application in this process — a test with a fake decoder — expects its jobs
+    to use that one.
+    """
+    factory: MediaJobFactory = request.app.state.media_jobs
     return factory
 
 

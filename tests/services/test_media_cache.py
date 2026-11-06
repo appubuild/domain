@@ -80,36 +80,36 @@ class FakeIndex:
     """The `CacheIndex` port, as a dictionary. Remembers what it was told."""
 
     def __init__(self) -> None:
-        self.entries: dict[str, CacheEntry] = {}
+        self.rows: dict[str, CacheEntry] = {}
         self.touched: list[str] = []
         self.removed: list[str] = []
         self.closed = False
 
     def get(self, key: str) -> CacheEntry | None:
-        return self.entries.get(key)
+        return self.rows.get(key)
 
     def put(self, entry: CacheEntry) -> Result[None]:
-        self.entries[entry.key] = entry
+        self.rows[entry.key] = entry
         return ok(None)
 
     def touch(self, key: str, *, at_ms: int) -> Result[None]:
         self.touched.append(key)
-        existing = self.entries.get(key)
+        existing = self.rows.get(key)
         if existing is not None:
-            self.entries[key] = existing.touch(at_ms)
+            self.rows[key] = existing.touch(at_ms)
         return ok(None)
 
     def remove(self, key: str) -> Result[None]:
         self.removed.append(key)
-        self.entries.pop(key, None)
+        self.rows.pop(key, None)
         return ok(None)
 
     def entries(self, kind: CacheKind | None = None) -> tuple[CacheEntry, ...]:
-        found = [entry for entry in self.entries.values() if kind is None or entry.kind is kind]
+        found = [entry for entry in self.rows.values() if kind is None or entry.kind is kind]
         return tuple(sorted(found, key=lambda entry: entry.key))
 
     def total_bytes(self) -> int:
-        return sum(entry.size_bytes for entry in self.entries.values())
+        return sum(entry.size_bytes for entry in self.rows.values())
 
     def close(self) -> None:
         self.closed = True
@@ -193,6 +193,10 @@ def proxy_entry(asset_id: str = ASSET_ID, *, at_ms: int = 1_000) -> tuple[str, C
 
 def proxy_path(root: Path, key: str) -> str:
     return str(derived_path(root, CacheKind.PROXY, key))
+
+
+def still_path(root: Path, key: str) -> str:
+    return str(derived_path(root, CacheKind.THUMBNAIL, key))
 
 
 # -- what a copy is called ---------------------------------------------------
@@ -324,15 +328,15 @@ class TestBookkeeping:
         cache, index, _disk, _clock = cache_in(tmp_path)
         key, _ = proxy_entry()
         cache.record(key, size_bytes=2_048)
-        assert index.entries[key].kind is CacheKind.PROXY
-        assert index.entries[key].size_bytes == 2_048
+        assert index.rows[key].kind is CacheKind.PROXY
+        assert index.rows[key].size_bytes == 2_048
         assert index.total_bytes() == 2_048
 
     def test_a_thumbnail_records_as_a_thumbnail(self, tmp_path: Path) -> None:
         cache, index, _disk, _clock = cache_in(tmp_path)
         key = thumbnail_key(ASSET_ID, frame=0, width=320)
         cache.record(key, size_bytes=900)
-        assert index.entries[key].kind is CacheKind.THUMBNAIL
+        assert index.rows[key].kind is CacheKind.THUMBNAIL
 
     def test_a_use_is_not_written_sixty_times_a_second(self, tmp_path: Path) -> None:
         """LRU is a ranking, not a log. A write per read would make the cache a
@@ -372,6 +376,103 @@ class TestBookkeeping:
 
 
 # -- which copy at which scale -----------------------------------------------
+
+
+def still_entry(*, at_ms: int = 1_000) -> tuple[str, CacheEntry]:
+    """The key/row pair a finished thumbnail leaves behind."""
+    key = thumbnail_key(ASSET_ID, frame=0, width=320)
+    return key, CacheEntry(
+        key=key,
+        kind=CacheKind.THUMBNAIL,
+        size_bytes=4_096,
+        created_ms=at_ms,
+        last_used_ms=at_ms,
+    )
+
+
+class TestTakingStock:
+    """Listing what we hold, and letting it go."""
+
+    def test_what_we_hold_is_listed_oldest_use_first(self, tmp_path: Path) -> None:
+        """The order eviction will take them in — which is what an inspector
+        and a byte budget both want to read off the same list."""
+        young_key = proxy_key(ASSET_ID, height=720)
+        old_key = proxy_key(ASSET_ID, height=480)
+        young = CacheEntry(
+            key=young_key,
+            kind=CacheKind.PROXY,
+            size_bytes=4_096,
+            created_ms=5_000,
+            last_used_ms=5_000,
+        )
+        old = CacheEntry(
+            key=old_key,
+            kind=CacheKind.PROXY,
+            size_bytes=4_096,
+            created_ms=1_000,
+            last_used_ms=1_000,
+        )
+        cache, _index, _disk, _clock = cache_in(
+            tmp_path,
+            files=(proxy_path(tmp_path, young_key), proxy_path(tmp_path, old_key)),
+            rows=(young, old),
+        )
+        assert [entry.key for entry in cache.entries()] == [old_key, young_key]
+
+    def test_an_entry_whose_file_has_gone_is_not_listed(self, tmp_path: Path) -> None:
+        """A row without bytes is not something we hold."""
+        _key, entry = proxy_entry()
+        cache, _index, _disk, _clock = cache_in(tmp_path, rows=(entry,))
+        assert cache.entries() == ()
+
+    def test_one_kind_can_be_listed_on_its_own(self, tmp_path: Path) -> None:
+        proxy_name, proxy_row = proxy_entry()
+        still, still_row = still_entry()
+        cache, _index, _disk, _clock = cache_in(
+            tmp_path,
+            files=(proxy_path(tmp_path, proxy_name), still_path(tmp_path, still)),
+            rows=(proxy_row, still_row),
+        )
+        assert [entry.kind for entry in cache.entries(CacheKind.PROXY)] == [CacheKind.PROXY]
+
+    def test_dropping_everything_frees_the_disk_and_the_rows(self, tmp_path: Path) -> None:
+        proxy_name, proxy_row = proxy_entry()
+        still, still_row = still_entry(at_ms=2_000)
+        cache, index, disk, _clock = cache_in(
+            tmp_path,
+            files=(proxy_path(tmp_path, proxy_name), still_path(tmp_path, still)),
+            rows=(proxy_row, still_row),
+        )
+
+        dropped = cache.drop()
+
+        assert dropped.entries == 2
+        assert dropped.size_bytes == 8_192
+        assert len(disk.deleted) == 2
+        assert index.rows == {}
+
+    def test_one_kind_can_be_dropped_on_its_own(self, tmp_path: Path) -> None:
+        """Stale thumbnails are a different problem from a disk that is full."""
+        proxy_name, proxy_row = proxy_entry()
+        still, still_row = still_entry(at_ms=2_000)
+        cache, _index, _disk, _clock = cache_in(
+            tmp_path,
+            files=(proxy_path(tmp_path, proxy_name), still_path(tmp_path, still)),
+            rows=(proxy_row, still_row),
+        )
+
+        dropped = cache.drop(CacheKind.THUMBNAIL)
+
+        assert dropped.entries == 1
+        assert [entry.kind for entry in cache.entries()] == [CacheKind.PROXY]
+
+    def test_the_total_is_what_the_rows_name_not_what_the_disk_says(self, tmp_path: Path) -> None:
+        """A file no row names is not ours to count — and the difference
+        between the two numbers is exactly what an inspector wants to see."""
+        _key, entry = proxy_entry()
+        cache, _index, _disk, _clock = cache_in(tmp_path, rows=(entry,))
+        assert cache.total_bytes() == entry.size_bytes
+        assert cache.entries() == ()
 
 
 class TestChoosingACopy:

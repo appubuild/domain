@@ -1,4 +1,4 @@
-"""L4 — the system router: health, identity, capabilities.
+"""L4 — the system router: health, identity, capabilities, and the cache.
 
 Three endpoints, and the only three the desktop shell needs before it has a
 project. They exist as HTTP rather than as arguments to the window because the
@@ -23,11 +23,16 @@ import platform
 import sys
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from nova_studio import __version__
-from nova_studio.api.dependencies import session_state
+from nova_studio.api.dependencies import session_state, workspace
 from nova_studio.api.errors import error_responses, respond
+from nova_studio.api.schemas.media import (
+    MediaCacheDroppedResponse,
+    MediaCacheEntrySummary,
+    MediaCacheResponse,
+)
 from nova_studio.api.schemas.system import (
     CapabilitiesResponse,
     HealthResponse,
@@ -37,7 +42,15 @@ from nova_studio.api.schemas.system import (
     python_version,
 )
 from nova_studio.api.state import SessionState
+
+# Runtime imports on purpose: FastAPI resolves a handler's annotations to decide
+# what each parameter *is*, and a name that exists only for mypy under
+# `from __future__ import annotations` is not a dependency — it is a query
+# parameter, and the endpoint then 422s with something that reads like nonsense
+# until you know this (see `api/dependencies.py`).
+from nova_studio.api.workspace import ProjectWorkspace  # noqa: TC001 — FastAPI resolves it
 from nova_studio.core.result import ok
+from nova_studio.domain.persistence import CacheKind  # noqa: TC001 — FastAPI resolves it
 from nova_studio.infra.persistence.archive import SUPPORTED_FORMAT_VERSION
 
 if TYPE_CHECKING:
@@ -102,4 +115,71 @@ async def capabilities() -> Any:
         ok(probe_components()),
         to_body=lambda body: body,
         instance="/api/v1/system/capabilities",
+    )
+
+
+@router.get(
+    "/api/v1/system/cache",
+    response_model=MediaCacheResponse,
+    responses=error_responses(),
+    summary="What the derived-media cache is holding",
+)
+async def read_cache(projects: ProjectWorkspace = Depends(workspace)) -> Any:
+    """Every derived artefact this install has made, oldest use first.
+
+    Here rather than under a project, because the cache **is** install-wide:
+    two projects that share a source share its proxy, and a user asking "how
+    much disk is this costing me" is asking about the machine, not about a
+    file.
+
+    The order is the order eviction will take them in, which is what an
+    inspector and a byte budget both want to read off the same list.
+    """
+    entries = projects.media_cache.entries()
+    return MediaCacheResponse(
+        entries=[
+            MediaCacheEntrySummary(
+                key=entry.key,
+                kind=str(entry.kind),
+                size_bytes=entry.size_bytes,
+                created_ms=entry.created_ms,
+                last_used_ms=entry.last_used_ms,
+            )
+            for entry in entries
+        ],
+        total=len(entries),
+        size_bytes=sum(entry.size_bytes for entry in entries),
+    )
+
+
+@router.delete(
+    "/api/v1/system/cache",
+    response_model=MediaCacheDroppedResponse,
+    responses=error_responses(),
+    summary="Delete derived media",
+)
+async def drop_cache(
+    kind: CacheKind | None = Query(
+        default=None,
+        description="Delete only this kind — `proxy`, `thumbnail` — instead of everything.",
+    ),
+    projects: ProjectWorkspace = Depends(workspace),
+) -> Any:
+    """Forget derived bytes, and say how much disk came back.
+
+    Losing the cache costs a rebuild and nothing else (ADR-0015 rule 6: it is
+    disposable), which is why this is a button and not a confirmation about
+    projects. Proxies and thumbnails come back the next time something asks for
+    them.
+
+    The bytes go before the row, per entry, so an interrupted deletion leaves an
+    entry pointing at nothing — which the cache already reads as a miss — rather
+    than unreachable bytes no entry names and no eviction will ever reclaim.
+    """
+    dropped = projects.media_cache.drop(kind)
+    what = "derived media" if kind is None else f"cached {kind}"
+    return MediaCacheDroppedResponse(
+        entries=dropped.entries,
+        size_bytes=dropped.size_bytes,
+        summary=f"dropped {dropped.entries} {what} item(s), {dropped.size_bytes / 1_048_576:.1f} MB",
     )

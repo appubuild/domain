@@ -40,6 +40,7 @@ from nova_studio.api.auth import LoopbackGuard, token_dependency
 from nova_studio.api.errors import error_responses, install_error_handlers
 from nova_studio.api.exports import ExportJobFactory
 from nova_studio.api.job_events import install as install_job_events
+from nova_studio.api.media_jobs import MediaJobFactory
 from nova_studio.api.routers import events, export, jobs, media, projects, render, system, timeline
 from nova_studio.api.schemas.system import HealthResponse
 from nova_studio.api.state import SessionState, new_session_state
@@ -170,6 +171,10 @@ def create_app(
     app.state.workspace = workspace
     app.state.jobs = executor
     app.state.exports = ExportJobFactory()
+    # The derived-media jobs: same shape as the export factory, and the same
+    # reason it exists. It carries `data_dir` because a worker builds its own
+    # cache index from it rather than inheriting the workspace's connection.
+    app.state.media_jobs = MediaJobFactory(data_dir=state.data_dir)
 
     install_error_handlers(app)
     app.middleware("http")(guard.as_middleware())
