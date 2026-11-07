@@ -389,6 +389,17 @@ class TestJobRecord:
         record = _record(status=JobStatus.INTERRUPTED, started_ms=1_500, finished_ms=9_000)
         assert record.status is JobStatus.INTERRUPTED
 
+    def test_a_job_can_be_interrupted_before_it_started(self) -> None:
+        """The editor died between "submitted" and "admitted".
+
+        The record must survive that, because the job is one the user asked
+        for — and it must not claim a start time, because there was not one.
+        """
+        record = _record().interrupted(9_000)
+        assert record.status is JobStatus.INTERRUPTED
+        assert record.started_ms is None
+        assert "before this job started" in (record.error_message or "")
+
     def test_a_negative_attempt_count_is_refused(self) -> None:
         with pytest.raises(NovaInvariantError, match="attempts"):
             _record(attempts=-1)

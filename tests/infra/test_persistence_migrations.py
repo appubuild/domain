@@ -83,6 +83,7 @@ class TestAFreshDatabase:
         ] == [
             (1, "install_core", clock.now_ms(), 0),
             (2, "job_history", clock.now_ms(), 0),
+            (3, "job_history_index_tidy", clock.now_ms(), 0),
         ]
 
     def test_the_pragma_mirrors_the_version(self, db: SqliteGateway) -> None:
@@ -124,9 +125,9 @@ class TestAnOlderDatabase:
         yield gateway
         gateway.close()
 
-    def test_only_the_new_migration_runs(self, old: SqliteGateway) -> None:
-        assert ensure_schema(old) == 1
-        assert applied_versions(old) == (1, 2)
+    def test_only_the_new_migrations_run(self, old: SqliteGateway) -> None:
+        assert ensure_schema(old) == len(INSTALL_MIGRATIONS) - 1
+        assert applied_versions(old) == tuple(range(1, len(INSTALL_MIGRATIONS) + 1))
 
     def test_the_upgrade_keeps_the_data_it_finds(self, old: SqliteGateway) -> None:
         # The whole point of an upgrade: the rows a user accumulated are still

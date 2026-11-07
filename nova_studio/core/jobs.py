@@ -753,12 +753,22 @@ class JobRecord:
         )
 
     def interrupted(self, now_ms: int) -> JobRecord:
-        """Mark a job that was active when the process ended (ADR-0010 §6)."""
+        """Mark a job that was active when the process ended (ADR-0010 §6).
+
+        Leaves ``started_ms`` alone, including when it is ``None``: a job that
+        was submitted but never admitted was interrupted too, and saying it ran
+        would be a lie the user would act on — they would look for output that
+        was never produced.
+        """
         return replace(
             self,
             status=JobStatus.INTERRUPTED,
             finished_ms=now_ms,
-            error_message="the editor closed while this job was running",
+            error_message=(
+                "the editor closed while this job was running"
+                if self.started_ms is not None
+                else "the editor closed before this job started"
+            ),
         )
 
     def to_wire(self) -> dict[str, object]:
@@ -813,13 +823,18 @@ class JobRecord:
         )
 
 
+#: Statuses that cannot be true without a start time.
+#:
+#: ``INTERRUPTED`` is deliberately absent. A job can be interrupted *before it
+#: ever started* — the editor died between "submitted" and "admitted" — and
+#: inventing a start time for it would both falsify the history and hide the
+#: one thing worth knowing about that job, which is that it never ran.
 _STARTED_STATUSES: Final[frozenset[JobStatus]] = frozenset(
     {
         JobStatus.RUNNING,
         JobStatus.SUCCEEDED,
         JobStatus.FAILED,
         JobStatus.CANCELLED,
-        JobStatus.INTERRUPTED,
     }
 )
 

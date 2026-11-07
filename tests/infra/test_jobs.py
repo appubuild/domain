@@ -33,7 +33,7 @@ from __future__ import annotations
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 import pytest
 
@@ -55,8 +55,11 @@ from nova_studio.infra.jobs import (
     ThreadPoolJobExecutor,
     spawn_context,
 )
+from nova_studio.infra.persistence.job_store import SqliteJobStore
 from nova_studio.infra.persistence.jobs import JsonJobStore, job_history_path
-from nova_studio.ports.jobs import JobErrorCode
+from nova_studio.infra.persistence.migrations import ensure_schema
+from nova_studio.infra.persistence.sqlite import SqliteGateway
+from nova_studio.ports.jobs import JobErrorCode, JobStore
 from tests.conftest import FakeClock
 
 if TYPE_CHECKING:
@@ -175,6 +178,24 @@ def waiting(until: threading.Event) -> JobBody:
     return body
 
 
+def ignores_cancel(until: threading.Event) -> JobBody:
+    """A job that waits for an event and ignores cancellation while it waits.
+
+    For the tests that need the job to *still be running* after a cancel. With
+    a body that honoured cancellation, the record would go terminal within a
+    poll, and a second cancel would be refused — correctly, but for a reason
+    that has nothing to do with what the test is asserting.
+    """
+
+    def body(context: JobContext) -> Result[JobOutcome]:
+        del context
+        while not until.wait(0.01):
+            pass
+        return ok(JobOutcome())
+
+    return body
+
+
 def stubborn() -> JobBody:
     """A job that ignores cancellation entirely: the watchdog's reason to exist."""
 
@@ -187,7 +208,7 @@ def stubborn() -> JobBody:
 
 
 def _executor(
-    store: JsonJobStore,
+    store: JobStore,
     *,
     capacity: PoolCapacity | None = None,
     clock: FakeClock | None = None,
@@ -201,9 +222,25 @@ def _executor(
     )
 
 
-@pytest.fixture
-def store(tmp_path: Path) -> JsonJobStore:
-    return JsonJobStore(job_history_path(tmp_path))
+# Both adapters, over the same tests.
+#
+# The port is the contract; these two implementations are two ways of keeping
+# it. Running one suite against both is what proves the SQL store is a *second
+# implementation of the port* rather than a second, slightly different
+# behaviour — the difference that would otherwise be discovered by a user whose
+# export history vanished.
+STORES: Final[dict[str, str]] = {"json": "one document", "sqlite": "rows in nova.db"}
+
+
+@pytest.fixture(params=list(STORES))
+def store(request: pytest.FixtureRequest, tmp_path: Path) -> JobStore:
+    """One job history, in whichever engine this parametrisation asks for."""
+    if request.param == "json":
+        return JsonJobStore(job_history_path(tmp_path))
+    gateway = SqliteGateway(tmp_path / "nova.db", shared=True)
+    gateway.open()
+    ensure_schema(gateway)
+    return SqliteJobStore(gateway)
 
 
 @pytest.fixture
@@ -217,26 +254,26 @@ def clock() -> FakeClock:
 
 
 class TestRunningAJob:
-    def test_a_job_runs_and_returns_its_outcome(self, store: JsonJobStore) -> None:
+    def test_a_job_runs_and_returns_its_outcome(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), echo("hello")).unwrap()
             assert handle.wait(5_000).unwrap().value == "hello"
 
-    def test_a_handle_knows_its_job(self, store: JsonJobStore) -> None:
+    def test_a_handle_knows_its_job(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), echo()).unwrap()
             assert handle.job_id
             assert handle.spec.kind == "test.echo"
             handle.wait(5_000)
 
-    def test_the_record_says_succeeded(self, store: JsonJobStore) -> None:
+    def test_the_record_says_succeeded(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), echo()).unwrap()
             handle.wait(5_000)
             assert handle.status() is JobStatus.SUCCEEDED
             assert handle.record().finished_ms is not None
 
-    def test_artefacts_are_recorded(self, store: JsonJobStore) -> None:
+    def test_artefacts_are_recorded(self, store: JobStore) -> None:
         def body(context: JobContext) -> Result[JobOutcome]:
             del context
             return ok(JobOutcome(artefacts=("/media/out.mp4",)))
@@ -246,15 +283,13 @@ class TestRunningAJob:
             handle.wait(5_000)
             assert handle.record().artefacts == ("/media/out.mp4",)
 
-    def test_the_progress_the_job_reported_is_the_progress_recorded(
-        self, store: JsonJobStore
-    ) -> None:
+    def test_the_progress_the_job_reported_is_the_progress_recorded(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), staged()).unwrap()
             handle.wait(5_000)
             assert handle.record().progress.stage == "done"
 
-    def test_a_running_job_is_listed_as_running(self, store: JsonJobStore) -> None:
+    def test_a_running_job_is_listed_as_running(self, store: JobStore) -> None:
         gate = threading.Event()
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), waiting(gate)).unwrap()
@@ -264,14 +299,14 @@ class TestRunningAJob:
 
 
 class TestFailure:
-    def test_a_job_that_returns_err_is_failed_with_its_code(self, store: JsonJobStore) -> None:
+    def test_a_job_that_returns_err_is_failed_with_its_code(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), failing("NS-RENDER-4003")).unwrap()
             problem = handle.wait(5_000).unwrap_err()
             assert problem.code == "NS-RENDER-4003"
             assert handle.record().status is JobStatus.FAILED
 
-    def test_a_job_that_raises_is_a_value_not_a_crash(self, store: JsonJobStore) -> None:
+    def test_a_job_that_raises_is_a_value_not_a_crash(self, store: JobStore) -> None:
         """An exception in a job must not become an exception in the editor."""
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), raising()).unwrap()
@@ -280,7 +315,7 @@ class TestFailure:
             assert handle.record().status is JobStatus.FAILED
             assert "RuntimeError" in str(handle.record().error_message)
 
-    def test_a_failed_job_leaves_no_artefacts(self, store: JsonJobStore) -> None:
+    def test_a_failed_job_leaves_no_artefacts(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), failing()).unwrap()
             handle.wait(5_000)
@@ -293,14 +328,14 @@ class TestFailure:
 
 
 class TestProgress:
-    def test_an_observer_sees_the_progress(self, store: JsonJobStore) -> None:
+    def test_an_observer_sees_the_progress(self, store: JobStore) -> None:
         recorder = Recorder()
         with _executor(store) as jobs:
             jobs.subscribe(recorder)
             jobs.submit(thread_spec(), reporting(5)).unwrap().wait(5_000)
         assert len(recorder.progress) >= 1
 
-    def test_a_burst_is_throttled(self, store: JsonJobStore) -> None:
+    def test_a_burst_is_throttled(self, store: JobStore) -> None:
         """A hundred reports in a millisecond are not a hundred events."""
         recorder = Recorder()
         with _executor(store) as jobs:
@@ -308,7 +343,7 @@ class TestProgress:
             jobs.submit(thread_spec(), reporting(200)).unwrap().wait(5_000)
         assert len(recorder.progress) < 200
 
-    def test_a_stage_change_is_never_dropped(self, store: JsonJobStore) -> None:
+    def test_a_stage_change_is_never_dropped(self, store: JobStore) -> None:
         """A bar that stops moving while the label changes reads as a hang."""
         recorder = Recorder()
         with _executor(store) as jobs:
@@ -317,14 +352,14 @@ class TestProgress:
         stages = [progress.stage for _, progress in recorder.progress]
         assert stages == ["preparing", "encoding", "muxing", "done"]
 
-    def test_the_terminal_report_is_never_dropped(self, store: JsonJobStore) -> None:
+    def test_the_terminal_report_is_never_dropped(self, store: JobStore) -> None:
         recorder = Recorder()
         with _executor(store) as jobs:
             jobs.subscribe(recorder)
             jobs.submit(thread_spec(), reporting(200)).unwrap().wait(5_000)
         assert recorder.progress[-1][1].fraction == 1.0
 
-    def test_unsubscribing_stops_the_events(self, store: JsonJobStore) -> None:
+    def test_unsubscribing_stops_the_events(self, store: JobStore) -> None:
         recorder = Recorder()
         with _executor(store) as jobs:
             stop = jobs.subscribe(recorder)
@@ -332,7 +367,7 @@ class TestProgress:
             jobs.submit(thread_spec(), reporting(10)).unwrap().wait(5_000)
         assert recorder.progress == []
 
-    def test_an_observer_sees_every_status_change(self, store: JsonJobStore) -> None:
+    def test_an_observer_sees_every_status_change(self, store: JobStore) -> None:
         recorder = Recorder()
         with _executor(store) as jobs:
             jobs.subscribe(recorder)
@@ -348,14 +383,14 @@ class TestProgress:
 
 
 class TestCancelling:
-    def test_a_cancelled_job_stops(self, store: JsonJobStore) -> None:
+    def test_a_cancelled_job_stops(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), waiting(threading.Event())).unwrap()
             assert handle.cancel().is_ok() is True
             problem = handle.wait(5_000).unwrap_err()
             assert problem.code == JobErrorCode.CANCELLED
 
-    def test_a_cancelled_job_is_cancelled_and_not_failed(self, store: JsonJobStore) -> None:
+    def test_a_cancelled_job_is_cancelled_and_not_failed(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), waiting(threading.Event())).unwrap()
             handle.cancel()
@@ -363,27 +398,35 @@ class TestCancelling:
             assert handle.status() is JobStatus.CANCELLED
             assert handle.record().error_code is None
 
-    def test_cancelling_twice_is_asking_twice_not_failing(self, store: JsonJobStore) -> None:
+    def test_cancelling_twice_is_asking_twice_not_failing(self, store: JobStore) -> None:
+        """While the job is still running, the second ask is the same ask.
+
+        The body ignores cancellation on purpose: a job that stopped would make
+        the second ask *correctly* refused ("already finished"), and a test that
+        asserted `is_ok` on it would be asserting a race rather than a rule.
+        """
+        until = threading.Event()
         with _executor(store) as jobs:
-            handle = jobs.submit(thread_spec(), waiting(threading.Event())).unwrap()
+            handle = jobs.submit(thread_spec(grace_period_ms=5_000), ignores_cancel(until)).unwrap()
             assert handle.cancel().is_ok() is True
             assert handle.cancel().is_ok() is True
+            until.set()
             handle.wait(5_000)
 
-    def test_cancelling_a_finished_job_is_refused(self, store: JsonJobStore) -> None:
+    def test_cancelling_a_finished_job_is_refused(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), echo()).unwrap()
             handle.wait(5_000)
             assert handle.cancel().unwrap_err().code == JobErrorCode.JOB_FAILED
 
-    def test_cancelling_a_job_that_was_never_admitted_is_refused(self, store: JsonJobStore) -> None:
+    def test_cancelling_a_job_that_was_never_admitted_is_refused(self, store: JobStore) -> None:
         with _executor(store) as jobs:
             handle = jobs.submit(thread_spec(), echo()).unwrap()
             problem = jobs._cancel("no-such-job").unwrap_err()
             assert problem.code == JobErrorCode.QUEUE_FULL
             handle.wait(5_000)
 
-    def test_a_job_that_will_not_stop_is_closed_by_the_watchdog(self, store: JsonJobStore) -> None:
+    def test_a_job_that_will_not_stop_is_closed_by_the_watchdog(self, store: JobStore) -> None:
         """A thread cannot be killed; the record can still be closed."""
         spec = thread_spec(grace_period_ms=50)
         with _executor(store) as jobs:
@@ -401,13 +444,13 @@ class TestCancelling:
 
 
 class TestAdmission:
-    def test_capacity_is_what_the_machine_was_measured_to_have(self, store: JsonJobStore) -> None:
+    def test_capacity_is_what_the_machine_was_measured_to_have(self, store: JobStore) -> None:
         capacity = PoolCapacity(threads=2, processes=1)
         with _executor(store, capacity=capacity) as jobs:
             assert jobs.capacity() is capacity
 
     def test_the_second_of_two_jobs_is_refused_when_there_is_one_slot(
-        self, store: JsonJobStore
+        self, store: JobStore
     ) -> None:
         """Refused rather than queued: a queue that grows is a memory leak."""
         gate = threading.Event()
@@ -418,12 +461,12 @@ class TestAdmission:
             gate.set()
             first.wait(5_000)
 
-    def test_a_slot_is_free_again_once_the_job_ends(self, store: JsonJobStore) -> None:
+    def test_a_slot_is_free_again_once_the_job_ends(self, store: JobStore) -> None:
         with _executor(store, capacity=PoolCapacity(threads=1, processes=1)) as jobs:
             for _ in range(3):
                 jobs.submit(thread_spec(), echo()).unwrap().wait(5_000)
 
-    def test_a_process_job_is_refused_when_the_pool_has_no_slots(self, store: JsonJobStore) -> None:
+    def test_a_process_job_is_refused_when_the_pool_has_no_slots(self, store: JobStore) -> None:
         with _executor(
             store, capacity=PoolCapacity(threads=4, processes=0), process_context=spawn_context()
         ) as jobs:
@@ -433,22 +476,20 @@ class TestAdmission:
                 JobErrorCode.QUEUE_FULL
             )
 
-    def test_a_refused_job_was_never_started(self, store: JsonJobStore) -> None:
+    def test_a_refused_job_was_never_started(self, store: JobStore) -> None:
         with _executor(store, capacity=PoolCapacity(threads=0, processes=0)) as jobs:
             assert jobs.submit(thread_spec(), echo()).unwrap_err().code == (JobErrorCode.QUEUE_FULL)
         assert store.active() == ()
 
     def test_an_unpicklable_body_is_refused_before_a_worker_is_scheduled(
-        self, store: JsonJobStore
+        self, store: JobStore
     ) -> None:
         """Forty minutes into a two-hour export is the wrong time to find out."""
         with _executor(store, process_context=spawn_context()) as jobs:
             problem = jobs.submit(process_spec(), echo()).unwrap_err()
         assert problem.code == JobErrorCode.PAYLOAD_NOT_TRANSFERABLE
 
-    def test_a_build_without_process_isolation_refuses_a_process_job(
-        self, store: JsonJobStore
-    ) -> None:
+    def test_a_build_without_process_isolation_refuses_a_process_job(self, store: JobStore) -> None:
         jobs = ThreadPoolJobExecutor(store=store)
         problem = jobs.submit(process_spec(), echo()).unwrap_err()
         assert problem.code == JobErrorCode.QUEUE_FULL
@@ -461,7 +502,7 @@ class TestAdmission:
 
 
 class TestDurability:
-    def test_the_record_is_written_before_the_job_runs(self, store: JsonJobStore) -> None:
+    def test_the_record_is_written_before_the_job_runs(self, store: JobStore) -> None:
         """Rule 4: the last thing the process did is always on disk."""
         seen: list[Any] = []
 
@@ -473,7 +514,7 @@ class TestDurability:
             jobs.submit(thread_spec(), body).unwrap().wait(5_000)
         assert seen and seen[0] is not None
 
-    def test_four_jobs_finishing_at_once_all_land_in_the_history(self, store: JsonJobStore) -> None:
+    def test_four_jobs_finishing_at_once_all_land_in_the_history(self, store: JobStore) -> None:
         """A lost update here is a job that vanishes from the user's history.
 
         Every store write is a read-modify-write of one document, and four jobs
@@ -511,23 +552,23 @@ class TestDurability:
 
 
 class TestShutdown:
-    def test_shutdown_stops_everything(self, store: JsonJobStore) -> None:
+    def test_shutdown_stops_everything(self, store: JobStore) -> None:
         jobs = _executor(store)
         jobs.submit(thread_spec(), echo()).unwrap().wait(5_000)
         assert jobs.shutdown().is_ok() is True
 
-    def test_a_job_submitted_after_shutdown_is_refused(self, store: JsonJobStore) -> None:
+    def test_a_job_submitted_after_shutdown_is_refused(self, store: JobStore) -> None:
         jobs = _executor(store)
         jobs.shutdown()
         assert jobs.submit(thread_spec(), echo()).unwrap_err().code == JobErrorCode.QUEUE_FULL
 
-    def test_drain_waits_for_what_is_running(self, store: JsonJobStore) -> None:
+    def test_drain_waits_for_what_is_running(self, store: JobStore) -> None:
         jobs = _executor(store)
         jobs.submit(thread_spec(), echo()).unwrap().wait(5_000)
         assert jobs.drain(2_000) is True
         jobs.shutdown()
 
-    def test_cancel_all_stops_every_active_job(self, store: JsonJobStore) -> None:
+    def test_cancel_all_stops_every_active_job(self, store: JobStore) -> None:
         import threading
 
         jobs = _executor(store)
@@ -551,34 +592,34 @@ def _record(job_id: str = "j1", **over: Any) -> JobRecord:
 
 
 class TestTheStore:
-    def test_a_record_survives_a_rewrite(self, store: JsonJobStore) -> None:
+    def test_a_record_survives_a_rewrite(self, store: JobStore) -> None:
         assert store.put(_record(status=JobStatus.RUNNING, started_ms=1_100)).is_ok() is True
         assert store.get("j1") is not None
         assert store.get("j1").status is JobStatus.RUNNING
 
-    def test_an_unknown_job_is_an_answer_not_an_error(self, store: JsonJobStore) -> None:
+    def test_an_unknown_job_is_an_answer_not_an_error(self, store: JobStore) -> None:
         assert store.get("nope") is None
 
     def test_a_missing_file_reads_as_empty(self, tmp_path: Path) -> None:
         assert JsonJobStore(job_history_path(tmp_path)).active() == ()
 
-    def test_active_means_not_terminal(self, store: JsonJobStore) -> None:
+    def test_active_means_not_terminal(self, store: JobStore) -> None:
         store.put(_record("j1", status=JobStatus.RUNNING, started_ms=1_000))
         store.put(_record("j2", status=JobStatus.SUCCEEDED, started_ms=1_000, finished_ms=2_000))
         assert [record.job_id for record in store.active()] == ["j1"]
 
-    def test_by_kind_is_newest_first(self, store: JsonJobStore) -> None:
+    def test_by_kind_is_newest_first(self, store: JobStore) -> None:
         store.put(_record("old", submitted_ms=1_000))
         store.put(_record("new", submitted_ms=2_000))
         store.put(_record("other", kind="asr.transcribe", submitted_ms=3_000))
         assert [record.job_id for record in store.by_kind("export.video")] == ["new", "old"]
 
-    def test_by_kind_is_limited(self, store: JsonJobStore) -> None:
+    def test_by_kind_is_limited(self, store: JobStore) -> None:
         for index in range(5):
             store.put(_record(f"j{index}", submitted_ms=index))
         assert len(store.by_kind("export.video", limit=2)) == 2
 
-    def test_a_crash_turns_a_running_job_into_an_interrupted_one(self, store: JsonJobStore) -> None:
+    def test_a_crash_turns_a_running_job_into_an_interrupted_one(self, store: JobStore) -> None:
         """It did not fail and it did not finish: it was interrupted."""
         store.put(_record("j1", status=JobStatus.RUNNING, started_ms=1_000))
         store.put(_record("j2", status=JobStatus.SUCCEEDED, started_ms=1_000, finished_ms=2_000))
@@ -587,17 +628,42 @@ class TestTheStore:
         assert store.get("j1").status is JobStatus.INTERRUPTED
         assert store.get("j2").status is JobStatus.SUCCEEDED
 
-    def test_reconciling_twice_does_nothing_the_second_time(self, store: JsonJobStore) -> None:
+    def test_reconciling_twice_does_nothing_the_second_time(self, store: JobStore) -> None:
         store.put(_record("j1", status=JobStatus.RUNNING, started_ms=1_000))
         store.reconcile_interrupted()
         assert store.reconcile_interrupted() == ()
 
-    def test_pruning_keeps_a_job_that_could_still_be_resumed(self, store: JsonJobStore) -> None:
+    def test_pruning_keeps_a_job_that_could_still_be_resumed(self, store: JobStore) -> None:
         store.put(_record("done", status=JobStatus.SUCCEEDED, started_ms=1, finished_ms=100))
         store.put(_record("live", status=JobStatus.RUNNING, started_ms=1))
         assert store.prune(older_than_ms=1_000) == 1
         assert store.get("done") is None
         assert store.get("live") is not None
+
+    def test_a_job_interrupted_before_it_started_is_not_left_running(self, store: JobStore) -> None:
+        """The editor died between "submit" and "admit".
+
+        The job never ran, and it must not sit in the history as `pending`
+        forever — the UI would offer to cancel work that was never started.
+        """
+        store.put(_record("waiting", status=JobStatus.PENDING))
+        reconciled = store.reconcile_interrupted()
+        assert [record.job_id for record in reconciled] == ["waiting"]
+        record = store.get("waiting")
+        assert record is not None
+        assert record.status is JobStatus.INTERRUPTED
+        assert record.started_ms is None
+
+
+class TestTheJsonStore:
+    """Properties of *one* adapter, not of the port.
+
+    A temporary file beside the history, and a history that is not JSON, are the
+    file adapter's business and nobody else's. Kept here, with `JsonJobStore`
+    named, rather than reached for through the port's interface — a contract
+    test that asserts an implementation detail is a test that breaks the moment
+    the details are swapped.
+    """
 
     def test_a_corrupt_file_is_reported_and_not_fatal(self, tmp_path: Path) -> None:
         path = job_history_path(tmp_path)
@@ -605,8 +671,9 @@ class TestTheStore:
         store = JsonJobStore(path)
         assert store.put(_record()).unwrap_err().code == JobErrorCode.RECORD_UNAVAILABLE
 
-    def test_the_write_is_atomic(self, store: JsonJobStore) -> None:
+    def test_the_write_is_atomic(self, tmp_path: Path) -> None:
         """No temporary file is left beside the history."""
+        store = JsonJobStore(job_history_path(tmp_path))
         store.put(_record())
         assert list(store.path.parent.glob("*.tmp")) == []
 
@@ -617,7 +684,7 @@ class TestTheStore:
 
 
 class TestAProcessJob:
-    def test_a_job_runs_in_its_own_process(self, store: JsonJobStore) -> None:
+    def test_a_job_runs_in_its_own_process(self, store: JobStore) -> None:
         """The only test that starts a process, because the rest must not have to.
 
         A spawned worker re-imports this module, so the body and the spec have
@@ -635,7 +702,7 @@ class TestAProcessJob:
             assert outcome.unwrap().value == {"ok": True}
             assert handle.status() is JobStatus.SUCCEEDED
 
-    def test_progress_arrives_from_the_other_side(self, store: JsonJobStore) -> None:
+    def test_progress_arrives_from_the_other_side(self, store: JobStore) -> None:
         if sys.platform == "win32" and not getattr(sys, "frozen", False):
             pytest.skip("spawn needs freeze_support() in a frozen build")
 

@@ -211,6 +211,23 @@ CREATE TABLE IF NOT EXISTS recent_files (
     ),
 )
 
+#: v3 — an index that turned out to be decoration.
+#:
+#: `jobs_by_updated` was created for `prune`, on the theory that "older than a
+#: timestamp" is a range scan. `EXPLAIN QUERY PLAN` disagrees: the planner picks
+#: `jobs_by_status`, because four terminal statuses are more selective than any
+#: cutoff. An index the planner declines is not free — it is written on every
+#: `put` and read by nobody — so it goes.
+#:
+#: Removed by a *new* migration rather than by editing v2, because v2 has
+#: shipped: a migration edited in place leaves every database that already ran
+#: it silently different from a fresh one.
+_MIGRATION_3: Final[Migration] = Migration(
+    version=3,
+    name="job_history_index_tidy",
+    statements=("DROP INDEX IF EXISTS jobs_by_updated",),
+)
+
 #: v2 — the job history, which is what makes a crash survivable: after a power
 #: cut there is no executor, nothing is running, and the only thing that can say
 #: "these three exports were interrupted" is a row (ADR-0010 §6).
@@ -254,9 +271,6 @@ CREATE TABLE IF NOT EXISTS jobs (
         # process died: one status, read at start-up, over a table that is
         # mostly terminal rows.
         "CREATE INDEX IF NOT EXISTS jobs_by_status ON jobs (status)",
-        # `updated_ms` is what `prune(older_than_ms=…)` deletes by, and it is
-        # not covered by the kind index for jobs whose kind differs.
-        "CREATE INDEX IF NOT EXISTS jobs_by_updated ON jobs (updated_ms)",
     ),
 )
 
@@ -264,7 +278,7 @@ CREATE TABLE IF NOT EXISTS jobs (
 #: history; there is no directory to scan, because a directory scanned at
 #: runtime is a deployment that can differ between two machines running the
 #: same build.
-INSTALL_MIGRATIONS: Final[tuple[Migration, ...]] = (_MIGRATION_1, _MIGRATION_2)
+INSTALL_MIGRATIONS: Final[tuple[Migration, ...]] = (_MIGRATION_1, _MIGRATION_2, _MIGRATION_3)
 
 #: The newest install schema this build can open. Read by the tests, and by a
 #: support engineer comparing it with `PRAGMA user_version` on a database in

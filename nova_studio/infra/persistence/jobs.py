@@ -1,29 +1,40 @@
-"""L4 — the job history, as one JSON file in the data directory.
+"""L4 — the job history: one port, two adapters, one constructor apart.
 
 :class:`~nova_studio.ports.jobs.JobStore` exists for one reason: **history must
 outlive the pools.** After a crash there is no executor, nothing is running, and
 the only thing that can tell the user "these three exports were interrupted" is
-a file. Rows eventually live in ``ai_jobs``/``export_jobs`` (ADR-0004 §6); this
-is the file-backed adapter that gets us there without waiting for the database,
-and it is deliberately shaped so the swap is a constructor argument rather than
-a rewrite: one record per id, written whole, read whole.
+something that was written down.
 
-Two rules decide everything else:
+Two adapters implement it, and the difference between them is one line in the
+composition root:
+
+:class:`JsonJobStore`
+    One JSON document in the data directory. The adapter the service shipped
+    with, kept because it is the fallback when the install database cannot be
+    opened — a history that cannot be written is not a reason to refuse to
+    start — and because it is the shape an upgrade *imports from*.
+:class:`SqliteJobStore`
+    Rows in ``nova.db`` (ADR-0004 §6, migration ``job_history``). Wired in
+    production. Queries are queries: `by_kind` and `reconcile_interrupted` are
+    indexed rather than a scan of everything ever run.
+
+Both obey the same rules, because the rules belong to the port and not to a
+storage engine:
 
 * **A record is written before the work starts, and after every transition.**
   The last thing the process did is always on disk (port rule 4), which is the
   whole of post-crash reporting — and a job whose record cannot be written is
   not started, because the alternative is work nobody can account for.
-* **The write is atomic, in the file's own directory.** Written beside the
-  target and promoted with ``os.replace``, because ``os.replace`` is only atomic
-  within one filesystem — a file staged in ``/tmp`` is a copy, and a job history
-  that is half-written is worse than one that is a few seconds stale.
-
-The format is the record's own :meth:`~nova_studio.core.jobs.JobRecord.to_wire`,
-so nothing in here knows what a job *is*: a new field on the record lands in the
-file without this module changing. A corrupt file is not fatal — it is reported
-as :attr:`~nova_studio.ports.jobs.JobErrorCode.RECORD_UNAVAILABLE`, because a
-history that cannot be read must not take the editor down with it.
+* **A write is atomic.** The file adapter stages beside the target and promotes
+  with ``os.replace``, which is only atomic within one filesystem; the SQL
+  adapter writes one row in one statement, and reconciles inside one
+  transaction.
+* **A corrupt row is data, not an error.** One unreadable record hides itself
+  and leaves the rest of the history readable: a history that cannot be read
+  must not take the editor down with it.
+* **The bytes are the same.** Both adapters serialise a record with
+  :func:`record_json`, so a row and a file entry are the same string for the
+  same job — which is what makes the upgrade an import and not a translation.
 """
 
 from __future__ import annotations
@@ -44,7 +55,13 @@ from nova_studio.ports.jobs import JobErrorCode
 if TYPE_CHECKING:
     from pathlib import Path
 
-__all__ = ["JOB_HISTORY_NAME", "JsonJobStore", "job_history_path"]
+__all__ = [
+    "JOB_HISTORY_NAME",
+    "JsonJobStore",
+    "job_history_path",
+    "job_unavailable",
+    "record_json",
+]
 
 #: The file's name inside the data directory. One name, so a support engineer
 #: reading a bug report knows where to look and a user cleaning up knows what
@@ -62,7 +79,25 @@ def job_history_path(data_root: Path) -> Path:
     return data_root / JOB_HISTORY_NAME
 
 
-def _unavailable(cause: str, *, path: str = "") -> NovaError:
+def record_json(record: JobRecord) -> str:
+    """The bytes one record is stored as, whichever adapter is storing it.
+
+    ``sort_keys`` and ``allow_nan=False`` are not decoration: the first makes
+    the bytes stable, so two writes of one record produce one string and a test
+    can compare them; the second refuses a float that JSON cannot spell, which
+    would otherwise be written by one adapter, read back as ``NaN`` by the
+    other, and fail somewhere with no connection to where it came from.
+    """
+    return json.dumps(
+        record.to_wire(),
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+        allow_nan=False,
+    )
+
+
+def job_unavailable(cause: str, *, path: str = "") -> NovaError:
     return NovaError(
         JobErrorCode.RECORD_UNAVAILABLE,
         "the job history could not be read or written",
@@ -120,9 +155,9 @@ class JsonJobStore:
             try:
                 document = self._read_document()
             except OSError as error:
-                return err(_unavailable(str(error), path=str(self._path)))
+                return err(job_unavailable(str(error), path=str(self._path)))
             if document is None:
-                return err(_unavailable("the file is not a job history", path=str(self._path)))
+                return err(job_unavailable("the file is not a job history", path=str(self._path)))
             document["jobs"][record.job_id] = record.to_wire()
             return self._write_document(document)
 
@@ -290,7 +325,7 @@ class JsonJobStore:
             separators=(",", ":"),
             sort_keys=True,
             allow_nan=False,
-        )
+        )  # the document's own spelling; each record inside it uses record_json
         try:
             with staged.open("w", encoding="utf-8") as handle:
                 handle.write(payload)
@@ -300,7 +335,7 @@ class JsonJobStore:
             _fsync_directory(self._path.parent)
         except OSError as error:
             _discard(staged)
-            return err(_unavailable(str(error), path=str(self._path)))
+            return err(job_unavailable(str(error), path=str(self._path)))
         return ok(None)
 
 

@@ -52,7 +52,7 @@ from nova_studio.api.ws import (
 )
 from nova_studio.core.clock import SystemClock
 from nova_studio.infra.jobs import ConcurrentJobExecutor, spawn_context
-from nova_studio.infra.persistence.jobs import JsonJobStore, job_history_path
+from nova_studio.infra.persistence.job_store import open_job_store
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -144,7 +144,7 @@ def create_app(
     # `freeze_support()`), process jobs are refused at submit time instead of
     # misbehaving at run time.
     executor = ConcurrentJobExecutor(
-        store=JsonJobStore(job_history_path(state.data_dir)),
+        store=open_job_store(state.data_dir),
         clock=SystemClock(),
         process_context=spawn_context(),
     )
