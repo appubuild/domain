@@ -324,4 +324,6 @@ export const DEMO_WORKSPACE_VERSION = 1
 export const DEMO_CONTENT_NOTICE =
   'Demo records — content, leads and activity entries are fictional samples used to demonstrate the admin workflows.'
 
-export const ADMIN_VERSION_LABEL = `Phase 1 · static demo · ${ADMIN_CONFIG.version}`
+export const ADMIN_VERSION_LABEL = ADMIN_CONFIG.api.enabled
+  ? `Connected · v${ADMIN_CONFIG.version}`
+  : `Demo · v${ADMIN_CONFIG.version}`

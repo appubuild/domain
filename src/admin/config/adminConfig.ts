@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  ADMIN CONFIGURATION — PHASE 1 (STATIC DEMO)
+ *  ADMIN CONFIGURATION
  * ============================================================================
  *  Everything the admin console needs to boot, in one place.
  *
@@ -31,7 +31,7 @@ export const API_MODE_ENABLED = API_BASE_URL.length > 0
 export type AuthMode = 'demo' | 'api'
 
 export const ADMIN_CONFIG = {
-  version: '1.0.0-phase1',
+  version: '2.0.0',
   product: {
     name: 'Safe Home Network',
     consoleName: 'Admin Console',

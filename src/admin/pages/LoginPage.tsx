@@ -113,15 +113,27 @@ export const LoginPage = () => {
           </ul>
         </div>
 
-        <div className="relative rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-          <p className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-[0.14em] text-amber-300">
-            <ShieldAlert className="h-3.5 w-3.5" /> Phase 1 · static demo
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-navy-300">
-            Authentication, data and analytics are simulated in the browser. The PHP + MySQL API and
-            real session security arrive in Phase 2.
-          </p>
-        </div>
+        {IS_DEMO_AUTH ? (
+          <div className="relative rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+            <p className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-[0.14em] text-amber-300">
+              <ShieldAlert className="h-3.5 w-3.5" /> Demo mode
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-navy-300">
+              This build is not connected to the API. Authentication and analytics are simulated in
+              the browser, so treat this screen as a preview only.
+            </p>
+          </div>
+        ) : (
+          <div className="relative rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+            <p className="flex items-center gap-2 text-2xs font-semibold uppercase tracking-[0.14em] text-emerald-300">
+              <ShieldCheck className="h-3.5 w-3.5" /> Connected to the API
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-navy-300">
+              Sign-in is handled by the PHP API with hashed passwords, an HttpOnly session cookie and
+              CSRF protection. Every action is audited on the server.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Form panel */}
@@ -139,7 +151,9 @@ export const LoginPage = () => {
 
           <h2 className="font-display text-2xl font-bold tracking-tight text-ink">Sign in to the console</h2>
           <p className="mt-1.5 text-sm text-muted">
-            Use the demo credentials below. They are prefilled with one click.
+            {IS_DEMO_AUTH
+              ? 'Use the demo credentials below. They are prefilled with one click.'
+              : 'Use the email and password of your admin account.'}
           </p>
 
           {lastSignOutReason ? (
