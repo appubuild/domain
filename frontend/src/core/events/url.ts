@@ -16,11 +16,24 @@ export const EVENTS_PATH = '/api/v1/ws';
  *  `wss:` for a page served over https and `ws:` otherwise, because a page
  *  served securely is not allowed to open an insecure socket, and a page served
  *  over http has no secure one to open.
+ *
+ *  An empty origin means *this page's own origin* — which is the desktop case,
+ *  where the service serves the window — and the answer is then a relative URL,
+ *  because that is the one form that is right in every environment and needs no
+ *  knowledge of how the page was delivered.
  */
 export function eventSocketUrl(origin: string, token?: string): string {
-  const base = origin || '/';
+  const query = token === undefined || token === '' ? '' : `?token=${encodeURIComponent(token)}`;
+  const base = origin || (typeof window === 'undefined' ? '' : window.location.origin);
+  if (base === '') return `${EVENTS_PATH}${query}`;
+
+  // An opaque origin — a sandboxed frame, a `file:` page — reports itself as
+  // "null", which is not something a URL can be built from. Relative is the
+  // honest answer there too: it will not work, and neither would anything else.
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(base)) return `${EVENTS_PATH}${query}`;
+
   const url = new URL(EVENTS_PATH, base.endsWith('/') ? base : `${base}/`);
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
-  if (token !== undefined && token !== '') url.searchParams.set('token', token);
+  if (query !== '') url.search = query;
   return url.toString();
 }

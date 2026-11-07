@@ -1,19 +1,18 @@
 /** The first thing a user sees, and the first thing that can be wrong.
  *
- * It has exactly one job: say whether the editor is there. Which is why it asks
- * `/api/v1/system/info` — the one endpoint the shell needs before it has a
- * project — and why every state is spelled out rather than left implied: a
- * splash screen that hangs on "Starting…" forever is indistinguishable from a
- * crash, and the user deserves to be told which one it is.
+ *  It has exactly one job: say whether the editor is there. Which is why every
+ *  state is spelled out rather than left implied: a splash screen that hangs on
+ *  "Starting…" forever is indistinguishable from a crash, and the user deserves
+ *  to be told which one it is.
+ *
+ *  The state arrives as a prop rather than being fetched here, because the
+ *  window asks the same question the splash answers — a splash that called the
+ *  service itself would make every boot two requests instead of one.
  */
 
-import { useApi } from '../../core/api/context';
-import { useServiceInfo } from './useServiceInfo';
+import type { ServiceState } from './useServiceInfo';
 
-export function Splash(): React.JSX.Element {
-  const client = useApi();
-  const state = useServiceInfo(client);
-
+export function Splash({ state }: { readonly state: ServiceState }): React.JSX.Element {
   return (
     <main className="flex h-full items-center justify-center">
       <section className="w-[28rem] rounded-panel border border-line bg-surface-1 p-8">

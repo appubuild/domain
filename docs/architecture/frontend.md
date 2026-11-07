@@ -144,8 +144,10 @@ frontend/
 ├── eslint.config.js           lint, including the three architectural rules of §10.5
 ├── .prettierrc.json           one format
 └── src/
-    ├── main.tsx               composition root: config → client → context → <App/>
-    ├── App.tsx                the window's shell (three lines until routing exists)
+    ├── main.tsx               process entry: config → client → context → <App/>
+    ├── App.tsx                the window's shell: service state → splash or workspace
+    ├── app/
+    │   └── providers.tsx      the workspace's composition root (§10.9.3)
     ├── core/                  mechanisms, no product knowledge
     │   ├── api/
     │   │   ├── contract.ts    GENERATED — never edit
@@ -166,7 +168,8 @@ frontend/
     ├── ui/                    (stage 6) design system: Button, Slider, Menu, Modal,
     │                          Tooltip, VirtualList, Dock, Splitter, Icon, Toast
     ├── features/              one folder per screen or panel group
-    │   ├── splash/            boot screen: is the editor there?
+    │   ├── splash/            boot screen: is the editor there? (useServiceInfo, Splash)
+    │   ├── projects/          the project list panel (useProjects, ProjectList)
     │   ├── home/  project-manager/        (stage 6)
     │   ├── editor/            toolbar, left-sidebar, preview, inspector,
     │   │                      timeline (ruler, tracks, clips, keyframes, markers),
@@ -184,6 +187,9 @@ guess, and the tree above is a map of where things go, not a claim that they are
 ## 10.5 Layering inside the frontend
 
 ```
+        app/                 the composition root: wires the two halves together
+            │                (§10.9.3) — depends on everything, is depended on by
+            │                nothing but main.tsx
         features/            screens and panels (product knowledge lives here)
             │
         stores/              domain state, one slice per aggregate
@@ -194,6 +200,10 @@ guess, and the tree above is a map of where things go, not a claim that they are
 ```
 
 `ui/` sits beside them and depends on `core/result.ts` and on tokens, never on a store.
+`app/` is the exception the diagram draws on purpose: it is allowed to know both
+`stores/` and `core/` because joining them is its only job — and it holds no
+behaviour of its own, so there is nothing to test about it except the join
+(`app/providers.test.tsx`).
 Rules, and how each is enforced:
 
 | Rule | Enforced by |
@@ -291,6 +301,13 @@ delivered:
    missing, because a component silently talking to no service is the hardest failure to
    debug.
 
+From there `App.tsx` owns the window's one question — *is the editor there?*
+(`useServiceInfo`) — and answers it with either the splash or the workspace. The
+workspace is `<WorkspaceProviders>`, which is where the store and the socket are
+joined (§10.9.3); it is not created until the service has answered, because a
+socket opened against a service that is still starting is a retry loop with a
+splash screen on top of it.
+
 `ShellLocation` is a two-field seam (`search`, `path`) with a `replace` callback, so the
 token-stripping logic is tested without a browser (`config.test.ts`).
 
@@ -378,10 +395,19 @@ document to live. It is therefore the only file that can drift silently, so
 `nova_studio.api.ws` by a Python test (`tests/api/test_ws_protocol_mirror.py`):
 the same trick as `make contract-check`, applied where the generator cannot reach.
 
+**Health is a published value, not a question you ask twice.** `health()`
+returns the *same object* until something changes — status, sequence, drops,
+attempts — and `onHealthChange(listener)` hands the changes to as many listeners
+as ask. Both halves matter: React compares a snapshot by identity, so a `health()`
+rebuilt on every call would re-render a status line on every frame of a scrub,
+and a single `onHealth` slot would let the last component to register silence
+every other one.
+
 Two more that are the bridge's own:
 
 * **A handler that throws does not take the socket with it.** One panel's bug is
-  not an editor-wide outage; the error is reported and delivery continues.
+  not an editor-wide outage; the error is reported and delivery continues. A
+  health listener that throws is treated the same way.
 * **Reconnection backs off** (doubling with jitter, reset by a `hello`), and a
   socket that has gone quiet for three heartbeat intervals is presumed dead —
   silence is the only evidence there is, because nothing arrives to say a socket
@@ -440,11 +466,60 @@ Four rules, and each is a bug going the other way:
   the snapshot, so asking once more is honest. Ten events in a tick are two
   requests, not ten.
 
+The first panel that uses all of it is `features/projects/`: `useProjects.ts` is
+the view-model (the store's fields plus one `refresh()` on mount, and actions
+read from `getState()` rather than from a selector, because an action that is
+selected is an action re-rendered on every write), and `ProjectList.tsx` is the
+view. A panel that reaches into the store directly would be tested by mounting a
+store; this one is tested by handing the view-model a client double.
+
 Still to come, and why they are not here yet: commands, undo/redo and optimistic
 updates (stage 7 — the journal lives in the service, and an optimistic update is
 only safe once the command log can roll it back), and server state versus UI
 state living in separate slices (`stores/` gains `ui`, `timeline`, `media`, … as
 those features arrive).
+
+### 10.9.3 Where the two halves are wired together (`app/`)
+
+Neither half may wire itself: a store that subscribed to a socket could not be
+built in a test, and a stream that wrote to a store could not be pointed at
+another one. So the wiring has a home of its own, `app/providers.tsx`, and it is
+the only logic in the file:
+
+1. **One store per client**, memoized on `[client]`.
+2. **One socket for the window**, `useEventStream`, opened on mount and closed on
+   unmount. Its `onStale` calls `store.getState().refresh()` — a hole the bus
+   could not repair is the stream's discovery and the store's problem.
+3. **A refresh on mount, before any event arrives**, because a service that has
+   been up for an hour has no event to tell us what it is already holding.
+4. **A `project.*` subscription**, whose unsubscribe the effect returns. Not `*`:
+   a store that refetched on every topic would refetch on every frame of a scrub.
+5. **Both objects handed down as contexts** — the store, and the stream.
+
+`useEventStream` itself is small on purpose and defends one invariant: **the
+stream is created once, never rebuilt under a re-render**. The callbacks
+(`onStale`, `onError`) are read through a ref so a caller may pass an inline
+arrow, and the `socketFactory` too — a factory passed as an inline arrow is the
+natural way to write it, and a stream rebuilt every render is a reconnect loop
+that only shows up under load, where it looks like the service flaking.
+
+`useStreamHealth()` is how a component *below* the provider learns the socket's
+state: it takes the stable stream out of context and subscribes to its health
+through `useSyncExternalStore`, which is exactly why §10.9.1 publishes a stable
+snapshot. A status line needs the health; it should not be the reason a socket
+stays open.
+
+```
+main.tsx                 config → client → ApiContext → <App/>
+  App.tsx                useServiceInfo → Splash | <WorkspaceProviders>
+                                                 store ─┐
+    app/providers.tsx    useEventStream ──── stream ────┤ one refresh on mount,
+                                                        │ project.* → refresh(),
+                                                        │ gap → onStale → refresh()
+                         EventStreamContext ────────────┘
+                         ProjectStoreContext
+      features/**        panels, each with its own view-model
+```
 
 ## 10.10 Theming and the design system
 
@@ -485,7 +560,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (100 tests, 7 files, ≈ 3 s):
+Suites today (130 tests, 11 files, ≈ 6 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -493,9 +568,13 @@ Suites today (100 tests, 7 files, ≈ 3 s):
 | `core/api/client.test.ts` (16) | URL building, path params, headers, token, JSON and blob reads, timeouts, cancellation, and every `ApiProblem` kind — against a `fetch` double, so no service is needed |
 | `core/shell/config.test.ts` (5) | Token consumption, URL rewriting, `VITE_API_BASE` |
 | `core/events/protocol.test.ts` (25) | Every frame kind, and that each shape of nonsense — a newer server's frame, malformed JSON, an event with no topic — comes back as `null` rather than an exception |
-| `core/events/bridge.test.ts` (24) | The sequence arithmetic against a socket double: a gap is held and requested, a replay fills the hole, an incomplete replay is admitted, a handler that throws does not kill the stream, silence reconnects, and the retry backs off |
+| `core/events/url.test.ts` (9) | `wss` under https, the token in the escaped query string, and the relative URL a desktop window needs |
+| `core/events/bridge.test.ts` (27) | The sequence arithmetic against a socket double: a gap is held and requested, a replay fills the hole, an incomplete replay is admitted, a handler that throws does not kill the stream, silence reconnects, the retry backs off, and the health snapshot is stable between changes while every listener is told |
 | `stores/project.test.ts` (18) | The service's answer wins, a failed refresh keeps the list, refreshes coalesce, ten events are two requests, and a save asks for the summary instead of inventing one |
+| `app/providers.test.tsx` (5) | The wiring: a refresh on mount, the socket opening and going live, `project.*` asking again while another topic does not, an unrepairable gap refreshing, and the subscription coming back on unmount |
 | `features/splash/Splash.test.tsx` (5) | All three splash states, including that a timeout is not reported as a crash |
+| `features/splash/useServiceInfo.test.ts` (4) | The boot request: a connecting start, a ready service, a failure that names its code, and the abort signal handed to the client when the window gives up |
+| `features/projects/ProjectList.test.tsx` (9) | The panel against a scripted client double: rows, the empty state, a failed refresh that keeps the list, create, close, and the error a rejected create leaves behind |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
 is why the tests route values through helpers: `const good = asResult(ok(42))` keeps the
@@ -509,7 +588,7 @@ with a headless canvas harness).
 
 | Rule | Why |
 | --- | --- |
-| The bundle is budgeted, not measured afterwards | Today: 236 kB raw / 73 kB gzip for a boot screen and a client. A route-level split comes with routing (stage 6). |
+| The bundle is budgeted, not measured afterwards | Today: 248 kB raw / 77 kB gzip for a boot screen, a client, a socket and one panel. A route-level split comes with routing (stage 6). |
 | No per-frame React state | Timeline and preview panels write to canvas (§10.12), not to `useState`; a 60 fps React render is 60 reconciliations of a tree that did not change. |
 | Redraws batched in `requestAnimationFrame`, dirty-region driven | Thousands of clips; only the damaged region repaints. |
 | Virtualise by visible range | A two-hour timeline has ~200 000 frames; rendering the ones off-screen is the whole bug. |

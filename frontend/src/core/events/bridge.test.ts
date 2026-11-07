@@ -320,6 +320,57 @@ describe('health', () => {
     connect(h);
     expect(h.health.at(-1)?.status).toBe('live');
   });
+
+  it('the snapshot is the same object until something changes, so comparing it is cheap', () => {
+    // React compares a snapshot by identity. A `health()` that rebuilt itself on
+    // every call would re-render a status line on every frame of a scrub.
+    const h = harness();
+    const socket = connect(h);
+    const before = h.stream.health();
+    expect(h.stream.health()).toBe(before);
+
+    socket.say({ type: 'heartbeat', seq: 4, dropped: 0, at_ms: 1 });
+    const after = h.stream.health();
+    expect(after).not.toBe(before); // the sequence moved
+    expect(after.lastSeq).toBe(4);
+    expect(h.stream.health()).toBe(after); // and is stable again
+  });
+
+  it('an event advances the health, not only a heartbeat', () => {
+    // The sequence in the health is the sequence we *applied*, which is the one
+    // a caller would ask the service to replay from.
+    const h = harness();
+    const socket = connect(h, 41);
+    socket.say(event(42));
+    expect(h.stream.health().lastSeq).toBe(42);
+  });
+
+  it('every listener is told, and a listener that throws does not silence the rest', () => {
+    const h = harness();
+    const seen: string[] = [];
+    const off = h.stream.onHealthChange((health) => {
+      seen.push(`one:${health.status}`);
+    });
+    h.stream.onHealthChange(() => {
+      throw new Error('a status line with a bug in it');
+    });
+    h.stream.onHealthChange((health) => {
+      seen.push(`three:${health.status}`);
+    });
+    connect(h);
+    expect(seen).toContain('one:live');
+    expect(seen).toContain('three:live');
+    // Once per report rather than once per listener: the other two were still
+    // called, which is the point.
+    expect(
+      h.errors.some((error) => error instanceof Error && /status line/.test(error.message)),
+    ).toBe(true);
+
+    off();
+    seen.length = 0;
+    FakeSocket.last?.say({ type: 'heartbeat', seq: 9, dropped: 2, at_ms: 1 });
+    expect(seen).toEqual(['three:live']);
+  });
 });
 
 describe('reconnection', () => {

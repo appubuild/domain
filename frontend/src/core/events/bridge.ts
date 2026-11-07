@@ -60,6 +60,9 @@ export interface EventHandler {
  *  matches everything under `timeline.`, and `*` matches everything. */
 export type TopicPattern = string;
 
+/** Told when the stream's health changes. */
+export type HealthListener = (health: StreamHealth) => void;
+
 export interface EventStreamOptions {
   /** Open a socket. Injected, because a test cannot open a real one and a
    *  browser cannot open one to a loopback service that is not running. */
@@ -101,8 +104,18 @@ export interface SocketLike {
 export interface EventStream {
   /** Register a handler. Returns the unsubscribe. */
   readonly subscribe: (pattern: TopicPattern, handler: EventHandler) => () => void;
-  /** The socket's health, as of now. */
+  /** The socket's health, as of now.
+   *
+   *  The object is the *same* one between changes, which is what lets React
+   *  compare it cheaply: a snapshot rebuilt on every call would re-render a
+   *  status line on every frame of a scrub. */
   readonly health: () => StreamHealth;
+  /** Watch the health. Returns the unsubscribe.
+   *
+   *  Many listeners rather than the one `onHealth` option, because more than
+   *  one thing wants to know: a status line in the shell, a retry notice in a
+   *  panel. A single slot would let the last one to register silence the rest. */
+  readonly onHealthChange: (listener: HealthListener) => () => void;
   /** Open the socket. Idempotent: calling it on a live stream does nothing. */
   readonly open: () => void;
   /** Say goodbye and stay closed. */
@@ -119,6 +132,7 @@ const MAX_PENDING = 512;
 
 export function createEventStream(options: EventStreamOptions): EventStream {
   const handlers = new Map<TopicPattern, Set<EventHandler>>();
+  const healthListeners = new Set<HealthListener>();
   const now = options.now ?? (() => Date.now());
   const setTimer = options.setTimeout ?? ((fn, ms) => setTimeout(fn, ms) as unknown as number);
   const clearTimer =
@@ -149,12 +163,37 @@ export function createEventStream(options: EventStreamOptions): EventStream {
   let watchdogTimer: number | undefined;
   let closedByUs = false;
 
+  /** The published health. Rebuilt only inside `report`, so a caller that
+   *  compares it by identity — React does exactly that — sees a change when and
+   *  only when something changed. */
+  let snapshot: StreamHealth = { status, lastSeq, dropped, attempts };
+
   function health(): StreamHealth {
-    return { status, lastSeq, dropped, attempts };
+    return snapshot;
   }
 
   function report(): void {
-    options.onHealth?.(health());
+    // Nothing moved, nothing to say: a rebuilt snapshot with identical numbers
+    // is a re-render in every consumer that compares it by identity.
+    if (
+      snapshot.status === status &&
+      snapshot.lastSeq === lastSeq &&
+      snapshot.dropped === dropped &&
+      snapshot.attempts === attempts
+    ) {
+      return;
+    }
+    snapshot = { status, lastSeq, dropped, attempts };
+    options.onHealth?.(snapshot);
+    // Like `deliver`, one bad listener must not stop the rest: a status line
+    // that throws is not an editor without a status line.
+    for (const listener of [...healthListeners]) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        options.onError?.(error);
+      }
+    }
   }
 
   function setStatus(next: StreamStatus): void {
@@ -291,7 +330,12 @@ export function createEventStream(options: EventStreamOptions): EventStream {
       if (typeof event.data !== 'string') return;
       lastFrameAt = now();
       const frame = parseFrame(event.data);
-      if (frame) receive(frame);
+      if (frame) {
+        receive(frame);
+        // After the frame, not inside it: the sequence it advanced belongs in
+        // the health a listener reads next, whichever path it took.
+        report();
+      }
     };
     opened.onerror = () => {
       // No detail is available from a WebSocket error by design; the close
@@ -409,6 +453,10 @@ export function createEventStream(options: EventStreamOptions): EventStream {
     if (closedByUs) return;
     attempts += 1;
     setStatus('reconnecting');
+    // The attempt count is part of the health even when the status word is not
+    // new: a window that says "reconnecting" for an hour should be able to say
+    // for how long.
+    report();
     // Doubling with jitter: a service restarting gets a window to finish, and
     // a hundred windows do not all retry on the same millisecond.
     const ceiling = Math.min(maxRetryMs, retryMs * 2 ** (attempts - 1));
@@ -453,6 +501,12 @@ export function createEventStream(options: EventStreamOptions): EventStream {
         if (set.size === 0) {
           handlers.delete(pattern);
         }
+      };
+    },
+    onHealthChange(listener: HealthListener): () => void {
+      healthListeners.add(listener);
+      return () => {
+        healthListeners.delete(listener);
       };
     },
     health,

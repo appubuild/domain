@@ -223,15 +223,27 @@ export function createProjectStore(client: ApiClient): ProjectStore {
 
 export const ProjectStoreContext = createContext<ProjectStore | undefined>(undefined);
 
-/** Read from the project store. Throws without a provider, for the same reason
- *  `useApi` does: a store that is not there is a silent no-op, and a silent
- *  no-op is the failure nobody traces. */
-export function useProjectStore<T>(selector: (state: ProjectState) => T): T {
+function useProjectStoreInContext(): ProjectStore {
   const store = useContext(ProjectStoreContext);
   if (!store) {
     throw new Error(
       'no project store in context — wrap this tree in <ProjectStoreContext.Provider>',
     );
   }
-  return useStore(store, selector);
+  return store;
+}
+
+/** Read from the project store. Throws without a provider, for the same reason
+ *  `useApi` does: a store that is not there is a silent no-op, and a silent
+ *  no-op is the failure nobody traces. */
+export function useProjectStore<T>(selector: (state: ProjectState) => T): T {
+  return useStore(useProjectStoreInContext(), selector);
+}
+
+/** The store itself, for a view-model that wants its actions as well as its
+ *  state. Actions come from `getState()` rather than from a selector, because
+ *  they never change: selecting them would re-render on every write for
+ *  nothing. */
+export function useProjectStoreApi(): ProjectStore {
+  return useProjectStoreInContext();
 }
