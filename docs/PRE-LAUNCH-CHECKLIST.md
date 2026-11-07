@@ -38,18 +38,33 @@ this file in the repo (or in Drive) as the internal checklist instead.
       `tel:` links appear on non-service pages, which `npm run audit` currently
       treats as an error — update that check if you set it.
 
-## 3b. Admin console (Phase 1 demo)
+## 3b. Admin console
 
-- [ ] `/admin` is live for review only. It uses **demo credentials stored in the
-      browser bundle** (`info@safehomenetwork.com` / `Sa123456`) — not real
-      security. Do not share the URL publicly and do not store real business
-      data behind it.
+Choose one mode and confirm it explicitly.
+
+**Demo mode (no API) — review only**
+
+- [ ] `VITE_API_BASE_URL` is empty. The panel uses **demo credentials in the
+      browser bundle** (`info@safehomenetwork.com` / `Sa123456`); the login screen
+      and profile page say so. Do not share `/admin` and do not store real data.
+- [ ] Dashboards are simulated and labelled; never quote those figures.
+
+**Connected mode (API) — production**
+
+- [ ] `api/` is deployed and `/api/v1/health` returns `200`.
+- [ ] The seeded owner password has been changed; every team member has their own
+      account and role.
+- [ ] `VITE_API_BASE_URL` was set at build time; the demo-credentials panel no
+      longer appears and signing in sets an HttpOnly cookie.
+- [ ] Saving in Settings / Services / SEO persists after a page reload and is
+      reflected on the public site.
+- [ ] A `viewer` account receives `403` on save (role enforcement).
+- [ ] Analytics shows only recorded data; “Simulated data” is gone once live data
+      loads. Calls/revenue stay at zero until recorded.
+- [ ] HTTPS is enforced, `COOKIE_SECURE=true`, and `CORS_ALLOWED_ORIGINS` lists
+      only your origins (same-origin hosting preferred).
+- [ ] `php api/tools/maintenance.php` is on a daily cron.
 - [ ] `robots.txt` disallows `/admin` and the console sets `noindex,nofollow`.
-- [ ] Phase 2 (PHP + MySQL auth + REST API) must be approved and completed before
-      the panel is treated as production: hashed passwords, server sessions,
-      CSRF, rate limiting, per-endpoint authorisation.
-- [ ] The panel's dashboards are simulated data — never quote those figures as
-      real traffic, calls or revenue.
 
 ## 4. Contact form delivery
 
@@ -57,10 +72,12 @@ The form is usable today: submitting opens the visitor's email app with the
 message pre-filled and addressed to `SITE.contact.email` (no fake success, no
 dead end).
 
-- [ ] Optional: connect a real endpoint — set `VITE_CONTACT_ENDPOINT` (Formspree,
-      Netlify Forms, your API, an email service) and, if used,
-      `VITE_SPAM_PROTECTION_SITE_KEY`, then rebuild. The page then posts directly
-      and shows a genuine confirmation.
+- [ ] Preferred: deploy the API and build with `VITE_API_BASE_URL` — the form
+      posts to `POST /v1/leads` and submissions appear in Admin → Leads.
+- [ ] Without the API: set `VITE_CONTACT_ENDPOINT` (Formspree, Netlify Forms, an
+      email service) and, if used, `VITE_SPAM_PROTECTION_SITE_KEY`, then rebuild.
+- [ ] Send a real test message and confirm it reaches the inbox or the Leads
+      screen, with the reference shown to the visitor.
 
 ## 5. Legal review
 

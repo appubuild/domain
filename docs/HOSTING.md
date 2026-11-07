@@ -1,13 +1,20 @@
 # Hosting Guide — Safe Home Network
 
-The site is a **static website**. There is no database, no PHP and no server-side
-runtime. That means it can be hosted almost anywhere: shared cPanel hosting,
-Netlify, Vercel, Cloudflare Pages, AWS S3, or a VPS.
+The site is a **static website**. It can be hosted almost anywhere: shared cPanel
+hosting, Netlify, Vercel, Cloudflare Pages, AWS S3, or a VPS.
+
+Optionally it can read content from the **PHP 8 + MySQL API** in `api/`. That needs
+PHP hosting (cPanel/Hostinger or any Apache/LiteSpeed server) plus one MySQL
+database; the setup is in **[api/docs/INSTALLATION.md](../api/docs/INSTALLATION.md)**,
+and the frontend switch is in **[API-INTEGRATION.md](API-INTEGRATION.md)**. Netlify,
+Vercel, Cloudflare Pages and S3 cannot run the API — host the API on PHP hosting and
+the static build anywhere.
 
 Two things to know before you start:
 
 1. **Build command:** `npm run build`
 2. **Publish directory:** `dist/`
+3. **Optional API:** `api/` on PHP hosting, enabled with `VITE_API_BASE_URL` at build time
 
 If you prefer not to run Node on your computer, you do not have to. Use the
 pre-built `dist` package supplied alongside this guide and upload its contents
@@ -125,6 +132,17 @@ CLI alternative: `npm i -g vercel && vercel --prod` from the project folder.
 4. Request an ACM certificate for the domain and attach it to the distribution.
 
 ---
+
+## If you also deploy the API
+
+* Upload `api/` beside the site (e.g. `public_html/api/`), import the SQL file and
+  set `.env` — full steps in `api/docs/INSTALLATION.md`.
+* Build with `VITE_API_BASE_URL=https://your-domain.com/api` (no trailing slash, no `/v1`).
+* Exclude `/api` and `/api/uploads` from the SPA rewrite so API routes and images are
+  not rewritten to `index.html`.
+* Verify `https://your-domain.com/api/v1/health` returns `200`, then sign in at `/admin`
+  and change the seeded password.
+* Keep the API and site on the same origin if possible — session cookies are `SameSite=Lax`.
 
 ## After any deployment — launch checklist
 

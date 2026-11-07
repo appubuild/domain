@@ -39,6 +39,19 @@ export const HOME_FAQS: FaqItem[] = [
   },
 ]
 
+/**
+ * Replaces the bundled FAQ copy with questions published by the API.
+ * Empty groups leave the bundled copy in place.
+ */
+export const hydrateFaqs = (groups: { home?: FaqItem[]; howItWorks?: FaqItem[] }): void => {
+  if (groups.home && groups.home.length > 0) {
+    HOME_FAQS.splice(0, HOME_FAQS.length, ...groups.home)
+  }
+  if (groups.howItWorks && groups.howItWorks.length > 0) {
+    HOW_IT_WORKS_FAQS.splice(0, HOW_IT_WORKS_FAQS.length, ...groups.howItWorks)
+  }
+}
+
 export const HOW_IT_WORKS_FAQS: FaqItem[] = [
   {
     question: 'Do I have to choose a provider through Safe Home Network?',

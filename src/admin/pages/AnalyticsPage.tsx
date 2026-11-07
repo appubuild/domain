@@ -21,6 +21,8 @@ import {
   SimulatedBadge,
 } from '@/admin/components/ui'
 import { useToast } from '@/admin/context/ToastContext'
+import { useLiveAnalytics } from '@/admin/data/liveAnalytics'
+import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
 import {
   formatCompact,
   formatCurrency,
@@ -60,10 +62,12 @@ export const AnalyticsPage = () => {
   const [range, setRange] = useState(30)
   const [metric, setMetric] = useState<MetricKey>('visitors')
 
-  const analytics = useMemo(() => buildAnalytics(90), [])
-  const daily = useMemo(() => rangeFor(range), [range])
+  const { live, version, error: liveError } = useLiveAnalytics()
+
+  const analytics = useMemo(() => buildAnalytics(90), [version])
+  const daily = useMemo(() => rangeFor(range), [range, version])
   const totals = useMemo(() => totalsFor(daily), [daily])
-  const previousTotals = useMemo(() => totalsFor(previousRangeFor(range)), [range])
+  const previousTotals = useMemo(() => totalsFor(previousRangeFor(range)), [range, version])
 
   const metricColor: Record<MetricKey, string> = {
     visitors: CHART_COLORS.brand,
@@ -205,7 +209,7 @@ export const AnalyticsPage = () => {
       <PageHeader
         title="Analytics & reports"
         description="Traffic, call and revenue reporting with date filters and exportable detail."
-        meta={<SimulatedBadge />}
+        meta={live ? undefined : <SimulatedBadge />}
         actions={
           <>
             <Segmented options={RANGE_OPTIONS} value={range} onChange={setRange} ariaLabel="Report range" size="sm" />
@@ -216,7 +220,12 @@ export const AnalyticsPage = () => {
         }
       />
 
-      <SimulatedNotice />
+      {live ? null : <SimulatedNotice />}
+      {ADMIN_CONFIG.api.enabled && liveError ? (
+        <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          Live analytics could not be loaded ({liveError}). The figures below are demo data.
+        </p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard

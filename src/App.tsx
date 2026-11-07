@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { CallSheetProvider } from '@/components/calls/CallContext'
+import ContentBridge from '@/components/ContentBridge'
+import AnalyticsBeacon from '@/components/AnalyticsBeacon'
 import { Layout } from '@/components/Layout'
 import Home from '@/pages/Home'
 import About from '@/pages/About'
@@ -31,6 +33,8 @@ const AdminLoadingFallback = () => (
 
 const App = () => (
   <ThemeProvider>
+    <ContentBridge />
+    <AnalyticsBeacon />
     <CallSheetProvider>
       <Routes>
         <Route

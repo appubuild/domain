@@ -45,6 +45,26 @@ export const SERVICE_NUMBER_MAP: Record<string, ServiceNumberMapping> = {
 }
 
 /**
+ * Replaces the bundled service→group mapping with the API's published mapping.
+ * Called only when the API is configured; the bundled map stays authoritative
+ * otherwise. Services mapped to no group keep showing the contact message.
+ */
+export const hydrateServiceNumberMap = (next: Record<string, ServiceNumberMapping>): void => {
+  Object.keys(SERVICE_NUMBER_MAP).forEach((key) => {
+    delete SERVICE_NUMBER_MAP[key]
+  })
+  Object.entries(next).forEach(([key, value]) => {
+    SERVICE_NUMBER_MAP[key] = value
+  })
+}
+
+/** Replaces the public picker directory with the API's group list. */
+export const hydrateCallDirectory = (next: CallDirectoryCategory[]): void => {
+  if (next.length === 0) return
+  CALL_DIRECTORY_CATEGORIES.splice(0, CALL_DIRECTORY_CATEGORIES.length, ...next)
+}
+
+/**
  * Directory shown in the homepage / service area finder. One entry per phone
  * directory group; `serviceSlug` links to the matching website page when one
  * exists, so visitors can read about the work before calling.

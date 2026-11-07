@@ -12,7 +12,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { readDemoCredentials, useAdminAuth } from '@/admin/context/AdminAuthContext'
-import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
+import { ADMIN_CONFIG, IS_DEMO_AUTH } from '@/admin/config/adminConfig'
 import { Button, Field, Input } from '@/admin/components/ui'
 
 export const LoginPage = () => {
@@ -206,34 +206,36 @@ export const LoginPage = () => {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-2xl border border-dashed border-line bg-soft/60 p-4">
-            <div className="flex items-center justify-between gap-2">
-              <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.14em] text-muted">
-                <KeyRound className="h-3.5 w-3.5" /> Demo credentials
-              </p>
-              <button
-                type="button"
-                onClick={copyDemo}
-                className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
-              >
-                <Copy className="h-3 w-3" /> {copied ? 'Copied' : 'Copy'}
-              </button>
+          {IS_DEMO_AUTH ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-line bg-soft/60 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.14em] text-muted">
+                  <KeyRound className="h-3.5 w-3.5" /> Demo credentials
+                </p>
+                <button
+                  type="button"
+                  onClick={copyDemo}
+                  className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs font-semibold text-brand-700 transition hover:bg-brand-50 dark:text-brand-300 dark:hover:bg-brand-950/40"
+                >
+                  <Copy className="h-3 w-3" /> {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+              <dl className="mt-2.5 space-y-1 text-xs">
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted">Email</dt>
+                  <dd className="font-mono text-[0.72rem] font-medium text-ink">{demo.email}</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-muted">Password</dt>
+                  <dd className="font-mono text-[0.72rem] font-medium text-ink">{demo.password}</dd>
+                </div>
+              </dl>
+              <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={fillDemo}>
+                Fill demo credentials
+              </Button>
+              <p className="mt-2.5 text-2xs leading-relaxed text-muted">{ADMIN_CONFIG.demo.notice}</p>
             </div>
-            <dl className="mt-2.5 space-y-1 text-xs">
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted">Email</dt>
-                <dd className="font-mono text-[0.72rem] font-medium text-ink">{demo.email}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-muted">Password</dt>
-                <dd className="font-mono text-[0.72rem] font-medium text-ink">{demo.password}</dd>
-              </div>
-            </dl>
-            <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={fillDemo}>
-              Fill demo credentials
-            </Button>
-            <p className="mt-2.5 text-2xs leading-relaxed text-muted">{ADMIN_CONFIG.demo.notice}</p>
-          </div>
+          ) : null}
 
           <p className="mt-6 text-center text-2xs text-muted">
             <Link to="/" className="font-semibold text-brand-700 hover:underline dark:text-brand-300">

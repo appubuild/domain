@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { INTEGRATIONS, CONTACT_FORM_CONNECTED } from '@/config/integrations'
 import { SITE } from '@/config/site'
 import { tracking } from '@/lib/tracking'
+import { API_ENABLED, apiRequest } from '@/lib/api/client'
+import { utmParams } from '@/lib/api/analytics'
 
 type Status = 'idle' | 'submitting' | 'sent' | 'email' | 'error'
 
@@ -94,14 +96,42 @@ export const ContactForm = () => {
       return
     }
 
-    // Basic bot signals: a filled honeypot or an instant submit.
-    const looksAutomated = Boolean(values.company) || Date.now() - startedAt.current < 1500
+    // Basic bot signals: a filled honeypot or an instant submit. The API
+    // enforces the same 2-second minimum, so keep the client threshold in step.
+    const looksAutomated = Boolean(values.company) || Date.now() - startedAt.current < 2000
     if (looksAutomated) {
       setStatus('error')
       return
     }
 
     tracking.onContactSubmit({ service: values.subject, path: '/contact' })
+
+    if (API_ENABLED) {
+      setStatus('submitting')
+      try {
+        await apiRequest('/v1/leads', {
+          method: 'POST',
+          body: {
+            name: values.name.trim(),
+            email: values.email.trim(),
+            subject: `Website enquiry — ${values.subject}`,
+            message: values.message.trim(),
+            consent: values.consent,
+            source: 'contact-page',
+            type: 'support',
+            // Honeypot + timing: the API rejects filled traps and instant submits.
+            website: values.company,
+            form_started_at: startedAt.current,
+            ...utmParams(),
+          },
+        })
+        setStatus('sent')
+        setValues(initialValues)
+      } catch {
+        setStatus('error')
+      }
+      return
+    }
 
     if (!CONTACT_FORM_CONNECTED) {
       // No server endpoint: hand the finished message to the visitor's email

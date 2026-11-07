@@ -15,10 +15,18 @@
  *  │  in Phase 2 should depend on `ADMIN_CONFIG.demo`.                     │
  *  └───────────────────────────────────────────────────────────────────────┘
  *
- *  Change the demo email / password here. The login screen reads them from
- *  this object, so the placeholders it shows always match what works.
+ *  Phase 2: set `VITE_API_BASE_URL` (e.g. https://safehomenetwork.com/api) and
+ *  the console switches to password-hashed, HTTP-only cookie sessions served by
+ *  the PHP API. The demo credentials below are then ignored, and the login
+ *  screen stops advertising them.
  * ============================================================================
  */
+
+/** Absolute or same-origin API root, e.g. `https://site.com/api`. */
+const API_BASE_URL = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '').trim().replace(/\/+$/, '')
+
+/** True when the build is wired to the PHP + MySQL API. */
+export const API_MODE_ENABLED = API_BASE_URL.length > 0
 
 export type AuthMode = 'demo' | 'api'
 
@@ -30,8 +38,8 @@ export const ADMIN_CONFIG = {
     tagline: 'Directory, content and call tracking',
   },
 
-  /** `demo` = client-side check against the credentials below. */
-  authMode: 'demo' as AuthMode,
+  /** `api` = PHP session cookie; `demo` = client-side check (no backend). */
+  authMode: (API_BASE_URL.length > 0 ? 'api' : 'demo') as AuthMode,
 
   demo: {
     /** ← change these two values to change the demo login. */
@@ -49,32 +57,37 @@ export const ADMIN_CONFIG = {
   },
 
   /**
-   * Phase 2 placeholders. Nothing here is called yet: the repository always
-   * runs against local mock storage while `enabled` is false.
+   * Enabled automatically when VITE_API_BASE_URL is present. `baseUrl` excludes
+   * the version segment; the client appends `/v1`.
    */
   api: {
-    enabled: false,
-    baseUrl: '', // e.g. 'https://safehomenetwork.com/api'
+    enabled: API_BASE_URL.length > 0,
+    baseUrl: API_BASE_URL,
     version: 'v1',
     timeoutMs: 15000,
+    /** Paths are relative to `/v1` (auth lives outside `/admin`). */
     endpoints: {
       login: '/auth/login',
       logout: '/auth/logout',
       session: '/auth/session',
-      services: '/services',
-      numbers: '/numbers',
-      niches: '/niches',
-      pages: '/pages',
-      posts: '/posts',
-      sections: '/homepage-sections',
-      leads: '/leads',
-      settings: '/settings',
-      seo: '/seo',
-      analytics: '/analytics',
+      services: '/admin/services',
+      numbers: '/admin/phone-numbers',
+      niches: '/admin/niches',
+      pages: '/admin/pages',
+      posts: '/admin/blog',
+      sections: '/admin/homepage-sections',
+      leads: '/admin/leads',
+      settings: '/admin/settings',
+      seo: '/admin/settings/seo',
+      analytics: '/admin/analytics',
+      team: '/admin/team',
+      activity: '/admin/activity',
+      media: '/admin/media',
     },
-    /** Auth header used by the future API client. */
-    authHeader: 'Authorization',
-    authScheme: 'Bearer ',
+    /**
+     * Sessions are HttpOnly cookies now, so no Authorization header is sent.
+     * Writes carry `X-CSRF-Token` instead (see `data/apiClient.ts`).
+     */
   },
 
   storage: {

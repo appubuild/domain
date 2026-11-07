@@ -34,3 +34,14 @@ dist-ssr
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# PHP API — never commit credentials, logs or uploaded files
+api/.env
+api/storage/*
+!api/storage/.gitkeep
+api/uploads/library/*
+!api/uploads/library/.gitkeep
+api/uploads/index.html
+
+.smoke-api
+.api-seed-build

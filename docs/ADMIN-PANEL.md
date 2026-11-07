@@ -1,12 +1,20 @@
-# Admin Console — Phase 1 (static demo)
+# Admin Console
 
 A production-styled admin panel at **`/admin`** for the Safe Home Network site.
-Phase 1 is deliberately **front-end only**: no PHP, no MySQL, no API calls. Every
-write goes to `localStorage` so the workflows can be reviewed safely before the
-backend exists.
 
-> **Phase 2** (PHP + MySQL REST API) is not started. The data layer is already
-> shaped for it — see [Phase 2 hand-off](#phase-2-hand-off).
+The console runs in one of two modes, selected at build time by
+`VITE_API_BASE_URL`:
+
+| | Connected | Demo |
+| --- | --- | --- |
+| Trigger | `VITE_API_BASE_URL` set | variable empty |
+| Auth | `POST /v1/auth/login`, HttpOnly cookie + CSRF | bundled credentials, `localStorage` |
+| Data | MySQL through `data/apiRepository.ts` | `localStorage` seed |
+| Analytics | recorded events from the API | deterministic simulation, labelled |
+| Warning banner | none | “Demo mode” / “Simulated data” everywhere |
+
+Set `VITE_API_BASE_URL=https://your-domain.com/api` and rebuild to run connected.
+The screens, routes and data contracts are identical in both modes.
 
 ---
 
@@ -31,9 +39,12 @@ match.
 | Clears the session on logout and on “Extend session” expiry | Survive a cleared browser |
 | Shows a permanent demo-mode warning on the login screen and profile page | Prevent anyone reading the credentials in the bundle |
 
-**This is not production security.** Anyone can read the JavaScript bundle. Do
-not put real business data behind this panel until Phase 2 lands, and do not
-advertise `/admin` publicly.
+**Demo mode is not production security.** Anyone can read the JavaScript bundle.
+Use it only to review the UI. In connected mode the demo panel is not rendered at
+all and credentials never reach the browser — see §5.
+
+Do not advertise `/admin` publicly in either mode; `robots.txt` disallows it and
+the console injects `noindex,nofollow`.
 
 ---
 
@@ -71,12 +82,13 @@ src/admin/
 ├── data/
 │   ├── seed.ts               demo workspace; services + numbers derived from the live site
 │   ├── repository.ts         AdminRepository interface + LocalStorage implementation
-│   ├── apiRepository.ts      Phase 2 REST implementation (unwired)
-│   ├── apiClient.ts          Phase 2 fetch client + token handling (unwired)
+│   ├── apiRepository.ts      REST implementation over the PHP API
+│   ├── apiClient.ts          fetch wrapper: /v1 prefix, CSRF header, cookie session
+│   ├── liveAnalytics.ts      loads the analytics screens from /v1/admin/analytics/*
 │   ├── analytics.ts          deterministic simulated analytics
 │   └── storage.ts            localStorage adapter with in-memory fallback (SSR/tests)
 ├── context/
-│   ├── AdminAuthContext.tsx  demo session, guards helpers, password change
+│   ├── AdminAuthContext.tsx  API or demo session, guards, password change
 │   └── ToastContext.tsx      toast notifications
 ├── components/
 │   ├── AdminLayout.tsx       sidebar + topbar + independent scroll areas
@@ -109,31 +121,36 @@ public site uses** — no invented phone numbers.
 
 ## 4. What is mock data
 
-| Screen | Mock? | Notes |
+| Screen | Demo mode | Connected mode |
 | --- | --- | --- |
-| Dashboard KPIs, charts, sources, keywords, landing pages, revenue | **Simulated** | Deterministic generator in `data/analytics.ts`; labelled “Simulated data” everywhere |
-| Analytics & reports (all tables, CSV) | **Simulated** | Same module; CSV exports the simulated series |
-| Services, numbers, niches | Real seed, local edits | Edits persist in this browser only |
-| Pages, blog, homepage sections | **Fictional demo content** | Text is illustrative, not site copy |
-| Leads & support | **Fictional demo enquiries** | Emails use `example.com` |
-| Settings, SEO | Real values pre-filled from `SITE` | Saving only affects the demo workspace |
-| Activity log | Real (of this browser’s demo actions) | |
+| Dashboard KPIs, charts, sources, landing pages | Simulated, labelled | Recorded events (`analytics_events`, `leads`, `call_records`, `revenue_records`) |
+| Analytics & reports, CSV | Simulated | Same recorded data; CSV says “recorded” |
+| Keywords / caller states | Simulated | **Empty** — no Search Console or call-location source is connected |
+| Services, numbers, niches, pages, blog, homepage, FAQs | Seed + local edits | Database |
+| Leads & support | Fictional demo enquiries | Real submissions from the contact form |
+| Settings, SEO | Pre-filled from `SITE` | Database; public site reflects them after cache purge |
+| Activity log | This browser’s demo actions | `activity_log` (audit trail) |
 
-What the panel does **not** claim: no real traffic, no real calls, no real
-revenue, and no statement that editing here changes the live site.
+In connected mode the “Simulated data” badge and notice disappear automatically
+once a real snapshot loads. If the analytics request fails, the panel says so and
+keeps the labelled demo figures rather than showing fake “live” numbers. Nothing
+on the panel estimates traffic, calls or revenue.
 
 ---
 
-## 5. Phase 2 hand-off
+## 5. Connected mode
 
-Everything below is prepared but **not connected**:
+When `VITE_API_BASE_URL` is set:
 
-1. **`ADMIN_CONFIG.api`** — `enabled: false`, `baseUrl: ''`, endpoint paths, timeout,
-   auth header and scheme.
-2. **`data/apiClient.ts`** — `request<T>()` with bearer token, JSON, timeout and
-   `credentials: 'include'`, plus `ApiNotConfiguredError` so nothing silently fails.
-3. **`data/apiRepository.ts`** — the full `AdminRepository` interface over REST.
-   Wiring it is one line in `data/repository.ts`:
+1. **`ADMIN_CONFIG.api`** — `enabled: true`, `baseUrl` from the environment,
+   `/admin/*` endpoints, cookie session (no bearer token).
+2. **`data/apiClient.ts`** — prefixes `/v1`, sends `credentials: 'include'`,
+   adds `X-CSRF-Token` from the CSRF cookie on writes, 15-second timeout, and
+   raises `ApiNotConfiguredError` when no base URL exists.
+3. **`data/apiRepository.ts`** — the full `AdminRepository` interface over REST,
+   including snake_case ↔ camelCase mapping, settings flattening, SEO mapping and
+   string ids for the UI.
+4. **`data/repository.ts`** — picks the implementation:
 
    ```ts
    export const repository = ADMIN_CONFIG.api.enabled
@@ -141,22 +158,20 @@ Everything below is prepared but **not connected**:
      : localRepository
    ```
 
-4. **`types/admin.ts`** — the JSON contract for the PHP endpoints.
+5. **`context/AdminAuthContext.tsx`** — `/v1/auth/login`, `/v1/auth/session`,
+   `/v1/auth/logout`, `/v1/auth/profile`, `/v1/auth/password`; stores no token.
+6. **`data/liveAnalytics.ts`** — `useLiveAnalytics()` fetches the 90-day snapshot
+   and feeds it to `buildAnalytics()`.
 
-### Suggested PHP/MySQL work for Phase 2
+Server-side implementation: `api/` (129 routes). Endpoint detail is in
+`api/docs/API-REFERENCE.md`; security in `api/docs/SECURITY.md`.
 
-- `POST /auth/login` → hashed password (`password_verify`), session cookie,
-  rate limiting; `GET /auth/session`, `POST /auth/logout`.
-- Tables: `admins`, `services`, `phone_groups`, `tracking_numbers`, `niches`,
-  `pages`, `blog_posts`, `homepage_sections`, `leads`, `settings`, `seo_settings`,
-  `activity_log`.
-- Enforce in SQL/PHP what the demo repository enforces in JS: unique `slug`,
-  unique `number`, `priority` ordering, `status` enum.
-- `GET /analytics?range=30` → replace `data/analytics.ts`; the UI already treats
-  the response as `AnalyticsSnapshot`.
-- Keep `localStorage` only for UI preferences (sidebar state, last range).
+### Role enforcement
 
----
+The API enforces `owner` > `admin` > `editor` > `viewer` on every write. The UI
+still shows the full navigation to every signed-in role, so a viewer who tries to
+save receives a `403` toast (the server is the source of truth). Demo mode has no
+roles and never claims to.
 
 ## 6. Resetting the demo
 
@@ -170,7 +185,7 @@ not touch the public site or the production phone directory.
 
 ```bash
 npm run test:admin    # 83 assertions
-npm run test          # public directory suite + admin suite
+npm run test          # directory 28 + admin 83 + API 33 = 144
 ```
 
 The admin suite covers the demo credential configuration, protected-route
@@ -178,3 +193,7 @@ behaviour (signed out vs signed in, including the login redirect), rendering of 
 every admin route, repository CRUD and validation for all six entities, seed
 fidelity against the live service/number mapping, selectors, analytics maths and
 formatting helpers.
+
+The API suite (`npm run test:api`) covers the mapper/hydration layer that makes
+connected mode possible. Server-side tests live in `api/tests/` and are described
+in `api/docs/TESTING.md`.

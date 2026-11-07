@@ -92,13 +92,29 @@ export const totalsFor = (rows: DailyMetric[]): MetricTotals => {
   }
 }
 
+/**
+ * Live snapshot supplied by the API (see `liveAnalytics.ts`).
+ * While it is null the screens keep using the clearly-labelled simulated set.
+ */
+let liveSnapshot: AnalyticsSnapshot | null = null
+
+export const setLiveAnalytics = (snapshot: AnalyticsSnapshot | null): void => {
+  liveSnapshot = snapshot
+}
+
+export const isLiveAnalytics = (): boolean => liveSnapshot !== null
+
 /** Last `days` entries (inclusive of today). */
-export const rangeFor = (days: number): DailyMetric[] => DAILY_SERIES.slice(-Math.max(1, days))
+export const rangeFor = (days: number): DailyMetric[] => {
+  const source = liveSnapshot?.daily ?? DAILY_SERIES
+  return source.slice(-Math.max(1, days))
+}
 
 /** The equally sized window immediately before `days`. */
 export const previousRangeFor = (days: number): DailyMetric[] => {
-  const end = DAILY_SERIES.length - days
-  return DAILY_SERIES.slice(Math.max(0, end - days), end)
+  const source = liveSnapshot?.daily ?? DAILY_SERIES
+  const end = source.length - days
+  return source.slice(Math.max(0, end - days), end)
 }
 
 export const changePercent = (current: number, previous: number): number => {
@@ -246,7 +262,7 @@ const buildServicePerformance = (days: number): ServicePerformance[] => {
   })
 }
 
-export const buildAnalytics = (days = ANALYTICS_WINDOW_DAYS): AnalyticsSnapshot => ({
+const buildSimulatedAnalytics = (days = ANALYTICS_WINDOW_DAYS): AnalyticsSnapshot => ({
   generatedAt: new Date().toISOString(),
   daily: rangeFor(days),
   sources: buildSources(days),
@@ -269,7 +285,15 @@ export const buildAnalytics = (days = ANALYTICS_WINDOW_DAYS): AnalyticsSnapshot 
   ],
 })
 
-export const MOCK_ANALYTICS: AnalyticsSnapshot = buildAnalytics()
+export const MOCK_ANALYTICS: AnalyticsSnapshot = buildSimulatedAnalytics()
 
 /** Fresh snapshot for the current date, used by the "refresh" action. */
 export const refreshAnalytics = (days = ANALYTICS_WINDOW_DAYS): AnalyticsSnapshot => buildAnalytics(days)
+
+/**
+ * Returns the live API snapshot when one has been loaded, otherwise the
+ * simulated dataset. Both satisfy the same `AnalyticsSnapshot` type, so the
+ * screens only need to change their labels.
+ */
+export const buildAnalytics = (days = ANALYTICS_WINDOW_DAYS): AnalyticsSnapshot =>
+  liveSnapshot ?? buildSimulatedAnalytics(days)

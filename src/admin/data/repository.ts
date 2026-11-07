@@ -14,7 +14,7 @@
  *  fields) so the same rules apply when the PHP API takes over.
  * ============================================================================
  */
-import { storageKey } from '@/admin/config/adminConfig'
+import { ADMIN_CONFIG, storageKey } from '@/admin/config/adminConfig'
 import type {
   ActivityEntry,
   AdminWorkspace,
@@ -30,6 +30,7 @@ import type {
 } from '@/admin/types/admin'
 import { delay, makeId, readJSON, writeJSON } from './storage'
 import { DEMO_WORKSPACE_VERSION, buildSeedWorkspace } from './seed'
+import { createApiRepository } from './apiRepository'
 
 export type NewService = Omit<ServiceRecord, 'id' | 'updatedAt'>
 export type NewNumber = Omit<TrackingNumber, 'id' | 'createdAt' | 'updatedAt'>
@@ -515,7 +516,9 @@ export const localRepository: AdminRepository = new LocalStorageRepository()
  *       ? createApiRepository()
  *       : localRepository
  */
-export const repository: AdminRepository = localRepository
+export const repository: AdminRepository = ADMIN_CONFIG.api.enabled
+  ? createApiRepository()
+  : localRepository
 
 export const isDemoRepository = repository.mode === 'local'
 

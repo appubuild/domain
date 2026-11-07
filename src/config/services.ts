@@ -1485,6 +1485,30 @@ export const SERVICE_BY_SLUG: Record<string, Service> = SERVICES.reduce(
 
 export const getService = (slug: string): Service | undefined => SERVICE_BY_SLUG[slug]
 
+/**
+ * Replaces the bundled service content with a payload from the API.
+ *
+ * Only called when `VITE_API_BASE_URL` is configured and the request succeeds;
+ * otherwise the bundled data above remains the source of truth, so a static
+ * build without a backend behaves exactly as before.
+ */
+export const hydrateServices = (next: Service[], categories?: ServiceCategory[]): void => {
+  if (next.length === 0) return
+
+  SERVICES.splice(0, SERVICES.length, ...next)
+
+  Object.keys(SERVICE_BY_SLUG).forEach((key) => {
+    delete SERVICE_BY_SLUG[key]
+  })
+  SERVICES.forEach((service) => {
+    SERVICE_BY_SLUG[service.slug] = service
+  })
+
+  if (categories && categories.length > 0) {
+    SERVICE_CATEGORIES.splice(0, SERVICE_CATEGORIES.length, ...categories)
+  }
+}
+
 export const servicePath = (slug: string): string => `/services/${slug}`
 
 export const featuredServices = (): Service[] => SERVICES.filter((service) => service.featured)

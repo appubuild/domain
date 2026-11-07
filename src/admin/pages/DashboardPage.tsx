@@ -15,6 +15,7 @@ import { repository } from '@/admin/data/repository'
 import { storageKey, ADMIN_CONFIG } from '@/admin/config/adminConfig'
 import { readJSON, writeJSON } from '@/admin/data/storage'
 import { buildAnalytics, changePercent, previousRangeFor, rangeFor, totalsFor } from '@/admin/data/analytics'
+import { useLiveAnalytics } from '@/admin/data/liveAnalytics'
 import { leadStatusTone, directoryHealth } from '@/admin/lib/selectors'
 import {
   formatCompact,
@@ -79,9 +80,11 @@ export const DashboardPage = () => {
     load()
   }, [load])
 
-  const analytics = useMemo(() => buildAnalytics(90), [refreshedAt])
-  const daily = useMemo(() => rangeFor(range), [range])
-  const previous = useMemo(() => previousRangeFor(range), [range])
+  const { live, version, error: liveError } = useLiveAnalytics()
+
+  const analytics = useMemo(() => buildAnalytics(90), [refreshedAt, version])
+  const daily = useMemo(() => rangeFor(range), [range, version])
+  const previous = useMemo(() => previousRangeFor(range), [range, version])
   const totals = useMemo(() => totalsFor(daily), [daily])
   const previousTotals = useMemo(() => totalsFor(previous), [previous])
   const today = daily[daily.length - 1]
@@ -130,7 +133,7 @@ export const DashboardPage = () => {
         description="Directory health, call performance and traffic at a glance."
         meta={
           <>
-            <SimulatedBadge />
+            {live ? null : <SimulatedBadge />}
             <span>Updated {timeAgo(refreshedAt)}</span>
           </>
         }
@@ -147,7 +150,12 @@ export const DashboardPage = () => {
         }
       />
 
-      <SimulatedNotice compact />
+      {live ? null : <SimulatedNotice compact />}
+      {ADMIN_CONFIG.api.enabled && liveError ? (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          Live analytics could not be loaded ({liveError}). The figures below are demo data.
+        </p>
+      ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -413,8 +421,9 @@ export const DashboardPage = () => {
 
       <p className={cn('flex items-center gap-1.5 text-2xs text-muted')}>
         <MousePointerClick className="h-3.5 w-3.5" />
-        Service and number figures come from the demo workspace; traffic and revenue figures come from the
-        simulated analytics module.
+        {live
+          ? 'Directory figures are read from the API; traffic, call and revenue figures are recorded events.'
+          : 'Service and number figures come from the demo workspace; traffic and revenue figures come from the simulated analytics module.'}
       </p>
     </div>
   )

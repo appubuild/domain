@@ -97,6 +97,60 @@ export const SITE: SiteConfig = {
   themeStorageKey: 'shn-theme',
 }
 
+/** Partial site configuration coming from the API's settings endpoint. */
+export interface SiteConfigPatch {
+  name?: string
+  shortName?: string
+  legalName?: string
+  domain?: string
+  url?: string
+  tagline?: string
+  description?: string
+  modelStatement?: string
+  contact?: Partial<SiteConfig['contact']>
+  social?: Partial<SiteConfig['social']>
+}
+
+/**
+ * Merges settings published by the API into the SITE object.
+ * Undefined values are ignored so a partly-filled settings table never blanks
+ * out working copy. Called only when VITE_API_BASE_URL is configured.
+ */
+export const hydrateSite = (patch: SiteConfigPatch): void => {
+  const scalarKeys: (keyof SiteConfigPatch)[] = [
+    'name',
+    'shortName',
+    'legalName',
+    'domain',
+    'url',
+    'tagline',
+    'description',
+    'modelStatement',
+  ]
+
+  scalarKeys.forEach((key) => {
+    const value = patch[key]
+    if (typeof value === 'string' && value.length > 0) {
+      ;(SITE as unknown as Record<string, unknown>)[key] = value
+    }
+  })
+
+  if (patch.contact) {
+    Object.entries(patch.contact).forEach(([key, value]) => {
+      if (value === undefined) return
+      if (key === 'addressLines' && Array.isArray(value) && value.length === 0) return
+      ;(SITE.contact as unknown as Record<string, unknown>)[key] = value
+    })
+  }
+
+  if (patch.social) {
+    Object.entries(patch.social).forEach(([key, value]) => {
+      if (typeof value !== 'string') return
+      ;(SITE.social as unknown as Record<string, unknown>)[key] = value
+    })
+  }
+}
+
 /** True when an authorized, dialable phone number has been configured. */
 export const hasPhone = (): boolean => Boolean(SITE.contact.phone && SITE.contact.phoneDisplay)
 

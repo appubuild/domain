@@ -4,8 +4,10 @@ A production-quality, static-first marketing and service-discovery website for
 **Safe Home Network**, a US home services connection and referral platform.
 
 Built with **React 18 + TypeScript + Vite + Tailwind CSS + React Router + Lucide**.
-No database, no backend required — all business data lives in typed configuration
-files so the owner can update it without touching UI components.
+It ships as a static site with all business data in typed configuration files, and
+it can optionally read everything from the bundled **PHP 8 + MySQL API** in `api/`.
+No build step is required to deploy the API — upload the folder, import one SQL
+file, set the database credentials.
 
 ---
 
@@ -22,6 +24,16 @@ npm run sitemap   # regenerate public/sitemap.xml
 ```
 
 Node 18+ required. `npm run build` regenerates `public/sitemap.xml` automatically.
+
+To make the site read live content from the API:
+
+```bash
+VITE_API_BASE_URL=https://safehomenetwork.com/api npm run build
+```
+
+Leave the variable empty to keep the static build. See
+**[docs/API-INTEGRATION.md](docs/API-INTEGRATION.md)** for what changes and
+**[api/README.md](api/README.md)** for the backend.
 
 ---
 
@@ -55,7 +67,7 @@ Node 18+ required. `npm run build` regenerates `public/sitemap.xml` automaticall
 | `/disclaimer` | Referral-model disclaimer |
 | `/do-not-sell-or-share` | Privacy choices / opt-out request page |
 | `/accessibility` | Accessibility statement |
-| `/admin` | Admin console (Phase 1 static demo — sign-in required, `noindex`) |
+| `/admin` | Admin console (sign-in required, `noindex`; demo account or API login) |
 | `*` | 404 page (noindex) |
 
 Every page is a real page with unique content, metadata and breadcrumbs. No dead
@@ -143,12 +155,15 @@ see **[docs/PHONE-DIRECTORY.md](docs/PHONE-DIRECTORY.md)** for the operations gu
 ## Contact form
 
 Client-side validation, inline errors, `aria-invalid`, honeypot and timing checks
-are implemented. Submission is only attempted when `VITE_CONTACT_ENDPOINT` is set.
+are implemented. Delivery depends on which backend is configured:
 
-With no endpoint configured, the form validates normally and then states plainly
-that delivery is **not** configured — it never fakes a success message. Point
-`VITE_CONTACT_ENDPOINT` at Formspree, Netlify Forms, your API route, or an email
-service, then rebuild.
+1. **`VITE_API_BASE_URL` set** — the form posts to `POST /v1/leads` and shows the
+   reference returned by the API. Submissions appear under Admin → Leads.
+2. **`VITE_CONTACT_ENDPOINT` set (no API)** — the form posts to that endpoint
+   (Formspree, Netlify Forms, …).
+3. **Neither set** — the form validates normally and clearly states that delivery
+   is not configured, with a button that opens the visitor's email app. It never
+   fakes a success message.
 
 ---
 
@@ -214,27 +229,66 @@ SPA rewrites are included for the common hosts:
 
 Verify a deep link (e.g. `/services/locksmith`) after deploying, not just the homepage.
 
+### With the PHP API
+
+Deploy `api/` beside the built site (e.g. `public_html/api/`), import the SQL file and point
+`VITE_API_BASE_URL` at `https://your-domain.com/api` before building. cPanel steps, permissions,
+HTTPS/CORS and the health check are in **[api/docs/INSTALLATION.md](api/docs/INSTALLATION.md)**.
+Exclude `/api/uploads` from the SPA rewrite so uploaded images are served as files.
+
 ---
 
-## Admin console (Phase 1)
+## Admin console
 
 A separate, lazy-loaded admin panel at **`/admin`** manages the directory, content
-and settings. Phase 1 is static: no PHP, no MySQL, no API — data lives in
-`localStorage` and analytics are simulated. See
-**[docs/ADMIN-PANEL.md](docs/ADMIN-PANEL.md)** for the full guide.
+and settings. It runs in one of two modes, chosen by `VITE_API_BASE_URL`:
+
+* **Connected** — real login (`/v1/auth/login`, HttpOnly cookie + CSRF), every
+  screen reads and writes MySQL through `apiRepository.ts`, and analytics come
+  from recorded events.
+* **Demo** — no API configured: browser `localStorage`, simulated analytics, and
+  a labelled demo account for reviewing the UI.
+
+See **[docs/ADMIN-PANEL.md](docs/ADMIN-PANEL.md)** for screens and
+**[docs/API-INTEGRATION.md](docs/API-INTEGRATION.md)** for the mode switch.
 
 - **Login:** `info@safehomenetwork.com` / `Sa123456` — set in
   `src/admin/config/adminConfig.ts` (`ADMIN_CONFIG.demo`).
 - **Screens:** dashboard, analytics & reports, services, tracking numbers, niches,
   pages, blog, homepage sections, leads, website settings, SEO settings, profile
   & security.
-- **Data layer:** `src/admin/data/repository.ts` (interface + localStorage
-  implementation). `apiRepository.ts` and `apiClient.ts` are the prepared Phase 2
-  REST equivalents; `ADMIN_CONFIG.api.enabled` is `false`, so nothing is fetched.
+- **Data layer:** `src/admin/data/repository.ts` exports the interface and picks
+  `createApiRepository()` (REST) or the `localStorage` implementation based on
+  `ADMIN_CONFIG.api.enabled`.
 - **Seed:** services and numbers come from the live `services.ts` /
   `serviceNumbers.ts` — the panel starts in sync with the public directory.
-- **Not real:** traffic, calls, revenue and leads are clearly labelled simulated
-  or fictional demo data.
+- **Not real in demo mode:** traffic, calls, revenue and leads are clearly labelled
+  simulated data. In connected mode the labels disappear because the figures are
+  recorded; anything without a data source (Search Console keywords, caller
+  states) stays empty rather than being estimated.
+
+## PHP API (Phase 2)
+
+`api/` is a dependency-free PHP 8.1+ backend with one MySQL schema (22 tables) and
+129 routes under `/v1`.
+
+* **Install:** import `api/database/safehomenetwork.sql` in phpMyAdmin, copy
+  `api/.env.example` → `.env`, verify `/api/v1/health`. Full guide:
+  **[api/docs/INSTALLATION.md](api/docs/INSTALLATION.md)**.
+* **Endpoints:** services (with `?full=1`), phone groups, pages, blog, homepage,
+  FAQs, settings, integrations, SEO, sitemap, leads, first-party analytics, plus
+  admin CRUD for every screen, calls, revenue, media and team. Reference:
+  **[api/docs/API-REFERENCE.md](api/docs/API-REFERENCE.md)**.
+* **Security:** bcrypt cost 12, hashed session tokens, CSRF header, RBAC
+  (owner/admin/editor/viewer), rate limits, snippet allow-list, upload
+  hardening. Details: **[api/docs/SECURITY.md](api/docs/SECURITY.md)**.
+* **Seed:** 15 services, 5 categories, 10 phone groups, 20 numbers, 12 pages,
+  6 posts, 8 sections, 12 FAQs, 33 settings. Change the seeded password on the
+  first login.
+* **Tests:** `php api/tests/run-tests.php` (56 assertions),
+  `php api/tests/route-check.php` (129 routes / 217 calls),
+  `php api/tests/http-smoke.php GET /v1/health`. See
+  **[api/docs/TESTING.md](api/docs/TESTING.md)**.
 
 ## Quality checks performed
 
@@ -243,11 +297,13 @@ and settings. Phase 1 is static: no PHP, no MySQL, no API — data lives in
 - `npm run smoke` — SSR render test across all 26 routes plus 404 cases.
 - `npm run audit` — link, in-page anchor, image-source, duplicate-id and
   single-`h1` audit across every route (26 routes, all passing).
-- `npm run test` — 111 assertions: 28 over the public phone directory
+- `npm run test` — 144 assertions: 28 over the public phone directory
   (mapping, publication rules, campaign permissions, rendered markup — numbers
-  never appear before a service is selected) and 83 over the admin console
+  never appear before a service is selected), 83 over the admin console
   (demo credentials, protected routes, every admin screen rendering, repository
-  CRUD and validation, seed fidelity, analytics maths).
+  CRUD and validation, seed fidelity, analytics maths) and 33 over the API
+  integration layer (mappers, directory round-trip, hydration, snippet guard,
+  client errors).
 - `npm run test:admin` — the admin suite on its own.
 - All internal links resolve to real routes; all CTA buttons are wired to a
   working action (dialog, navigation or form).
@@ -270,9 +326,10 @@ Owner decisions / tasks before going live:
 2. **Service phone numbers** — already live in `src/data/serviceNumbers.ts`
    (20 owner-confirmed lines, two per trade). `SITE.contact.phone` /
    `phoneDisplay` are only for an optional company-wide line.
-3. **Contact form endpoint (optional)** — without one, the form opens the
-   visitor's email app with the message pre-filled and addressed to
-   `SITE.contact.email`; set `VITE_CONTACT_ENDPOINT` (+ spam key) to deliver
+3. **Contact form delivery (optional)** — the API route is used when
+   `VITE_API_BASE_URL` is set; otherwise set `VITE_CONTACT_ENDPOINT` (+ spam key)
+   to deliver; without either, the form opens the visitor's email app with the
+   message pre-filled and addressed to `SITE.contact.email`
    directly instead.
 4. **Legal review** — Privacy Policy, Terms, Disclaimer, Do-Not-Sell and
    Accessibility pages must be reviewed by counsel for your entity, the states you

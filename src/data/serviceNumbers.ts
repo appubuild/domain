@@ -213,6 +213,16 @@ export const SERVICE_PHONE_NUMBERS: ServicePhoneGroup[] = [
  * how a held-back number would look — clearly marked as unpublished — without
  * publishing anything. In a production build this is always false.
  */
+/**
+ * Replaces the bundled directory with numbers published by the API.
+ * The API only returns numbers that are mapped to a service and marked active,
+ * so the publication rules in this file are applied server-side in that mode.
+ */
+export const hydrateServicePhoneNumbers = (groups: ServicePhoneGroup[]): void => {
+  if (groups.length === 0) return
+  SERVICE_PHONE_NUMBERS.splice(0, SERVICE_PHONE_NUMBERS.length, ...groups)
+}
+
 export const PREVIEW_UNPUBLISHED_NUMBERS: boolean = import.meta.env.DEV
 
 /** Guard rail: only `status: 'active'` numbers can ever be published. */
