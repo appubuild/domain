@@ -318,7 +318,8 @@ Error codes are stable strings (`NS-MEDIA-4001`), never HTTP-status-only, so the
 
 ## 6. Data architecture
 
-Full DDL: `docs/architecture/database-schema.md`. The strategy:
+Full DDL, migration rules and the deletion policy:
+[`database-schema.md`](database-schema.md), written in stage 5. The strategy:
 
 **Hybrid normalised/document model.** Relational tables hold everything that must be
 *queried, indexed, joined or listed* — projects, assets, tracks, clips, captions, jobs,
@@ -341,7 +342,7 @@ are large; explicit SQL is auditable and fast.
 
 ### 6.1 The persistence port and what it stores
 
-`ports/persistence.py` declares four protocols; `domain/persistence.py` holds the
+`ports/persistence.py` declares six protocols; `domain/persistence.py` holds the
 vocabulary they move. Neither names SQLite, ZIP or a filesystem.
 
 | Protocol | Lifetime | Answers |
@@ -350,6 +351,8 @@ vocabulary they move. Neither names SQLite, ZIP or a filesystem.
 | `ProjectArchive` | one per open project | "read/write/checkpoint this `.nova` container" |
 | `Journal` | one per open project | "what has happened since the last checkpoint" |
 | `CacheIndex` | one per install | "what derived bytes do we hold, and how old are they" |
+| `SettingsStore` | one per install | "what did this install decide to remember" (stage 5) |
+| `RecentFiles` | one per install | "which projects has this install seen, and was one left dirty" (stage 5) |
 
 | Vocabulary (domain) | Role |
 | --- | --- |
@@ -357,6 +360,8 @@ vocabulary they move. Neither names SQLite, ZIP or a filesystem.
 | `RevisionRef` | One numbered checkpoint; `document_name` is where it lives in the archive |
 | `JournalEntry`, `JournalWindow` | One logged command, and a resumable read of them |
 | `CacheEntry`, `CacheKind`, `CacheBudget` | Derived artefacts, what kind they are, how much is allowed |
+| `Setting` | One scoped key's value: a scope and a key are names, a value is JSON |
+| `RecentProject` | One project this install has seen: where it was, and whether it was left dirty |
 | `CheckpointPolicy`, `select_for_eviction`, `revisions_to_prune` | Pure policy: when to checkpoint, what to evict, what history to keep |
 | `is_valid_document_name`, `revision_document`, `caption_document` | Entry naming — including the zip-slip guard |
 
@@ -385,14 +390,43 @@ sidecar for derived data only.
 | | What it holds | Where it lives | May it be deleted? |
 | --- | --- | --- | --- |
 | `.nova` (ZIP of canonical JSON) | the project: manifest, settings, the authoritative timeline graph, captions, revisions | wherever the user put it | **No** — that is the edit |
+| `nova.db` (SQLite, WAL) | install state that cannot be recomputed: settings, the recent-files registry, the job history | the app data directory | No — it *is* the history |
 | `cache.sqlite3` (SQLite, WAL) | the index of derived bytes: proxies, thumbnails, waveforms, analysis | the app data directory | Yes — costs a rebuild, loses nothing |
+| `cache/` | the derived bytes themselves | beside the index | Yes — the index stops finding them |
 | `autosave/<project>/cmds-*.ndjson` | the command journal since the last checkpoint | the app data directory | Yes — costs the unsaved tail, which is all it holds |
+
+**Two databases, because they are deleted on different schedules.** `rm cache.sqlite3` is a
+supported way to reclaim disk; there is no supported way to delete `nova.db`. One shared
+version number would tell a support engineer nothing about either file, so each carries its
+own ledger and its own `PRAGMA user_version`.
 
 SQLite's WAL and shared-memory files cannot live inside a ZIP member, which is the
 mechanical reason; the architectural one is that a project needing a database to be read
 is a project a database can orphan. Because the archive is self-describing, the recovery
 path for a missing sidecar — rebuild from the document — is the same path a crash takes,
 so there is one path and not two.
+
+### 6.2 The schema, built in stage 5
+
+`infra/persistence/migrations.py` is now the **only** place a table is created. An adapter
+that ran its own `CREATE TABLE IF NOT EXISTS` at open time would race the migration that
+renames that table two versions later, and the loser would be whichever process started
+first. The chain is ordered, forward-only, applied one migration per transaction, recorded
+in `schema_migrations`, and mirrored in `PRAGMA user_version`; a database ahead of this
+build is refused (`NS-STORAGE-4003`) rather than half-understood, and one that predates
+versioning — today's `cache.sqlite3` — is *adopted* rather than rebuilt.
+
+| Table | Database | Holds |
+| --- | --- | --- |
+| `settings` | `nova.db` | scoped key/value preferences (§`database-schema.md` 5.2) |
+| `recent_files` | `nova.db` | the projects this install has seen, bounded by the store |
+| `jobs` | `nova.db` | the job history: columns for what is queried, `record_json` for the record |
+| `cache_index` | `cache.sqlite3` | bookkeeping for derived bytes; no bytes, ever |
+
+The `jobs` table is ADR-0004 §3 applied one level down: **rows are the index, `record_json`
+is the record** — adding a field to `JobRecord` is not a migration. The job history moved
+out of `jobs.json` behind the unchanged `JobStore` port, and the port's contract is now run
+against both adapters in `tests/infra/test_jobs.py`.
 
 ---
 

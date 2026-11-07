@@ -1,6 +1,28 @@
 # ADR-0004 — Hybrid normalised + document persistence in SQLite
 
-**Status:** Accepted · **Date:** 2026-09-24 · **Deciders:** Architecture Group
+**Status:** Accepted (partly superseded — see the amendment, 2026-11-07) ·
+**Date:** 2026-09-24 · **Deciders:** Architecture Group
+
+> **Amendment (2026-11-07, stage 5).** Two parts of this ADR were changed by
+> building them, and the reasons are recorded here rather than by editing the
+> decision, because an ADR that is silently rewritten tells the next reader
+> nothing about what was tried.
+>
+> 1. **§6, second half — superseded.** There is no per-project SQLite container.
+>    SQLite's `-wal` and `-shm` files cannot live inside a ZIP member, and a
+>    project that needed a database to be read is a project a database can
+>    orphan. The `.nova` archive is the project; SQLite holds install state and
+>    derived data only. See `ARCHITECTURE.md` §6 (decision of 2026-11-04) and
+>    `database-schema.md` §3.
+> 2. **§1, two job tables — amended.** `export_jobs` and `ai_jobs` are one
+>    `jobs` table with a `kind` column: the two would have had identical columns
+>    and identical state machines, `by_kind` already partitions them, and a job
+>    kind that is neither export nor AI — a plugin's — would have had nowhere to
+>    go. Within that table, rows are the index and `record_json` is the record,
+>    which is §3 of this ADR applied one level down.
+>
+> The rest of the decision stands, including the hybrid model, the pragmas, and
+> the ban on ORMs.
 
 ## Context
 
