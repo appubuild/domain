@@ -24,14 +24,19 @@ this file in the repo (or in Drive) as the internal checklist instead.
 - [ ] Optional: provider-specific numbers in `src/config/providers.ts` — only
       numbers the provider has authorized you to publish.
 
-## 3. Coverage data
+## 3. Phone lines and the (removed) ZIP check
 
-- [ ] `src/config/coverage.ts` ships **empty**. Until you add verified records,
-      every ZIP check answers "coverage not verified — contact our team", which
-      is truthful.
-- [ ] Add a record per service with `zipPrefixes` or `zips`, then set
-      `verified: true` only when it is confirmed with providers.
-- [ ] Use `COVERAGE_EXCLUSIONS` for ZIPs you deliberately do not serve.
+- [x] 20 numbers live in `src/data/serviceNumbers.ts`, two per trade.
+- [x] The ZIP input, ZIP validation and availability checker were removed from
+      every page. Nothing asks a visitor for a location any more.
+- [ ] If a line is ever restricted to certain states, remember that the public
+      site withholds `states` / `zipCodes` campaigns on purpose — geo-restricted
+      routing needs a location step (or network-level area-code routing) before
+      it can be published.
+- [ ] Optional: add a company-wide line to `SITE.contact.phone` /
+      `phoneDisplay` (header, footer, contact page). Note that this would make
+      `tel:` links appear on non-service pages, which `npm run audit` currently
+      treats as an error — update that check if you set it.
 
 ## 4. Contact form delivery
 

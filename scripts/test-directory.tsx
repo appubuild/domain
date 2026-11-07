@@ -1,11 +1,17 @@
 /**
- * Phone directory + ZIP lookup test suite.
+ * Service call directory test suite.
  *
  *   npm run test
  *
- * Runs against the real modules (no mocks for the directory) and a stubbed
- * `fetch` for the ZIP provider responses.
+ * Covers the data, the mapping, the call resolution rules and the rendered
+ * markup: numbers must appear only after a service is selected, and only the
+ * numbers assigned to that service.
  */
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { renderToString } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
+import App from '../src/App'
 import { SERVICE_PHONE_NUMBERS } from '../src/data/serviceNumbers'
 import {
   CALL_DIRECTORY_CATEGORIES,
@@ -15,30 +21,28 @@ import {
 } from '../src/data/serviceNumberMapping'
 import {
   directoryStats,
-  evaluateCampaign,
-  resolveCallDirectory,
+  hasCallDirectory,
+  isCampaignPermitted,
+  resolveServiceCall,
   toTelHref,
 } from '../src/lib/phoneDirectory'
-import { normalizeZip, validateZip } from '../src/lib/zip'
-import { clearZipCache, lookupZip, formatLocation } from '../src/lib/zipLookup'
-import type { UsLocation } from '../src/lib/zipLookup'
+import { getService } from '../src/config/services'
+import { ServiceCard } from '../src/components/ServiceCard'
+import { CallSheetProvider } from '../src/components/calls/CallContext'
 
 let pass = 0
 let fail = 0
 
-const check = (name: string, fn: () => void | boolean | Promise<void | boolean>) => {
-  const run = async () => {
-    try {
-      const result = await fn()
-      if (result === false) throw new Error('assertion returned false')
-      pass += 1
-      console.log(`  PASS  ${name}`)
-    } catch (error) {
-      fail += 1
-      console.log(`  FAIL  ${name}\n        ${(error as Error).message}`)
-    }
+const check = (name: string, fn: () => void | boolean) => {
+  try {
+    const result = fn()
+    if (result === false) throw new Error('assertion returned false')
+    pass += 1
+    console.log(`  PASS  ${name}`)
+  } catch (error) {
+    fail += 1
+    console.log(`  FAIL  ${name}\n        ${(error as Error).message}`)
   }
-  return run()
 }
 
 const ok = (value: unknown, message: string) => {
@@ -50,9 +54,6 @@ const eq = (actual: unknown, expected: unknown, message: string) => {
   const b = JSON.stringify(expected)
   if (a !== b) throw new Error(`${message} — expected ${b}, got ${a}`)
 }
-
-const ATLANTA: UsLocation = { zip: '30301', city: 'Atlanta', state: 'Georgia', stateAbbr: 'GA' }
-const DENVER: UsLocation = { zip: '80202', city: 'Denver', state: 'Colorado', stateAbbr: 'CO' }
 
 /**
  * Deep copy of the shipped directory. Tests mutate the live objects to exercise
@@ -72,445 +73,301 @@ const restoreDirectory = () => {
   })
 }
 
-const stubFetch = (implementation: (url: string) => Promise<Response> | Response) => {
-  globalThis.fetch = ((input: RequestInfo | URL) =>
-    Promise.resolve(implementation(String(input)))) as typeof fetch
-}
+const renderRoute = (path: string) =>
+  renderToString(
+    <MemoryRouter initialEntries={[path]}>
+      <App />
+    </MemoryRouter>,
+  )
 
-const jsonResponse = (body: unknown, status = 200) =>
-  ({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
-  }) as Response
+const telLinksIn = (html: string) => [...html.matchAll(/href="(tel:[^"]+)"/g)].map((match) => match[1])
+
+const numericDigits = (tel: string) => tel.replace(/[^0-9]/g, '')
 
 /* -------------------------------------------------------------------------- */
 
-const run = async () => {
-  console.log('\n── Directory structure ───────────────────────────────────────────')
+console.log('\n── Directory structure ───────────────────────────────────────────')
 
-  await check('10 service groups, 20 numbers total', () => {
-    const stats = directoryStats()
-    eq(stats.groups, 10, 'group count')
-    eq(stats.total, 20, 'number count')
-  })
+check('10 service groups with 20 numbers', () => {
+  const stats = directoryStats()
+  eq(stats.groups, 10, 'group count')
+  eq(stats.total, 20, 'number count')
+})
 
-  await check('every group has exactly two numbers with priorities 1 and 2', () => {
-    for (const group of SERVICE_PHONE_NUMBERS) {
-      eq(group.numbers.length, 2, `${group.id} number count`)
-      eq(
-        group.numbers.map((number) => number.priority),
-        [1, 2],
-        `${group.id} priorities`,
-      )
+check('every group has exactly two numbers, priorities 1 and 2', () => {
+  for (const group of SERVICE_PHONE_NUMBERS) {
+    eq(group.numbers.length, 2, `${group.id} number count`)
+    eq(
+      group.numbers.map((number) => number.priority),
+      [1, 2],
+      `${group.id} priorities`,
+    )
+  }
+})
+
+check('all twenty numbers are active and publishable', () => {
+  const stats = directoryStats()
+  eq(stats.active, 20, 'active count')
+  eq(stats.publishable, 20, 'publishable count')
+  eq(stats.pending, 0, 'pending count')
+  eq(stats.inactive, 0, 'inactive count')
+})
+
+check('ids and phone numbers are unique', () => {
+  const ids = new Set<string>()
+  const numbers = new Set<string>()
+  for (const group of SERVICE_PHONE_NUMBERS) {
+    for (const number of group.numbers) {
+      ok(!ids.has(number.id), `duplicate id ${number.id}`)
+      ok(!numbers.has(number.number), `duplicate number ${number.number}`)
+      ids.add(number.id)
+      numbers.add(number.number)
     }
-  })
+  }
+  eq(ids.size, 20, 'unique ids')
+})
 
-  await check('all twenty numbers are active and publishable', () => {
-    const stats = directoryStats()
-    eq(stats.active, 20, 'active count')
-    eq(stats.pending, 0, 'pending count')
-    eq(stats.inactive, 0, 'inactive count')
-  })
-
-  await check('every live number records its campaign permission', () => {
-    for (const group of SERVICE_PHONE_NUMBERS) {
-      for (const number of group.numbers) {
-        ok(number.campaign, `${number.id} has no campaign block`)
-        eq(number.campaign?.nationwide, true, `${number.id} nationwide permission`)
-        ok(
-          typeof number.campaign?.notes === 'string' && number.campaign.notes.length > 0,
-          `${number.id} must record why it is published`,
-        )
-      }
+check('all numbers use a valid US toll-free display format', () => {
+  for (const group of SERVICE_PHONE_NUMBERS) {
+    for (const number of group.numbers) {
+      ok(/^\d{3}-\d{3}-\d{4}$/.test(number.number), `bad format ${number.number}`)
+      ok(/^(800|833|844|855|866|877|888)/.test(number.number), `${number.number} is not toll-free`)
     }
-  })
+  }
+})
 
-  await check('number ids and phone numbers are unique', () => {
-    const ids = new Set<string>()
-    const numbers = new Set<string>()
-    for (const group of SERVICE_PHONE_NUMBERS) {
-      for (const number of group.numbers) {
-        ok(!ids.has(number.id), `duplicate id ${number.id}`)
-        ok(!numbers.has(number.number), `duplicate number ${number.number}`)
-        ids.add(number.id)
-        numbers.add(number.number)
-      }
+check('no internal labels leaked into the data file', () => {
+  const source = JSON.stringify(SERVICE_PHONE_NUMBERS).toLowerCase()
+  for (const banned of ['lokman', 'team member', 'internal', 'source label']) {
+    ok(!source.includes(banned), `found banned label "${banned}"`)
+  }
+})
+
+console.log('\n── Service → number mapping ─────────────────────────────────────')
+
+check('every mapped group id exists in the directory', () => {
+  for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
+    for (const groupId of mapping.groupIds) {
+      ok(getPhoneGroup(groupId), `${slug} references missing group ${groupId}`)
     }
-    eq(ids.size, 20, 'unique ids')
-  })
+  }
+})
 
-  await check('all numbers use a valid US toll-free display format', () => {
-    for (const group of SERVICE_PHONE_NUMBERS) {
-      for (const number of group.numbers) {
-        ok(/^\d{3}-\d{3}-\d{4}$/.test(number.number), `bad format ${number.number}`)
-        ok(
-          /^(800|833|844|855|866|877|888)/.test(number.number),
-          `${number.number} is not a toll-free number`,
-        )
-      }
-    }
-  })
+check('each service only receives numbers from its own group', () => {
+  for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
+    const ownNumbers = new Set(
+      mapping.groupIds.flatMap((groupId) =>
+        (getPhoneGroup(groupId)?.numbers ?? []).map((number) => number.number),
+      ),
+    )
+    const delivered = getGroupsForService(slug).flatMap((group) => group.numbers.map((n) => n.number))
+    for (const number of delivered) ok(ownNumbers.has(number), `${slug} received foreign number ${number}`)
+  }
+})
 
-  await check('no internal labels leaked into the data file', () => {
-    const source = JSON.stringify(SERVICE_PHONE_NUMBERS).toLowerCase()
-    for (const banned of ['lokman', 'team member', 'internal', 'source label']) {
-      ok(!source.includes(banned), `found banned label "${banned}"`)
-    }
-  })
+check('roofing maps to the roofing numbers only', () => {
+  const numbers = getGroupsForService('roofing').flatMap((group) => group.numbers.map((n) => n.number))
+  eq(numbers, ['800-779-3921', '888-863-0629'], 'roofing numbers')
+})
 
-  console.log('\n── Service → number mapping ─────────────────────────────────────')
+check('all ten call categories resolve to a group', () => {
+  eq(CALL_DIRECTORY_CATEGORIES.length, 10, 'category count')
+  for (const category of CALL_DIRECTORY_CATEGORIES) {
+    ok(getPhoneGroup(category.groupId), `${category.groupId} has no group`)
+    ok(getGroupsForService(category.groupId).length === 1, `${category.groupId} does not resolve`)
+  }
+})
 
-  await check('every mapped group id exists in the directory', () => {
-    for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
-      for (const groupId of mapping.groupIds) {
-        ok(getPhoneGroup(groupId), `${slug} references missing group ${groupId}`)
-      }
-    }
-  })
+check('services without an authorized group fall back to contact', () => {
+  for (const slug of ['water-damage', 'pest-control', 'locksmith', 'concrete-paving']) {
+    const state = resolveServiceCall({ serviceSlug: slug, serviceName: slug, previewUnpublished: false })
+    eq(state.kind, 'no-directory', `${slug} state`)
+  }
+})
 
-  await check('each service only receives numbers from its own group', () => {
-    for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
-      const ownNumbers = new Set(
-        mapping.groupIds.flatMap((groupId) =>
-          (getPhoneGroup(groupId)?.numbers ?? []).map((number) => number.number),
-        ),
-      )
-      const delivered = getGroupsForService(slug).flatMap((group) => group.numbers.map((n) => n.number))
-      for (const number of delivered) ok(ownNumbers.has(number), `${slug} received foreign number ${number}`)
-    }
-  })
+console.log('\n── Call resolution (no location involved) ───────────────────────')
 
-  await check('roofing maps to the roofing numbers only', () => {
-    const numbers = getGroupsForService('roofing').flatMap((group) => group.numbers.map((n) => n.number))
-    eq(numbers, ['800-779-3921', '888-863-0629'], 'roofing numbers')
-  })
+check('tel hrefs use E.164 US format', () => {
+  eq(toTelHref('800-779-3921'), 'tel:+18007793921', 'primary tel')
+  eq(toTelHref('888-863-0629'), 'tel:+18888630629', 'alternate tel')
+  eq(toTelHref('(800) 779-3921'), 'tel:+18007793921', 'formatted input')
+})
 
-  await check('all ten directory categories resolve to a group', () => {
-    eq(CALL_DIRECTORY_CATEGORIES.length, 10, 'category count')
-    for (const category of CALL_DIRECTORY_CATEGORIES) {
-      ok(getPhoneGroup(category.groupId), `${category.groupId} has no group`)
-      ok(getGroupsForService(category.groupId).length === 1, `${category.groupId} does not resolve`)
-    }
-  })
+check('priority decides Call Now vs Call Alternate', () => {
+  const state = resolveServiceCall({ serviceSlug: 'roofing', serviceName: 'Roofing', previewUnpublished: false })
+  eq(state.kind, 'ready', 'state')
+  if (state.kind !== 'ready') throw new Error('not ready')
+  eq(state.numbers.length, 2, 'both lines offered')
+  eq(state.numbers[0].slot, 'primary', 'first slot')
+  eq(state.numbers[0].display, '800-779-3921', 'primary number')
+  eq(state.numbers[0].telHref, 'tel:+18007793921', 'primary href')
+  eq(state.numbers[1].slot, 'alternate', 'second slot')
+  eq(state.numbers[1].display, '888-863-0629', 'alternate number')
+  eq(state.numbers[1].telHref, 'tel:+18888630629', 'alternate href')
+})
 
-  await check('services without an authorized group fall back to contact', () => {
-    for (const slug of ['water-damage', 'pest-control', 'locksmith', 'concrete-paving']) {
-      const state = resolveCallDirectory({
-        serviceSlug: slug,
-        serviceName: slug,
-        location: ATLANTA,
-        previewUnpublished: false,
-      })
-      eq(state.kind, 'no-directory', `${slug} state`)
-    }
-  })
+check('resolution needs no ZIP code or location argument', () => {
+  const state = resolveServiceCall({ serviceSlug: 'plumbing', serviceName: 'Plumbing' })
+  eq(state.kind, 'ready', 'state')
+})
 
-  console.log('\n── tel: links and priority ──────────────────────────────────────')
-
-  await check('tel hrefs use E.164 US format', () => {
-    eq(toTelHref('800-779-3921'), 'tel:+18007793921', 'primary tel')
-    eq(toTelHref('888-863-0629'), 'tel:+18888630629', 'alternate tel')
-    eq(toTelHref('(800) 779-3921'), 'tel:+18007793921', 'formatted input')
-  })
-
-  await check('priority decides Call Now vs Call Alternate', () => {
-    const state = resolveCallDirectory({
-      serviceSlug: 'roofing',
-      serviceName: 'Roofing',
-      location: ATLANTA,
+check('all ten categories return two call options', () => {
+  for (const category of CALL_DIRECTORY_CATEGORIES) {
+    const state = resolveServiceCall({
+      serviceSlug: category.groupId,
+      serviceName: category.label,
       previewUnpublished: false,
     })
+    eq(state.kind, 'ready', `${category.groupId} state`)
+    if (state.kind !== 'ready') continue
+    eq(state.numbers.length, 2, `${category.groupId} number count`)
+    ok(
+      state.numbers.every((number) => number.telHref.startsWith('tel:+1') && numericDigits(number.telHref).length === 11),
+      `${category.groupId} tel format`,
+    )
+  }
+})
+
+console.log('\n── Publication rules ────────────────────────────────────────────')
+
+check('a number set back to pending is never published', () => {
+  const group = getPhoneGroup('roofing')!
+  try {
+    group.numbers.forEach((number) => {
+      number.status = 'pending-verification'
+      number.campaign = undefined
+    })
+    const state = resolveServiceCall({ serviceSlug: 'roofing', serviceName: 'Roofing', previewUnpublished: false })
+    eq(state.kind, 'awaiting-verification', 'state')
+  } finally {
+    restoreDirectory()
+  }
+})
+
+check('development preview flags unpublished numbers', () => {
+  const group = getPhoneGroup('roofing')!
+  try {
+    group.numbers.forEach((number) => {
+      number.status = 'pending-verification'
+      number.campaign = undefined
+    })
+    const state = resolveServiceCall({ serviceSlug: 'roofing', serviceName: 'Roofing', previewUnpublished: true })
+    eq(state.kind, 'preview', 'state')
+    if (state.kind !== 'preview') throw new Error('not preview')
+    ok(state.numbers.every((number) => number.published === false), 'preview numbers flagged unpublished')
+  } finally {
+    restoreDirectory()
+  }
+})
+
+check('inactive numbers are never offered', () => {
+  const group = getPhoneGroup('plumbing')!
+  try {
+    group.numbers[0].status = 'inactive'
+    const state = resolveServiceCall({ serviceSlug: 'plumbing', serviceName: 'Plumbing', previewUnpublished: true })
     eq(state.kind, 'ready', 'state')
     if (state.kind !== 'ready') throw new Error('not ready')
-    eq(state.numbers.length, 2, 'both lines offered')
-    eq(state.numbers[0].slot, 'primary', 'first slot')
-    eq(state.numbers[0].display, '800-779-3921', 'primary number')
-    eq(state.numbers[0].telHref, 'tel:+18007793921', 'primary tel href')
-    eq(state.numbers[1].slot, 'alternate', 'second slot')
-    eq(state.numbers[1].display, '888-863-0629', 'alternate number')
-    eq(state.numbers[1].telHref, 'tel:+18888630629', 'alternate tel href')
-  })
+    eq(state.numbers.length, 1, 'only the active number is offered')
+    eq(state.numbers[0].id, 'plumbing-2', 'active number id')
+  } finally {
+    restoreDirectory()
+  }
+})
 
-  await check('a location is required before any number is offered', () => {
-    const state = resolveCallDirectory({
-      serviceSlug: 'roofing',
-      serviceName: 'Roofing',
-      location: null,
-      previewUnpublished: false,
-    })
-    eq(state.kind, 'needs-location', 'state without a location')
-  })
+check('a number without an explicit nationwide permission is withheld', () => {
+  const number = { id: 't', number: '800-000-0000', priority: 1, status: 'active' as const }
+  eq(isCampaignPermitted(number), false, 'missing campaign')
+  eq(isCampaignPermitted({ ...number, campaign: {} }), false, 'empty campaign')
+  eq(isCampaignPermitted({ ...number, campaign: { nationwide: true } }), true, 'nationwide campaign')
+})
 
-  console.log('\n── Publication rules ────────────────────────────────────────────')
+check('state or ZIP restricted campaigns are withheld (no location is collected)', () => {
+  const number = { id: 't', number: '800-000-0000', priority: 1, status: 'active' as const }
+  eq(isCampaignPermitted({ ...number, campaign: { states: ['GA'] } }), false, 'state allow-list')
+  eq(isCampaignPermitted({ ...number, campaign: { zipCodes: ['30301'] } }), false, 'zip allow-list')
+})
 
-  await check('a number set back to pending is never published', () => {
-    const group = getPhoneGroup('roofing')!
-    try {
-      group.numbers.forEach((number) => {
-        number.status = 'pending-verification'
-        number.campaign = undefined
-      })
-      const state = resolveCallDirectory({
-        serviceSlug: 'roofing',
-        serviceName: 'Roofing',
-        location: ATLANTA,
-        previewUnpublished: false,
-      })
-      eq(state.kind, 'awaiting-verification', 'state')
-    } finally {
-      restoreDirectory()
+console.log('\n── Rendered pages ───────────────────────────────────────────────')
+
+check('ZIP / availability modules are gone from the codebase', () => {
+  for (const path of [
+    'src/components/availability',
+    'src/lib/zip.ts',
+    'src/lib/zipLookup.ts',
+    'src/lib/coverage.ts',
+    'src/config/coverage.ts',
+    'src/config/providers.ts',
+  ]) {
+    ok(!existsSync(resolve(process.cwd(), path)), `${path} still exists`)
+  }
+})
+
+check('a service card shows Call Now but never a phone number', () => {
+  const service = getService('roofing')!
+  const html = renderToString(
+    <MemoryRouter>
+      <CallSheetProvider>
+        <ServiceCard service={service} />
+      </CallSheetProvider>
+    </MemoryRouter>,
+  )
+  ok(html.includes('Call Now'), 'Call Now button missing')
+  eq(telLinksIn(html), [], 'no tel: link may appear before a service is selected')
+  ok(!html.includes('800-779-3921'), 'card must not print the number')
+})
+
+check('the services index lists Call Now buttons with no numbers', () => {
+  const html = renderRoute('/services')
+  ok(html.includes('Call Now'), 'Call Now missing on /services')
+  eq(telLinksIn(html), [], '/services must not expose tel: links')
+  ok(!html.includes('800-779-3921'), '/services must not print roofing number')
+})
+
+check('the homepage has no ZIP input and no tel: link', () => {
+  const html = renderRoute('/')
+  eq(telLinksIn(html), [], 'homepage must not expose tel: links')
+  ok(!/name="zip"/i.test(html), 'ZIP input still present')
+  ok(!/id="zip"/i.test(html), 'ZIP input id still present')
+  ok(!/Enter (your )?ZIP/i.test(html), 'ZIP prompt copy still present')
+  ok(html.includes('Call Now'), 'homepage is missing Call Now')
+})
+
+check('service detail pages expose only their own two numbers', () => {
+  const html = renderRoute('/services/roofing')
+  const links = telLinksIn(html)
+  eq(links, ['tel:+18007793921', 'tel:+18888630629'], 'roofing tel links')
+  ok(html.includes('Call Now'), 'Call Now missing')
+  ok(html.includes('Call Alternate'), 'Call Alternate missing')
+  ok(!html.includes('800-736-1462'), 'plumbing number leaked into roofing page')
+})
+
+check('every service page either shows call links or a contact message', () => {
+  for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
+    const html = renderRoute(`/services/${slug}`)
+    const links = telLinksIn(html)
+    if (mapping.groupIds.length > 0) {
+      ok(links.length === 2, `${slug} expected 2 tel links, got ${links.length}`)
+      ok(html.includes('Call Now'), `${slug} missing Call Now`)
+    } else {
+      eq(links, [], `${slug} must not expose tel links`)
+      ok(html.includes('Contact our team'), `${slug} missing contact fallback`)
     }
-  })
+  }
+})
 
-  await check('development preview flags unpublished numbers', () => {
-    const group = getPhoneGroup('roofing')!
-    try {
-      group.numbers.forEach((number) => {
-        number.status = 'pending-verification'
-        number.campaign = undefined
-      })
-      const state = resolveCallDirectory({
-        serviceSlug: 'roofing',
-        serviceName: 'Roofing',
-        location: ATLANTA,
-        previewUnpublished: true,
-      })
-      eq(state.kind, 'preview', 'state')
-      if (state.kind !== 'preview') throw new Error('not preview')
-      ok(
-        state.numbers.every((number) => number.published === false),
-        'preview numbers must be marked unpublished',
-      )
-      eq(state.numbers.length, 2, 'preview count')
-    } finally {
-      restoreDirectory()
-    }
-  })
+check('removing the ZIP step did not break other routes', () => {
+  for (const route of ['/about', '/contact', '/how-it-works', '/service-area', '/privacy-policy']) {
+    const html = renderRoute(route)
+    ok(html.length > 500, `${route} rendered too little`)
+    ok(!/name="zip"/i.test(html), `${route} still renders a ZIP input`)
+  }
+})
 
-  await check('inactive numbers are never offered', () => {
-    const group = getPhoneGroup('plumbing')!
-    try {
-      group.numbers[0].status = 'inactive'
-      const state = resolveCallDirectory({
-        serviceSlug: 'plumbing',
-        serviceName: 'Plumbing',
-        location: ATLANTA,
-        previewUnpublished: true,
-      })
-      eq(state.kind, 'ready', 'state')
-      if (state.kind !== 'ready') throw new Error('not ready')
-      eq(state.numbers.length, 1, 'only the active number is offered')
-      eq(state.numbers[0].id, 'plumbing-2', 'active number id')
-    } finally {
-      restoreDirectory()
-    }
-  })
+check('hasCallDirectory matches the mapped services', () => {
+  for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
+    eq(hasCallDirectory(slug), mapping.groupIds.length > 0, `${slug} hasCallDirectory`)
+  }
+})
 
-  console.log('\n── Campaign eligibility ─────────────────────────────────────────')
-
-  await check('no campaign data means unverified (never offered)', () => {
-    const number = { id: 't', number: '800-000-0000', priority: 1, status: 'active' as const }
-    eq(evaluateCampaign(number, ATLANTA).eligibility, 'unverified', 'eligibility')
-  })
-
-  await check('nationwide permission is required explicitly', () => {
-    const number = { id: 't', number: '800-000-0000', priority: 1, status: 'active' as const, campaign: {} }
-    eq(evaluateCampaign(number, ATLANTA).eligibility, 'unverified', 'empty campaign')
-
-    const withNationwide = { ...number, campaign: { nationwide: true } }
-    eq(evaluateCampaign(withNationwide, ATLANTA).eligibility, 'eligible', 'nationwide true')
-  })
-
-  await check('state allow-lists restrict traffic', () => {
-    const number = {
-      id: 't',
-      number: '800-000-0000',
-      priority: 1,
-      status: 'active' as const,
-      campaign: { states: ['GA', 'FL'] },
-    }
-    eq(evaluateCampaign(number, ATLANTA).eligibility, 'eligible', 'GA allowed')
-    eq(evaluateCampaign(number, DENVER).eligibility, 'restricted', 'CO blocked')
-  })
-
-  await check('ZIP allow-lists override state rules', () => {
-    const number = {
-      id: 't',
-      number: '800-000-0000',
-      priority: 1,
-      status: 'active' as const,
-      campaign: { states: ['GA'], zipCodes: ['30301'] },
-    }
-    eq(evaluateCampaign(number, ATLANTA).eligibility, 'eligible', 'allowed zip')
-    eq(evaluateCampaign(number, DENVER).eligibility, 'restricted', 'blocked zip')
-  })
-
-  await check('state-restricted campaign yields an unverified-location panel', () => {
-    const group = getPhoneGroup('window')!
-    try {
-      group.numbers.forEach((number) => {
-        number.status = 'active'
-        number.campaign = { states: ['GA'] }
-      })
-      const state = resolveCallDirectory({
-        serviceSlug: 'window',
-        serviceName: 'Window',
-        location: DENVER,
-        previewUnpublished: false,
-      })
-      eq(state.kind, 'unverified-location', 'state')
-    } finally {
-      restoreDirectory()
-    }
-  })
-
-  console.log('\n── ZIP code validation ──────────────────────────────────────────')
-
-  await check('accepts valid US ZIP codes', () => {
-    for (const zip of ['00501', '10001', '30301', '90210', '99950']) {
-      ok(validateZip(zip).valid, `${zip} should be valid`)
-    }
-  })
-
-  await check('rejects malformed or out-of-range ZIP codes', () => {
-    for (const zip of ['00000', '00012', '1234', 'abcde', '', '99951']) {
-      ok(!validateZip(zip).valid, `${zip} should be invalid`)
-    }
-  })
-
-  await check('accepts ZIP+4 input by using the five-digit base', () => {
-    eq(normalizeZip('303011234'), '30301', 'zip+4 truncation')
-    ok(validateZip('303011234').valid, 'ZIP+4 should validate on its base ZIP')
-  })
-
-  await check('normalizes pasted input to five digits', () => {
-    eq(normalizeZip('30301-1234'), '30301', 'zip+4')
-    eq(normalizeZip(' 30 301 '), '30301', 'spaces')
-    eq(normalizeZip('90210abc'), '90210', 'letters')
-  })
-
-  console.log('\n── ZIP lookup API ───────────────────────────────────────────────')
-
-  await check('returns city and state for a valid ZIP', async () => {
-    clearZipCache()
-    stubFetch(() =>
-      jsonResponse({
-        'post code': '30301',
-        places: [{ 'place name': 'Atlanta', state: 'Georgia', 'state abbreviation': 'GA' }],
-      }),
-    )
-    const result = await lookupZip('30301')
-    ok(result.ok, 'expected success')
-    if (!result.ok) return
-    eq(result.location.city, 'Atlanta', 'city')
-    eq(result.location.state, 'Georgia', 'state')
-    eq(result.location.stateAbbr, 'GA', 'state abbr')
-    eq(formatLocation(result.location), 'Atlanta, GA', 'formatted location')
-  })
-
-  await check('caches repeat lookups (no second network call)', async () => {
-    clearZipCache()
-    let calls = 0
-    stubFetch(() => {
-      calls += 1
-      return jsonResponse({
-        'post code': '80202',
-        places: [{ 'place name': 'Denver', state: 'Colorado', 'state abbreviation': 'CO' }],
-      })
-    })
-    await lookupZip('80202')
-    const second = await lookupZip('80202')
-    eq(calls, 1, 'fetch call count')
-    ok(second.ok && second.cached, 'second lookup should be cached')
-  })
-
-  await check('maps 404 to a friendly not-found error', async () => {
-    clearZipCache()
-    stubFetch(() => jsonResponse({}, 404))
-    const result = await lookupZip('12345')
-    ok(!result.ok, 'expected failure')
-    if (result.ok) return
-    eq(result.error, 'not-found', 'error code')
-    ok(result.message.includes('double-check'), 'message should guide the user')
-  })
-
-  await check('maps server errors to service-unavailable', async () => {
-    clearZipCache()
-    stubFetch(() => jsonResponse({}, 500))
-    const result = await lookupZip('30301')
-    ok(!result.ok && result.error === 'service-unavailable', 'error code')
-  })
-
-  await check('maps network failures to a retryable error', async () => {
-    clearZipCache()
-    stubFetch(() => {
-      throw new TypeError('Failed to fetch')
-    })
-    const result = await lookupZip('30301')
-    ok(!result.ok && result.error === 'network', 'error code')
-  })
-
-  await check('maps aborts to a timeout error', async () => {
-    clearZipCache()
-    stubFetch(() => {
-      const error = new Error('aborted')
-      error.name = 'AbortError'
-      throw error
-    })
-    const result = await lookupZip('30301')
-    ok(!result.ok && result.error === 'timeout', 'error code')
-  })
-
-  await check('rejects invalid input before any network call', async () => {
-    clearZipCache()
-    let called = false
-    stubFetch(() => {
-      called = true
-      return jsonResponse({})
-    })
-    const result = await lookupZip('1234')
-    ok(!result.ok && result.error === 'invalid', 'error code')
-    ok(!called, 'fetch must not run for invalid input')
-  })
-
-  console.log('\n── Rendering ────────────────────────────────────────────────────')
-
-  await check('all ten categories offer two call options for a confirmed US location', () => {
-    for (const category of CALL_DIRECTORY_CATEGORIES) {
-      const state = resolveCallDirectory({
-        serviceSlug: category.groupId,
-        serviceName: category.label,
-        location: ATLANTA,
-        previewUnpublished: false,
-      })
-      eq(state.kind, 'ready', `${category.groupId} state`)
-      if (state.kind !== 'ready') continue
-      eq(state.numbers.length, 2, `${category.groupId} number count`)
-      ok(
-        state.numbers.every(
-          (number) =>
-            number.telHref.startsWith('tel:+1') && number.telHref.replace(/[^0-9]/g, '').length === 11,
-        ),
-        `${category.groupId} tel href format`,
-      )
-    }
-  })
-
-  await check('service pages with a group offer calls, the rest show contact', () => {
-    for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
-      const state = resolveCallDirectory({
-        serviceSlug: slug,
-        serviceName: slug,
-        location: ATLANTA,
-        previewUnpublished: false,
-      })
-      eq(state.kind, mapping.groupIds.length > 0 ? 'ready' : 'no-directory', `${slug} state`)
-    }
-  })
-
-  console.log(`\n${pass} passed, ${fail} failed\n`)
-  process.exit(fail === 0 ? 0 : 1)
-}
-
-void run()
+console.log(`\n${pass} passed, ${fail} failed\n`)
+process.exit(fail === 0 ? 0 : 1)

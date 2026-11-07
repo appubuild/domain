@@ -67,7 +67,7 @@ export const SITE: SiteConfig = {
   url: 'https://safehomenetwork.com',
   tagline: 'Your Home Deserves the Right Help.',
   description:
-    'Safe Home Network is a home services connection and referral platform. We help homeowners explore service categories, check availability by ZIP code, and connect with independent local service providers.',
+    'Safe Home Network is a home services connection and referral platform. We help homeowners explore service categories and call the published service line for the trade they need, connecting them with independent local service providers.',
   modelStatement:
     'Safe Home Network is a connection and referral platform, not a contractor. We do not perform home repairs, and we do not employ or dispatch service technicians.',
   contact: {
@@ -90,7 +90,7 @@ export const SITE: SiteConfig = {
       'Safe Home Network | Find Home Service Options in Your Area',
     titleTemplate: '%s | Safe Home Network',
     defaultDescription:
-      'Explore home service categories, check service availability by ZIP code, and connect with independent local providers through Safe Home Network.',
+      'Explore home service categories, call the service line for the trade you need, and connect with independent local providers through Safe Home Network.',
     defaultImage: '/images/hero-home.jpg',
     twitterHandle: '',
   },

@@ -5,7 +5,6 @@ import {
   CircleHelp,
   ClipboardCheck,
   Compass,
-  MapPin,
   MessageSquare,
   Phone,
   ShieldCheck,
@@ -19,8 +18,7 @@ import { PageHero } from '@/components/PageHero'
 import { SectionHeading } from '@/components/SectionHeading'
 import { FaqAccordion } from '@/components/FaqAccordion'
 import { CtaBand } from '@/components/CtaBand'
-import { ZipCheckForm } from '@/components/availability/ZipCheckForm'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 import { Reveal } from '@/components/Reveal'
 
 const STEPS = [
@@ -39,13 +37,13 @@ const STEPS = [
   },
   {
     number: '02',
-    icon: MapPin,
-    title: 'Check your ZIP code',
-    body: 'Enter a 5-digit US ZIP code. We compare it against coverage records maintained for that specific service — not a national blanket answer.',
+    icon: Phone,
+    title: 'Tap Call Now',
+    body: 'The service card and the service page both carry a Call Now button. It opens the primary and alternate numbers assigned to that trade — no ZIP code, no forms, no waiting.',
     detail: [
-      'Five-digit validation before any lookup happens',
-      'Service-specific coverage records, updated independently of the UI',
-      'If we have no verified record, we say so instead of guessing',
+      'One number per trade, assigned in a central directory',
+      'Primary line first, alternate line beside it',
+      'Every button is a plain tel: link that starts a normal call',
     ],
     image: '/images/service-roofing.jpg',
     alt: 'Roofing crew installing architectural shingles on a home',
@@ -53,12 +51,12 @@ const STEPS = [
   {
     number: '03',
     icon: Users,
-    title: 'Explore available service providers',
-    body: 'When coverage is confirmed, we show the provider options listed for your area — including the contact details each provider has authorized us to publish.',
+    title: 'Speak with a participating provider',
+    body: 'Calls are answered by independent providers who perform the work and set their own pricing and scheduling. Ask about scope, timing and local availability before you commit.',
     detail: [
-      'Provider name, category and coverage shown up front',
+      'Providers remain responsible for licensing, insurance and workmanship',
       'No invented phone numbers and no inflated availability claims',
-      'Contact our team any time if no provider is published for your area',
+      'Contact our team any time if a category has no published line yet',
     ],
     image: '/images/service-hvac.jpg',
     alt: 'HVAC technician servicing residential heating equipment',
@@ -69,33 +67,33 @@ const OUTCOMES = [
   {
     icon: CheckCircle2,
     tone: 'success',
-    title: 'Service available',
+    title: 'A line answers',
     body:
-      'Coverage records confirm the service is listed in your area. Review the participating provider options, or ask our team for help comparing them.',
+      'A participating provider picks up and can tell you whether they cover your address, when they can come out, and what a visit costs.',
   },
   {
     icon: XCircle,
     tone: 'amber',
-    title: 'Service not currently listed',
+    title: 'Try the alternate line',
     body:
-      'No verified provider listing for that service in your ZIP code. We suggest related categories and invite you to contact us — coverage changes as providers join.',
+      'If the primary line is busy or outside service hours, the alternate number for the same trade is shown right next to it.',
   },
   {
     icon: CircleHelp,
     tone: 'brand',
-    title: 'Coverage not verified',
+    title: 'No line published yet',
     body:
-      'We have no verified coverage record for that combination yet. Rather than guess, we ask you to contact our team to confirm availability.',
+      'A few categories do not have a published line. Those pages say so and offer our contact form rather than a number we cannot stand behind.',
   },
 ]
 
 const HowItWorks = () => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
 
   useSeo({
     title: 'How It Works',
     description:
-      'See how Safe Home Network works: choose a service, check availability by ZIP code, and review participating provider options in your area.',
+      'See how Safe Home Network works: choose a service, tap the Call Now button assigned to that trade, and speak directly with an independent provider.',
     path: '/how-it-works',
     jsonLd: [
       breadcrumbJsonLd([
@@ -116,8 +114,8 @@ const HowItWorks = () => {
       >
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={() => open()} className="btn-primary">
-            <MapPin className="h-4 w-4" aria-hidden="true" />
-            Start with your ZIP code
+            <Phone className="h-4 w-4" aria-hidden="true" />
+            Call Now
           </button>
           <Link to="/services" className="btn-secondary">
             Browse services
@@ -169,8 +167,8 @@ const HowItWorks = () => {
                 {step.number === '03' ? (
                   <div className="mt-5 flex flex-wrap gap-2">
                     <button type="button" onClick={() => open()} className="btn-primary btn-sm">
-                      <MapPin className="h-4 w-4" aria-hidden="true" />
-                      Check availability
+                      <Phone className="h-4 w-4" aria-hidden="true" />
+                      Call Now
                     </button>
                     <Link to="/contact" className="btn-secondary btn-sm">
                       <MessageSquare className="h-4 w-4" aria-hidden="true" />
@@ -188,9 +186,9 @@ const HowItWorks = () => {
         <div className="container-page">
           <SectionHeading
             align="center"
-            eyebrow="What you might see"
-            title="The three possible availability results"
-            description="We built the checker to be honest in both directions — including when the answer is no or unknown."
+            eyebrow="When you call"
+            title="Three things that can happen on the call"
+            description="Straight answers, including when the news is not what you hoped for."
           />
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {OUTCOMES.map((outcome, index) => {
@@ -223,8 +221,8 @@ const HowItWorks = () => {
             })}
           </div>
           <p className="mx-auto mt-6 max-w-2xl text-center text-xs leading-5 text-muted">
-            Availability depends on participating providers and their coverage areas. A result reflects our
-            coverage records only — it is not a booking, a quote, or a guarantee of service.
+            Availability, pricing and response times are set by each independent provider. A call is not a
+            booking, a quote, or a guarantee of service.
           </p>
         </div>
       </section>
@@ -247,7 +245,7 @@ const HowItWorks = () => {
                 {
                   icon: MessageSquare,
                   title: 'Ask our team for help',
-                  body: 'Tell us what you need and we will help you review the options listed near your ZIP code.',
+                  body: 'Tell us what you need and we will point you to the right trade and line.',
                 },
                 {
                   icon: ClipboardCheck,
@@ -270,13 +268,14 @@ const HowItWorks = () => {
 
           <div className="space-y-4">
             <div className="rounded-2xl border border-line bg-elevated p-6 shadow-card">
-              <h3 className="font-display text-lg font-bold text-ink">Ready to check your area?</h3>
+              <h3 className="font-display text-lg font-bold text-ink">Ready to call a service line?</h3>
               <p className="mt-1.5 text-sm leading-6 text-muted">
-                Pick a service and enter your ZIP code. It takes a few seconds and costs nothing.
+                Pick the trade you need and the primary and alternate numbers appear. No ZIP code, no forms.
               </p>
-              <div className="mt-4">
-                <ZipCheckForm showServiceSelect />
-              </div>
+              <button type="button" onClick={() => open()} className="btn-primary btn-sm mt-4 w-full">
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                Call Now
+              </button>
               {hasPhone() ? (
                 <a href={telHref() as string} className="btn-secondary btn-sm mt-3 w-full">
                   <Phone className="h-4 w-4" aria-hidden="true" />

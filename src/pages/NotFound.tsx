@@ -1,11 +1,11 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Home as HomeIcon, MapPin, Search } from 'lucide-react'
+import { ArrowRight, Home as HomeIcon, Phone, Search } from 'lucide-react'
 import { useSeo } from '@/lib/seo'
 import { SERVICES, servicePath } from '@/config/services'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 
 const NotFound = () => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
   const suggestions = SERVICES.slice(0, 6)
 
   useSeo({
@@ -24,8 +24,8 @@ const NotFound = () => {
             We could not find that page
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-[0.9375rem] leading-7 text-muted">
-            The link may be outdated, or the page may have moved. Try the service directory or check
-            availability in your ZIP code instead.
+            The link may be outdated, or the page may have moved. Try the service directory, or pick the
+            service you need and call its line.
           </p>
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <Link to="/" className="btn-primary">
@@ -37,8 +37,8 @@ const NotFound = () => {
               Browse services
             </Link>
             <button type="button" onClick={() => open()} className="btn-secondary">
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Check ZIP code
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              Call Now
             </button>
           </div>
         </div>

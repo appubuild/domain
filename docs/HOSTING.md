@@ -143,8 +143,9 @@ CLI alternative: `npm i -g vercel && vercel --prod` from the project folder.
    `SITE.contact.phone` / `phoneDisplay` in `src/config/site.ts` are only for an
    optional company-wide line; leave them empty to show per-service numbers
    only.
-5. **Coverage data** — `src/config/coverage.ts` ships empty, so the site never
-   claims availability it cannot verify. Add verified records and rebuild.
+5. **Call lines** — the 20 service numbers are already live in
+   `src/data/serviceNumbers.ts`, and the site needs no database to serve them. The
+   ZIP/coverage system was removed, so there is nothing else to configure.
 6. **Public pages carry no setup notes** — launch reminders live in
    `docs/PRE-LAUNCH-CHECKLIST.md`, never on the site.
 

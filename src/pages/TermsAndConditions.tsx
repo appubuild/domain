@@ -51,9 +51,9 @@ const TermsAndConditions = () => {
       <h2 id="services">2. What this website provides</h2>
       <p>
         {SITE.name} is a home services discovery and referral platform. The website provides educational
-        content about home service categories, a ZIP code-based availability checker that reports on our
-        coverage records, and, where available, information about independent service providers who have
-        agreed to be listed for particular service areas.
+        content about home service categories, published telephone lines that connect homeowners with
+        independent service providers for a given trade, and information about those providers where it has
+        been authorized for publication.
       </p>
       <p>
         The website is free for homeowners to browse and use. We may receive compensation from participating

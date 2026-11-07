@@ -29,7 +29,7 @@ Node 18+ required. `npm run build` regenerates `public/sitemap.xml` automaticall
 
 | Route | Page |
 | --- | --- |
-| `/` | Homepage (hero, ZIP checker, trust, 12 popular services, 3-step process, benefits, FAQ, CTA) |
+| `/` | Homepage (hero, Call Now, service picker, trust, popular services, 3-step process, benefits, FAQ, CTA) |
 | `/about` | About / business model disclosure |
 | `/services` | Directory with live search + category filtering (shareable `?q=` / `?category=` state) |
 | `/services/roofing` | Service template — roofing |
@@ -49,7 +49,7 @@ Node 18+ required. `npm run build` regenerates `public/sitemap.xml` automaticall
 | `/services/locksmith` | Service template — locksmith |
 | `/how-it-works` | Process, the three availability outcomes, next steps, FAQ |
 | `/contact` | Validated contact form + configurable contact details |
-| `/service-area` | Coverage model, ZIP checker, per-service coverage table |
+| `/service-area` | How the call lines work, per-service call availability table |
 | `/privacy-policy` | Privacy policy |
 | `/terms-and-conditions` | Terms & conditions |
 | `/disclaimer` | Referral-model disclaimer |
@@ -68,14 +68,12 @@ Everything an owner needs to change lives in `src/config/`:
 
 | File | Controls |
 | --- | --- |
-| `src/config/site.ts` | Brand name, legal entity, domain, contact email/phone/address/hours, social links, SEO defaults, launch notices |
+| `src/config/site.ts` | Brand name, legal entity, domain, contact email/phone/address/hours, social links, SEO defaults |
 | `src/config/services.ts` | All 15 service categories: name, icon, image, copy, common needs, options, FAQs, related services, meta title/description |
-| `src/config/coverage.ts` | ZIP code coverage dataset (per service) |
-| `src/config/providers.ts` | Provider records: name, services, phone, coverage, availability, disclosure |
 | `src/config/faqs.ts` | Homepage and How It Works FAQ sets |
 | `src/config/integrations.ts` | Contact endpoint, spam protection, call tracking, analytics (env-driven) |
 | `src/data/serviceNumbers.ts` | **All service phone numbers** (10 groups, 20 numbers), statuses and campaign permissions |
-| `src/data/serviceNumberMapping.ts` | Which phone group serves which website service, plus the finder categories |
+| `src/data/serviceNumberMapping.ts` | Which phone group serves which website service, plus the call-sheet categories |
 
 Navigation, routes, the services dropdown, the directory search, related-service
 lists, the sitemap and structured data are all derived from these files. Adding a
@@ -83,33 +81,27 @@ service to `services.ts` adds its page, card, menu entry and sitemap URL.
 
 ---
 
-## ZIP code availability system
+## Call flow (no ZIP code)
 
-Flow: **choose service → submit 5-digit ZIP → validate → look up coverage → result**
+Flow: **choose a service → the sheet/page shows its two lines → tap to dial.**
 
-- Validation lives in `src/lib/zip.ts` (digits only, real US ZIP range check).
-- Lookup lives in `src/lib/coverage.ts`; it is deliberately conservative:
-  - no record, or `verified: false` → **"coverage not verified"** (never a guess)
-  - verified record + matching ZIP → **available**
-  - verified record + non-matching ZIP → **not currently listed**
-- UI lives in `src/components/availability/` — one modal (`AvailabilityModal`),
-  one inline form (`ZipCheckForm`) and one provider block (`ProviderContact`)
-  shared by the homepage, service pages, service area page and header CTA.
-
-### Coverage ships empty (on purpose)
-
-`src/config/coverage.ts` contains **no records**. Nothing on the site claims a
-service is available anywhere, because no contracted coverage is on file yet —
-every ZIP check returns "coverage not verified, contact our team", which is the
-truth. To switch real answers on, add records and mark them `verified: true`:
-
-1. Add a record per service with `zipPrefixes` or `zips`.
-2. Mark it `verified: true` only when it is confirmed with providers.
-3. Rebuild — no component changes.
-
-Optional per-service ZIP exclusions are supported via `COVERAGE_EXCLUSIONS`.
-There is no sample/demo dataset and no flag to remember: if the list is empty,
-the site simply does not claim availability.
+- There is no ZIP input, no ZIP validation and no coverage lookup anywhere in the
+  app. `src/lib/zip.ts`, `src/lib/zipLookup.ts`, `src/lib/coverage.ts`,
+  `src/config/coverage.ts`, `src/config/providers.ts` and
+  `src/components/availability/` were removed in this release.
+- Resolution lives in `src/lib/phoneDirectory.ts` (`resolveServiceCall`). It takes
+  a service slug and returns the published primary + alternate numbers, or a
+  contact fallback.
+- UI lives in `src/components/calls/`:
+  - `CallSheet` — the single dialog. Opens on a service picker and reveals the
+    chosen service's numbers.
+  - `CallConnectionPanel` — renders "Call Now" / "Call Alternate" tel links inline
+    (service pages, homepage picker, dialog).
+  - `ServiceCallDirectory` — homepage / service-area "select a service" section.
+  - `CallContext` — `useCallSheet()` provider used by the header, footer and CTAs.
+- Numbers appear only after a service is selected. Listing pages render buttons,
+  not phone numbers; `npm run audit` fails if a `tel:` link appears on a
+  non-service route.
 
 ---
 
@@ -122,14 +114,13 @@ see **[docs/PHONE-DIRECTORY.md](docs/PHONE-DIRECTORY.md)** for the operations gu
   2026-11-07), published nationwide. The six services with no authorized group
   deliberately show a contact message instead of borrowing another trade's
   number.
-- A number is published only when `status: 'active'` **and** its campaign
-  permissions allow the visitor's location (`nationwide`, or a `states` /
-  `zipCodes` allow-list).
+- A number is published only when `status: 'active'` **and** its campaign is
+  marked `nationwide: true`. State/ZIP-restricted campaigns are withheld on
+  purpose: the site no longer collects a location, so it cannot honour them.
 - Primary/alternate ordering comes from `priority`; each renders its own
   `tel:+1…` link. Calls are never auto-dialled, redirected or forwarded.
-- The homepage and `/service-area` include a ZIP-first finder: it confirms the
-  **city and state** through the Zippopotam.us ZIP API, then shows the call
-  options authorized for that location.
+- The homepage and `/service-area` include a "select a service" section that
+  reveals the chosen service's numbers inline — no location step.
 - In `npm run dev` only, unpublished numbers appear with a "Not published" badge
   and a preview notice so the layout can be reviewed without publishing.
 
@@ -231,14 +222,15 @@ Verify a deep link (e.g. `/services/locksmith`) after deploying, not just the ho
 - `npm run smoke` — SSR render test across all 26 routes plus 404 cases.
 - `npm run audit` — link, in-page anchor, image-source, duplicate-id and
   single-`h1` audit across every route (26 routes, all passing).
-- `npm run test` — 33 assertions over the phone directory, service→number
-  mapping, publication rules, campaign eligibility, ZIP validation and the ZIP
-  API (success, cache, 404, 5xx, network, abort).
+- `npm run test` — 28 assertions over the phone directory, service→number
+  mapping, publication rules, campaign permissions, and the rendered markup:
+  numbers never appear before a service is selected, and each service page shows
+  only its own two lines.
 - All internal links resolve to real routes; all CTA buttons are wired to a
   working action (dialog, navigation or form).
-- Availability states tested: available (e.g. `30301` for roofing), unavailable
-  (e.g. `10001` for roofing), unverified (any ZIP for locksmith / concrete-paving
-  / bedroom-remodeling).
+- Call flow tested end to end: every one of the 15 service pages either renders
+  exactly two `tel:` links (its own primary + alternate) or a contact fallback,
+  and the listing pages render zero `tel:` links.
 - Contact form validation tested for empty, malformed email, short message and
   missing consent.
 - Theme toggle tested in header and mobile drawer; preference persists.
@@ -253,23 +245,20 @@ Owner decisions / tasks before going live:
 1. **Legal entity name and registered details** — update `SITE.legalName`,
    and add `SITE.contact.addressLines` if you have a public business address.
 2. **Service phone numbers** — already live in `src/data/serviceNumbers.ts`
-   (20 owner-confirmed lines). `SITE.contact.phone` / `phoneDisplay` are only for
-   an optional company-wide line; provider records go in
-   `src/config/providers.ts`.
-3. **Real coverage data** — add verified records to `src/config/coverage.ts`
-   (ships empty, so nothing is claimed today).
-4. **Contact form endpoint (optional)** — without one, the form opens the
+   (20 owner-confirmed lines, two per trade). `SITE.contact.phone` /
+   `phoneDisplay` are only for an optional company-wide line.
+3. **Contact form endpoint (optional)** — without one, the form opens the
    visitor's email app with the message pre-filled and addressed to
    `SITE.contact.email`; set `VITE_CONTACT_ENDPOINT` (+ spam key) to deliver
    directly instead.
-5. **Legal review** — Privacy Policy, Terms, Disclaimer, Do-Not-Sell and
+4. **Legal review** — Privacy Policy, Terms, Disclaimer, Do-Not-Sell and
    Accessibility pages must be reviewed by counsel for your entity, the states you
    operate in, and any advertising or call-tracking you enable. Launch notices are
    no longer rendered anywhere; the owner checklist lives in
    `docs/PRE-LAUNCH-CHECKLIST.md`.
-6. **Imagery licensing** — all 15 categories and the hero currently use
+5. **Imagery licensing** — all 15 categories and the hero currently use
    generated placeholder photography. Replace it with your licensed images
    before launch (keep the same filenames in `public/images/`, or update the
    `image` field in `services.ts`).
-7. **Search Console / analytics** — verify the domain, submit the sitemap, and add
+6. **Search Console / analytics** — verify the domain, submit the sitemap, and add
    your GA4 measurement id if desired.

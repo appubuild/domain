@@ -9,13 +9,13 @@ import {
 } from '@/config/site'
 import { SERVICES, SERVICE_CATEGORIES, servicePath } from '@/config/services'
 import { Logo } from '@/components/Logo'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 
 const footerLink =
   'text-sm text-white/75 transition-colors hover:text-white focus-visible:text-white'
 
 export const Footer = () => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
   const year = new Date().getFullYear()
   const socialEntries = Object.entries(SITE.social).filter(([, url]) => Boolean(url))
 
@@ -28,8 +28,8 @@ export const Footer = () => {
             <Logo variant="light" />
             <p className="mt-5 max-w-xs text-sm leading-6 text-white/70">
               {SITE.name} is a home services connection and referral platform. We help homeowners explore
-              service categories, check availability by ZIP code, and connect with independent local
-              providers.
+              service categories and call the service line assigned to the trade they need, connecting them
+              with independent local providers.
             </p>
             <p className="mt-4 flex items-start gap-2 text-xs leading-5 text-white/65">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" aria-hidden="true" />
@@ -40,8 +40,8 @@ export const Footer = () => {
               onClick={() => open()}
               className="btn-accent btn-sm mt-6"
             >
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Check your ZIP code
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              Call Now
             </button>
           </div>
 

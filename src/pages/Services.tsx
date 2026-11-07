@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ArrowRight, MapPin, Search, SlidersHorizontal, X } from 'lucide-react'
+import { ArrowRight, Phone, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SERVICE_CATEGORIES, SERVICES } from '@/config/services'
 import { PageHero } from '@/components/PageHero'
@@ -8,7 +8,7 @@ import { ServiceCard } from '@/components/ServiceCard'
 import { CtaBand } from '@/components/CtaBand'
 import { Reveal } from '@/components/Reveal'
 import { ServiceIcon } from '@/components/ServiceIcon'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 
 const matchesQuery = (serviceName: string, description: string, terms: string[] | undefined, query: string) => {
   const haystack = [serviceName, description, ...(terms ?? [])].join(' ').toLowerCase()
@@ -21,7 +21,7 @@ const matchesQuery = (serviceName: string, description: string, terms: string[] 
 
 const Services = () => {
   const [params, setParams] = useSearchParams()
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
   const query = params.get('q') ?? ''
   const category = params.get('category') ?? 'all'
 
@@ -50,7 +50,7 @@ const Services = () => {
 
   useSeo({
     title: 'Home Services Directory — All Categories',
-    description: `Browse ${SERVICES.length} home service categories, compare what each project involves and check provider availability by ZIP code.`,
+    description: `Browse ${SERVICES.length} home service categories, compare what each project involves, and call the service line assigned to the trade you need.`,
     path: '/services',
     jsonLd: [
       breadcrumbJsonLd([
@@ -76,13 +76,13 @@ const Services = () => {
       <PageHero
         eyebrow="Service directory"
         title="Every home service category, in one organized place"
-        description="Browse by trade or search for what you need. Each category explains what the work involves and lets you check whether providers are listed in your ZIP code."
+        description="Browse by trade or search for what you need. Each category explains what the work involves and shows the call line assigned to that service."
         crumbs={[{ label: 'Services' }]}
       >
         <div className="flex flex-wrap gap-3">
           <button type="button" onClick={() => open()} className="btn-primary">
-            <MapPin className="h-4 w-4" aria-hidden="true" />
-            Check my ZIP code
+            <Phone className="h-4 w-4" aria-hidden="true" />
+            Call Now
           </button>
           <Link to="/how-it-works" className="btn-secondary">
             How connections work
@@ -240,8 +240,8 @@ const Services = () => {
 
       <CtaBand
         headline="Not sure which category fits your project?"
-        description="Tell us what is going on and our team will point you toward the right service category and check availability in your area."
-        primaryLabel="Check your ZIP code"
+        description="Tell us what is going on and our team will point you toward the right service category and the line to call."
+        primaryLabel="Call Now"
         secondaryLabel="Contact our team"
         secondaryTo="/contact"
       />

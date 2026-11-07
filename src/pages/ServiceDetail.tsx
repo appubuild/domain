@@ -4,7 +4,6 @@ import {
   BadgeCheck,
   CheckCircle2,
   ChevronRight,
-  MapPin,
   MessageSquare,
   Phone,
   ShieldCheck,
@@ -12,11 +11,9 @@ import {
 } from 'lucide-react'
 import { useSeo, breadcrumbJsonLd, faqJsonLd } from '@/lib/seo'
 import { SERVICE_CATEGORIES, getService, relatedServices, servicePath } from '@/config/services'
-import { coverageSummary } from '@/config/coverage'
 import { SITE, hasPhone, telHref } from '@/config/site'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
-import { ZipCheckForm } from '@/components/availability/ZipCheckForm'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { FaqAccordion } from '@/components/FaqAccordion'
 import { SectionHeading } from '@/components/SectionHeading'
@@ -28,26 +25,26 @@ import NotFound from '@/pages/NotFound'
 
 const CONNECTION_STEPS = [
   {
-    icon: MapPin,
-    title: 'Check coverage',
-    body: 'Enter your ZIP code and we compare it with our coverage records for this service.',
+    icon: Phone,
+    title: 'Call the service line',
+    body: 'Every service page and service card shows a Call Now button for the line assigned to that trade.',
   },
   {
     icon: Users,
-    title: 'Review options',
-    body: 'If providers are listed for your area, we show the contact options they have authorized us to publish.',
+    title: 'Speak with a partner',
+    body: 'Calls are answered by independent participating providers — not by us. Ask about scope, timing and price.',
   },
   {
-    icon: Phone,
+    icon: ShieldCheck,
     title: 'Decide for yourself',
-    body: 'Reach out directly, request a quote, or ask our team for help. There is no obligation at any step.',
+    body: 'Request a quote or walk away. There is no obligation and no booking made on your behalf.',
   },
 ]
 
 const ServiceDetail = () => {
   const { slug = '' } = useParams()
   const service = getService(slug)
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
   const related = service ? relatedServices(service) : []
 
   useSeo({
@@ -114,8 +111,8 @@ const ServiceDetail = () => {
                   onClick={() => open({ serviceSlug: service.slug })}
                   className="btn-primary"
                 >
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
-                  Check availability in your ZIP
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Call Now
                 </button>
                 <Link to="/contact" className="btn-secondary">
                   <MessageSquare className="h-4 w-4" aria-hidden="true" />
@@ -130,7 +127,7 @@ const ServiceDetail = () => {
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <BadgeCheck className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
-                  {coverageSummary(service.slug)}
+                  Primary &amp; alternate call lines
                 </span>
               </div>
             </div>
@@ -244,56 +241,16 @@ const ServiceDetail = () => {
               </p>
             </div>
 
-            {/* Availability checker */}
-            <div id="availability" className="mt-12 scroll-mt-28">
-              <div className="relative overflow-hidden rounded-2xl border border-line bg-elevated p-6 shadow-card sm:p-8">
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-brand-500/10 blur-3xl"
-                />
-                <div className="relative">
-                  <div className="flex items-center gap-2 text-2xs font-bold uppercase tracking-[0.16em] text-brand-700 dark:text-brand-300">
-                    <MapPin className="h-4 w-4" aria-hidden="true" />
-                    Availability checker
-                  </div>
-                  <h2 className="mt-3 font-display text-xl font-extrabold text-ink sm:text-2xl">
-                    Is {service.name.toLowerCase()} available in your area?
-                  </h2>
-                  <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-                    Enter a 5-digit US ZIP code. We check our coverage records for this service — no account
-                    and no obligation.
-                  </p>
-                  <div className="mt-5 max-w-xl">
-                    <ZipCheckForm defaultService={service.slug} />
-                  </div>
-                  <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted">
-                    <li className="inline-flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success-600" aria-hidden="true" />
-                      We never guess at coverage
-                    </li>
-                    <li className="inline-flex items-center gap-1.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-success-600" aria-hidden="true" />
-                      Your ZIP is used only to check availability
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
             {/* Call connection */}
             <div id="call" className="mt-12 scroll-mt-28">
               <SectionHeading
                 as="h2"
                 eyebrow="Call connection"
                 title={`Call a ${service.name.toLowerCase()} service line`}
-                description="Call connections are permissioned by location. Confirm your ZIP code and we will show the line authorized for your area — or tell you if none is confirmed yet."
+                description={`Pick up the phone and speak with a participating ${service.name.toLowerCase()} provider. The primary line is listed first, with the alternate line beside it.`}
               />
               <div className="mt-6">
-                <CallConnectionPanel
-                  serviceSlug={service.slug}
-                  serviceName={service.name}
-                  onRequestLocation={() => open({ serviceSlug: service.slug })}
-                />
+                <CallConnectionPanel serviceSlug={service.slug} serviceName={service.name} />
               </div>
             </div>
 
@@ -315,22 +272,22 @@ const ServiceDetail = () => {
           <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
             <div className="card overflow-hidden">
               <div className="border-b border-line bg-soft px-5 py-4">
-                <p className="text-2xs font-bold uppercase tracking-[0.16em] text-muted">Quick check</p>
+                <p className="text-2xs font-bold uppercase tracking-[0.16em] text-muted">Call now</p>
                 <p className="mt-1 font-display text-sm font-bold text-ink">
-                  {service.name} availability
+                  {service.name} service line
                 </p>
               </div>
               <div className="p-5">
                 <p className="text-[0.8125rem] leading-6 text-muted">
-                  Coverage depends on participating providers in your ZIP code.
+                  Choose this service to see its primary and alternate call connections.
                 </p>
                 <button
                   type="button"
                   onClick={() => open({ serviceSlug: service.slug })}
                   className="btn-primary btn-sm mt-4 w-full"
                 >
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
-                  Check my ZIP code
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Call Now
                 </button>
                 {hasPhone() ? (
                   <a href={telHref() as string} className="btn-secondary btn-sm mt-2 w-full">
@@ -352,7 +309,6 @@ const ServiceDetail = () => {
                       { id: 'options', label: 'Options' },
                       { id: 'how-it-works', label: 'How connections work' },
                       { id: 'call', label: 'Call connection' },
-                      { id: 'availability', label: 'Availability checker' },
                       { id: 'faq', label: `${service.name} FAQs` },
                     ].map((item) => (
                       <li key={item.id}>
@@ -433,9 +389,9 @@ const ServiceDetail = () => {
       ) : null}
 
       <CtaBand
-        headline={`Ready to check ${service.name.toLowerCase()} availability?`}
-        description="Enter your ZIP code to see whether providers are listed for your area, or contact our team and we will help you look."
-        primaryLabel="Check your area"
+        headline={`Ready to call a ${service.name.toLowerCase()} service line?`}
+        description="Tap Call Now to see the primary and alternate lines for this service, or contact our team if you would rather ask a question first."
+        primaryLabel="Call Now"
         serviceSlug={service.slug}
       />
     </>

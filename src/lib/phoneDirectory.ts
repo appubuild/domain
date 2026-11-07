@@ -1,15 +1,18 @@
 /**
- * Phone directory resolution + call eligibility.
+ * Service call directory resolution.
  *
- * Two separate questions are answered here and never confused:
+ * The site is deliberately simple now: a visitor picks a service and the
+ * primary + alternate numbers assigned to that service become dialable links.
+ * There is no ZIP code step, no coverage lookup and no location check anywhere.
  *
- *   1. Is a number published?      → status must be "active"
- *   2. May that campaign accept a call from the visitor's location?
- *                                  → campaign.nationwide / states / zipCodes
+ * Publication rule (unchanged, and still the safety net):
+ *   A number is only offered when it is `status: 'active'` AND its campaign is
+ *   explicitly permitted for this site. Campaigns that are restricted to states
+ *   or ZIP codes are held back, because the site no longer collects a location
+ *   and therefore cannot honour that restriction.
  *
- * A number is offered publicly only when both answers are yes. When campaign
- * permissions are unknown, the UI shows a verification message rather than a
- * number.
+ * Nothing here invents, reorders across services, or rewrites a phone number:
+ * every value comes from src/data/serviceNumbers.ts.
  */
 
 import {
@@ -19,9 +22,6 @@ import {
   type ServicePhoneNumber,
 } from '@/data/serviceNumbers'
 import { getGroupsForService, getServiceNumberLabel } from '@/data/serviceNumberMapping'
-import type { UsLocation } from '@/lib/zipLookup'
-
-export type NumberEligibility = 'eligible' | 'restricted' | 'unverified'
 
 export interface ResolvedCallNumber {
   id: string
@@ -34,75 +34,35 @@ export interface ResolvedCallNumber {
   status: ServicePhoneNumber['status']
   /** True when the number may be shown to public visitors. */
   published: boolean
-  eligibility: NumberEligibility
-  eligibilityNote?: string
-  network?: string
-  campaign?: string
 }
 
-export type CallDirectoryState =
+export type ServiceCallState =
   /** No phone directory group is mapped to this service. */
   | { kind: 'no-directory'; label: string }
   /** Numbers exist but none has been activated for publication. */
   | { kind: 'awaiting-verification'; label: string; pendingCount: number }
   /** Development-only preview of unpublished numbers (never in production). */
   | { kind: 'preview'; label: string; numbers: ResolvedCallNumber[] }
-  /** Published numbers exist, but we need a ZIP/state before offering one. */
-  | { kind: 'needs-location'; label: string }
-  /** Published numbers exist, but their campaigns do not confirm this location. */
-  | { kind: 'unverified-location'; label: string; location: UsLocation }
-  /** At least one published number may accept traffic from this location. */
-  | { kind: 'ready'; label: string; location?: UsLocation; numbers: ResolvedCallNumber[] }
+  /** At least one published number exists for this service. */
+  | { kind: 'ready'; label: string; numbers: ResolvedCallNumber[] }
 
 /** Converts an owner-supplied display number into a dialable US tel: link. */
 export const toTelHref = (display: string): string => `tel:+1${display.replace(/\D/g, '')}`
 
 export const formatDisplayNumber = (display: string): string => display
 
-interface CampaignEvaluation {
-  eligibility: NumberEligibility
-  note?: string
-}
-
-export const evaluateCampaign = (
-  number: ServicePhoneNumber,
-  location?: UsLocation | null,
-): CampaignEvaluation => {
+/**
+ * True when the campaign metadata allows this site to publish the number
+ * without knowing the visitor's location. State/ZIP-restricted campaigns are
+ * excluded on purpose — we would rather show a contact message than break a
+ * network's routing rules.
+ */
+export const isCampaignPermitted = (number: ServicePhoneNumber): boolean => {
   const campaign = number.campaign
-
-  if (!campaign) {
-    return {
-      eligibility: 'unverified',
-      note: 'Campaign permissions for this number have not been confirmed.',
-    }
-  }
-
-  // ZIP allow-list is the most specific rule and wins when present.
-  if (campaign.zipCodes && campaign.zipCodes.length > 0) {
-    if (!location) return { eligibility: 'unverified', note: 'A ZIP code is needed for this campaign.' }
-    return campaign.zipCodes.includes(location.zip)
-      ? { eligibility: 'eligible' }
-      : { eligibility: 'restricted', note: `This campaign does not list ZIP ${location.zip}.` }
-  }
-
-  // State allow-list.
-  if (campaign.states && campaign.states.length > 0) {
-    if (!location) return { eligibility: 'unverified', note: 'A ZIP code is needed for this campaign.' }
-    return campaign.states.map((state) => state.toUpperCase()).includes(location.stateAbbr)
-      ? { eligibility: 'eligible' }
-      : {
-          eligibility: 'restricted',
-          note: `This campaign does not accept calls from ${location.stateAbbr}.`,
-        }
-  }
-
-  // Explicit nationwide permission only.
-  if (campaign.nationwide === true) return { eligibility: 'eligible' }
-
-  return {
-    eligibility: 'unverified',
-    note: 'Nationwide coverage has not been confirmed for this campaign.',
-  }
+  if (!campaign) return false
+  if (campaign.zipCodes && campaign.zipCodes.length > 0) return false
+  if (campaign.states && campaign.states.length > 0) return false
+  return campaign.nationwide === true
 }
 
 const sortNumbers = (numbers: ServicePhoneNumber[]): ServicePhoneNumber[] =>
@@ -112,8 +72,6 @@ const toResolved = (
   number: ServicePhoneNumber,
   index: number,
   published: boolean,
-  eligibility: NumberEligibility,
-  note?: string,
 ): ResolvedCallNumber => ({
   id: number.id,
   display: number.number,
@@ -122,29 +80,24 @@ const toResolved = (
   slot: index === 0 ? 'primary' : 'alternate',
   status: number.status,
   published,
-  eligibility,
-  eligibilityNote: note,
-  network: number.campaign?.network,
-  campaign: number.campaign?.campaign,
 })
 
-export interface ResolveCallDirectoryOptions {
+export interface ResolveServiceCallOptions {
   serviceSlug: string
   serviceName: string
-  location?: UsLocation | null
   /** Overrides the environment default (used by tests). */
   previewUnpublished?: boolean
 }
 
 /**
- * Resolves which call options (if any) may be shown for a service.
+ * Resolves the call options for a service. No location argument exists — by
+ * design, selecting the service is all the input this needs.
  */
-export const resolveCallDirectory = ({
+export const resolveServiceCall = ({
   serviceSlug,
   serviceName,
-  location,
   previewUnpublished = PREVIEW_UNPUBLISHED_NUMBERS,
-}: ResolveCallDirectoryOptions): CallDirectoryState => {
+}: ResolveServiceCallOptions): ServiceCallState => {
   const label = getServiceNumberLabel(serviceSlug, serviceName)
   const groups = getGroupsForService(serviceSlug)
   const allNumbers = sortNumbers(groups.flatMap((group) => group.numbers))
@@ -153,15 +106,17 @@ export const resolveCallDirectory = ({
     return { kind: 'no-directory', label }
   }
 
-  const activeNumbers = PUBLISH_ONLY_ACTIVE_NUMBERS
+  const candidates = PUBLISH_ONLY_ACTIVE_NUMBERS
     ? allNumbers.filter((number) => number.status === 'active')
     : allNumbers.filter((number) => number.status !== 'inactive')
 
-  if (activeNumbers.length === 0) {
+  const publishable = candidates.filter(isCampaignPermitted)
+
+  if (publishable.length === 0) {
     if (previewUnpublished) {
       const numbers = allNumbers
         .filter((number) => number.status !== 'inactive')
-        .map((number, index) => toResolved(number, index, false, 'unverified'))
+        .map((number, index) => toResolved(number, index, false))
       if (numbers.length > 0) return { kind: 'preview', label, numbers }
     }
     return {
@@ -171,21 +126,10 @@ export const resolveCallDirectory = ({
     }
   }
 
-  if (!location) return { kind: 'needs-location', label }
-
-  const evaluated = activeNumbers.map((number, index) => {
-    const evaluation = evaluateCampaign(number, location)
-    return toResolved(number, index, true, evaluation.eligibility, evaluation.note)
-  })
-
-  const eligible = evaluated.filter((number) => number.eligibility === 'eligible')
-  if (eligible.length === 0) return { kind: 'unverified-location', label, location }
-
   return {
     kind: 'ready',
     label,
-    location,
-    numbers: eligible.map((number, index) => ({ ...number, slot: index === 0 ? 'primary' : 'alternate' })),
+    numbers: publishable.map((number, index) => toResolved(number, index, true)),
   }
 }
 
@@ -201,5 +145,6 @@ export const directoryStats = () => {
     active: numbers.filter((number) => number.status === 'active').length,
     pending: numbers.filter((number) => number.status === 'pending-verification').length,
     inactive: numbers.filter((number) => number.status === 'inactive').length,
+    publishable: numbers.filter((number) => number.status === 'active' && isCampaignPermitted(number)).length,
   }
 }

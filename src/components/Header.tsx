@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { ArrowRight, ChevronDown, Mail, MapPin, Menu, Phone, X } from 'lucide-react'
+import { ArrowRight, ChevronDown, Mail, Menu, Phone, X } from 'lucide-react'
 import { NAV_LINKS, SITE, hasPhone, telHref } from '@/config/site'
 import { SERVICE_CATEGORIES, SERVICES, servicePath } from '@/config/services'
 import { Logo } from '@/components/Logo'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ServiceIcon } from '@/components/ServiceIcon'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 
 const navItemClasses = (isActive: boolean) =>
   `relative rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
@@ -24,7 +24,7 @@ const ServicesMenu = ({ onNavigate }: { onNavigate: () => void }) => {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const { open: openChecker } = useAvailability()
+  const { open: openChecker } = useCallSheet()
 
   useEffect(() => {
     if (!open) return
@@ -129,8 +129,8 @@ const ServicesMenu = ({ onNavigate }: { onNavigate: () => void }) => {
               }}
               className="btn-secondary btn-sm"
             >
-              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-              Check your ZIP code
+              <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+              Call a service line
             </button>
           </div>
         </div>
@@ -145,7 +145,7 @@ const ServicesMenu = ({ onNavigate }: { onNavigate: () => void }) => {
 
 const MobileDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const [servicesExpanded, setServicesExpanded] = useState(false)
-  const { open: openChecker } = useAvailability()
+  const { open: openChecker } = useCallSheet()
   const location = useLocation()
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -292,8 +292,8 @@ const MobileDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
               }}
               className="btn-primary w-full"
             >
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Find a Service
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              Call Now
             </button>
           </div>
 
@@ -328,7 +328,7 @@ const MobileDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
 export const Header = () => {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { open: openChecker } = useAvailability()
+  const { open: openChecker } = useCallSheet()
   const location = useLocation()
 
   useEffect(() => {
@@ -378,8 +378,8 @@ export const Header = () => {
               onClick={() => openChecker()}
               className="btn-primary hidden px-4 py-2.5 text-[0.8125rem] sm:inline-flex lg:px-5 lg:text-sm"
             >
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Find a Service
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              Call Now
             </button>
             <button
               type="button"

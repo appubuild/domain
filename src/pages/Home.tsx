@@ -6,8 +6,8 @@ import {
   Clock,
   Compass,
   Layers,
-  MapPin,
   MessageSquare,
+  Phone,
   Search,
   ShieldCheck,
   Sparkles,
@@ -17,15 +17,14 @@ import { useSeo, faqJsonLd, organizationJsonLd, websiteJsonLd } from '@/lib/seo'
 import { HOME_FAQS } from '@/config/faqs'
 import { SERVICES, featuredServices, servicePath } from '@/config/services'
 import { SITE } from '@/config/site'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
-import { ZipCheckForm } from '@/components/availability/ZipCheckForm'
+import { useCallSheet } from '@/components/calls/CallContext'
 import { ServiceCard } from '@/components/ServiceCard'
 import { SectionHeading } from '@/components/SectionHeading'
 import { FaqAccordion } from '@/components/FaqAccordion'
 import { CtaBand } from '@/components/CtaBand'
 import { Reveal } from '@/components/Reveal'
 import { ServiceIcon } from '@/components/ServiceIcon'
-import { ServiceCallFinder } from '@/components/calls/ServiceCallFinder'
+import { ServiceCallDirectory } from '@/components/calls/ServiceCallDirectory'
 
 const TRUST_ITEMS = [
   {
@@ -34,9 +33,9 @@ const TRUST_ITEMS = [
     description: 'Browse every major home service category in one place instead of juggling search results.',
   },
   {
-    icon: MapPin,
-    title: 'Local availability checking',
-    description: 'Enter a ZIP code to see whether providers are listed for that service in your area.',
+    icon: Phone,
+    title: 'Direct call buttons',
+    description: 'Every service shows its primary and alternate line — tap once and your phone dials.',
   },
   {
     icon: Layers,
@@ -65,15 +64,15 @@ const BENEFITS = [
   },
   {
     icon: BadgeCheck,
-    title: 'Transparency about coverage',
+    title: 'Only published lines',
     description:
-      'If our coverage records do not confirm a service in your ZIP code, we say so plainly instead of promising a callback that will not come.',
+      'We only display service lines that are verified and published. When a trade has no line yet, we say so plainly instead of inventing a number.',
   },
   {
     icon: Clock,
     title: 'A simple connection process',
     description:
-      'Check availability, review the options listed for your area, and decide for yourself whether to reach out. No obligation at any step.',
+      'Choose a service, tap the call button and decide for yourself whether to go ahead. No forms and no obligation at any step.',
   },
 ]
 
@@ -88,22 +87,22 @@ const STEPS = [
   },
   {
     number: '02',
-    icon: MapPin,
-    title: 'Check your ZIP code',
+    icon: Phone,
+    title: 'Tap Call Now',
     description:
-      'Enter your 5-digit ZIP code and we compare it against our coverage records for that specific service.',
+      'Every service card and service page shows a Call Now button. The primary line is one tap away, with the alternate line beside it.',
   },
   {
     number: '03',
     icon: Users,
-    title: 'Explore available providers',
+    title: 'Speak with a service partner',
     description:
-      'Review participating provider options listed for your area, or ask our team to help you find the right fit.',
+      'Calls are answered by independent participating providers. Ask about availability, pricing and licensing before you authorize any work.',
   },
 ]
 
 const Home = () => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
   const popular = featuredServices()
 
   useSeo({
@@ -151,31 +150,22 @@ const Home = () => {
                 find available providers in your area.
               </p>
 
-              <div className="mt-7 max-w-xl">
-                <ZipCheckForm
-                  variant="onDark"
-                  showServiceSelect
-                  buttonLabel="Check Availability"
-                  helperText="Free to check. No account, no obligation."
-                />
-              </div>
-
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <button type="button" onClick={() => open()} className="btn-primary">
-                  <Search className="h-4 w-4" aria-hidden="true" />
-                  Find Home Services
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Call Now
                 </button>
                 <Link
                   to="/services"
                   className="btn border border-white/25 bg-white/5 text-white backdrop-blur-sm transition-colors hover:bg-white/10"
                 >
-                  Explore Services
+                  Browse all {SERVICES.length} services
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
               </div>
 
               <ul className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-white/75">
-                {[`${SERVICES.length} service categories`, 'ZIP code availability checking', 'No obligation'].map(
+                {[`${SERVICES.length} service categories`, 'Direct call buttons', 'No obligation'].map(
                   (item) => (
                     <li key={item} className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" aria-hidden="true" />
@@ -245,7 +235,7 @@ const Home = () => {
         </div>
       </section>
 
-      <ServiceCallFinder />
+      <ServiceCallDirectory />
 
       {/* ------------------------------------------------------ Popular services */}
       <section className="section" aria-labelledby="popular-services">
@@ -255,7 +245,7 @@ const Home = () => {
               id="popular-services"
               eyebrow="Service directory"
               title="Popular services homeowners ask about"
-              description="Explore the categories we cover, understand what the work usually involves, and check availability in your ZIP code."
+              description="Explore the categories we cover, then call the service line assigned to the trade you need."
             />
             <Link
               to="/services"
@@ -284,7 +274,7 @@ const Home = () => {
             align="center"
             eyebrow="How it works"
             title="Three steps to the right local provider"
-            description="No forms to chase and no obligation. Start with the service you need and a ZIP code."
+            description="No forms and no ZIP code. Choose the service you need and call the line assigned to it."
           />
 
           <div className="relative mt-12">
@@ -323,8 +313,8 @@ const Home = () => {
 
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <button type="button" onClick={() => open()} className="btn-primary">
-              <MapPin className="h-4 w-4" aria-hidden="true" />
-              Check availability in your ZIP
+              <Phone className="h-4 w-4" aria-hidden="true" />
+              Call Now
             </button>
             <Link to="/how-it-works" className="btn-secondary">
               Read the full process
@@ -333,8 +323,8 @@ const Home = () => {
           </div>
 
           <p className="mx-auto mt-6 max-w-2xl text-center text-xs leading-5 text-muted">
-            Actual service availability depends on participating providers and their coverage areas. A ZIP
-            code result reflects our coverage records — it is not a booking or a guarantee of service.
+            Calls are answered by independent participating providers. {SITE.name} is a connection platform:
+            we do not perform the work, dispatch crews or guarantee availability, pricing or outcomes.
           </p>
         </div>
       </section>
@@ -395,7 +385,7 @@ const Home = () => {
                     {[
                       {
                         ok: true,
-                        text: 'We help you explore categories, coverage and provider options.',
+                        text: 'We help you explore service categories and call the line assigned to that trade.',
                       },
                       { ok: true, text: 'We explain the work and the questions worth asking.' },
                       { ok: false, text: 'We do not perform repairs, dispatch crews or set pricing.' },

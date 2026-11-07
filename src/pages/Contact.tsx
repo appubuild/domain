@@ -4,15 +4,15 @@ import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SITE, hasPhone, telHref } from '@/config/site'
 import { PageHero } from '@/components/PageHero'
 import { ContactForm } from '@/components/ContactForm'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 
 const Contact = () => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
 
   useSeo({
     title: 'Contact Us',
     description:
-      'Contact Safe Home Network with questions about home service categories, ZIP code availability, or provider listings. We reply within one business day.',
+      'Contact Safe Home Network with questions about home service categories, service phone lines, or provider listings. We reply within one business day.',
     path: '/contact',
     jsonLd: breadcrumbJsonLd([
       { name: 'Home', path: '/' },
@@ -25,7 +25,7 @@ const Contact = () => {
       <PageHero
         eyebrow="Contact"
         title="Talk to our team about your project"
-        description="Whether you have a question about coverage, a service category, or a provider listing, we are happy to help. Send a message and we will reply within one business day."
+        description="Whether you have a question about a service category, a call line, or a provider listing, we are happy to help. Send a message and we will reply within one business day."
         crumbs={[{ label: 'Contact' }]}
       />
 
@@ -102,11 +102,11 @@ const Contact = () => {
               <div className="card p-6">
                 <h2 className="font-display text-base font-bold text-ink">Looking for a service?</h2>
                 <p className="mt-1.5 text-sm leading-6 text-muted">
-                  Checking availability is faster than emailing. Choose a service and enter your ZIP code.
+                  Calling is faster than emailing. Choose a service and the primary line is one tap away.
                 </p>
                 <button type="button" onClick={() => open()} className="btn-primary btn-sm mt-4 w-full">
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
-                  Check availability
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Call Now
                 </button>
                 <Link to="/services" className="btn-secondary btn-sm mt-2 w-full">
                   <MessageSquare className="h-4 w-4" aria-hidden="true" />

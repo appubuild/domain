@@ -57,6 +57,10 @@ const BANNED_PUBLIC_COPY = [
   'example coverage',
   'sample dataset',
   'demo dataset',
+  'ZIP code checker',
+  'Check availability',
+  'Enter your ZIP',
+  'availability checker',
   'lorem ipsum',
   'not configured',
   'configuration required',
@@ -111,6 +115,25 @@ for (const route of ALL_ROUTES) {
   // Every route should have exactly one h1.
   const h1Count = (html.match(/<h1/g) ?? []).length
   if (h1Count !== 1) report(route, `expected exactly one h1, found ${h1Count}`)
+
+  // The ZIP / availability system is gone: no page may render a ZIP input.
+  if (/name="zip"/i.test(html) || /id="zip"/i.test(html)) {
+    report(route, 'ZIP input rendered')
+  }
+
+  // Phone numbers may only be printed on a service page, i.e. after the visitor
+  // has selected a service. Listing pages show buttons, not numbers.
+  const telLinks = [...html.matchAll(/href="(tel:[^"]+)"/g)].map((match) => match[1])
+  if (!route.startsWith('/services/')) {
+    if (telLinks.length > 0) {
+      report(route, `${telLinks.length} tel: link(s) exposed before a service is selected`)
+    }
+  } else {
+    if (!html.includes('Call Now')) report(route, 'service page is missing a Call Now button')
+    if (!/Call Alternate/.test(html) && html.includes('Primary line')) {
+      report(route, 'service page shows a primary line but no Call Alternate')
+    }
+  }
 
   // No developer-facing copy on a public page.
   const lowerHtml = html.toLowerCase()

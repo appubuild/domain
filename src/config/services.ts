@@ -58,7 +58,7 @@ export const SERVICES: Service[] = [
       'Full roof replacement, tear-offs and new installations, with materials and questions explained before you commit.',
     intro: [
       'A roof is the one part of your home that works every single day, in every season, usually without a second thought — until a stain appears on the ceiling or a shingle shows up in the driveway. A full replacement is a large, structural purchase, and it is normal to feel unsure about how to compare one quote to another.',
-      'This page is here to make that comparison less of a guess. You will find the situations that typically lead to a roofing project, the main material categories and how they differ, and the questions worth asking before signing anything. When you are ready, you can check whether roofing providers are listed for your ZIP code.',
+      'This page is here to make that comparison less of a guess. You will find the situations that typically lead to a roofing project, the main material categories and how they differ, and the questions worth asking before signing anything. When you are ready, the roofing service line is one tap away.',
     ],
     commonNeeds: [
       {
@@ -136,7 +136,7 @@ export const SERVICES: Service[] = [
     related: ['roof-repair', 'window-installation', 'water-damage'],
     metaTitle: 'Roofing Services & Roof Replacement Options',
     metaDescription:
-      'Explore roof replacement materials, common roofing needs and the questions to ask a contractor. Check whether roofing providers are listed in your ZIP code.',
+      'Explore roof replacement materials, common roofing needs and the questions to ask a contractor. Call the roofing service line when you are ready.',
     searchTerms: ['roof replacement', 'shingles', 'roofer', 'metal roof', 'tear-off'],
   },
   {
@@ -231,7 +231,7 @@ export const SERVICES: Service[] = [
     related: ['roofing', 'water-damage', 'door-installation'],
     metaTitle: 'Roof Repair: Leaks, Flashing & Storm Damage',
     metaDescription:
-      'Learn what roof repairs cover, how leaks are traced and when repair beats replacement. Check whether roof repair providers are listed in your ZIP code.',
+      'Learn what roof repairs cover, how leaks are traced and when repair beats replacement. Call the roof repair service line when you are ready.',
     searchTerms: ['leak repair', 'shingle repair', 'flashing', 'storm damage', 'roof leak'],
   },
   {
@@ -326,7 +326,7 @@ export const SERVICES: Service[] = [
     related: ['water-damage', 'bathroom-remodeling', 'hvac'],
     metaTitle: 'Plumbing Services: Leaks, Drains & Water Heaters',
     metaDescription:
-      'Understand common plumbing needs, repair versus replacement options and the questions to ask before hiring. Check plumbing availability in your ZIP code.',
+      'Understand common plumbing needs, repair versus replacement options and the questions to ask before hiring. Call the plumbing service line when you are ready.',
     searchTerms: ['plumber', 'leak', 'clogged drain', 'water heater', 'repipe'],
   },
   {
@@ -343,7 +343,7 @@ export const SERVICES: Service[] = [
       'Furnace and heat pump service, AC repair, ductwork and maintenance plans from independent HVAC contractors.',
     intro: [
       'A heating and cooling system is the most expensive equipment in most homes and the one homeowners think about least until it stops working. Modern systems are also more tightly coupled than they look: duct sizing, refrigerant charge, airflow and thermostat settings all affect whether equipment performs the way its rating promises.',
-      'Here you will find what falls under HVAC work, the difference between maintaining, repairing and replacing a system, and the questions that separate a careful contractor from a quick swap. Availability for heating and cooling requests is seasonal, so check your ZIP code when you are ready.',
+      'Here you will find what falls under HVAC work, the difference between maintaining, repairing and replacing a system, and the questions that separate a careful contractor from a quick swap. Heating and cooling demand is seasonal, so ask about timing when you call.',
     ],
     commonNeeds: [
       {
@@ -421,7 +421,7 @@ export const SERVICES: Service[] = [
     related: ['ac-repair', 'electrical', 'water-damage'],
     metaTitle: 'HVAC Services: Heating, Cooling & Ductwork',
     metaDescription:
-      'Explore HVAC maintenance, repair and replacement options, plus the questions to ask a contractor. Check heating and cooling availability in your ZIP code.',
+      'Explore HVAC maintenance, repair and replacement options, plus the questions to ask a contractor. Call the heating and cooling service line when you are ready.',
     searchTerms: ['furnace', 'heat pump', 'ductwork', 'air conditioning', 'tune-up'],
   },
   {
@@ -438,7 +438,7 @@ export const SERVICES: Service[] = [
       'Diagnostics, refrigerant checks, capacitor and compressor repairs, and AC replacement guidance.',
     intro: [
       'When an air conditioner stops cooling, the temptation is to blame the biggest component. In practice, a large share of no-cooling calls come down to a failed capacitor, a clogged condensate line, a dirty coil or a tripped breaker — inexpensive fixes that need proper diagnosis rather than parts swapping.',
-      'This page covers the symptoms homeowners report most often, what a technician actually tests, and when repair stops making financial sense. Cooling availability is seasonal in many markets, so check your ZIP code before assuming a same-day appointment is possible.',
+      'This page covers the symptoms homeowners report most often, what a technician actually tests, and when repair stops making financial sense. Cooling demand is seasonal in many markets, so ask about timing rather than assuming a same-day appointment.',
     ],
     commonNeeds: [
       {
@@ -516,7 +516,7 @@ export const SERVICES: Service[] = [
     related: ['hvac', 'electrical', 'roof-repair'],
     metaTitle: 'AC Repair: Diagnostics, Repairs & Replacement',
     metaDescription:
-      'Learn why air conditioners stop cooling, what a technician checks and when to repair or replace. Check AC repair availability in your ZIP code.',
+      'Learn why air conditioners stop cooling, what a technician checks and when to repair or replace. Call the AC repair service line when you are ready.',
     searchTerms: ['air conditioning', 'AC not cooling', 'refrigerant', 'capacitor', 'compressor'],
   },
   {
@@ -533,7 +533,7 @@ export const SERVICES: Service[] = [
       'Emergency water extraction, structural drying, moisture documentation and cleanup coordination.',
     intro: [
       'Water damage gets worse on a clock. Within the first day, drywall and insulation absorb moisture; within a couple of days, swelling and microbial growth become realistic concerns. The difference between a small cleanup and a rebuild is often how quickly water is extracted and drying equipment is running.',
-      'This page explains what a restoration company actually does, how it differs from the plumber who fixes the source, and what to document for an insurance claim. Restoration availability changes quickly during storms, so confirm your ZIP code rather than assuming immediate service.',
+      'This page explains what a restoration company actually does, how it differs from the plumber who fixes the source, and what to document for an insurance claim. Restoration demand changes quickly during storms, so call rather than assuming immediate service.',
     ],
     commonNeeds: [
       {
@@ -611,7 +611,7 @@ export const SERVICES: Service[] = [
     related: ['plumbing', 'roof-repair', 'pest-control'],
     metaTitle: 'Water Damage Restoration: Drying & Cleanup',
     metaDescription:
-      'Understand emergency water extraction, structural drying and insurance documentation. Check water damage restoration availability in your ZIP code.',
+      'Understand emergency water extraction, structural drying and insurance documentation. Contact our team to review water damage restoration options.',
     searchTerms: ['flood', 'water extraction', 'mold', 'burst pipe', 'drying'],
   },
   {
@@ -706,7 +706,7 @@ export const SERVICES: Service[] = [
     related: ['water-damage', 'roof-repair', 'locksmith'],
     metaTitle: 'Pest Control: Inspection, Treatment & Prevention',
     metaDescription:
-      'Compare one-time treatments and recurring pest plans, learn what to ask a provider and check pest control availability in your ZIP code.',
+      'Compare one-time treatments and recurring pest plans, learn what to ask a provider and contact our team to review pest control options.',
     searchTerms: ['exterminator', 'termites', 'rodents', 'roaches', 'ants', 'wasp nest'],
   },
   {
@@ -801,7 +801,7 @@ export const SERVICES: Service[] = [
     related: ['hvac', 'kitchen-remodeling', 'locksmith'],
     metaTitle: 'Electrical Services: Panels, Circuits & Lighting',
     metaDescription:
-      'Learn when to call a licensed electrician, what panel upgrades involve and how safety issues are diagnosed. Check electrical availability in your ZIP code.',
+      'Learn when to call a licensed electrician, what panel upgrades involve and how safety issues are diagnosed. Call the electrical service line when you are ready.',
     searchTerms: ['electrician', 'panel upgrade', 'breaker', 'outlet', 'EV charger'],
   },
   {
@@ -818,7 +818,7 @@ export const SERVICES: Service[] = [
       'Full kitchen renovations, cabinet and countertop replacement, layout changes and finish selections.',
     intro: [
       'A kitchen remodel is less a shopping list than a sequence of decisions, and the order matters. Moving a sink changes plumbing; moving a range changes gas and electrical; removing a wall may change structure and permits. The earliest choices set the budget, and late changes are what turn a comfortable project into a stressful one.',
-      'This page covers what a kitchen renovation typically includes, the trade-offs between refacing, partial updates and full remodels, and the questions to settle before signing a contract. When you are ready, check whether kitchen remodelers are listed for your ZIP code.',
+      'This page covers what a kitchen renovation typically includes, the trade-offs between refacing, partial updates and full remodels, and the questions to settle before signing a contract. When you are ready, the kitchen remodeling service line is one tap away.',
     ],
     commonNeeds: [
       {
@@ -896,7 +896,7 @@ export const SERVICES: Service[] = [
     related: ['bathroom-remodeling', 'electrical', 'plumbing'],
     metaTitle: 'Kitchen Remodeling: Layout, Cabinets & Finishes',
     metaDescription:
-      'Plan a kitchen remodel from layout through finishes, understand reface versus full renovation and what to decide before quotes. Check ZIP availability.',
+      'Plan a kitchen remodel from layout through finishes, understand reface versus full renovation and what to decide before quotes. Call the kitchen service line when you are ready.',
     searchTerms: ['kitchen renovation', 'cabinets', 'countertops', 'backsplash', 'remodel'],
   },
   {
@@ -991,7 +991,7 @@ export const SERVICES: Service[] = [
     related: ['kitchen-remodeling', 'plumbing', 'water-damage'],
     metaTitle: 'Bathroom Remodeling: Showers, Tile & Vanities',
     metaDescription:
-      'Compare a bathroom refresh with a full remodel, learn why waterproofing matters and what to ask a contractor. Check ZIP code availability.',
+      'Compare a bathroom refresh with a full remodel, learn why waterproofing matters and what to ask a contractor. Call the bathroom service line when you are ready.',
     searchTerms: ['bathroom renovation', 'walk-in shower', 'tile', 'vanity', 'tub replacement'],
   },
   {
@@ -1008,7 +1008,7 @@ export const SERVICES: Service[] = [
       'Primary suite updates, closet systems, lighting, insulation and finish work for bedrooms and guest rooms.',
     intro: [
       'Bedroom projects are quieter than kitchens and bathrooms, but they change how a home feels every single day. Noise, drafts, poor closet storage and a single overhead light are the complaints we hear most — and each has a specific, practical fix that does not require rebuilding the room.',
-      'This page covers what a bedroom renovation typically includes, from insulation and window updates to closet systems and lighting layers, plus how to plan a primary suite project around the rest of the house. Then check whether remodelers are listed in your ZIP code.',
+      'This page covers what a bedroom renovation typically includes, from insulation and window updates to closet systems and lighting layers, plus how to plan a primary suite project around the rest of the house. Then contact our team to review bedroom remodeling options.',
     ],
     commonNeeds: [
       {
@@ -1086,7 +1086,7 @@ export const SERVICES: Service[] = [
     related: ['bathroom-remodeling', 'window-installation', 'door-installation'],
     metaTitle: 'Bedroom Remodeling: Closets, Comfort & Finishes',
     metaDescription:
-      'Explore bedroom renovation options including closet systems, insulation, lighting and suite additions. Check whether remodelers cover your ZIP code.',
+      'Explore bedroom renovation options including closet systems, insulation, lighting and suite additions. Contact our team to review bedroom remodeling options.',
     searchTerms: ['bedroom renovation', 'closet system', 'primary suite', 'attic conversion'],
   },
   {
@@ -1103,7 +1103,7 @@ export const SERVICES: Service[] = [
       'Full-frame and insert window replacement, glass upgrades and installation detailing for US homes.',
     intro: [
       'Windows are sold on numbers — U-factor, solar heat gain, condensation resistance — but what homeowners notice is whether the room is still cold near the glass in January and whether the street is still audible at night. Both outcomes depend as much on installation quality and air sealing as on the glass itself.',
-      'This page explains the difference between insert and full-frame replacement, how frame materials compare, and which installation details to insist on. Then check whether window installers are listed for your ZIP code.',
+      'This page explains the difference between insert and full-frame replacement, how frame materials compare, and which installation details to insist on. Then the window service line is one tap away.',
     ],
     commonNeeds: [
       {
@@ -1181,7 +1181,7 @@ export const SERVICES: Service[] = [
     related: ['door-installation', 'roofing', 'bedroom-remodeling'],
     metaTitle: 'Window Installation & Replacement Options',
     metaDescription:
-      'Compare insert and full-frame window replacement, glass ratings and frame materials, and what to confirm before signing. Check ZIP availability.',
+      'Compare insert and full-frame window replacement, glass ratings and frame materials, and what to confirm before signing. Call the window service line when you are ready.',
     searchTerms: ['window replacement', 'double pane', 'glass', 'energy efficient windows'],
   },
   {
@@ -1198,7 +1198,7 @@ export const SERVICES: Service[] = [
       'Entry doors, patio doors, storm doors and interior doors installed with proper flashing and sealing.',
     intro: [
       'A door has to do three jobs at once: keep weather out, keep the house secure, and look right from the curb. Most door problems trace back to installation rather than the door itself — missing head flashing, an uneven rough opening, or a threshold that was never properly shimmed and sealed.',
-      'This page covers entry and patio door replacement, the difference between replacing a slab and the full pre-hung unit, and what to check the day the install is finished. Then you can check whether door installers are listed in your ZIP code.',
+      'This page covers entry and patio door replacement, the difference between replacing a slab and the full pre-hung unit, and what to check the day the install is finished. Then contact our team to review door installation options.',
     ],
     commonNeeds: [
       {
@@ -1276,7 +1276,7 @@ export const SERVICES: Service[] = [
     related: ['window-installation', 'locksmith', 'roofing'],
     metaTitle: 'Door Installation: Entry, Patio & Interior Doors',
     metaDescription:
-      'Compare slab and pre-hung door replacement, security upgrades and flashing details, and what to check after install. Check ZIP code availability.',
+      'Compare slab and pre-hung door replacement, security upgrades and flashing details, and what to check after install. Contact our team to review door installation options.',
     searchTerms: ['front door', 'patio door', 'storm door', 'pre-hung', 'door replacement'],
   },
   {
@@ -1371,7 +1371,7 @@ export const SERVICES: Service[] = [
     related: ['roofing', 'door-installation', 'window-installation'],
     metaTitle: 'Concrete & Paving: Driveways, Patios, Asphalt',
     metaDescription:
-      'Understand concrete and asphalt installation, base preparation, repair versus replacement and permit considerations. Check ZIP code availability.',
+      'Understand concrete and asphalt installation, base preparation, repair versus replacement and permit considerations. Contact our team to review concrete and paving options.',
     searchTerms: ['driveway', 'patio', 'sidewalk', 'asphalt', 'seal coating', 'pavers'],
   },
   {
@@ -1466,7 +1466,7 @@ export const SERVICES: Service[] = [
     related: ['door-installation', 'electrical', 'pest-control'],
     metaTitle: 'Locksmith Services: Lockouts, Rekeys & Locks',
     metaDescription:
-      'Learn how rekeying compares with replacement, what to confirm before a locksmith starts and how to avoid scams. Check locksmith coverage by ZIP code.',
+      'Learn how rekeying compares with replacement, what to confirm before a locksmith starts and how to avoid scams. Contact our team to review locksmith options.',
     searchTerms: ['lockout', 'rekey', 'deadbolt', 'smart lock', 'key duplication'],
   },
 ]

@@ -1,6 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
-import { AvailabilityProvider } from '@/components/availability/AvailabilityContext'
+import { CallSheetProvider } from '@/components/calls/CallContext'
 import { Layout } from '@/components/Layout'
 import Home from '@/pages/Home'
 import About from '@/pages/About'
@@ -18,7 +18,7 @@ import NotFound from '@/pages/NotFound'
 
 const App = () => (
   <ThemeProvider>
-    <AvailabilityProvider>
+    <CallSheetProvider>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
@@ -36,7 +36,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-    </AvailabilityProvider>
+    </CallSheetProvider>
   </ThemeProvider>
 )
 

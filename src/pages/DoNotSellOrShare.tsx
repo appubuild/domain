@@ -95,12 +95,12 @@ const DoNotSellOrShare = () => {
                     <strong>Identifiers</strong> — name, email address, IP address.
                   </li>
                   <li>
-                    <strong>Internet activity</strong> — pages viewed, interactions with the availability
-                    checker, referring URL.
+                    <strong>Internet activity</strong> — pages viewed, service pages opened, call buttons
+                    pressed, referring URL.
                   </li>
                   <li>
-                    <strong>Geolocation data (coarse)</strong> — a five-digit ZIP code you enter, and
-                    city-level location inferred from IP address.
+                    <strong>Geolocation data (coarse)</strong> — city-level location inferred from IP address
+                    by our hosting provider. This website does not ask for a ZIP code.
                   </li>
                   <li>
                     <strong>Communications</strong> — the content of messages you send through the contact
@@ -108,7 +108,7 @@ const DoNotSellOrShare = () => {
                   </li>
                   <li>
                     <strong>Inferences</strong> — which service categories interest you based on the pages you
-                    visit and the checks you run, used to answer your request and improve the site.
+                    visit, used to answer your request and improve the site.
                   </li>
                 </ul>
 

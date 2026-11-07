@@ -3,7 +3,7 @@ import {
   ArrowRight,
   Eye,
   HeartHandshake,
-  MapPin,
+  Phone,
   Scale,
   ShieldCheck,
   Sparkles,
@@ -16,7 +16,7 @@ import { PageHero } from '@/components/PageHero'
 import { SectionHeading } from '@/components/SectionHeading'
 import { CtaBand } from '@/components/CtaBand'
 import { Reveal } from '@/components/Reveal'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 
 const WHAT_WE_DO = [
   {
@@ -26,16 +26,16 @@ const WHAT_WE_DO = [
       'Each category page explains what the work typically involves, what the common options are, and which questions are worth asking before you commit to anything.',
   },
   {
-    icon: MapPin,
-    title: 'Check local availability',
+    icon: Phone,
+    title: 'Put the right line one tap away',
     body:
-      'Our ZIP code checker compares your location against coverage records we maintain per service, so you know whether providers are listed nearby.',
+      'Every service shows the phone line assigned to that trade, with an alternate beside it, so you can call directly from the page.',
   },
   {
     icon: Users,
     title: 'Connect you with independent providers',
     body:
-      'When coverage is confirmed, we show the provider contact options they have authorized us to publish. If we have none, we tell you plainly.',
+      'Calls are answered by independent participating providers. When a category has no published line yet, we say so plainly instead of guessing.',
   },
 ]
 
@@ -44,13 +44,13 @@ const COMMITMENTS = [
     icon: Eye,
     title: 'Transparency first',
     body:
-      'We label what we know, what we do not know, and when coverage is unverified. We never describe a provider as available when our records do not confirm it.',
+      'We label what we know and what we do not. We do not display a phone number we cannot stand behind, and we do not describe a provider as available when our records do not confirm it.',
   },
   {
     icon: ShieldCheck,
     title: 'Privacy by default',
     body:
-      'We do not sell personal information. Your ZIP code is used to answer a coverage question, not to build an advertising profile. See our Privacy Policy for the detail.',
+      'We do not sell personal information. This website does not ask for your ZIP code or track your location — there is nothing to build an advertising profile from. See our Privacy Policy for the detail.',
   },
   {
     icon: Scale,
@@ -67,12 +67,12 @@ const COMMITMENTS = [
 ]
 
 const About = () => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
 
   useSeo({
     title: 'About Safe Home Network',
     description:
-      'Learn how Safe Home Network helps homeowners explore home service categories, check availability by ZIP code, and connect with independent local providers.',
+      'Learn how Safe Home Network helps homeowners explore home service categories and call the line assigned to the trade they need, connecting them with independent local providers.',
     path: '/about',
     jsonLd: breadcrumbJsonLd([
       { name: 'Home', path: '/' },
@@ -111,8 +111,8 @@ const About = () => {
                 </p>
                 <p>
                   So we write the explanatory part ourselves — the needs, the options, the trade-offs and the
-                  questions to ask — and we maintain coverage records for the part we can actually verify:
-                  whether a participating provider is listed in a given ZIP code for a given service.
+                  questions to ask — and we keep the phone side deliberately simple: one published line per
+                  trade, stored centrally, with an alternate number when the first is busy.
                 </p>
                 <p>
                   Providers who participate are independent businesses. They set their own pricing, schedule
@@ -132,9 +132,9 @@ const About = () => {
                   {[
                     ['Business model', 'Home services directory and referral platform'],
                     ['Service categories', `${SERVICES.length} categories across repairs, systems and remodels`],
-                    ['Cost to homeowners', 'Free to browse and check availability'],
+                    ['Cost to homeowners', 'Free to browse and call a service line'],
                     ['Work performed by', 'Independent participating providers'],
-                    ['Coverage verification', 'Per service, per ZIP code'],
+                    ['Phone lines', 'One primary line per service, plus an alternate'],
                   ].map(([term, value]) => (
                     <div key={term} className="flex items-start justify-between gap-4 border-b border-line pb-3 last:border-0 last:pb-0">
                       <dt className="text-muted">{term}</dt>
@@ -143,8 +143,8 @@ const About = () => {
                   ))}
                 </dl>
                 <button type="button" onClick={() => open()} className="btn-primary btn-sm mt-5 w-full">
-                  <MapPin className="h-4 w-4" aria-hidden="true" />
-                  Check availability in your area
+                  <Phone className="h-4 w-4" aria-hidden="true" />
+                  Call Now
                 </button>
               </div>
 
@@ -229,9 +229,9 @@ const About = () => {
       </section>
 
       <CtaBand
-        headline="Start with your ZIP code"
-        description="See whether providers are listed for the service you need — or browse every category first."
-        primaryLabel="Check your area"
+        headline="Start with the service you need"
+        description="Pick the trade and call the line assigned to it — or browse every category first."
+        primaryLabel="Call Now"
         secondaryLabel="Browse services"
         secondaryTo="/services"
       />

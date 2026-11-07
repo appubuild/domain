@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, MapPin } from 'lucide-react'
+import { ArrowRight, Phone } from 'lucide-react'
 import { servicePath } from '@/config/services'
 import { useId } from 'react'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { useCallSheet } from '@/components/calls/CallContext'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { SERVICE_CATEGORIES } from '@/config/services'
+import { hasCallDirectory } from '@/lib/phoneDirectory'
 import type { Service } from '@/types'
 
 interface ServiceCardProps {
@@ -14,7 +15,7 @@ interface ServiceCardProps {
 }
 
 export const ServiceCard = ({ service, compact = false }: ServiceCardProps) => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
   const descriptionId = useId()
   const category = SERVICE_CATEGORIES.find((item) => item.id === service.category)
 
@@ -60,14 +61,20 @@ export const ServiceCard = ({ service, compact = false }: ServiceCardProps) => {
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
           </Link>
           {!compact ? (
-            <button
-              type="button"
-              onClick={() => open({ serviceSlug: service.slug })}
-              className="btn-secondary btn-sm"
-            >
-              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-              Check availability
-            </button>
+            hasCallDirectory(service.slug) ? (
+              <button
+                type="button"
+                onClick={() => open({ serviceSlug: service.slug })}
+                className="btn-primary btn-sm"
+              >
+                <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                Call Now
+              </button>
+            ) : (
+              <Link to="/contact" className="btn-secondary btn-sm">
+                Ask about this
+              </Link>
+            )
           ) : null}
         </div>
       </div>

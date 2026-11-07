@@ -1,5 +1,5 @@
-import { ArrowRight, MapPin } from 'lucide-react'
-import { useAvailability } from '@/components/availability/AvailabilityContext'
+import { ArrowRight, Phone } from 'lucide-react'
+import { useCallSheet } from '@/components/calls/CallContext'
 import { Link } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -14,13 +14,13 @@ interface CtaBandProps {
 
 export const CtaBand = ({
   headline = 'Ready to Find Help for Your Home?',
-  description = 'Explore available services and discover provider options for your area.',
-  primaryLabel = 'Check Your Area',
+  description = 'Choose the service you need and call the line assigned to that trade.',
+  primaryLabel = 'Call Now',
   secondaryLabel = 'How it works',
   secondaryTo = '/how-it-works',
   serviceSlug,
 }: CtaBandProps) => {
-  const { open } = useAvailability()
+  const { open } = useCallSheet()
 
   return (
     <section className="section">
@@ -57,7 +57,7 @@ export const CtaBand = ({
                 onClick={() => open({ serviceSlug })}
                 className="btn-white"
               >
-                <MapPin className="h-4 w-4" aria-hidden="true" />
+                <Phone className="h-4 w-4" aria-hidden="true" />
                 {primaryLabel}
               </button>
               <Link
@@ -69,8 +69,8 @@ export const CtaBand = ({
               </Link>
             </div>
             <p className="mt-5 text-xs leading-5 text-white/70">
-              Availability depends on participating providers and their coverage areas. Checking is free and
-              does not commit you to anything.
+              Calls are answered by independent participating providers. Review the service page first if you
+              would like to understand the work before you call.
             </p>
           </div>
         </div>

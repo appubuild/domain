@@ -36,8 +36,8 @@ const Accessibility = () => {
     >
       <h2 id="commitment">1. Our commitment</h2>
       <p>
-        We want every visitor to be able to research home services and check availability in their area,
-        regardless of ability or the device they use. Accessibility is treated as part of the build process
+        We want every visitor to be able to research home services and reach a service line for the trade
+        they need, regardless of ability or the device they use. Accessibility is treated as part of the build process
         rather than an afterthought: semantic HTML, keyboard operability and readable contrast are
         requirements on this site, not optional extras.
       </p>
@@ -78,8 +78,9 @@ const Accessibility = () => {
           not meet the same standard until it is reviewed.
         </li>
         <li>
-          The ZIP code checker requires JavaScript. Visitors who cannot use JavaScript can still reach our team
-          by email at <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a> to check availability.
+          Choosing a service and revealing its call buttons requires JavaScript. The service pages also list
+          the same primary and alternate numbers as text, and visitors who cannot use JavaScript can reach our
+          team by email at <a href={`mailto:${SITE.contact.email}`}>{SITE.contact.email}</a>.
         </li>
         <li>
           Map-style or third-party embedded tools, if added later, may have their own accessibility
@@ -107,7 +108,7 @@ const Accessibility = () => {
       <h2 id="ongoing">8. Ongoing evaluation</h2>
       <p>
         We review accessibility when adding features, run periodic automated audits, and re-test key flows
-        such as the availability checker and mobile navigation after changes. This statement will be updated
+        such as the service call buttons and mobile navigation after changes. This statement will be updated
         as the site evolves.
       </p>
     </LegalPage>

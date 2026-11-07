@@ -68,15 +68,15 @@ const PrivacyPolicy = () => {
       <ul>
         <li>Browser and device information, such as browser type, operating system and screen size.</li>
         <li>Approximate location derived from IP address, at the city or regional level.</li>
-        <li>Pages viewed, referring URLs, and interactions with site features such as the availability checker.</li>
+        <li>Pages viewed, referring URLs, and interactions with service call buttons.</li>
         <li>Standard server log information, including IP address and timestamps.</li>
       </ul>
 
-      <h2 id="zip-code">3. ZIP code information</h2>
+      <h2 id="zip-code">3. Location information</h2>
       <p>
-        The availability checker asks for a five-digit US ZIP code. We use that ZIP code to compare your
-        location against our service coverage records for the category you selected. Coverage lookups are
-        performed to answer your request in that session.
+        This website does not ask for a ZIP code and does not use a coverage lookup. Choosing a service
+        displays the phone line assigned to that trade, and the page contains ordinary telephone links that
+        open your device’s calling app. We do not collect your location to provide that feature.
       </p>
       <p>
         A ZIP code identifies an area, not a household. We do not use ZIP code entries to attempt to identify
@@ -111,8 +111,8 @@ const PrivacyPolicy = () => {
         </li>
         <li>
           <strong>Analytics</strong> — only where you have consented, we may use analytics to understand which
-          pages are visited and how the availability checker is used, so we can improve the site. Analytics
-          data is aggregated and is not used to identify individuals.
+          pages are visited and which service pages and call buttons are used, so we can improve the site.
+          Analytics data is aggregated and is not used to identify individuals.
         </li>
       </ul>
       <p>
