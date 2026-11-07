@@ -22,11 +22,23 @@
     ],
     "intent": "Commercial investigation",
     "audience": "Homeowners with a cracked or settling driveway who need to understand what a replacement involves before getting quotes.",
-    "cta": { "label": "See concrete and paving options", "href": "/services/concrete-paving" },
+    "cta": {
+      "label": "See concrete and paving options",
+      "href": "/services/concrete-paving"
+    },
     "internalLinks": [
-      { "label": "Concrete repair or replace?", "href": "/blog/concrete-repair-vs-replace" },
-      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" },
-      { "label": "Questions to ask before hiring a home service professional", "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional" }
+      {
+        "label": "Concrete repair or replace?",
+        "href": "/blog/concrete-repair-vs-replace"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      },
+      {
+        "label": "Questions to ask before hiring a home service professional",
+        "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional"
+      }
     ],
     "image": "/images/blog/driveway-replacement-cost.svg",
     "imageAlt": "Illustration of a concrete driveway slab with a coin and a ruler",
@@ -35,7 +47,12 @@
     "excerpt": "Two quotes for the same driveway can differ by thousands because one includes six inches of compacted base and the other includes four. Here is what you are actually buying.",
     "seoSummary": "Cost-driver breakdown for driveway replacement with a base-and-joint quality checklist.",
     "author": "Safe Home Network Editorial",
-    "tags": ["concrete", "driveways", "budget", "contractors"],
+    "tags": [
+      "concrete",
+      "driveways",
+      "budget",
+      "contractors"
+    ],
     "visual": "Flat vector medallion: a perspective concrete slab with a coin chip, a ruler chip and a calendar chip on a cream background.",
     "sections": [
       {
@@ -59,12 +76,32 @@
       {
         "h2": "The four things that decide whether it lasts",
         "table": {
-          "head": ["Detail", "Good practice", "What failing looks like"],
+          "head": [
+            "Detail",
+            "Good practice",
+            "What failing looks like"
+          ],
           "rows": [
-            ["Base depth", "4–6 inches compacted crushed stone", "Cracks and settlement within two winters"],
-            ["Drainage", "Slope away from the house and garage, no ponding", "Standing water and heaving at the edges"],
-            ["Joint spacing", "Control joints every 8–10 feet, cut to depth", "Random cracking across the slab"],
-            ["Thickness", "4 inches minimum, thicker where loaded", "Spider cracks and edge break-up"]
+            [
+              "Base depth",
+              "4–6 inches compacted crushed stone",
+              "Cracks and settlement within two winters"
+            ],
+            [
+              "Drainage",
+              "Slope away from the house and garage, no ponding",
+              "Standing water and heaving at the edges"
+            ],
+            [
+              "Joint spacing",
+              "Control joints every 8–10 feet, cut to depth",
+              "Random cracking across the slab"
+            ],
+            [
+              "Thickness",
+              "4 inches minimum, thicker where loaded",
+              "Spider cracks and edge break-up"
+            ]
           ]
         },
         "note": "Ask how the subgrade is prepared and whether the base is compacted in lifts. A contractor who cannot explain compaction in layers is planning to pour on whatever is there."
@@ -145,10 +182,19 @@
     ],
     "intent": "Commercial investigation",
     "audience": "Homeowners with cracked, settled or spalling concrete who want to know which failures are cosmetic.",
-    "cta": { "label": "See concrete and paving options", "href": "/services/concrete-paving" },
+    "cta": {
+      "label": "See concrete and paving options",
+      "href": "/services/concrete-paving"
+    },
     "internalLinks": [
-      { "label": "Driveway replacement cost: what you are paying for", "href": "/blog/driveway-replacement-cost" },
-      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" }
+      {
+        "label": "Driveway replacement cost: what you are paying for",
+        "href": "/blog/driveway-replacement-cost"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
     ],
     "image": "/images/blog/concrete-repair-vs-replace.svg",
     "imageAlt": "Illustration of a cracked concrete slab with a wrench and a coin",
@@ -157,7 +203,12 @@
     "excerpt": "Not every crack means a new driveway. The deciding question is whether the slab is still supported — and that is something you can check with a golf ball and a straight edge.",
     "seoSummary": "Diagnostic framework for cracked and settled concrete with repair-option comparison.",
     "author": "Safe Home Network Editorial",
-    "tags": ["concrete", "repair", "driveways", "maintenance"],
+    "tags": [
+      "concrete",
+      "repair",
+      "driveways",
+      "maintenance"
+    ],
     "visual": "Flat vector medallion: a concrete slab with a zigzag crack, a wrench chip and a coin chip on a sand background.",
     "sections": [
       {
@@ -169,13 +220,37 @@
       {
         "h2": "Failure one: cracking",
         "table": {
-          "head": ["What you see", "Likely cause", "Verdict"],
+          "head": [
+            "What you see",
+            "Likely cause",
+            "Verdict"
+          ],
           "rows": [
-            ["Hairline cracks under 1 mm", "Normal curing shrinkage", "Monitor; seal if water gets in"],
-            ["Straight cracks at regular intervals", "Control joints doing their job", "Normal, not a defect"],
-            ["Cracks wider than 3 mm", "Base movement or missing joints", "Repair the cause before sealing"],
-            ["Spider-web pattern", "Shallow surface shrinkage or over-finishing", "Cosmetic unless spalling follows"],
-            ["Cracks following a tree line", "Roots and soil moisture change", "Investigate the subgrade"]
+            [
+              "Hairline cracks under 1 mm",
+              "Normal curing shrinkage",
+              "Monitor; seal if water gets in"
+            ],
+            [
+              "Straight cracks at regular intervals",
+              "Control joints doing their job",
+              "Normal, not a defect"
+            ],
+            [
+              "Cracks wider than 3 mm",
+              "Base movement or missing joints",
+              "Repair the cause before sealing"
+            ],
+            [
+              "Spider-web pattern",
+              "Shallow surface shrinkage or over-finishing",
+              "Cosmetic unless spalling follows"
+            ],
+            [
+              "Cracks following a tree line",
+              "Roots and soil moisture change",
+              "Investigate the subgrade"
+            ]
           ]
         }
       },
@@ -212,6 +287,17 @@
           "Spalling across most of the surface with exposed aggregate.",
           "A slab that ponds water against the house or the garage.",
           "A base that has failed, which cannot be fixed without removing the slab anyway."
+        ]
+      },
+      {
+        "h2": "What a repair quote should include",
+        "ordered": [
+          "The method: crack injection, overlay, lifting, or partial replacement.",
+          "The preparation: crack cleaning, routing, and any concrete removal.",
+          "The material and its intended service life in years.",
+          "Whether the underlying drainage or base problem is being addressed.",
+          "A workmanship warranty period for the repair itself.",
+          "A clear statement of what happens if the repair fails in the same place."
         ]
       },
       {

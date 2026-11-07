@@ -486,6 +486,9 @@ SELECT 'warning-signs-your-home-may-have-electrical-problems', 'Warning Signs Yo
 <h2>Why these warnings matter more than they seem</h2>
 <p>The US Fire Administration attributes a substantial share of home fires to electrical distribution and lighting equipment, with arcing and loose connections among the common mechanisms. The pattern is consistent: a small, ignorable symptom precedes most of them.</p>
 <p>Adding arc-fault circuit interrupters (AFCIs) and ground-fault protection where the code requires them is the structural fix. Smoke alarms that actually work are the backstop. Neither substitutes for the other.</p>
+<h2>What to do tonight, before anyone arrives</h2>
+<p>If a sign appears in the evening and nothing is sparking, the practical steps are small: stop using the affected circuit, unplug what you can reach, and move anything flammable away from a warm outlet or panel. Do not open the panel cover to look inside.</p>
+<p>Write down what you noticed and when. An electrician diagnosing an intermittent fault will get much further with "the bathroom light flickered for ten minutes after the dryer started" than with a general description of the problem.</p>
 <h2>What to do while you wait for the electrician</h2>
 <ol><li>Stop using the affected circuit; unplug appliances on it.</li><li>Switch the circuit off at the breaker if you can reach the panel safely.</li><li>Do not open outlets, switches or the panel cover.</li><li>Keep anything flammable away from the area and make sure a smoke alarm is working nearby.</li><li>If you see smoke, flames or smell burning and cannot isolate the circuit, leave the building and call the fire service.</li></ol>
 <h2>Frequently asked questions</h2>
@@ -532,7 +535,7 @@ INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'target_audience', 'Homeowners noticing odd electrical behaviour and unsure whether it is normal or urgent.' FROM blog_posts b WHERE b.slug = 'warning-signs-your-home-may-have-electrical-problems'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
-SELECT b.id, 'article_length', '772 words' FROM blog_posts b WHERE b.slug = 'warning-signs-your-home-may-have-electrical-problems'
+SELECT b.id, 'article_length', '862 words' FROM blog_posts b WHERE b.slug = 'warning-signs-your-home-may-have-electrical-problems'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'cta_target', 'See electrical service options' FROM blog_posts b WHERE b.slug = 'warning-signs-your-home-may-have-electrical-problems'
@@ -1648,6 +1651,9 @@ SELECT 'rodent-proofing-your-home', 'Rodent Proofing: Keeping Mice and Rats Out 
 <blockquote><p>Never seal a gap you have not confirmed is empty. Sealing an active run traps rodents inside, and the smell is a problem you will not forget.</p></blockquote>
 <h2>Clearing what is already inside</h2>
 <ol><li>Set traps along walls and in corners — rodents travel with one side against a surface.</li><li>Use snap traps or enclosed traps rather than glue boards, which are indiscriminate and inhumane.</li><li>Check traps daily; a dead rodent left for days attracts insects.</li><li>Wear gloves and a mask when cleaning droppings, and disinfect the area — hantavirus is a real risk in some regions.</li><li>Keep baits away from pets and children, and prefer professional placement for outdoor stations.</li></ol>
+<h2>When to call a professional</h2>
+<p>A single mouse caught within a week of first hearing it is a homeowner job. Call a professional when droppings appear in food preparation areas, when activity continues after sealing, when the building has a crawlspace or attic you cannot inspect safely, or when the species matters — rats, squirrels and raccoons need different methods and, in some states, a licence.</p>
+<p>Professional exclusion usually costs more than traps but less than a re-infestation cycle, and it comes with a documented seal of the building envelope, which is the part that actually solves the problem.</p>
 <h2>The prevention habits that keep them out</h2>
 <p>Rodents need food, water and shelter. Store dry goods in metal or thick plastic containers, take bins out at night, fix dripping outdoor taps and keep pet food indoors. Clear ivy and shrubs back from the walls, and keep firewood off the ground and away from the house.</p>
 <p>A clean, sealed, dry house with no accessible food is a house rodents leave alone — not because they cannot get in, but because there is nothing worth staying for.</p>
@@ -1695,7 +1701,7 @@ INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'target_audience', 'Homeowners hearing noises in walls or finding droppings, who want to stop the next rodent rather than just remove this one.' FROM blog_posts b WHERE b.slug = 'rodent-proofing-your-home'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
-SELECT b.id, 'article_length', '790 words' FROM blog_posts b WHERE b.slug = 'rodent-proofing-your-home'
+SELECT b.id, 'article_length', '889 words' FROM blog_posts b WHERE b.slug = 'rodent-proofing-your-home'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'cta_target', 'See pest control options' FROM blog_posts b WHERE b.slug = 'rodent-proofing-your-home'
@@ -1979,6 +1985,9 @@ SELECT 'small-bathroom-remodel-that-adds-value', 'Small Bathroom Remodels That A
 <h2>Where to save, where not to</h2>
 <p>Save on tile you will not touch — a large-format floor tile in a neutral tone looks expensive and costs less than mosaic. Save on the vanity cabinet if the countertop and faucet are good. Do not save on waterproofing, ventilation or the shower valve: those are the items whose failure means rebuilding the room.</p>
 <p>A cheap faucet on a good vanity is a visible compromise; a good faucet on a modest vanity reads as quality. Spend where hands and eyes land.</p>
+<h2>Six choices that make a small bathroom feel smaller</h2>
+<ul><li>A dark floor with dark walls and no contrast — the room reads as a box.</li><li>A large mirror that stops short of the ceiling, chopping the wall in half.</li><li>A shower curtain in a heavy print instead of a clear screen or a light textile.</li><li>Deep cabinets that push the vanity out into the walking space.</li><li>A single central ceiling light, which leaves every corner in shadow.</li><li>Busy mosaic on every surface, which removes the calm a small room needs.</li></ul>
+<blockquote><p>If you change only two things in a compact bathroom, change the lighting and the mirror. They cost the least and change the perception of the room the most.</p></blockquote>
 <h2>What actually returns at resale</h2>
 <p>Bathrooms matter to buyers mostly as a hygiene and condition signal: a clean, dry, bright bathroom suggests a well-kept house. A mid-range remodel of a small bathroom usually returns a solid share of its cost; a high-end spa bathroom in a modest house rarely does.</p>
 <p>The consistently rewarded items are a working fan, no visible mold or water staining, a modern faucet and shower head, good light and adequate storage. None of those require a gut renovation.</p>
@@ -2026,7 +2035,7 @@ INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'target_audience', 'Homeowners with a compact bathroom or powder room who want the changes that improve daily use and resale without a full gut.' FROM blog_posts b WHERE b.slug = 'small-bathroom-remodel-that-adds-value'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
-SELECT b.id, 'article_length', '748 words' FROM blog_posts b WHERE b.slug = 'small-bathroom-remodel-that-adds-value'
+SELECT b.id, 'article_length', '867 words' FROM blog_posts b WHERE b.slug = 'small-bathroom-remodel-that-adds-value'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'cta_target', 'See bathroom remodeling options' FROM blog_posts b WHERE b.slug = 'small-bathroom-remodel-that-adds-value'
@@ -2140,6 +2149,9 @@ SELECT 'energy-efficient-windows-guide', 'Energy Efficient Windows: What the Rat
 <h2>Where efficiency upgrades stop paying back</h2>
 <p>Windows are a small part of a home''s heat loss compared with attic insulation, air sealing and duct leakage. If your goal is a lower energy bill, spend the first dollars on those — they are cheaper per unit of saving and often far more effective.</p>
 <p>The exception is comfort: if a room is unusable in winter because of cold glass and drafts, better windows change how the house feels, which is a legitimate reason even when the payback is long.</p>
+<h2>Installation quality beats the specification</h2>
+<p>A window rated at 0.22 U-factor that is installed with compressed insulation and no air sealing will leak more than a 0.30 unit installed properly. The rough opening, the flashing at the head, the sill pan and the interior air barrier are where performance is actually delivered.</p>
+<p>Ask any installer to describe their air-sealing sequence, and ask whether they use a blower door test on the finished job. The answer tells you more about the window you will actually live with than any label.</p>
 <h2>Specifying without being sold to</h2>
 <ol><li>Ask for the full ratings label, not just the ENERGY STAR logo.</li><li>Specify U-factor, SHGC and VT in the contract so substitutions can be rejected.</li><li>Confirm the spacer type and the gas fill in writing.</li><li>Check the warranty covers seal failure and for how long.</li><li>Confirm installation details — flashing and air sealing matter more than the numbers on the sticker.</li></ol>
 <h2>Frequently asked questions</h2>
@@ -2186,7 +2198,7 @@ INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'target_audience', 'Homeowners specifying new windows who want to understand the labels before a salesperson explains them.' FROM blog_posts b WHERE b.slug = 'energy-efficient-windows-guide'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
-SELECT b.id, 'article_length', '751 words' FROM blog_posts b WHERE b.slug = 'energy-efficient-windows-guide'
+SELECT b.id, 'article_length', '840 words' FROM blog_posts b WHERE b.slug = 'energy-efficient-windows-guide'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'cta_target', 'See window installation options' FROM blog_posts b WHERE b.slug = 'energy-efficient-windows-guide'
@@ -2385,6 +2397,8 @@ SELECT 'concrete-repair-vs-replace', 'Concrete Repair or Replace? How to Judge a
 <ul><li>Isolated cracks cleaned, filled and sealed with a flexible sealant.</li><li>A settled but structurally sound slab lifted by foam or slurry injection.</li><li>Localised spalling patched with a polymer-modified repair mortar.</li><li>A sound slab given a resurfacing overlay for appearance.</li><li>Joint and edge repairs where the failure is at a control joint.</li></ul>
 <h2>When replacement is the honest answer</h2>
 <ul><li>Cracking through the full thickness in multiple directions — the slab has broken into pieces.</li><li>Settlement across a large area or repeated lifting in the same spot.</li><li>Spalling across most of the surface with exposed aggregate.</li><li>A slab that ponds water against the house or the garage.</li><li>A base that has failed, which cannot be fixed without removing the slab anyway.</li></ul>
+<h2>What a repair quote should include</h2>
+<ol><li>The method: crack injection, overlay, lifting, or partial replacement.</li><li>The preparation: crack cleaning, routing, and any concrete removal.</li><li>The material and its intended service life in years.</li><li>Whether the underlying drainage or base problem is being addressed.</li><li>A workmanship warranty period for the repair itself.</li><li>A clear statement of what happens if the repair fails in the same place.</li></ol>
 <h2>The economics</h2>
 <p>As a rule, if the repair cost approaches a third of replacement and the slab is already twenty years old, replacement is the better investment. Lifting or sealing a young slab is almost always worth doing.</p>
 <p>Resurfacing deserves a warning: an overlay on a slab that is still moving will crack again within a season. It is a finish, not a structural fix, and it should only go on a slab whose base is stable.</p>
@@ -2432,7 +2446,7 @@ INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'target_audience', 'Homeowners with cracked, settled or spalling concrete who want to know which failures are cosmetic.' FROM blog_posts b WHERE b.slug = 'concrete-repair-vs-replace'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
-SELECT b.id, 'article_length', '754 words' FROM blog_posts b WHERE b.slug = 'concrete-repair-vs-replace'
+SELECT b.id, 'article_length', '819 words' FROM blog_posts b WHERE b.slug = 'concrete-repair-vs-replace'
 ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value);
 INSERT INTO blog_post_metadata (post_id, meta_key, meta_value)
 SELECT b.id, 'cta_target', 'See concrete and paving options' FROM blog_posts b WHERE b.slug = 'concrete-repair-vs-replace'

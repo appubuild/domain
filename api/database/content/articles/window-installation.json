@@ -22,11 +22,23 @@
     ],
     "intent": "Commercial investigation",
     "audience": "Homeowners with drafty, foggy or difficult windows deciding between repair and replacement.",
-    "cta": { "label": "See window installation options", "href": "/services/window-installation" },
+    "cta": {
+      "label": "See window installation options",
+      "href": "/services/window-installation"
+    },
     "internalLinks": [
-      { "label": "Energy efficient windows: what the ratings mean", "href": "/blog/energy-efficient-windows-guide" },
-      { "label": "Front door replacement guide", "href": "/blog/front-door-replacement-guide" },
-      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" }
+      {
+        "label": "Energy efficient windows: what the ratings mean",
+        "href": "/blog/energy-efficient-windows-guide"
+      },
+      {
+        "label": "Front door replacement guide",
+        "href": "/blog/front-door-replacement-guide"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
     ],
     "image": "/images/blog/window-replacement-cost-and-signs.svg",
     "imageAlt": "Illustration of a four-pane window with a coin and a measuring ruler",
@@ -35,7 +47,12 @@
     "excerpt": "Most windows are replaced years before they needed to be — and a few are replaced years after they should have been. The difference is knowing which failure you are looking at.",
     "seoSummary": "Repair-versus-replace guide for windows with cost drivers and installation quality checks.",
     "author": "Safe Home Network Editorial",
-    "tags": ["windows", "replacement", "energy", "budget"],
+    "tags": [
+      "windows",
+      "replacement",
+      "energy",
+      "budget"
+    ],
     "visual": "Flat vector medallion: a four-pane window with a coin chip, a ruler chip and a check chip on a sand background.",
     "sections": [
       {
@@ -57,14 +74,42 @@
       {
         "h2": "What is repairable",
         "table": {
-          "head": ["Problem", "Repairable?", "Typical fix"],
+          "head": [
+            "Problem",
+            "Repairable?",
+            "Typical fix"
+          ],
           "rows": [
-            ["Failed double-glazing seal", "Sometimes", "Replace the glass unit, keep the frame"],
-            ["Worn weatherstrip", "Yes", "New gaskets and sweeps"],
-            ["Stiff or drafty sash", "Yes", "Adjust hinges, replace balances"],
-            ["Painted-shut window", "Yes", "Release and re-finish"],
-            ["Soft or rotten frame", "Rarely", "Replacement, because the structure has gone"],
-            ["Failed flashing at the head", "Yes", "Re-flash and seal — this is a wall job, not a window job"]
+            [
+              "Failed double-glazing seal",
+              "Sometimes",
+              "Replace the glass unit, keep the frame"
+            ],
+            [
+              "Worn weatherstrip",
+              "Yes",
+              "New gaskets and sweeps"
+            ],
+            [
+              "Stiff or drafty sash",
+              "Yes",
+              "Adjust hinges, replace balances"
+            ],
+            [
+              "Painted-shut window",
+              "Yes",
+              "Release and re-finish"
+            ],
+            [
+              "Soft or rotten frame",
+              "Rarely",
+              "Replacement, because the structure has gone"
+            ],
+            [
+              "Failed flashing at the head",
+              "Yes",
+              "Re-flash and seal — this is a wall job, not a window job"
+            ]
           ]
         },
         "note": "A window that fogs between the panes has a failed seal, but the frame may be perfectly sound. Replacing just the glass unit is often a fraction of the cost of a full replacement — ask for that option explicitly."
@@ -149,10 +194,19 @@
     ],
     "intent": "Informational",
     "audience": "Homeowners specifying new windows who want to understand the labels before a salesperson explains them.",
-    "cta": { "label": "See window installation options", "href": "/services/window-installation" },
+    "cta": {
+      "label": "See window installation options",
+      "href": "/services/window-installation"
+    },
     "internalLinks": [
-      { "label": "Window replacement: cost and the signs it is time", "href": "/blog/window-replacement-cost-and-signs" },
-      { "label": "A yearly furnace maintenance checklist", "href": "/blog/furnace-maintenance-checklist" }
+      {
+        "label": "Window replacement: cost and the signs it is time",
+        "href": "/blog/window-replacement-cost-and-signs"
+      },
+      {
+        "label": "A yearly furnace maintenance checklist",
+        "href": "/blog/furnace-maintenance-checklist"
+      }
     ],
     "image": "/images/blog/energy-efficient-windows-guide.svg",
     "imageAlt": "Illustration of a window with a sun and a leaf, representing energy efficiency",
@@ -161,7 +215,12 @@
     "excerpt": "The sticker on a window has four numbers that matter and one that sells. Here is how to read them, and why the right specification in Miami is the wrong one in Minneapolis.",
     "seoSummary": "Plain-English guide to window energy ratings and climate-specific specification choices.",
     "author": "Safe Home Network Editorial",
-    "tags": ["windows", "energy", "efficiency", "specification"],
+    "tags": [
+      "windows",
+      "energy",
+      "efficiency",
+      "specification"
+    ],
     "visual": "Flat vector medallion: a four-pane window with a sun chip, a leaf chip and a gauge chip on a cream background.",
     "sections": [
       {
@@ -173,12 +232,32 @@
       {
         "h2": "The four numbers",
         "table": {
-          "head": ["Rating", "What it measures", "Better is"],
+          "head": [
+            "Rating",
+            "What it measures",
+            "Better is"
+          ],
           "rows": [
-            ["U-factor", "Heat flow through the whole window assembly", "Lower (0.30 or below is good; 0.20 is excellent)"],
-            ["SHGC", "Fraction of solar heat admitted", "Depends on climate — lower in hot climates, higher in cold"],
-            ["VT (visible transmittance)", "How much daylight comes through", "Higher for brighter rooms"],
-            ["Air leakage (AL)", "Air infiltration at a standard pressure difference", "Lower (≤0.3 cfm/ft²)"]
+            [
+              "U-factor",
+              "Heat flow through the whole window assembly",
+              "Lower (0.30 or below is good; 0.20 is excellent)"
+            ],
+            [
+              "SHGC",
+              "Fraction of solar heat admitted",
+              "Depends on climate — lower in hot climates, higher in cold"
+            ],
+            [
+              "VT (visible transmittance)",
+              "How much daylight comes through",
+              "Higher for brighter rooms"
+            ],
+            [
+              "Air leakage (AL)",
+              "Air infiltration at a standard pressure difference",
+              "Lower (≤0.3 cfm/ft²)"
+            ]
           ]
         },
         "paras": [
@@ -208,6 +287,13 @@
         "paras": [
           "Windows are a small part of a home's heat loss compared with attic insulation, air sealing and duct leakage. If your goal is a lower energy bill, spend the first dollars on those — they are cheaper per unit of saving and often far more effective.",
           "The exception is comfort: if a room is unusable in winter because of cold glass and drafts, better windows change how the house feels, which is a legitimate reason even when the payback is long."
+        ]
+      },
+      {
+        "h2": "Installation quality beats the specification",
+        "paras": [
+          "A window rated at 0.22 U-factor that is installed with compressed insulation and no air sealing will leak more than a 0.30 unit installed properly. The rough opening, the flashing at the head, the sill pan and the interior air barrier are where performance is actually delivered.",
+          "Ask any installer to describe their air-sealing sequence, and ask whether they use a blower door test on the finished job. The answer tells you more about the window you will actually live with than any label."
         ]
       },
       {

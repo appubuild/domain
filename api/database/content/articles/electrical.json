@@ -95,6 +95,13 @@
         ]
       },
       {
+        "h2": "What to do tonight, before anyone arrives",
+        "paras": [
+          "If a sign appears in the evening and nothing is sparking, the practical steps are small: stop using the affected circuit, unplug what you can reach, and move anything flammable away from a warm outlet or panel. Do not open the panel cover to look inside.",
+          "Write down what you noticed and when. An electrician diagnosing an intermittent fault will get much further with \"the bathroom light flickered for ten minutes after the dryer started\" than with a general description of the problem."
+        ]
+      },
+      {
         "h2": "What to do while you wait for the electrician",
         "ordered": [
           "Stop using the affected circuit; unplug appliances on it.",

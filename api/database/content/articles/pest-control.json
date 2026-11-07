@@ -22,10 +22,19 @@
     ],
     "intent": "Informational",
     "audience": "Homeowners in termite-prone regions who want to check their property before damage becomes structural.",
-    "cta": { "label": "See pest control options", "href": "/services/pest-control" },
+    "cta": {
+      "label": "See pest control options",
+      "href": "/services/pest-control"
+    },
     "internalLinks": [
-      { "label": "Rodent proofing: keeping mice out of your home", "href": "/blog/rodent-proofing-your-home" },
-      { "label": "The first 24 hours after water damage", "href": "/blog/first-24-hours-after-water-damage" }
+      {
+        "label": "Rodent proofing: keeping mice out of your home",
+        "href": "/blog/rodent-proofing-your-home"
+      },
+      {
+        "label": "The first 24 hours after water damage",
+        "href": "/blog/first-24-hours-after-water-damage"
+      }
     ],
     "image": "/images/blog/termite-warning-signs.svg",
     "imageAlt": "Illustration of a termite with a house and a clipboard inspection report",
@@ -34,7 +43,12 @@
     "excerpt": "Termites are rarely seen. They leave evidence instead — tunnels, wings, sagging trim and paint that bubbles for no reason. Here is where to look and when to call.",
     "seoSummary": "Field guide to subterranean and drywood termite evidence with an inspection checklist.",
     "author": "Safe Home Network Editorial",
-    "tags": ["pest control", "termites", "inspection", "prevention"],
+    "tags": [
+      "pest control",
+      "termites",
+      "inspection",
+      "prevention"
+    ],
     "visual": "Flat vector medallion: a termite with a house chip and an inspection document chip on a cream background.",
     "sections": [
       {
@@ -62,14 +76,35 @@
           "Pay attention to the damp places. Termites need moisture, so leaking gutters, downspouts discharging against the foundation and sprinklers hitting the siding are all invitations."
         ],
         "table": {
-          "head": ["Area", "What you are looking for"],
+          "head": [
+            "Area",
+            "What you are looking for"
+          ],
           "rows": [
-            ["Foundation wall", "Mud tubes, especially in corners and behind planting"],
-            ["Crawlspace", "Tubes on piers, frass, damp wood, standing water"],
-            ["Sill plate and rim joist", "Hollow sound, soft timber, tubes entering the framing"],
-            ["Deck and porch posts", "Wood-to-soil contact without a barrier"],
-            ["Bathroom and laundry walls", "Soft baseboards, loose tiles, persistent damp"],
-            ["Attic (drywood termites)", "Frass piles, galleries in rafters, discarded wings"]
+            [
+              "Foundation wall",
+              "Mud tubes, especially in corners and behind planting"
+            ],
+            [
+              "Crawlspace",
+              "Tubes on piers, frass, damp wood, standing water"
+            ],
+            [
+              "Sill plate and rim joist",
+              "Hollow sound, soft timber, tubes entering the framing"
+            ],
+            [
+              "Deck and porch posts",
+              "Wood-to-soil contact without a barrier"
+            ],
+            [
+              "Bathroom and laundry walls",
+              "Soft baseboards, loose tiles, persistent damp"
+            ],
+            [
+              "Attic (drywood termites)",
+              "Frass piles, galleries in rafters, discarded wings"
+            ]
           ]
         }
       },
@@ -153,10 +188,19 @@
     ],
     "intent": "Informational",
     "audience": "Homeowners hearing noises in walls or finding droppings, who want to stop the next rodent rather than just remove this one.",
-    "cta": { "label": "See pest control options", "href": "/services/pest-control" },
+    "cta": {
+      "label": "See pest control options",
+      "href": "/services/pest-control"
+    },
     "internalLinks": [
-      { "label": "Termite warning signs around your home", "href": "/blog/termite-warning-signs" },
-      { "label": "A yearly furnace maintenance checklist", "href": "/blog/furnace-maintenance-checklist" }
+      {
+        "label": "Termite warning signs around your home",
+        "href": "/blog/termite-warning-signs"
+      },
+      {
+        "label": "A yearly furnace maintenance checklist",
+        "href": "/blog/furnace-maintenance-checklist"
+      }
     ],
     "image": "/images/blog/rodent-proofing-your-home.svg",
     "imageAlt": "Illustration of a mouse beside a shield and a house icon",
@@ -165,7 +209,12 @@
     "excerpt": "Trapping a mouse solves this mouse. Sealing the gap solves the next five. Here are the entry points that actually matter and the materials that last more than one season.",
     "seoSummary": "Exclusion-first rodent control guide with a gap-by-gap sealing checklist.",
     "author": "Safe Home Network Editorial",
-    "tags": ["pest control", "rodents", "prevention", "sealing"],
+    "tags": [
+      "pest control",
+      "rodents",
+      "prevention",
+      "sealing"
+    ],
     "visual": "Flat vector medallion: a gray mouse with a shield chip, a check chip and a house chip on a sand background.",
     "sections": [
       {
@@ -177,13 +226,37 @@
       {
         "h2": "How to tell mice from rats",
         "table": {
-          "head": ["Evidence", "Mice", "Rats"],
+          "head": [
+            "Evidence",
+            "Mice",
+            "Rats"
+          ],
           "rows": [
-            ["Droppings", "3–6 mm, pointed ends", "12–18 mm, blunt ends"],
-            ["Noises", "Light scratching and scurrying", "Heavy thumping, gnawing in walls"],
-            ["Grease marks", "Rare", "Dark smears along walls and pipes"],
-            ["Nests", "Shredded paper in drawers and cupboards", "Larger nests in voids and under decks"],
-            ["Behaviour", "Curious, ranges close to cover", "Wary of new objects — needs pre-baiting"]
+            [
+              "Droppings",
+              "3–6 mm, pointed ends",
+              "12–18 mm, blunt ends"
+            ],
+            [
+              "Noises",
+              "Light scratching and scurrying",
+              "Heavy thumping, gnawing in walls"
+            ],
+            [
+              "Grease marks",
+              "Rare",
+              "Dark smears along walls and pipes"
+            ],
+            [
+              "Nests",
+              "Shredded paper in drawers and cupboards",
+              "Larger nests in voids and under decks"
+            ],
+            [
+              "Behaviour",
+              "Curious, ranges close to cover",
+              "Wary of new objects — needs pre-baiting"
+            ]
           ]
         },
         "paras": [
@@ -228,6 +301,13 @@
           "Check traps daily; a dead rodent left for days attracts insects.",
           "Wear gloves and a mask when cleaning droppings, and disinfect the area — hantavirus is a real risk in some regions.",
           "Keep baits away from pets and children, and prefer professional placement for outdoor stations."
+        ]
+      },
+      {
+        "h2": "When to call a professional",
+        "paras": [
+          "A single mouse caught within a week of first hearing it is a homeowner job. Call a professional when droppings appear in food preparation areas, when activity continues after sealing, when the building has a crawlspace or attic you cannot inspect safely, or when the species matters — rats, squirrels and raccoons need different methods and, in some states, a licence.",
+          "Professional exclusion usually costs more than traps but less than a re-infestation cycle, and it comes with a documented seal of the building envelope, which is the part that actually solves the problem."
         ]
       },
       {

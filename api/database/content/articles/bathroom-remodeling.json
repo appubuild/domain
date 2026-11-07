@@ -22,11 +22,23 @@
     ],
     "intent": "Informational",
     "audience": "Homeowners planning a bathroom renovation who want a decision order that avoids rework.",
-    "cta": { "label": "See bathroom remodeling options", "href": "/services/bathroom-remodeling" },
+    "cta": {
+      "label": "See bathroom remodeling options",
+      "href": "/services/bathroom-remodeling"
+    },
     "internalLinks": [
-      { "label": "Small bathroom remodels that add value", "href": "/blog/small-bathroom-remodel-that-adds-value" },
-      { "label": "Hidden mold after a leak: what to look for", "href": "/blog/hidden-mold-after-a-leak" },
-      { "label": "Kitchen remodel costs: a line-by-line breakdown", "href": "/blog/kitchen-remodel-cost-breakdown" }
+      {
+        "label": "Small bathroom remodels that add value",
+        "href": "/blog/small-bathroom-remodel-that-adds-value"
+      },
+      {
+        "label": "Hidden mold after a leak: what to look for",
+        "href": "/blog/hidden-mold-after-a-leak"
+      },
+      {
+        "label": "Kitchen remodel costs: a line-by-line breakdown",
+        "href": "/blog/kitchen-remodel-cost-breakdown"
+      }
     ],
     "image": "/images/blog/bathroom-remodel-planning-checklist.svg",
     "imageAlt": "Illustration of a shower head with a checklist and a measuring ruler",
@@ -35,7 +47,12 @@
     "excerpt": "Bathrooms go wrong in the order decisions are made. Tile is the last thing to choose and the first thing people pick — then the drain will not fit and the fan cannot vent.",
     "seoSummary": "12-step bathroom remodel planning sequence with waterproofing and ventilation requirements.",
     "author": "Safe Home Network Editorial",
-    "tags": ["bathroom remodeling", "planning", "waterproofing", "ventilation"],
+    "tags": [
+      "bathroom remodeling",
+      "planning",
+      "waterproofing",
+      "ventilation"
+    ],
     "visual": "Flat vector medallion: a shower head with falling water, a checklist chip and a ruler chip on a cream background.",
     "sections": [
       {
@@ -62,14 +79,35 @@
       {
         "h2": "3. Waterproofing, then tile",
         "table": {
-          "head": ["Area", "What is required"],
+          "head": [
+            "Area",
+            "What is required"
+          ],
           "rows": [
-            ["Shower walls", "Cement board or backer board plus a bonded waterproof membrane"],
-            ["Shower floor", "Pre-sloped mortar bed, waterproof membrane, proper drain flange"],
-            ["Tub surround", "Waterproof backer to at least the showerhead height"],
-            ["Bathroom floor", "Water-resistant underlayment; waterproofing mandatory in wet rooms"],
-            ["Behind a freestanding tub", "Sealed, splash-rated wall finish, not standard drywall"],
-            ["Niches and benches", "Membrane continuity and sealed penetrations"]
+            [
+              "Shower walls",
+              "Cement board or backer board plus a bonded waterproof membrane"
+            ],
+            [
+              "Shower floor",
+              "Pre-sloped mortar bed, waterproof membrane, proper drain flange"
+            ],
+            [
+              "Tub surround",
+              "Waterproof backer to at least the showerhead height"
+            ],
+            [
+              "Bathroom floor",
+              "Water-resistant underlayment; waterproofing mandatory in wet rooms"
+            ],
+            [
+              "Behind a freestanding tub",
+              "Sealed, splash-rated wall finish, not standard drywall"
+            ],
+            [
+              "Niches and benches",
+              "Membrane continuity and sealed penetrations"
+            ]
           ]
         },
         "paras": [
@@ -155,10 +193,19 @@
     ],
     "intent": "Commercial investigation",
     "audience": "Homeowners with a compact bathroom or powder room who want the changes that improve daily use and resale without a full gut.",
-    "cta": { "label": "See bathroom remodeling options", "href": "/services/bathroom-remodeling" },
+    "cta": {
+      "label": "See bathroom remodeling options",
+      "href": "/services/bathroom-remodeling"
+    },
     "internalLinks": [
-      { "label": "Bathroom remodel planning checklist", "href": "/blog/bathroom-remodel-planning-checklist" },
-      { "label": "Kitchen remodel costs: a line-by-line breakdown", "href": "/blog/kitchen-remodel-cost-breakdown" }
+      {
+        "label": "Bathroom remodel planning checklist",
+        "href": "/blog/bathroom-remodel-planning-checklist"
+      },
+      {
+        "label": "Kitchen remodel costs: a line-by-line breakdown",
+        "href": "/blog/kitchen-remodel-cost-breakdown"
+      }
     ],
     "image": "/images/blog/small-bathroom-remodel-that-adds-value.svg",
     "imageAlt": "Illustration of a bathtub with a coin and a measuring ruler",
@@ -167,7 +214,12 @@
     "excerpt": "In a small bathroom, value comes from usable space and good light, not from expensive tile. These are the moves that change how a compact room feels and what it is worth.",
     "seoSummary": "Value-focused small bathroom upgrade list ranked by cost per impact.",
     "author": "Safe Home Network Editorial",
-    "tags": ["bathroom remodeling", "small spaces", "home value", "budget"],
+    "tags": [
+      "bathroom remodeling",
+      "small spaces",
+      "home value",
+      "budget"
+    ],
     "visual": "Flat vector medallion: a bathtub with a coin chip, a ruler chip and a star chip on a warm sand background.",
     "sections": [
       {
@@ -196,14 +248,42 @@
       {
         "h2": "The layout moves worth paying for",
         "table": {
-          "head": ["Change", "Impact", "Disruption"],
+          "head": [
+            "Change",
+            "Impact",
+            "Disruption"
+          ],
           "rows": [
-            ["Glass screen instead of a shower curtain", "High — makes the room read larger", "Low"],
-            ["Wall-hung vanity", "High — floor visible under it", "Medium (waste relocation)"],
-            ["Pocket or outswing door", "High in very small rooms", "Medium"],
-            ["Walk-in shower replacing a tub-shower", "High for daily use, mixed at resale", "High"],
-            ["Niche in the shower wall", "Medium-high", "Medium"],
-            ["Frameless mirror to the ceiling", "Medium-high", "Low"]
+            [
+              "Glass screen instead of a shower curtain",
+              "High — makes the room read larger",
+              "Low"
+            ],
+            [
+              "Wall-hung vanity",
+              "High — floor visible under it",
+              "Medium (waste relocation)"
+            ],
+            [
+              "Pocket or outswing door",
+              "High in very small rooms",
+              "Medium"
+            ],
+            [
+              "Walk-in shower replacing a tub-shower",
+              "High for daily use, mixed at resale",
+              "High"
+            ],
+            [
+              "Niche in the shower wall",
+              "Medium-high",
+              "Medium"
+            ],
+            [
+              "Frameless mirror to the ceiling",
+              "Medium-high",
+              "Low"
+            ]
           ]
         },
         "note": "Keep at least one bathtub in the house if you have children or plan to sell to families. Removing the only tub can narrow the buyer pool more than the nicer shower widens it."
@@ -214,6 +294,18 @@
           "Save on tile you will not touch — a large-format floor tile in a neutral tone looks expensive and costs less than mosaic. Save on the vanity cabinet if the countertop and faucet are good. Do not save on waterproofing, ventilation or the shower valve: those are the items whose failure means rebuilding the room.",
           "A cheap faucet on a good vanity is a visible compromise; a good faucet on a modest vanity reads as quality. Spend where hands and eyes land."
         ]
+      },
+      {
+        "h2": "Six choices that make a small bathroom feel smaller",
+        "bullets": [
+          "A dark floor with dark walls and no contrast — the room reads as a box.",
+          "A large mirror that stops short of the ceiling, chopping the wall in half.",
+          "A shower curtain in a heavy print instead of a clear screen or a light textile.",
+          "Deep cabinets that push the vanity out into the walking space.",
+          "A single central ceiling light, which leaves every corner in shadow.",
+          "Busy mosaic on every surface, which removes the calm a small room needs."
+        ],
+        "note": "If you change only two things in a compact bathroom, change the lighting and the mirror. They cost the least and change the perception of the room the most."
       },
       {
         "h2": "What actually returns at resale",
