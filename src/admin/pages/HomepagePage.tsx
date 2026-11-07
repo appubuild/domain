@@ -228,7 +228,7 @@ export const HomepagePage = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? `Edit ${editing.name}` : 'New homepage section'}
-        description="Headings and subheadings are demo content until Phase 2 wires the public site to this data."
+        description="Headings and subheadings are stored here; the public homepage layout is compiled from the site source."
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setModalOpen(false)}>
@@ -294,7 +294,7 @@ export const HomepagePage = () => {
       <ConfirmDialog
         open={Boolean(pendingDelete)}
         title="Delete section?"
-        description={`“${pendingDelete?.name ?? ''}” will be removed from the demo homepage layout.`}
+        description={`“${pendingDelete?.name ?? ''}” will be removed from the homepage layout.`}
         confirmLabel="Delete section"
         loading={deleting}
         onCancel={() => setPendingDelete(null)}

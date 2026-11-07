@@ -189,19 +189,23 @@ export const AnalyticsPage = () => {
     },
   ]
 
-  const sourceRows = [
-    { label: 'Organic search', value: 41, color: CHART_COLORS.brand },
-    { label: 'Direct', value: 23, color: CHART_COLORS.slate },
-    { label: 'Paid search', value: 16, color: CHART_COLORS.amber },
-    { label: 'Social media', value: 12, color: CHART_COLORS.violet },
-    { label: 'Referral', value: 8, color: CHART_COLORS.success },
-  ]
+  const sourceVisitors = analytics.sources.reduce((sum, source) => sum + source.visitors, 0)
+  const sourceRows = analytics.sources.map((source, index) => ({
+    label: source.source,
+    value: sourceVisitors > 0 ? Math.round((source.visitors / sourceVisitors) * 1000) / 10 : 0,
+    color: [CHART_COLORS.brand, CHART_COLORS.slate, CHART_COLORS.amber, CHART_COLORS.violet, CHART_COLORS.success][
+      index % 5
+    ],
+  }))
 
   const exportReport = () => {
     const header = 'date,visitors,pageviews,calls,leads,revenue'
     const rows = daily.map((row) => [row.date, row.visitors, row.pageViews, row.calls, row.leads, row.revenue].join(','))
-    download(`safe-home-network-simulated-analytics-${range}d.csv`, [header, ...rows].join('\n'))
-    toast.success('Report exported', `CSV with ${daily.length} days of simulated data.`)
+    download(`safe-home-network-analytics-${range}d.csv`, [header, ...rows].join('\n'))
+    toast.success(
+      'Report exported',
+      `CSV with ${daily.length} days of ${live ? 'recorded' : 'simulated'} data.`,
+    )
   }
 
   return (
@@ -221,6 +225,12 @@ export const AnalyticsPage = () => {
       />
 
       {live ? null : <SimulatedNotice />}
+      {live ? (
+        <p className="mt-3 rounded-xl border border-line bg-soft px-3.5 py-2.5 text-2xs leading-relaxed text-muted">
+          “Calls” on this report counts Call Now button taps recorded by the site. Connected calls and revenue are
+          recorded separately and are never inferred from clicks.
+        </p>
+      ) : null}
       {ADMIN_CONFIG.api.enabled && liveError ? (
         <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           Live analytics could not be loaded ({liveError}). The figures below are demo data.

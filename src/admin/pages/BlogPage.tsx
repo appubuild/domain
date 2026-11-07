@@ -306,7 +306,7 @@ export const BlogPage = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? `Edit “${editing.title}”` : 'New blog post'}
-        description="Demo content only — no post is written to the public site until the Phase 2 API exists."
+        description="Post records are managed here; the public site has no blog route yet."
         size="lg"
         footer={
           <>

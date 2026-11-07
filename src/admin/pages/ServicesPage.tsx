@@ -501,7 +501,7 @@ export const ServicesPage = () => {
       <ConfirmDialog
         open={Boolean(pendingDelete)}
         title="Delete service?"
-        description={`“${pendingDelete?.name ?? ''}” will be removed from the demo directory. Its tracking numbers stay in the phone directory.`}
+        description={`“${pendingDelete?.name ?? ''}” will be removed from the directory. Its tracking numbers stay in the phone directory.`}
         confirmLabel="Delete service"
         loading={deleting}
         onCancel={() => setPendingDelete(null)}

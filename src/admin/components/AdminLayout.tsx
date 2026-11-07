@@ -27,7 +27,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAdminAuth } from '@/admin/context/AdminAuthContext'
-import { ADMIN_CONFIG, storageKey } from '@/admin/config/adminConfig'
+import { ADMIN_CONFIG, IS_DEMO_AUTH, storageKey } from '@/admin/config/adminConfig'
 import { readJSON, writeJSON } from '@/admin/data/storage'
 import { repository } from '@/admin/data/repository'
 import type { AdminPreferences, LeadRecord } from '@/admin/types/admin'
@@ -237,7 +237,7 @@ export const AdminLayout = () => {
         </Link>
         {!collapsed ? (
           <p className="px-2.5 pt-1 text-2xs text-navy-500">
-            {ADMIN_CONFIG.version} · demo data
+            {ADMIN_CONFIG.version} · {IS_DEMO_AUTH ? 'demo data' : 'live data'}
           </p>
         ) : null}
       </div>
@@ -304,8 +304,15 @@ export const AdminLayout = () => {
           </div>
 
           <div className="ml-auto flex items-center gap-1.5">
-            <span className="mr-1 hidden rounded-full bg-amber-50 px-2.5 py-1 text-2xs font-semibold uppercase tracking-wide text-amber-700 ring-1 ring-inset ring-amber-300/60 sm:inline-flex dark:bg-amber-600/15 dark:text-amber-300 dark:ring-amber-700/40">
-              Phase 1 · demo
+            <span
+              className={cn(
+                'mr-1 hidden rounded-full px-2.5 py-1 text-2xs font-semibold uppercase tracking-wide ring-1 ring-inset sm:inline-flex',
+                IS_DEMO_AUTH
+                  ? 'bg-amber-50 text-amber-700 ring-amber-300/60 dark:bg-amber-600/15 dark:text-amber-300 dark:ring-amber-700/40'
+                  : 'bg-emerald-50 text-emerald-700 ring-emerald-300/60 dark:bg-emerald-600/15 dark:text-emerald-300 dark:ring-emerald-700/40',
+              )}
+            >
+              {IS_DEMO_AUTH ? 'Demo · simulated' : 'Live data'}
             </span>
             <Link
               to="/admin/leads"
@@ -342,7 +349,11 @@ export const AdminLayout = () => {
                 >
                   <div className="border-b border-line px-3 py-2.5">
                     <p className="truncate text-xs font-semibold text-ink">{user?.email}</p>
-                    <p className="text-2xs text-muted">Demo session · {ADMIN_CONFIG.demo.sessionHours}h</p>
+                    <p className="text-2xs text-muted">
+                      {IS_DEMO_AUTH
+                        ? `Demo session · ${ADMIN_CONFIG.demo.sessionHours}h`
+                        : 'Signed in via the API'}
+                    </p>
                   </div>
                   <Link
                     to="/admin/profile"

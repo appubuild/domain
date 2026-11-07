@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Clock, KeyRound, LogOut, ShieldAlert, ShieldCheck, UserRound } from 'lucide-react'
 import { useAdminAuth } from '@/admin/context/AdminAuthContext'
 import { repository } from '@/admin/data/repository'
-import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
+import { ADMIN_CONFIG, IS_DEMO_AUTH } from '@/admin/config/adminConfig'
 import type { ActivityEntry } from '@/admin/types/admin'
 import { formatDateTime, initialsOf, timeAgo } from '@/admin/lib/format'
 import {
@@ -52,7 +52,10 @@ export const ProfilePage = () => {
   const saveProfile = (event: React.FormEvent) => {
     event.preventDefault()
     updateProfile({ name: name.trim(), email: email.trim(), initials: initialsOf(name.trim()) || 'DA' })
-    toast.success('Profile updated', 'The change applies to this demo session.')
+    toast.success(
+      'Profile updated',
+      IS_DEMO_AUTH ? 'The change applies to this demo session.' : 'Your account has been updated.',
+    )
   }
 
   const savePassword = async (event: React.FormEvent) => {
@@ -83,7 +86,13 @@ export const ProfilePage = () => {
       <PageHeader
         title="Profile & security"
         description="Your admin identity, session and recent console activity."
-        meta={<Badge tone="amber">Demo authentication</Badge>}
+        meta={
+          IS_DEMO_AUTH ? (
+            <Badge tone="amber">Demo authentication</Badge>
+          ) : (
+            <Badge tone="success">API session</Badge>
+          )
+        }
         actions={
           <Button variant="secondary" size="sm" onClick={() => signOut('You signed out.')} iconLeft={<LogOut className="h-4 w-4" />}>
             Sign out
@@ -122,7 +131,15 @@ export const ProfilePage = () => {
           </Card>
 
           <Card>
-            <CardHeader title="Change password" description="Stored in this browser only while demo mode is on." action={<KeyRound className="h-4 w-4 text-muted" />} />
+            <CardHeader
+              title="Change password"
+              description={
+                IS_DEMO_AUTH
+                  ? 'Stored in this browser only while demo mode is on.'
+                  : 'Requires the current password; the API stores a bcrypt hash.'
+              }
+              action={<KeyRound className="h-4 w-4 text-muted" />}
+            />
             <form onSubmit={savePassword} className="space-y-3 p-5">
               {passwordError ? (
                 <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
@@ -169,14 +186,26 @@ export const ProfilePage = () => {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Session" description="Demo sessions expire automatically." action={<Clock className="h-4 w-4 text-muted" />} />
+            <CardHeader
+              title="Session"
+              description={
+                IS_DEMO_AUTH
+                  ? 'Demo sessions expire automatically.'
+                  : 'Issued and validated by the API; the cookie is HttpOnly.'
+              }
+              action={<Clock className="h-4 w-4 text-muted" />}
+            />
             <dl className="divide-y divide-line text-xs">
               {[
                 { label: 'Signed in', value: session ? formatDateTime(session.issuedAt) : '—' },
                 { label: 'Expires', value: session ? formatDateTime(session.expiresAt) : '—' },
                 { label: 'Time remaining', value: remaining },
-                { label: 'Session length', value: `${ADMIN_CONFIG.demo.sessionHours} hours` },
-                { label: 'Token', value: session ? `${session.token.slice(0, 14)}…` : '—' },
+                ...(IS_DEMO_AUTH
+                  ? [
+                      { label: 'Session length', value: `${ADMIN_CONFIG.demo.sessionHours} hours` },
+                      { label: 'Token', value: session ? `${session.token.slice(0, 14)}…` : '—' },
+                    ]
+                  : [{ label: 'Session', value: 'HttpOnly cookie' }]),
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-2.5">
                   <dt className="text-muted">{row.label}</dt>
@@ -190,7 +219,10 @@ export const ProfilePage = () => {
                 size="sm"
                 onClick={() => {
                   extendSession()
-                  toast.success('Session extended', `${ADMIN_CONFIG.demo.sessionHours} more hours.`)
+                  toast.success(
+                    'Session extended',
+                    IS_DEMO_AUTH ? `${ADMIN_CONFIG.demo.sessionHours} more hours.` : 'The server refreshed your session.',
+                  )
                 }}
               >
                 Extend session
@@ -202,29 +234,58 @@ export const ProfilePage = () => {
           </Card>
 
           <Card>
-            <CardHeader title="Security model" description="What is and is not protected in Phase 1." action={<ShieldAlert className="h-4 w-4 text-amber-500" />} />
+            <CardHeader
+              title="Security model"
+              description={IS_DEMO_AUTH ? 'What is and is not protected in demo mode.' : 'How the API protects this account.'}
+              action={
+                IS_DEMO_AUTH ? (
+                  <ShieldAlert className="h-4 w-4 text-amber-500" />
+                ) : (
+                  <ShieldCheck className="h-4 w-4 text-success-600" />
+                )
+              }
+            />
             <div className="space-y-2.5 p-5 text-xs leading-relaxed text-muted">
               <p className="flex gap-2">
                 <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success-600" />
                 Protected routes redirect unauthenticated visitors to the sign-in screen, sessions expire, and
                 signing out clears the stored session.
               </p>
-              <p className="flex gap-2">
-                <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
-                Demo credentials live in the JavaScript bundle, so this is not real access control. There is no
-                server to validate a password and no audit trail outside this browser.
-              </p>
-              <p className="rounded-lg bg-soft px-3 py-2 text-2xs">
-                Phase 2 replaces this with PHP sessions, hashed passwords, CSRF protection, rate limiting and
-                server-side authorisation on every admin endpoint.
-              </p>
+              {IS_DEMO_AUTH ? (
+                <>
+                  <p className="flex gap-2">
+                    <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                    Demo credentials live in the JavaScript bundle, so this is not real access control. There is
+                    no server to validate a password and no audit trail outside this browser.
+                  </p>
+                  <p className="rounded-lg bg-soft px-3 py-2 text-2xs">
+                    Set <code>VITE_API_BASE_URL</code> and rebuild to use PHP sessions, hashed passwords, CSRF
+                    protection and server-side authorisation on every admin endpoint.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="flex gap-2">
+                    <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success-600" />
+                    Passwords are hashed with bcrypt on the server. The session lives in an HttpOnly cookie and
+                    every write needs a matching CSRF token — neither is readable by page scripts.
+                  </p>
+                  <p className="rounded-lg bg-soft px-3 py-2 text-2xs">
+                    The API enforces your role on each request, rate-limits sign-in attempts and records every
+                    change in the audit log.
+                  </p>
+                </>
+              )}
             </div>
           </Card>
         </div>
       </div>
 
       <Card>
-        <CardHeader title="Recent activity" description="The last actions taken in this demo workspace." />
+        <CardHeader
+          title="Recent activity"
+          description={IS_DEMO_AUTH ? 'The last actions taken in this demo workspace.' : 'The latest entries from the server audit log.'}
+        />
         <ul className="divide-y divide-line">
           {activity.slice(0, 10).map((entry) => (
             <li key={entry.id} className="flex flex-wrap items-center gap-2 px-5 py-2.5 text-xs">

@@ -16,6 +16,7 @@ import {
   Textarea,
 } from '@/admin/components/ui'
 import { useToast } from '@/admin/context/ToastContext'
+import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
 
 export const SettingsPage = () => {
   const toast = useToast()
@@ -209,42 +210,51 @@ export const SettingsPage = () => {
               checked={draft.maintenanceMode}
               onChange={(value) => update('maintenanceMode', value)}
               label="Maintenance mode"
-              description="Replaces the public site with a holding page (Phase 2 behaviour)."
+              description={
+                ADMIN_CONFIG.api.enabled
+                  ? 'Replaces the public site with a holding page.'
+                  : 'Replaces the public site with a holding page (API builds only).'
+              }
             />
             <p className="rounded-lg bg-soft px-3 py-2 text-2xs leading-relaxed text-muted">
-              These switches are stored in the demo workspace. They do not affect the compiled public site
-              until the Phase 2 API can persist them.
+              {ADMIN_CONFIG.api.enabled
+                ? 'These switches are saved to the database and applied by the public site.'
+                : 'These switches are stored in the demo workspace only. Connect the API to persist them.'}
             </p>
           </div>
         </Card>
       </div>
 
-      <Card className="border-rose-200 dark:border-rose-900/60">
-        <CardHeader
-          title="Demo data"
-          description="Restore every service, number, page, post, lead and setting to the seeded snapshot."
-          action={<AlertTriangle className="h-4 w-4 text-rose-500" />}
-        />
-        <div className="flex flex-wrap items-center justify-between gap-3 p-5">
-          <p className="max-w-xl text-xs leading-relaxed text-muted">
-            Resetting clears anything you created in this browser and reloads the demo records. It does not
-            touch the public website or the production phone directory.
-          </p>
-          <Button variant="danger" size="sm" onClick={() => setResetOpen(true)} iconLeft={<RotateCcw className="h-4 w-4" />}>
-            Reset demo data
-          </Button>
-        </div>
-      </Card>
+      {ADMIN_CONFIG.api.enabled ? null : (
+        <>
+        <Card className="border-rose-200 dark:border-rose-900/60">
+          <CardHeader
+            title="Demo data"
+            description="Restore every service, number, page, post, lead and setting to the seeded snapshot."
+            action={<AlertTriangle className="h-4 w-4 text-rose-500" />}
+          />
+          <div className="flex flex-wrap items-center justify-between gap-3 p-5">
+            <p className="max-w-xl text-xs leading-relaxed text-muted">
+              Resetting clears anything you created in this browser and reloads the demo records. It does not
+              touch the public website or the production phone directory.
+            </p>
+            <Button variant="danger" size="sm" onClick={() => setResetOpen(true)} iconLeft={<RotateCcw className="h-4 w-4" />}>
+              Reset demo data
+            </Button>
+          </div>
+        </Card>
 
-      <ConfirmDialog
-        open={resetOpen}
-        title="Reset all demo data?"
-        description="Every change made in this browser will be discarded and the seeded demo workspace restored."
-        confirmLabel="Reset demo data"
-        loading={resetting}
-        onCancel={() => setResetOpen(false)}
-        onConfirm={resetDemo}
-      />
+        <ConfirmDialog
+          open={resetOpen}
+          title="Reset all demo data?"
+          description="Every change made in this browser will be discarded and the seeded demo workspace restored."
+          confirmLabel="Reset demo data"
+          loading={resetting}
+          onCancel={() => setResetOpen(false)}
+          onConfirm={resetDemo}
+        />
+        </>
+      )}
     </form>
   )
 }

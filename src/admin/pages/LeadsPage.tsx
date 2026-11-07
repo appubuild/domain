@@ -281,7 +281,7 @@ export const LeadsPage = () => {
               </Field>
             </div>
 
-            <Field label="Reply (opens your email app)" htmlFor="lead-reply" hint="Demo mode — nothing is sent from the browser.">
+            <Field label="Reply (opens your email app)" htmlFor="lead-reply" hint="Opens your email app — nothing is sent from the browser.">
               <Textarea
                 id="lead-reply"
                 rows={3}
@@ -303,7 +303,7 @@ export const LeadsPage = () => {
       <ConfirmDialog
         open={Boolean(pendingDelete)}
         title="Delete lead?"
-        description={`The enquiry from ${pendingDelete?.name ?? ''} will be removed from the demo inbox.`}
+        description={`The enquiry from ${pendingDelete?.name ?? ''} will be removed from the inbox.`}
         confirmLabel="Delete lead"
         loading={deleting}
         onCancel={() => setPendingDelete(null)}

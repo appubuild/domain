@@ -123,7 +123,10 @@ export const DashboardPage = () => {
   const refresh = () => {
     setRefreshedAt(new Date().toISOString())
     load()
-    toast.success('Dashboard refreshed', 'Simulated data regenerated for the selected range.')
+    toast.success(
+      'Dashboard refreshed',
+      live ? 'Analytics reloaded from the API.' : 'Simulated data regenerated for the selected range.',
+    )
   }
 
   return (
@@ -167,13 +170,17 @@ export const DashboardPage = () => {
           footer={`${formatNumber(today.visitors)} today · ${formatNumber(totals.pageViews)} page views`}
         />
         <StatCard
-          label={`Calls · ${range}d`}
+          label={live ? `Call clicks · ${range}d` : `Calls · ${range}d`}
           value={formatNumber(totals.calls)}
           delta={changePercent(totals.calls, previousTotals.calls)}
           icon={<PhoneCall className="h-4 w-4" />}
           sparkline={daily.map((row) => row.calls)}
           accent="success"
-          footer={`${formatNumber(today.calls)} today · ${formatPercent(totals.conversion)} of visitors`}
+          footer={
+            live
+              ? `${formatNumber(today.calls)} today · ${formatPercent(totals.conversion)} of visitors clicked`
+              : `${formatNumber(today.calls)} today · ${formatPercent(totals.conversion)} of visitors`
+          }
         />
         <StatCard
           label={`Leads · ${range}d`}
@@ -185,22 +192,26 @@ export const DashboardPage = () => {
           footer={`${recentLeads.filter((lead) => lead.status === 'new').length} awaiting first contact`}
         />
         <StatCard
-          label={`Est. revenue · ${range}d`}
+          label={live ? `Revenue · ${range}d` : `Est. revenue · ${range}d`}
           value={formatCurrency(totals.revenue)}
           delta={changePercent(totals.revenue, previousTotals.revenue)}
           icon={<CircleDollarSign className="h-4 w-4" />}
           sparkline={daily.map((row) => row.revenue)}
           accent="amber"
-          footer={`Simulated value · ${formatCurrency(totals.revenue / Math.max(1, totals.calls))} per call`}
+          footer={
+            live
+              ? `${formatNumber(totals.calls)} recorded calls · ${formatNumber(totals.leads)} leads`
+              : `Simulated value · ${formatCurrency(totals.revenue / Math.max(1, totals.calls))} per call`
+          }
         />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Traffic, calls and leads"
+            title={live ? 'Traffic, call clicks and leads' : 'Traffic, calls and leads'}
             description={`Daily performance over the last ${range} days`}
-            action={<Badge tone="amber">Simulated</Badge>}
+            action={live ? <Badge tone="success">Live</Badge> : <Badge tone="amber">Simulated</Badge>}
           />
           <div className="px-4 pb-4 pt-3">
             <TrendChart
@@ -227,7 +238,7 @@ export const DashboardPage = () => {
               <div key={row.label} className="px-5 py-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-ink">{row.label}</p>
-                  <Badge tone="slate">simulated</Badge>
+                  {live ? <Badge tone="success">recorded</Badge> : <Badge tone="slate">simulated</Badge>}
                 </div>
                 <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
                   <div>
@@ -287,7 +298,10 @@ export const DashboardPage = () => {
               }))}
               formatValue={(value) => formatCompact(value)}
             />
-            <p className="mt-3 text-2xs text-muted">Second figure = connected calls. All values are simulated.</p>
+            <p className="mt-3 text-2xs text-muted">
+              Second figure = connected calls.{' '}
+              {live ? 'Taken from recorded call records.' : 'All values are simulated.'}
+            </p>
           </div>
         </Card>
       </div>
@@ -322,7 +336,7 @@ export const DashboardPage = () => {
           <CardHeader
             title="Search keywords"
             description="Top queries sending traffic"
-            action={<Badge tone="amber">Simulated</Badge>}
+            action={live ? <Badge tone="success">Live</Badge> : <Badge tone="amber">Simulated</Badge>}
           />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

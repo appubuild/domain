@@ -268,7 +268,7 @@ export const PagesPage = () => {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? `Edit ${editing.title}` : 'New page'}
-        description="Demo content only — the public pages are compiled from the site source until Phase 2."
+        description="Page records are managed here; the public legal pages are compiled from the site source."
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setModalOpen(false)}>
