@@ -84,6 +84,22 @@ If your host limits upload size, import `database/schema.sql` and `database/seed
 | Contact email | `support@safehomenetwork.com` | Admin → Settings |
 | Analytics / verification IDs | empty | Admin → Settings → Integrations |
 
+If sign-in is locked or the seeded hash does not match, this restores the documented
+password `Sa123456` (change it from Profile immediately afterwards):
+
+```sql
+UPDATE admins
+   SET password_hash = '$2y$12$O.mAyi0e.szDnNHbiL.sZ.Q4k66zoaUBJUNwBtn0.LJ9MSo/5IMoC',
+       failed_attempts = 0,
+       locked_until = NULL,
+       status = 'active'
+ WHERE email = 'info@safehomenetwork.com';
+DELETE FROM rate_limits;
+```
+
+`php -r "var_dump(password_verify('Sa123456', '$2y$12$O.mAyi0e.szDnNHbiL.sZ.Q4k66zoaUBJUNwBtn0.LJ9MSo/5IMoC'));"`
+prints `true` — the hash above is verified.
+
 Generate a new password hash without a shell:
 
 ```sql
@@ -225,7 +241,8 @@ and what happens when the variable is absent.
 | Symptom | Likely cause | Fix |
 | --- | --- | --- |
 | `500 database credentials are not configured` | `.env` missing or not readable | Create `.env`; check `APP_ENV`; see `api/storage/logs/php-error.log` |
-| Login returns `429` | Rate limit / lockout | Wait 15 minutes, or raise `RATE_LOGIN_MAX` in `.env` |
+| Login returns `429` / “Too many failed attempts. Try again in N seconds.” | Account lockout after 5 wrong passwords (per account) or the IP throttle | Wait 15 minutes, or clear it in phpMyAdmin: `UPDATE admins SET failed_attempts = 0, locked_until = NULL WHERE email = 'you@example.com'; DELETE FROM rate_limits;` |
+| Login says the password is incorrect but you are sure it is right | The stored hash is not the seeded one, or the browser autofilled an old password | Compare `SELECT password_hash FROM admins WHERE email = '…';` with `database/seed.sql`, and set a known hash (see below) |
 | Login succeeds but the admin console bounces back | Third-party cookies blocked between different origins | Serve the frontend and API on the same origin, or allow the cookie in the browser |
 | `403 CSRF token` on every save | CSRF cookie not readable (wrong `COOKIE_DOMAIN`) or site is HTTP | Set `COOKIE_DOMAIN` empty; use HTTPS |
 | `403 This origin is not allowed` | Frontend origin missing from the allow-list | Add it to `CORS_ALLOWED_ORIGINS` |
