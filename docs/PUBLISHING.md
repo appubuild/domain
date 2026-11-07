@@ -144,6 +144,43 @@ mysql -u USER -p DATABASE < api/database/blog-content-import.sql
 Run the migration first: the import relies on `scheduled_at`, `seo_summary`,
 `focus_keyword`, `secondary_keywords`, `blog_post_metadata` and `media.kind`.
 
+### If the import fails with `#1054 Unknown column …`
+
+That error means the columns the import writes do not exist yet — the migration
+did not run. The most common reason is that the host's phpMyAdmin does not
+understand the `DELIMITER` directive the migration uses for its helper
+procedures; the file then stops on its first statement and applies nothing.
+
+1. Check what is missing (an empty result means you are ready to import):
+
+   ```bash
+   mysql -u USER -p DATABASE < api/database/check-cms-schema.sql
+   ```
+
+2. Apply the DELIMITER-free edition of the same migration — plain `ALTER`
+   statements guarded by `information_schema` checks, so it is safe to run any
+   number of times and never raises `#1060 Duplicate column`:
+
+   ```bash
+   mysql -u USER -p DATABASE < api/database/migrations/2026-11-blog-cms-upgrade-idempotent.sql
+   ```
+
+   In phpMyAdmin: select the database → **SQL** tab → paste the file → **Go**.
+   It finishes with a verification row: `blog cms migration applied | 1 | 1 | 2`.
+
+3. Re-run the import. Other errors you may meet:
+
+   | Error | Meaning | Fix |
+   | --- | --- | --- |
+   | `#1054 Unknown column 'x'` | migration not applied | step 2 above |
+   | `#1060 Duplicate column` | part of it already ran | use the idempotent file |
+   | `#1146 Table 'x' doesn't exist` | base schema missing | import `schema.sql` first |
+   | `#1452 Cannot add or update a child row` | the category row it needs is missing | run the file again; categories are inserted before posts |
+
+The generated migration (`2026-11-blog-cms-upgrade-idempotent.sql`) is rebuilt
+from the hand-written one with
+`node scripts/generate-migration-idempotent.mjs`, so the two never drift.
+
 ---
 
 ## 4. Illustrations

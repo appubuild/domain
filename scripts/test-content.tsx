@@ -243,5 +243,78 @@ check('sitemap lists the blog hub and every category', () => {
   }
 })
 
+/* -------------------------------------------------------------------------- */
+
+console.log('\n── Database schema ───────────────────────────────────────────────')
+
+const importSql = readFileSync(resolve(root, 'api/database/blog-content-import.sql'), 'utf8')
+const schemaSql = readFileSync(resolve(root, 'api/database/schema.sql'), 'utf8')
+const migrationSql = readFileSync(resolve(root, 'api/database/migrations/2026-11-blog-cms-upgrade.sql'), 'utf8')
+const idempotentSql = readFileSync(
+  resolve(root, 'api/database/migrations/2026-11-blog-cms-upgrade-idempotent.sql'),
+  'utf8',
+)
+
+const tableBlock = (source: string, table: string): string => {
+  const start = source.search(new RegExp(`CREATE TABLE (IF NOT EXISTS )?\x60${table}\x60`))
+  if (start === -1) return ''
+  const end = source.indexOf(';', start)
+  return source.slice(start, end === -1 ? undefined : end)
+}
+
+check('the import only writes columns the schema defines', () => {
+  const inserts = [...importSql.matchAll(/INSERT INTO (\w+)\s*\(([\s\S]*?)\)\s*(?:SELECT|VALUES)/g)]
+  ok(inserts.length >= 5, `expected several inserts, found ${inserts.length}`)
+  for (const [, table, columnList] of inserts) {
+    const block = tableBlock(schemaSql, table)
+    ok(block !== '', `schema.sql has no CREATE TABLE for ${table}`)
+    for (const raw of columnList.split(',')) {
+      const column = raw.trim().replace(/`/g, '')
+      if (!column) continue
+      ok(block.includes(`\x60${column}\x60`), `schema.sql is missing ${table}.${column}`)
+    }
+  }
+})
+
+check('idempotent migration guards every change the original makes', () => {
+  const pairs = (source: string) =>
+    [...source.matchAll(/TABLE_NAME = '([a-z_]+)' AND COLUMN_NAME = '([a-z_]+)'/g)].map(
+      (match) => `${match[1]}.${match[2]}`,
+    )
+  const original = [...migrationSql.matchAll(/CALL shn_add_column\('([a-z_]+)',\s*'([a-z_]+)'/g)].map(
+    (match) => `${match[1]}.${match[2]}`,
+  )
+  const guarded = new Set(pairs(idempotentSql))
+  eq(original.length, 23, 'column calls in the original migration')
+  for (const entry of original) ok(guarded.has(entry), `idempotent migration does not guard ${entry}`)
+
+  const indexes = [...migrationSql.matchAll(/CALL shn_add_index\('([a-z_]+)',\s*'([a-z_]+)'/g)].map(
+    (match) => `${match[1]}.${match[2]}`,
+  )
+  for (const entry of indexes) {
+    const [table, index] = entry.split('.')
+    ok(
+      idempotentSql.includes(`TABLE_NAME = '${table}' AND INDEX_NAME = '${index}'`),
+      `idempotent migration does not guard index ${entry}`,
+    )
+  }
+  ok(!/DELIMITER/.test(idempotentSql.replace(/^--.*$/gm, '')), 'idempotent migration must not use DELIMITER')
+})
+
+check('the pre-flight check covers every column the import needs', () => {
+  const checkSql = readFileSync(resolve(root, 'api/database/check-cms-schema.sql'), 'utf8')
+  const inserts = [...importSql.matchAll(/INSERT INTO (\w+)\s*\(([\s\S]*?)\)\s*(?:SELECT|VALUES)/g)]
+  for (const [, table, columnList] of inserts) {
+    for (const raw of columnList.split(',')) {
+      const column = raw.trim().replace(/`/g, '')
+      if (!column) continue
+      ok(
+        checkSql.includes(`SELECT '${table}', '${column}'`) || checkSql.includes(`SELECT '${table}' AS table_name, '${column}' AS column_name`),
+        `check-cms-schema.sql does not test ${table}.${column}`,
+      )
+    }
+  }
+})
+
 console.log(`\n${pass} passed, ${fail} failed\n`)
 process.exit(fail === 0 ? 0 : 1)

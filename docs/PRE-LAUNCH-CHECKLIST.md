@@ -70,6 +70,7 @@ Choose one mode and confirm it explicitly.
 
 ## 3b. Blog and editorial content
 
+- [ ] `check-cms-schema.sql` returns no rows (all CMS columns present).
 - [ ] The CMS migration ran, then `blog-content-import.sql` was imported and the
       verification `SELECT` reports 10 published / 20 scheduled / 15 categories.
 - [ ] `/blog`, a category archive and an article open on the live domain, with
