@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SITE } from '@/config/site'
 import { LegalPage } from '@/components/LegalPage'
-import { LaunchNotice } from '@/components/LaunchNotice'
 
 const SECTIONS = [
   { id: 'acceptance', label: '1. Acceptance of terms' },
@@ -41,15 +40,6 @@ const TermsAndConditions = () => {
       crumb="Terms & Conditions"
       sections={SECTIONS}
     >
-      {SITE.showLaunchNotices ? (
-        <LaunchNotice title="Legal review required">
-          <p>
-            Insert your registered legal entity name, governing-law state and any arbitration or venue
-            provisions your counsel recommends. This document is a working starting point and must be reviewed
-            by an attorney before launch.
-          </p>
-        </LaunchNotice>
-      ) : null}
 
       <h2 id="acceptance">1. Acceptance of terms</h2>
       <p>

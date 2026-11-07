@@ -3,7 +3,6 @@ import { ArrowRight, Mail, ShieldCheck } from 'lucide-react'
 import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SITE } from '@/config/site'
 import { PageHero } from '@/components/PageHero'
-import { LaunchNotice } from '@/components/LaunchNotice'
 
 const SECTIONS = [
   { id: 'summary', label: 'Our position in short' },
@@ -177,15 +176,6 @@ const DoNotSellOrShare = () => {
                 </a>
               </div>
 
-              {SITE.showLaunchNotices ? (
-                <LaunchNotice title="Confirm before launch">
-                  <p>
-                    If you later enable advertising pixels, remarketing tags or any tool that discloses
-                    personal information for cross-context behavioral advertising, this page and your consent
-                    interface must be updated before those tools go live.
-                  </p>
-                </LaunchNotice>
-              ) : null}
             </div>
           </div>
         </div>

@@ -16,7 +16,6 @@ import { PageHero } from '@/components/PageHero'
 import { SectionHeading } from '@/components/SectionHeading'
 import { CtaBand } from '@/components/CtaBand'
 import { Reveal } from '@/components/Reveal'
-import { LaunchNotice } from '@/components/LaunchNotice'
 import { useAvailability } from '@/components/availability/AvailabilityContext'
 
 const WHAT_WE_DO = [
@@ -161,17 +160,6 @@ const About = () => {
             </div>
           </div>
 
-          {SITE.showLaunchNotices ? (
-            <LaunchNotice title="Business details to confirm before launch">
-              <p>
-                This page intentionally avoids claiming certifications, licenses, insurance or a physical
-                office that have not been verified. Set your registered legal entity name in{' '}
-                <code className="rounded bg-black/5 px-1 dark:bg-white/10">src/config/site.ts</code>, add a
-                public business address if you have one, and keep the ownership disclosure accurate for your
-                state before launching.
-              </p>
-            </LaunchNotice>
-          ) : null}
         </div>
       </section>
 

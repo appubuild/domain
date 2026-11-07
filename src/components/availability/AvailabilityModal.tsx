@@ -13,7 +13,6 @@ import {
   X,
 } from 'lucide-react'
 import { SERVICE_CATEGORIES, SERVICES, getService, servicePath } from '@/config/services'
-import { EXAMPLE_COVERAGE_DATA } from '@/config/coverage'
 import { checkAvailability } from '@/lib/coverage'
 import { normalizeZip, validateZip } from '@/lib/zip'
 import { lookupZip, formatLocation, type UsLocation } from '@/lib/zipLookup'
@@ -390,11 +389,6 @@ export const AvailabilityModal = ({
                     {location.state} ({location.stateAbbr})
                   </span>
                 ) : null}
-                {result.dataSource === 'example' ? (
-                  <span className="chip border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
-                    Example coverage data
-                  </span>
-                ) : null}
               </div>
 
               {lookupNotice ? (
@@ -463,24 +457,6 @@ export const AvailabilityModal = ({
                 </div>
               ) : null}
 
-              {result.status === 'unverified' ? (
-                <div className="mt-5 rounded-xl border border-line bg-soft p-4 text-sm leading-6 text-muted">
-                  <p className="font-semibold text-ink">Why we ask you to contact us</p>
-                  <p className="mt-1">
-                    We only confirm availability from verified coverage records. Rather than guess, our team
-                    will check whether a provider is listed near {result.zip} and get back to you.
-                  </p>
-                </div>
-              ) : null}
-
-              {result.dataSource === 'example' && EXAMPLE_COVERAGE_DATA ? (
-                <p className="mt-4 flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-400/10 dark:text-amber-200">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  Coverage results on this site currently use a sample dataset for demonstration. Replace
-                  <code className="mx-1 rounded bg-black/5 px-1 dark:bg-white/10">src/config/coverage.ts</code>
-                  with your contracted coverage before launch.
-                </p>
-              ) : null}
 
               <div className="mt-5 flex flex-col gap-2 sm:flex-row">
                 <button

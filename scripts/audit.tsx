@@ -45,6 +45,25 @@ const SERVICE_SLUGS = [
 const ALL_ROUTES = [...ROUTES, ...SERVICE_SLUGS.map((slug) => `/services/${slug}`)]
 const PUBLIC_DIR = resolve(process.cwd(), 'public')
 
+/**
+ * Copy that must never reach a public page: environment variable names, source
+ * paths, launch reminders or sample-data labels.
+ */
+const BANNED_PUBLIC_COPY = [
+  'VITE_',
+  'src/config',
+  'before launch',
+  'EXAMPLE_',
+  'example coverage',
+  'sample dataset',
+  'demo dataset',
+  'lorem ipsum',
+  'not configured',
+  'configuration required',
+  'localhost',
+  '127.0.0.1',
+]
+
 let problems = 0
 const report = (route: string, message: string) => {
   problems += 1
@@ -92,6 +111,14 @@ for (const route of ALL_ROUTES) {
   // Every route should have exactly one h1.
   const h1Count = (html.match(/<h1/g) ?? []).length
   if (h1Count !== 1) report(route, `expected exactly one h1, found ${h1Count}`)
+
+  // No developer-facing copy on a public page.
+  const lowerHtml = html.toLowerCase()
+  for (const banned of BANNED_PUBLIC_COPY) {
+    if (lowerHtml.includes(banned.toLowerCase())) {
+      report(route, `internal copy visible: "${banned}"`)
+    }
+  }
 }
 
 console.log(

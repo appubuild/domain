@@ -1,8 +1,6 @@
-import { Link } from 'react-router-dom'
 import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SITE } from '@/config/site'
 import { LegalPage } from '@/components/LegalPage'
-import { LaunchNotice } from '@/components/LaunchNotice'
 
 const SECTIONS = [
   { id: 'independent', label: '1. Independent service providers' },
@@ -36,15 +34,6 @@ const Disclaimer = () => {
       crumb="Disclaimer"
       sections={SECTIONS}
     >
-      {SITE.showLaunchNotices ? (
-        <LaunchNotice title="Legal review required">
-          <p>
-            Review this disclaimer with counsel to confirm it matches your contracts with providers and the
-            disclosure requirements in the states you operate in. It should be read together with our{' '}
-            <Link to="/terms-and-conditions">Terms &amp; Conditions</Link>.
-          </p>
-        </LaunchNotice>
-      ) : null}
 
       <h2 id="independent">1. Independent service providers</h2>
       <p>

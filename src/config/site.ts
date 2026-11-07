@@ -55,7 +55,6 @@ export interface SiteConfig {
    * coverage results. Set to false once the business details, compliance
    * review and coverage data are finalized.
    */
-  showLaunchNotices: boolean
   /** Persisted theme key. */
   themeStorageKey: string
 }
@@ -95,7 +94,6 @@ export const SITE: SiteConfig = {
     defaultImage: '/images/hero-home.jpg',
     twitterHandle: '',
   },
-  showLaunchNotices: true,
   themeStorageKey: 'shn-theme',
 }
 

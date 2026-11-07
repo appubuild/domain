@@ -10,8 +10,6 @@ import { useAvailability } from '@/components/availability/AvailabilityContext'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { CtaBand } from '@/components/CtaBand'
 import { ServiceCallFinder } from '@/components/calls/ServiceCallFinder'
-import { LaunchNotice } from '@/components/LaunchNotice'
-import { SITE } from '@/config/site'
 
 const ServiceArea = () => {
   const { open } = useAvailability()
@@ -98,20 +96,6 @@ const ServiceArea = () => {
             </div>
           </div>
 
-          {SITE.showLaunchNotices ? (
-            <LaunchNotice title="Coverage dataset status">
-              <p>
-                The availability checker is wired to a configurable dataset in{' '}
-                <code className="rounded bg-black/5 px-1 dark:bg-white/10">src/config/coverage.ts</code>. The
-                dataset shipped with this build is a labelled example used to demonstrate the flow. Replace it
-                with your contracted coverage, mark each record{' '}
-                <code className="rounded bg-black/5 px-1 dark:bg-white/10">verified: true</code> only when it
-                is confirmed, and set{' '}
-                <code className="rounded bg-black/5 px-1 dark:bg-white/10">EXAMPLE_COVERAGE_DATA</code> to
-                false before launch.
-              </p>
-            </LaunchNotice>
-          ) : null}
         </div>
       </section>
 

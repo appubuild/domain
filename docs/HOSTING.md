@@ -132,16 +132,21 @@ CLI alternative: `npm i -g vercel && vercel --prod` from the project folder.
    verify it, and submit `https://yourdomain.com/sitemap.xml`.
 2. **robots.txt** — confirm `https://yourdomain.com/robots.txt` loads and points
    at the sitemap.
-3. **Contact form** — set `VITE_CONTACT_ENDPOINT` *before building*, otherwise the
-   form correctly reports that delivery is not configured. Then rebuild and
-   re-upload.
-4. **Phone number** — set `SITE.contact.phone` and `phoneDisplay` in
-   `src/config/site.ts`, then rebuild. Until then no call buttons are shown,
-   which is intentional.
-5. **Coverage data** — replace `src/config/coverage.ts` with your real coverage
-   and set `EXAMPLE_COVERAGE_DATA = false`, then rebuild.
-6. **Launch notices** — set `SITE.showLaunchNotices = false` once legal review is
-   done, then rebuild.
+3. **Contact form** — works out of the box: submitting opens the visitor's email
+   app with the message pre-filled and addressed to `SITE.contact.email`. To
+   deliver straight from the page on cPanel hosting, the build already includes
+   `contact.php` (edit the two addresses at the top, upload it with `dist/`, then
+   build with `VITE_CONTACT_ENDPOINT=/contact.php`). Any other handler works too —
+   set `VITE_CONTACT_ENDPOINT` to its URL (plus `VITE_SPAM_PROTECTION_SITE_KEY`
+   if it needs a captcha) and rebuild.
+4. **Service phone numbers** — already live in `src/data/serviceNumbers.ts`.
+   `SITE.contact.phone` / `phoneDisplay` in `src/config/site.ts` are only for an
+   optional company-wide line; leave them empty to show per-service numbers
+   only.
+5. **Coverage data** — `src/config/coverage.ts` ships empty, so the site never
+   claims availability it cannot verify. Add verified records and rebuild.
+6. **Public pages carry no setup notes** — launch reminders live in
+   `docs/PRE-LAUNCH-CHECKLIST.md`, never on the site.
 
 Every one of those items lives in the source project, so a rebuild is required
 after changing them. If you are hosting the ready-made `dist` package without the

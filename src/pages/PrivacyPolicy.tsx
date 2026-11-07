@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SITE } from '@/config/site'
 import { LegalPage } from '@/components/LegalPage'
-import { LaunchNotice } from '@/components/LaunchNotice'
 
 const SECTIONS = [
   { id: 'overview', label: '1. Overview' },
@@ -42,17 +41,6 @@ const PrivacyPolicy = () => {
       crumb="Privacy Policy"
       sections={SECTIONS}
     >
-      {SITE.showLaunchNotices ? (
-        <LaunchNotice title="Legal review required">
-          <p>
-            This policy is written for a home services connection and referral business and reflects how this
-            website is built. It is a starting point, not legal advice. Have counsel review it against your
-            actual data practices, vendor list and state obligations before launch, and complete the entity
-            name in{' '}
-            <code className="rounded bg-black/5 px-1 dark:bg-white/10">src/config/site.ts</code>.
-          </p>
-        </LaunchNotice>
-      ) : null}
 
       <h2 id="overview">1. Overview</h2>
       <p>

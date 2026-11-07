@@ -1,4 +1,4 @@
-import { COVERAGE, COVERAGE_EXCLUSIONS, EXAMPLE_COVERAGE_DATA } from '@/config/coverage'
+import { COVERAGE, COVERAGE_EXCLUSIONS } from '@/config/coverage'
 import { getProvidersFor } from '@/config/providers'
 import { getService } from '@/config/services'
 import { validateZip, normalizeZip } from '@/lib/zip'
@@ -50,7 +50,7 @@ export const checkAvailability = (serviceSlug: string, rawZip: string): Availabi
     serviceSlug,
     serviceName: service.name,
     status: inCoverage ? 'available' : 'unavailable',
-    dataSource: EXAMPLE_COVERAGE_DATA ? 'example' : 'configured',
+    dataSource: 'configured',
     note: record.note,
     lastReviewed: record.lastReviewed,
     providers: inCoverage ? providers : [],

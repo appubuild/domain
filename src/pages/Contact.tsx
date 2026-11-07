@@ -4,7 +4,6 @@ import { useSeo, breadcrumbJsonLd } from '@/lib/seo'
 import { SITE, hasPhone, telHref } from '@/config/site'
 import { PageHero } from '@/components/PageHero'
 import { ContactForm } from '@/components/ContactForm'
-import { LaunchNotice } from '@/components/LaunchNotice'
 import { useAvailability } from '@/components/availability/AvailabilityContext'
 
 const Contact = () => {
@@ -35,20 +34,6 @@ const Contact = () => {
           <div className="grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:gap-12">
             <div>
               <ContactForm />
-              {SITE.showLaunchNotices ? (
-                <LaunchNotice title="Form configuration required before launch">
-                  <p>
-                    Client-side validation, error states and the honest "not configured" response are in place.
-                    To start delivering messages, create a form endpoint and set{' '}
-                    <code className="rounded bg-black/5 px-1 dark:bg-white/10">VITE_CONTACT_ENDPOINT</code> in
-                    your environment, then rebuild. Add your reCAPTCHA or hCaptcha site key to{' '}
-                    <code className="rounded bg-black/5 px-1 dark:bg-white/10">
-                      VITE_SPAM_PROTECTION_SITE_KEY
-                    </code>{' '}
-                    for additional spam protection.
-                  </p>
-                </LaunchNotice>
-              ) : null}
             </div>
 
             <aside className="space-y-4">

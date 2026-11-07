@@ -96,17 +96,20 @@ Flow: **choose service → submit 5-digit ZIP → validate → look up coverage 
   one inline form (`ZipCheckForm`) and one provider block (`ProviderContact`)
   shared by the homepage, service pages, service area page and header CTA.
 
-### ⚠️ The shipped dataset is example data
+### Coverage ships empty (on purpose)
 
-`src/config/coverage.ts` ships with representative metro ZIP prefixes so the flow
-can be reviewed end to end. It is labelled in the UI as example data and is **not**
-a claim that providers operate there. Before launch:
+`src/config/coverage.ts` contains **no records**. Nothing on the site claims a
+service is available anywhere, because no contracted coverage is on file yet —
+every ZIP check returns "coverage not verified, contact our team", which is the
+truth. To switch real answers on, add records and mark them `verified: true`:
 
-1. Replace the records with your contracted coverage.
-2. Mark a record `verified: true` only when it is confirmed.
-3. Set `EXAMPLE_COVERAGE_DATA = false`.
+1. Add a record per service with `zipPrefixes` or `zips`.
+2. Mark it `verified: true` only when it is confirmed with providers.
+3. Rebuild — no component changes.
 
 Optional per-service ZIP exclusions are supported via `COVERAGE_EXCLUSIONS`.
+There is no sample/demo dataset and no flag to remember: if the list is empty,
+the site simply does not claim availability.
 
 ---
 
@@ -249,16 +252,21 @@ Owner decisions / tasks before going live:
 
 1. **Legal entity name and registered details** — update `SITE.legalName`,
    and add `SITE.contact.addressLines` if you have a public business address.
-2. **Authorized phone number** (and call-tracking number if used) —
-   `SITE.contact.phone` / `phoneDisplay`; add provider records with authorized
-   numbers in `src/config/providers.ts`.
-3. **Real coverage data** — replace the example dataset and set
-   `EXAMPLE_COVERAGE_DATA = false`.
-4. **Contact form endpoint** — set `VITE_CONTACT_ENDPOINT` (+ spam key).
+2. **Service phone numbers** — already live in `src/data/serviceNumbers.ts`
+   (20 owner-confirmed lines). `SITE.contact.phone` / `phoneDisplay` are only for
+   an optional company-wide line; provider records go in
+   `src/config/providers.ts`.
+3. **Real coverage data** — add verified records to `src/config/coverage.ts`
+   (ships empty, so nothing is claimed today).
+4. **Contact form endpoint (optional)** — without one, the form opens the
+   visitor's email app with the message pre-filled and addressed to
+   `SITE.contact.email`; set `VITE_CONTACT_ENDPOINT` (+ spam key) to deliver
+   directly instead.
 5. **Legal review** — Privacy Policy, Terms, Disclaimer, Do-Not-Sell and
    Accessibility pages must be reviewed by counsel for your entity, the states you
-   operate in, and any advertising or call-tracking you enable. Then set
-   `SITE.showLaunchNotices = false` to remove the setup notices.
+   operate in, and any advertising or call-tracking you enable. Launch notices are
+   no longer rendered anywhere; the owner checklist lives in
+   `docs/PRE-LAUNCH-CHECKLIST.md`.
 6. **Imagery licensing** — all 15 categories and the hero currently use
    generated placeholder photography. Replace it with your licensed images
    before launch (keep the same filenames in `public/images/`, or update the

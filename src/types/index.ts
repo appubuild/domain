@@ -94,7 +94,7 @@ export interface AvailabilityResult {
   serviceName: string
   status: CoverageStatus
   /** Where the coverage answer came from — surfaced in the UI for transparency. */
-  dataSource: 'configured' | 'example' | 'none'
+  dataSource: 'configured' | 'none'
   note?: string
   lastReviewed?: string
   providers: Provider[]

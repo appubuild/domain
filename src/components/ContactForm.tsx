@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Loader2, Send, Settings2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Check, Copy, Loader2, Mail, Send } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { INTEGRATIONS, CONTACT_FORM_CONNECTED } from '@/config/integrations'
 import { SITE } from '@/config/site'
 import { tracking } from '@/lib/tracking'
 
-type Status = 'idle' | 'submitting' | 'sent' | 'not-configured' | 'error'
+type Status = 'idle' | 'submitting' | 'sent' | 'email' | 'error'
 
 interface FormValues {
   name: string
@@ -50,10 +50,32 @@ const validate = (values: FormValues): FormErrors => {
   return errors
 }
 
+/**
+ * Builds the email that carries the enquiry when no form endpoint is connected,
+ * so the visitor still reaches a real inbox instead of a dead end.
+ */
+const buildEmailBody = (values: FormValues): string =>
+  [
+    `Name: ${values.name.trim()}`,
+    `Email: ${values.email.trim()}`,
+    `Topic: ${values.subject}`,
+    '',
+    values.message.trim(),
+    '',
+    'I agree to be contacted about this request.',
+  ].join('\n')
+
+const buildMailtoHref = (values: FormValues): string =>
+  `mailto:${SITE.contact.email}?subject=${encodeURIComponent(
+    `Website enquiry — ${values.subject}`,
+  )}&body=${encodeURIComponent(buildEmailBody(values))}`
+
 export const ContactForm = () => {
   const [values, setValues] = useState<FormValues>(initialValues)
   const [errors, setErrors] = useState<FormErrors>({})
   const [status, setStatus] = useState<Status>('idle')
+  const [mailtoHref, setMailtoHref] = useState('')
+  const [copied, setCopied] = useState(false)
   const startedAt = useRef(Date.now())
   const regionRef = useRef<HTMLFormElement>(null)
 
@@ -82,8 +104,12 @@ export const ContactForm = () => {
     tracking.onContactSubmit({ service: values.subject, path: '/contact' })
 
     if (!CONTACT_FORM_CONNECTED) {
-      // No endpoint configured: never show a fake success state.
-      setStatus('not-configured')
+      // No server endpoint: hand the finished message to the visitor's email
+      // app instead of pretending it was delivered from the page.
+      const href = buildMailtoHref(values)
+      setMailtoHref(href)
+      setStatus('email')
+      if (typeof window !== 'undefined') window.location.href = href
       return
     }
 
@@ -134,23 +160,57 @@ export const ContactForm = () => {
         Tell us what you are working on. We will reply with the options available in your area.
       </p>
 
-      {status === 'not-configured' ? (
-        <div className="mt-5 rounded-xl border border-amber-500/30 bg-amber-50/70 p-4 dark:border-amber-400/25 dark:bg-amber-400/10">
-          <p className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-200">
-            <Settings2 className="h-4 w-4" aria-hidden="true" />
-            Form delivery is not configured yet
+      {status === 'email' ? (
+        <div className="mt-5 rounded-xl border border-brand-500/30 bg-brand-50/70 p-4 dark:border-brand-400/25 dark:bg-brand-500/10">
+          <p className="flex items-center gap-2 text-sm font-bold text-ink dark:text-white">
+            <Mail className="h-4 w-4" aria-hidden="true" />
+            Your message is ready in your email app
           </p>
-          <p className="mt-2 text-[0.8125rem] leading-6 text-amber-900/90 dark:text-amber-100/90">
-            Your message was <strong>not</strong> sent, because no form endpoint has been connected to this
-            website. To enable delivery, set{' '}
-            <code className="rounded bg-black/10 px-1 dark:bg-white/10">VITE_CONTACT_ENDPOINT</code> to your
-            form handler (Formspree, Netlify Forms, your API, or an email service) and rebuild. In the
-            meantime, you can email us directly at{' '}
-            <a href={`mailto:${SITE.contact.email}`} className="font-semibold underline underline-offset-2">
+          <p className="mt-2 text-[0.8125rem] leading-6 text-ink/80 dark:text-white/80">
+            Press send there and it comes straight to our team — we will reply to {' '}
+            <span className="font-semibold">{values.email.trim() || 'the address you gave us'}</span>. If
+            nothing opened, copy the message and email it to {' '}
+            <a
+              href={`mailto:${SITE.contact.email}`}
+              className="font-semibold underline underline-offset-2"
+            >
               {SITE.contact.email}
             </a>
             .
           </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <a href={mailtoHref} className="btn-primary btn-sm">
+              <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+              Open email app
+            </a>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => {
+                void (async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      `To: ${SITE.contact.email}\nSubject: Website enquiry — ${values.subject}\n\n${buildEmailBody(values)}`,
+                    )
+                    setCopied(true)
+                    window.setTimeout(() => setCopied(false), 2500)
+                  } catch {
+                    setCopied(false)
+                  }
+                })()
+              }}
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+              {copied ? 'Copied' : 'Copy message'}
+            </button>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => setStatus('idle')}>
+              Edit message
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -325,8 +385,8 @@ export const ContactForm = () => {
 
         <p className="mt-3 text-xs leading-5 text-muted">
           {CONTACT_FORM_CONNECTED
-            ? 'We typically reply within one business day.'
-            : 'Form delivery requires configuration before launch — see the note above.'}
+            ? 'We reply to the address you provide, usually within one business day.'
+            : `Sending opens your email app with the message filled in, so it reaches ${SITE.contact.email} from your own address.`}
         </p>
       </form>
     </div>
