@@ -54,6 +54,24 @@ const eq = (actual: unknown, expected: unknown, message: string) => {
 const ATLANTA: UsLocation = { zip: '30301', city: 'Atlanta', state: 'Georgia', stateAbbr: 'GA' }
 const DENVER: UsLocation = { zip: '80202', city: 'Denver', state: 'Colorado', stateAbbr: 'CO' }
 
+/**
+ * Deep copy of the shipped directory. Tests mutate the live objects to exercise
+ * every branch, then restore from this snapshot so later assertions still see
+ * the real production data.
+ */
+const SNAPSHOT = JSON.parse(JSON.stringify(SERVICE_PHONE_NUMBERS)) as typeof SERVICE_PHONE_NUMBERS
+
+const restoreDirectory = () => {
+  SERVICE_PHONE_NUMBERS.forEach((group, groupIndex) => {
+    const original = SNAPSHOT[groupIndex]
+    group.numbers.forEach((number, numberIndex) => {
+      number.status = original.numbers[numberIndex].status
+      number.campaign = original.numbers[numberIndex].campaign
+      number.priority = original.numbers[numberIndex].priority
+    })
+  })
+}
+
 const stubFetch = (implementation: (url: string) => Promise<Response> | Response) => {
   globalThis.fetch = ((input: RequestInfo | URL) =>
     Promise.resolve(implementation(String(input)))) as typeof fetch
@@ -88,11 +106,24 @@ const run = async () => {
     }
   })
 
-  await check('all numbers are pending-verification (nothing published)', () => {
+  await check('all twenty numbers are active and publishable', () => {
     const stats = directoryStats()
-    eq(stats.pending, 20, 'pending count')
-    eq(stats.active, 0, 'active count')
+    eq(stats.active, 20, 'active count')
+    eq(stats.pending, 0, 'pending count')
     eq(stats.inactive, 0, 'inactive count')
+  })
+
+  await check('every live number records its campaign permission', () => {
+    for (const group of SERVICE_PHONE_NUMBERS) {
+      for (const number of group.numbers) {
+        ok(number.campaign, `${number.id} has no campaign block`)
+        eq(number.campaign?.nationwide, true, `${number.id} nationwide permission`)
+        ok(
+          typeof number.campaign?.notes === 'string' && number.campaign.notes.length > 0,
+          `${number.id} must record why it is published`,
+        )
+      }
+    }
   })
 
   await check('number ids and phone numbers are unique', () => {
@@ -183,13 +214,42 @@ const run = async () => {
     eq(toTelHref('(800) 779-3921'), 'tel:+18007793921', 'formatted input')
   })
 
-  await check('primary/alternate slots follow priority order', () => {
+  await check('priority decides Call Now vs Call Alternate', () => {
+    const state = resolveCallDirectory({
+      serviceSlug: 'roofing',
+      serviceName: 'Roofing',
+      location: ATLANTA,
+      previewUnpublished: false,
+    })
+    eq(state.kind, 'ready', 'state')
+    if (state.kind !== 'ready') throw new Error('not ready')
+    eq(state.numbers.length, 2, 'both lines offered')
+    eq(state.numbers[0].slot, 'primary', 'first slot')
+    eq(state.numbers[0].display, '800-779-3921', 'primary number')
+    eq(state.numbers[0].telHref, 'tel:+18007793921', 'primary tel href')
+    eq(state.numbers[1].slot, 'alternate', 'second slot')
+    eq(state.numbers[1].display, '888-863-0629', 'alternate number')
+    eq(state.numbers[1].telHref, 'tel:+18888630629', 'alternate tel href')
+  })
+
+  await check('a location is required before any number is offered', () => {
+    const state = resolveCallDirectory({
+      serviceSlug: 'roofing',
+      serviceName: 'Roofing',
+      location: null,
+      previewUnpublished: false,
+    })
+    eq(state.kind, 'needs-location', 'state without a location')
+  })
+
+  console.log('\n── Publication rules ────────────────────────────────────────────')
+
+  await check('a number set back to pending is never published', () => {
     const group = getPhoneGroup('roofing')!
-    const original = group.numbers.map((number) => ({ ...number }))
     try {
       group.numbers.forEach((number) => {
-        number.status = 'active'
-        number.campaign = { nationwide: true }
+        number.status = 'pending-verification'
+        number.campaign = undefined
       })
       const state = resolveCallDirectory({
         serviceSlug: 'roofing',
@@ -197,56 +257,41 @@ const run = async () => {
         location: ATLANTA,
         previewUnpublished: false,
       })
-      eq(state.kind, 'ready', 'state')
-      if (state.kind !== 'ready') throw new Error('not ready')
-      eq(state.numbers[0].slot, 'primary', 'first slot')
-      eq(state.numbers[0].display, '800-779-3921', 'primary number')
-      eq(state.numbers[1].slot, 'alternate', 'second slot')
-      eq(state.numbers[1].display, '888-863-0629', 'alternate number')
+      eq(state.kind, 'awaiting-verification', 'state')
     } finally {
-      group.numbers.forEach((number, index) => {
-        number.status = 'pending-verification'
-        number.campaign = undefined
-        number.priority = original[index].priority
-      })
+      restoreDirectory()
     }
   })
 
-  console.log('\n── Publication rules ────────────────────────────────────────────')
-
-  await check('pending numbers are hidden in production mode', () => {
-    const state = resolveCallDirectory({
-      serviceSlug: 'roofing',
-      serviceName: 'Roofing',
-      location: ATLANTA,
-      previewUnpublished: false,
-    })
-    eq(state.kind, 'awaiting-verification', 'state')
-  })
-
-  await check('development preview exposes unpublished numbers, flagged', () => {
-    const state = resolveCallDirectory({
-      serviceSlug: 'roofing',
-      serviceName: 'Roofing',
-      location: ATLANTA,
-      previewUnpublished: true,
-    })
-    eq(state.kind, 'preview', 'state')
-    if (state.kind !== 'preview') throw new Error('not preview')
-    ok(
-      state.numbers.every((number) => number.published === false),
-      'preview numbers must be marked unpublished',
-    )
-    eq(state.numbers.length, 2, 'preview count')
+  await check('development preview flags unpublished numbers', () => {
+    const group = getPhoneGroup('roofing')!
+    try {
+      group.numbers.forEach((number) => {
+        number.status = 'pending-verification'
+        number.campaign = undefined
+      })
+      const state = resolveCallDirectory({
+        serviceSlug: 'roofing',
+        serviceName: 'Roofing',
+        location: ATLANTA,
+        previewUnpublished: true,
+      })
+      eq(state.kind, 'preview', 'state')
+      if (state.kind !== 'preview') throw new Error('not preview')
+      ok(
+        state.numbers.every((number) => number.published === false),
+        'preview numbers must be marked unpublished',
+      )
+      eq(state.numbers.length, 2, 'preview count')
+    } finally {
+      restoreDirectory()
+    }
   })
 
   await check('inactive numbers are never offered', () => {
     const group = getPhoneGroup('plumbing')!
-    const original = group.numbers.map((number) => ({ ...number }))
     try {
       group.numbers[0].status = 'inactive'
-      group.numbers[1].status = 'active'
-      group.numbers[1].campaign = { nationwide: true }
       const state = resolveCallDirectory({
         serviceSlug: 'plumbing',
         serviceName: 'Plumbing',
@@ -258,18 +303,14 @@ const run = async () => {
       eq(state.numbers.length, 1, 'only the active number is offered')
       eq(state.numbers[0].id, 'plumbing-2', 'active number id')
     } finally {
-      group.numbers.forEach((number, index) => {
-        number.status = 'pending-verification'
-        number.campaign = undefined
-        number.priority = original[index].priority
-      })
+      restoreDirectory()
     }
   })
 
   console.log('\n── Campaign eligibility ─────────────────────────────────────────')
 
   await check('no campaign data means unverified (never offered)', () => {
-    const number = getPhoneGroup('hvac')!.numbers[0]
+    const number = { id: 't', number: '800-000-0000', priority: 1, status: 'active' as const }
     eq(evaluateCampaign(number, ATLANTA).eligibility, 'unverified', 'eligibility')
   })
 
@@ -307,7 +348,6 @@ const run = async () => {
 
   await check('state-restricted campaign yields an unverified-location panel', () => {
     const group = getPhoneGroup('window')!
-    const original = group.numbers.map((number) => ({ ...number }))
     try {
       group.numbers.forEach((number) => {
         number.status = 'active'
@@ -321,11 +361,7 @@ const run = async () => {
       })
       eq(state.kind, 'unverified-location', 'state')
     } finally {
-      group.numbers.forEach((number, index) => {
-        number.status = 'pending-verification'
-        number.campaign = undefined
-        number.priority = original[index].priority
-      })
+      restoreDirectory()
     }
   })
 
@@ -440,15 +476,36 @@ const run = async () => {
 
   console.log('\n── Rendering ────────────────────────────────────────────────────')
 
-  await check('every directory category produces a call panel state', () => {
+  await check('all ten categories offer two call options for a confirmed US location', () => {
     for (const category of CALL_DIRECTORY_CATEGORIES) {
       const state = resolveCallDirectory({
-        serviceSlug: category.serviceSlug ?? category.groupId,
+        serviceSlug: category.groupId,
         serviceName: category.label,
         location: ATLANTA,
         previewUnpublished: false,
       })
-      ok(typeof state.kind === 'string', `${category.groupId} produced no state`)
+      eq(state.kind, 'ready', `${category.groupId} state`)
+      if (state.kind !== 'ready') continue
+      eq(state.numbers.length, 2, `${category.groupId} number count`)
+      ok(
+        state.numbers.every(
+          (number) =>
+            number.telHref.startsWith('tel:+1') && number.telHref.replace(/[^0-9]/g, '').length === 11,
+        ),
+        `${category.groupId} tel href format`,
+      )
+    }
+  })
+
+  await check('service pages with a group offer calls, the rest show contact', () => {
+    for (const [slug, mapping] of Object.entries(SERVICE_NUMBER_MAP)) {
+      const state = resolveCallDirectory({
+        serviceSlug: slug,
+        serviceName: slug,
+        location: ATLANTA,
+        previewUnpublished: false,
+      })
+      eq(state.kind, mapping.groupIds.length > 0 ? 'ready' : 'no-directory', `${slug} state`)
     }
   })
 

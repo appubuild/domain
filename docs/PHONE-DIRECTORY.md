@@ -9,13 +9,15 @@ All service phone numbers on the website come from **one file**:
 |---|---|
 | Service groups | 10 |
 | Numbers imported | 20 (two per group) |
-| Active / published | **0** |
-| Pending verification | **20** |
+| Active / published | **20** |
+| Pending verification | 0 |
 | Inactive | 0 |
+| Owner confirmation | 2026-11-07 — all twenty lines confirmed correct and live |
 
-Every number ships as `pending-verification`. That means **no number is shown to
-the public** right now — visitors see a contact message instead. This is the
-correct state until each number and its call-campaign terms are verified.
+All twenty numbers are live with an explicit nationwide permission, so every
+service page, the homepage finder, the availability dialog and `/service-area`
+offer **Call Now** (priority 1) and **Call Alternate** (priority 2) once the
+visitor's ZIP code is confirmed.
 
 > A number is only published when **both** are true:
 > 1. `status: 'active'`
@@ -41,37 +43,42 @@ Services with **no** authorized group — water damage, pest control, locksmith,
 bedroom remodeling, door installation, concrete & paving — deliberately show a
 contact message. They never borrow another trade's number.
 
-## Activating a number (after you verify it)
+## Editing the directory
 
-Open `src/data/serviceNumbers.ts` and change only that number's object:
+Every entry looks like this:
 
 ```ts
 {
   id: 'roofing-1',
   number: '800-779-3921',
-  priority: 1,
-  status: 'active',                       // ← was 'pending-verification'
-  campaign: {
-    network: 'Network A',                 // who owns the line
-    campaign: 'Roofing nationwide',       // campaign / tracking pool
-    nationwide: true,                     // ONLY if confirmed in writing
-    // states: ['GA', 'FL'],              // or restrict instead
-    // zipCodes: ['30301'],
-    notes: 'Confirmed with network on 2026-11-12',
-  },
+  priority: 1,                              // 1 = Call Now, 2+ = Call Alternate
+  status: 'active',                         // 'active' | 'pending-verification' | 'inactive'
+  campaign: ownerConfirmedCampaign(),       // nationwide, confirmed 2026-11-07
 }
 ```
 
-Rules worth keeping:
+**Changing a number** — replace `number` with the new line and keep
+`priority`/`status`. Nothing else needs to change.
 
-- `nationwide: true` only when the campaign terms explicitly allow nationwide
-  traffic. If you are unsure, use `states` or `zipCodes`.
-- `priority: 1` becomes the **Call Now** button; every other published number
-  becomes a **Call Alternate** button, in ascending priority order.
-- Retire a line with `status: 'inactive'` — it stays in the file for history and
-  disappears from the site immediately.
-- Adding a whole new network or group needs no component changes: add the group,
-  then map it in `src/data/serviceNumberMapping.ts`.
+**Pausing a line** — set `status: 'inactive'`. It disappears from the site
+immediately and stays in the file for history.
+
+**Holding a line back** — set `status: 'pending-verification'`. It is hidden from
+visitors; in `npm run dev` you still see how it would look, flagged
+"Not published".
+
+**Restricting a line to some areas** — swap the campaign for an allow-list; the
+site then hides that line everywhere else automatically:
+
+```ts
+campaign: ownerConfirmedCampaign({ states: ['GA', 'FL'] })
+campaign: ownerConfirmedCampaign({ zipCodes: ['30301', '30303'] })
+```
+
+**Adding a network or an extra number** — add another object to the group's
+`numbers` array (and fill in `network` / `campaign` for tracking). No component
+changes are ever required; the mapping lives in
+`src/data/serviceNumberMapping.ts`.
 
 After editing, rebuild (`npm run build`) and re-upload `dist`.
 
@@ -115,11 +122,11 @@ and is hard-wired to the dev environment.
 npm run test
 ```
 
-33 assertions cover the directory structure, service-to-number mapping (no
-cross-assignment), two-number support, `tel:` formatting, priority ordering,
-active/inactive filtering, campaign eligibility (nationwide, state and ZIP
-rules), ZIP validation, and the ZIP API's success, cache, 404, 5xx, network and
-abort paths.
+36 assertions cover the directory structure, the live/active state, campaign
+permissions, service-to-number mapping (no cross-assignment), two-number
+support, `tel:` formatting, priority ordering, active/inactive filtering,
+campaign eligibility (nationwide, state and ZIP rules), ZIP validation, and the
+ZIP API's success, cache, 404, 5xx, network and abort paths.
 
 ## Campaign architecture (ready for the call networks)
 

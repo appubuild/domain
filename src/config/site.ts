@@ -6,10 +6,11 @@
  * UI components read from here so business details never have to be hunted
  * down in React files.
  *
- * ⚠️  PHONE NUMBERS: `phone` and `phoneDisplay` are intentionally empty. Add a
- * real, authorized number (or an authorized call-tracking number) before
- * launch. The UI hides every call button while they are empty and shows a
- * "contact our team" fallback instead. Never ship an unverified number.
+ * ℹ️  PHONE NUMBERS: service phone numbers live in src/data/serviceNumbers.ts
+ * (the live directory used by every call button). `phone` and `phoneDisplay`
+ * below are only for an optional company-wide line: leave them empty unless a
+ * single number should appear in the header, footer and contact page. Never
+ * ship an unverified number.
  * ============================================================================
  */
 

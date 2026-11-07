@@ -115,9 +115,10 @@ Optional per-service ZIP exclusions are supported via `COVERAGE_EXCLUSIONS`.
 Every call button on the site reads from `src/data/serviceNumbers.ts` —
 see **[docs/PHONE-DIRECTORY.md](docs/PHONE-DIRECTORY.md)** for the operations guide.
 
-- 10 service groups × 2 numbers = **20 numbers**, all currently
-  `pending-verification`, so **none are published**. Visitors see a contact
-  message instead.
+- 10 service groups × 2 numbers = **20 live numbers** (owner-confirmed
+  2026-11-07), published nationwide. The six services with no authorized group
+  deliberately show a contact message instead of borrowing another trade's
+  number.
 - A number is published only when `status: 'active'` **and** its campaign
   permissions allow the visitor's location (`nationwide`, or a `states` /
   `zipCodes` allow-list).
