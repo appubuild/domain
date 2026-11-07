@@ -1,0 +1,249 @@
+[
+  {
+    "id": 11,
+    "title": "Roof Leak Warning Signs Every Homeowner Should Know",
+    "slug": "roof-leak-warning-signs",
+    "category": {
+      "slug": "roofing",
+      "name": "Roofing",
+      "description": "Roof replacement and installation explained: materials, timelines, quotes and the inspection steps that tell you whether a roof has years left or months.",
+      "seoTitle": "Roofing Guides for Homeowners",
+      "seoDescription": "Plan a roofing project with confidence: how to read the early signs of a leak, what a full replacement involves, and the questions that separate a good quote from a cheap one.",
+      "sortOrder": 5
+    },
+    "primaryKeyword": "roof leak signs",
+    "secondaryKeywords": [
+      "signs of a leaking roof",
+      "roof leak from attic",
+      "water stain ceiling",
+      "roof inspection",
+      "roof repair near me",
+      "roof leak cost"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners who have spotted a stain, a missing shingle or a damp attic and want to know how urgent it is.",
+    "cta": { "label": "See roofing service options", "href": "/services/roofing" },
+    "internalLinks": [
+      { "label": "Roof repair or full replacement: how to decide", "href": "/blog/roof-repair-vs-replacement" },
+      { "label": "Storm damage roof repair and insurance claims", "href": "/blog/storm-damage-roof-repair-and-insurance" },
+      { "label": "The first 24 hours after water damage", "href": "/blog/first-24-hours-after-water-damage" }
+    ],
+    "image": "/images/blog/roof-leak-warning-signs.svg",
+    "imageAlt": "Illustration of a pitched roof with rain drops and a safety shield",
+    "seoTitle": "9 Roof Leak Warning Signs to Check This Weekend",
+    "seoDescription": "Brown ceiling rings, granules in the gutter, daylight in the attic: the nine signs a roof is leaking, what each one points to, and how long you have to act.",
+    "excerpt": "A roof leak rarely announces itself as water on the floor. It shows up first as a stain, a smell, a granule in the gutter or a shingle in the garden — and each of those tells you something different about urgency.",
+    "seoSummary": "Diagnostic guide to the nine earliest signals of roof failure, from interior stains to attic evidence.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["roofing", "leaks", "inspection", "prevention"],
+    "visual": "Flat vector medallion: a pitched roof with shingle lines and a chimney, with droplet and shield chips on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Water is patient. A roof can leak for months through a nail pop or a failed boot around a vent pipe before enough water collects to reach a ceiling — and by then the wet path is long, the insulation is saturated and the source is nowhere near the stain.",
+          "That is why the useful signs are not the dramatic ones. They are the small, early, specific ones listed below, each of which points to a different part of the roof and a different urgency."
+        ]
+      },
+      {
+        "h2": "Inside the house",
+        "bullets": [
+          "Brown or copper rings on a ceiling or wall — the classic sign. The centre of the ring is usually the lowest point of the leak, not the entry point.",
+          "Paint that blisters or bubbles near a ceiling line, which means moisture is trapped behind it.",
+          "A musty smell in an upstairs room or closet that does not go away when you ventilate.",
+          "Damp patches on a chimney breast, which usually mean failed flashing rather than failed shingles.",
+          "Sagging ceiling plaster — stop using the room below and get it inspected."
+        ]
+      },
+      {
+        "h2": "In the attic",
+        "paras": [
+          "Take a flashlight up on a dry day. Look for dark stains or water tracks on the underside of the roof deck, rust on nail tips, and daylight showing through the boards. Insulation that looks compressed, clumped or darker in one area has probably been wet.",
+          "Check around penetrations: vent pipes, the chimney, skylights and any satellite mount. Those are the places roofs leak first, because they rely on sealant and flashing rather than on the shingle field itself."
+        ]
+      },
+      {
+        "h2": "Outside, from the ground",
+        "table": {
+          "head": ["What you see", "What it usually means", "Urgency"],
+          "rows": [
+            ["Granules collecting in gutters or at downspouts", "Normal ageing, or hail damage if sudden", "Monitor; inspect after a storm"],
+            ["Curling, clawing or missing shingles", "End of service life on that slope", "Repair within weeks"],
+            ["Rusted or lifted flashing", "Sealant has failed at a penetration", "Repair within weeks"],
+            ["Sagging ridge line", "Structural or decking problem", "Inspect immediately"],
+            ["Dark streaks on the roof face", "Algae, usually cosmetic", "Low — clean if it bothers you"],
+            ["Moss or lichen in patches", "Retained moisture and debris", "Clean and inspect the deck"]
+          ]
+        }
+      },
+      {
+        "h2": "The one that catches everyone: ice dams",
+        "paras": [
+          "In cold climates, water backing up behind an ice dam at the eaves does more interior damage than any single missing shingle. The cause is warm air escaping into the attic, melting snow that refreezes at the cold edge. Fixing the roof without fixing the air sealing and insulation just moves the problem to next winter."
+        ]
+      },
+      {
+        "h2": "What to do while you wait for the inspection",
+        "ordered": [
+          "Put a bucket under the drip and move anything valuable out of the way.",
+          "Photograph everything — stains, shingles, granules, attic evidence — before anyone repairs anything.",
+          "Do not climb onto the roof. Wet shingles are treacherous and a fall is a far worse outcome than a stain.",
+          "If water is running near electrical fittings, switch off that circuit.",
+          "Avoid sealing over the leak from inside; trapping moisture in the assembly makes the damage worse."
+        ]
+      },
+      {
+        "h2": "How long you actually have",
+        "paras": [
+          "An active drip into a living space is a days-not-weeks problem. A stain with no active drip is usually weeks. A missing shingle on a slope with intact underlayment can often wait for scheduled work — but not through a storm season.",
+          "The exception is anything structural: a sagging deck, a ceiling that has begun to bow, or water pooling in the attic. Those need an inspection now, because the cost curve is not linear once framing is involved."
+        ],
+        "note": "Ask any inspector for photographs of what they found and a written scope of the repair. A verbal report of 'you need a new roof' is not a diagnosis, and it is not something you can compare against a second opinion."
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How do I find where a ceiling stain is coming from?",
+        "a": "Work uphill and up-slope from the stain: check the attic deck above it, then look outside at the nearest penetration — vent, chimney, skylight or valley. Water follows framing, so the entry point is often several feet away."
+      },
+      {
+        "q": "Is a small ceiling stain always a roof leak?",
+        "a": "No. Condensation from a bathroom fan venting into the attic, a plumbing leak or an ice dam can all produce identical stains. The attic inspection distinguishes them, which is why it is the first step."
+      },
+      {
+        "q": "Can I repair a roof leak myself?",
+        "a": "Clearing debris and replacing a slipped shingle at ground-accessible eaves is reasonable for a confident DIYer. Anything above a single story, anything around a chimney or valley, and any work on a wet roof belongs with a professional."
+      },
+      {
+        "q": "Will my insurance cover a roof leak?",
+        "a": "Policies typically cover sudden damage from a storm or a fallen branch, and typically exclude wear, age and lack of maintenance. Document the cause carefully: 'the shingles were worn' and 'hail damaged the shingles' produce very different answers."
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "title": "How to Choose a Roofing Contractor",
+    "slug": "how-to-choose-a-roofing-contractor",
+    "category": {
+      "slug": "roofing",
+      "name": "Roofing",
+      "description": "Roof replacement and installation explained: materials, timelines, quotes and the inspection steps that tell you whether a roof has years left or months.",
+      "seoTitle": "Roofing Guides for Homeowners",
+      "seoDescription": "Plan a roofing project with confidence: how to read the early signs of a leak, what a full replacement involves, and the questions that separate a good quote from a cheap one.",
+      "sortOrder": 5
+    },
+    "primaryKeyword": "how to choose a roofing contractor",
+    "secondaryKeywords": [
+      "roofing contractor near me",
+      "roofing quote",
+      "licensed roofer",
+      "roofing warranty",
+      "roof replacement estimate",
+      "roofing red flags"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners about to request roofing quotes and unsure what a credible proposal looks like.",
+    "cta": { "label": "See roofing service options", "href": "/services/roofing" },
+    "internalLinks": [
+      { "label": "Roof repair or full replacement: how to decide", "href": "/blog/roof-repair-vs-replacement" },
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" },
+      { "label": "Questions to ask before hiring a home service professional", "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional" }
+    ],
+    "image": "/images/blog/how-to-choose-a-roofing-contractor.svg",
+    "imageAlt": "Illustration of a house with a written quote and a review star",
+    "seoTitle": "How to Choose a Roofing Contractor: 7 Checks",
+    "seoDescription": "Licence, insurance, written scope, warranty and payment schedule: the seven checks that separate a professional roofer from an expensive experiment.",
+    "excerpt": "Roofing is the one home project where the cheapest quote is most often the most expensive outcome. Here is what to verify before you sign, and what a proper written scope contains.",
+    "seoSummary": "Contractor vetting checklist for roofing projects, from licence verification to payment milestones.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["roofing", "hiring", "contractors", "consumer protection"],
+    "visual": "Flat vector medallion: a house with a written proposal and a review star, on a warm sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A roof replacement is one of the largest single purchases a homeowner makes, and it is bought on trust: you cannot see the work once it is complete, and most of the failures show up after the contractor has moved on to the next job.",
+          "The vetting below is not about finding the cheapest roofer. It is about finding one whose paperwork, scope and payment terms will still make sense if something goes wrong in eighteen months."
+        ]
+      },
+      {
+        "h2": "1. Verify the licence and the insurance yourself",
+        "paras": [
+          "Ask for the licence number and check it against your state or local licensing database — do not accept a scanned card as proof. Ask for a certificate of general liability insurance and a workers' compensation certificate, and call the insurer to confirm the policy is current.",
+          "This matters more for roofing than for almost any other trade. If an uninsured crew member falls off your roof, the claim can land on your homeowner policy."
+        ]
+      },
+      {
+        "h2": "2. Insist on a written, itemised scope",
+        "paras": [
+          "A one-line quote saying 'remove and replace roof' is not a scope. A proper proposal states the square footage, whether the existing layers are removed or recovered, the underlayment and ice-and-water membrane, the flashing details, the ridge and edge treatment, ventilation changes, and what happens to the gutters and skylights."
+        ],
+        "table": {
+          "head": ["Line item", "Why it belongs in the quote"],
+          "rows": [
+            ["Tear-off vs overlay", "Overlays shorten the life of the new roof and may not be permitted"],
+            ["Decking replacement allowance", "Priced per sheet, so soft spots do not become a surprise invoice"],
+            ["Underlayment and membrane", "The layer that actually stops water at valleys and eaves"],
+            ["Flashing at chimney and walls", "The most common leak point on any roof"],
+            ["Ventilation", "Determines whether the manufacturer warranty stays valid"],
+            ["Dumpster, permits and cleanup", "Common hidden extras, and magnet sweeping for nails"],
+            ["Warranty terms", "Workmanship years and whether it is transferable"]
+          ]
+        }
+      },
+      {
+        "h2": "3. Check that the warranty is two warranties",
+        "paras": [
+          "Materials carry a manufacturer warranty; installation carries a workmanship warranty. A 30-year shingle installed badly will fail in five, and the manufacturer will decline the claim because the fault is workmanship.",
+          "Ask for the workmanship period in writing, whether it transfers to a buyer if you sell, and whether the contractor requires you to register the product warranty."
+        ]
+      },
+      {
+        "h2": "4. Ask how the crew is employed",
+        "paras": [
+          "Some companies use their own crews; others subcontract. Subcontracting is not automatically bad, but the contract should say who is responsible for supervision, insurance and warranty service. If the answer is vague, the warranty will be too."
+        ]
+      },
+      {
+        "h2": "5. Payment schedule and deposits",
+        "paras": [
+          "A sensible schedule is a modest deposit for materials, a progress payment once the roof is dry and inspection-ready, and the balance after the final walkthrough and cleanup. Large cash deposits, full payment upfront, or pressure to sign the same day are all reasons to walk away.",
+          "Never pay in cash without a receipt, and never let the final payment happen before you have walked the property and checked for nails, damaged landscaping and debris in gutters."
+        ]
+      },
+      {
+        "h2": "6. Local references you can actually call",
+        "paras": [
+          "Online reviews are a starting point, not evidence. Ask for three recent addresses in your area and, ideally, one roof that is at least five years old. A contractor whose five-year-old work still looks clean is telling you something reviews cannot."
+        ]
+      },
+      {
+        "h2": "7. Red flags worth ending the conversation over",
+        "bullets": [
+          "Door-to-door sales immediately after a storm, with an offer that expires today.",
+          "No physical business address, or an address that is a mailbox store.",
+          "A request to sign a document that assigns your insurance claim to them.",
+          "Refusal to put the scope, warranty or payment schedule in writing.",
+          "A quote dramatically below every other quote with no explanation of what is missing."
+        ],
+        "note": "In most US states you have a short right-to-cancel window on contracts signed at your home. Read the notice on the back of any contract before you sign it, and keep a copy of everything."
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How many roofing quotes should I get?",
+        "a": "Three is the practical number: enough to see the range, few enough to compare properly. Make sure all three are quoting the same scope, otherwise you are comparing prices, not proposals."
+      },
+      {
+        "q": "What is a normal deposit for a roof replacement?",
+        "a": "Often around 10–30% to cover materials, with the balance on completion. Anything approaching full payment before work starts should be refused."
+      },
+      {
+        "q": "Do I need a permit for a roof replacement?",
+        "a": "In most jurisdictions, yes — and the permit usually triggers an inspection. Ask who pulls it; a contractor who suggests skipping it is also skipping the inspection that protects you."
+      },
+      {
+        "q": "How long does a roof replacement take?",
+        "a": "Most single-family roofs take one to three days on site, weather permitting. Steeper pitches, multiple layers to strip and complex detailing can extend that."
+      }
+    ]
+  }
+]

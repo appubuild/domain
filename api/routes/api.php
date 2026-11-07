@@ -26,6 +26,7 @@ use Shn\Controllers\AdminLeadController;
 use Shn\Controllers\AdminMediaController;
 use Shn\Controllers\AdminPageController;
 use Shn\Controllers\AdminPhoneNumberController;
+use Shn\Controllers\AdminPublishingController;
 use Shn\Controllers\AdminServiceController;
 use Shn\Controllers\AdminSettingController;
 use Shn\Controllers\AdminTaxonomyController;
@@ -56,6 +57,7 @@ return [
     ['GET', '/v1/pages/{slug}', [PublicContentController::class, 'page'], ['rate:read']],
 
     ['GET', '/v1/blog/categories', [PublicContentController::class, 'blogCategories'], ['rate:read']],
+    ['GET', '/v1/blog/categories/{slug}', [PublicContentController::class, 'blogCategory'], ['rate:read']],
     ['GET', '/v1/blog/tags', [PublicContentController::class, 'blogTags'], ['rate:read']],
     ['GET', '/v1/blog', [PublicContentController::class, 'posts'], ['rate:read']],
     ['GET', '/v1/blog/{slug}', [PublicContentController::class, 'post'], ['rate:read']],
@@ -66,6 +68,7 @@ return [
     ['GET', '/v1/integrations', [PublicContentController::class, 'integrations'], ['rate:read']],
     ['GET', '/v1/seo', [PublicContentController::class, 'seo'], ['rate:read']],
     ['GET', '/v1/sitemap', [PublicContentController::class, 'sitemap'], ['rate:read']],
+    ['GET', '/v1/sitemap.xml', [PublicContentController::class, 'sitemapXml'], ['rate:read']],
 
     ['POST', '/v1/leads', [PublicLeadController::class, 'store'], ['rate:lead']],
     ['POST', '/v1/analytics/events', [PublicAnalyticsController::class, 'store'], ['rate:analytics']],
@@ -216,6 +219,13 @@ return [
     ['POST', '/v1/admin/calls', [AdminAnalyticsController::class, 'storeCall'], ['auth', 'csrf', 'role:admin']],
     ['GET', '/v1/admin/revenue', [AdminAnalyticsController::class, 'revenue'], ['auth', 'role:viewer']],
     ['POST', '/v1/admin/revenue', [AdminAnalyticsController::class, 'storeRevenue'], ['auth', 'csrf', 'role:admin']],
+
+    /* --------------------------- publishing --------------------------- */
+
+    ['GET', '/v1/admin/publishing/log', [AdminPublishingController::class, 'log'], ['auth', 'role:viewer']],
+    ['POST', '/v1/admin/publishing/run', [AdminPublishingController::class, 'run'], ['auth', 'csrf', 'role:editor']],
+    ['GET', '/v1/admin/publishing/sitemap', [AdminPublishingController::class, 'sitemap'], ['auth', 'role:viewer']],
+    ['POST', '/v1/admin/publishing/sitemap', [AdminPublishingController::class, 'rebuildSitemap'], ['auth', 'csrf', 'role:admin']],
 
     /* ------------------------------ media ----------------------------- */
 

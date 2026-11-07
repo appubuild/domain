@@ -156,6 +156,37 @@ DROP TABLE IF EXISTS `blog_tags`;
 DROP TABLE IF EXISTS `blog_posts`;
 DROP TABLE IF EXISTS `blog_categories`;
 DROP TABLE IF EXISTS `pages`;
+DROP TABLE IF EXISTS `blog_post_metadata`;
+DROP TABLE IF EXISTS `publishing_log`;
+
+CREATE TABLE `blog_post_metadata` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `post_id`    INT UNSIGNED NOT NULL,
+  `meta_key`   VARCHAR(80)  NOT NULL,
+  `meta_value` TEXT         NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_post_meta` (`post_id`, `meta_key`),
+  KEY `idx_post_meta_key` (`meta_key`),
+  CONSTRAINT `fk_post_meta_post` FOREIGN KEY (`post_id`) REFERENCES `blog_posts` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE `publishing_log` (
+  `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `entity_type`   ENUM('post','page') NOT NULL,
+  `entity_id`     INT UNSIGNED NOT NULL,
+  `action`        ENUM('scheduled','published','unpublished','failed','skipped') NOT NULL,
+  `scheduled_for` DATETIME NULL DEFAULT NULL,
+  `executed_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `actor`         VARCHAR(60)  NOT NULL DEFAULT 'cron',
+  `message`       VARCHAR(500) NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_publishing_entity` (`entity_type`, `entity_id`),
+  KEY `idx_publishing_action` (`action`, `executed_at`),
+  KEY `idx_publishing_executed` (`executed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS `homepage_sections`;
 DROP TABLE IF EXISTS `faqs`;
 DROP TABLE IF EXISTS `faq_groups`;
@@ -170,7 +201,15 @@ CREATE TABLE `pages` (
   `body`            LONGTEXT     NULL,
   `seo_title`       VARCHAR(200) NULL,
   `seo_description` VARCHAR(320) NULL,
+  `focus_keyword`   VARCHAR(160) NULL,
+  `secondary_keywords` VARCHAR(500) NULL,
+  `canonical_url`   VARCHAR(500) NULL,
+  `noindex`         TINYINT(1)   NOT NULL DEFAULT 0,
+  `og_image`        VARCHAR(255) NULL,
+  `page_group`      VARCHAR(80)  NULL,     -- grouping in the admin page list
+  `sort_order`      SMALLINT     NOT NULL DEFAULT 0,
   `published_at`    DATETIME     NULL DEFAULT NULL,
+  `scheduled_at`    DATETIME     NULL DEFAULT NULL,
   `created_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `deleted_at`      DATETIME     NULL DEFAULT NULL,
@@ -178,18 +217,25 @@ CREATE TABLE `pages` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_pages_slug` (`slug`),
   KEY `idx_pages_status` (`status`),
+  KEY `idx_pages_scheduled` (`status`, `scheduled_at`),
+  KEY `idx_pages_group` (`page_group`, `sort_order`),
   KEY `idx_pages_updated_by` (`updated_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `blog_categories` (
-  `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `slug`        VARCHAR(120) NOT NULL,
-  `name`        VARCHAR(160) NOT NULL,
-  `description` VARCHAR(400) NULL,
-  `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `slug`            VARCHAR(120) NOT NULL,
+  `name`            VARCHAR(160) NOT NULL,
+  `description`     VARCHAR(400) NULL,
+  `seo_title`       VARCHAR(200) NULL,
+  `seo_description` VARCHAR(320) NULL,
+  `sort_order`      SMALLINT NOT NULL DEFAULT 0,
+  `noindex`         TINYINT(1) NOT NULL DEFAULT 0,
+  `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uniq_blog_categories_slug` (`slug`)
+  UNIQUE KEY `uniq_blog_categories_slug` (`slug`),
+  KEY `idx_blog_categories_order` (`sort_order`, `name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `blog_tags` (
@@ -213,16 +259,27 @@ CREATE TABLE `blog_posts` (
   `featured_image_alt` VARCHAR(200) NULL,
   `seo_title`          VARCHAR(200) NULL,
   `seo_description`    VARCHAR(320) NULL,
+  `seo_summary`        VARCHAR(500) NULL,
+  `focus_keyword`      VARCHAR(160) NULL,
+  `secondary_keywords` VARCHAR(500) NULL,
+  `canonical_url`      VARCHAR(500) NULL,
+  `noindex`            TINYINT(1)   NOT NULL DEFAULT 0,
+  `social_image`       VARCHAR(255) NULL,
+  `view_count`         INT UNSIGNED NOT NULL DEFAULT 0,
   `author_name`        VARCHAR(120) NOT NULL DEFAULT 'Editorial team',
   `published_at`       DATETIME     NULL DEFAULT NULL,
+  `scheduled_at`       DATETIME     NULL DEFAULT NULL,
   `created_at`         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `updated_by`         INT UNSIGNED NULL,
   `deleted_at`         DATETIME     NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uniq_blog_posts_slug` (`slug`),
   KEY `idx_blog_posts_status` (`status`),
   KEY `idx_blog_posts_category` (`category_id`),
   KEY `idx_blog_posts_published` (`published_at`),
+  KEY `idx_blog_posts_scheduled` (`status`, `scheduled_at`),
+  KEY `idx_blog_posts_focus` (`focus_keyword`),
   CONSTRAINT `fk_blog_posts_category` FOREIGN KEY (`category_id`) REFERENCES `blog_categories` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -440,11 +497,13 @@ CREATE TABLE `media` (
   `filename`      VARCHAR(190) NOT NULL,
   `original_name` VARCHAR(190) NOT NULL,
   `mime_type`     VARCHAR(120) NOT NULL,
+  `kind`          VARCHAR(20) NOT NULL DEFAULT 'image',
   `size_bytes`    INT UNSIGNED NOT NULL DEFAULT 0,
   `width`         SMALLINT UNSIGNED NULL,
   `height`        SMALLINT UNSIGNED NULL,
   `path`          VARCHAR(255) NOT NULL,
   `alt_text`      VARCHAR(200) NULL,
+  `description`   VARCHAR(300) NULL,
   `uploaded_by`   INT UNSIGNED NULL,
   `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),

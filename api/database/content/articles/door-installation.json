@@ -1,0 +1,127 @@
+[
+  {
+    "id": 25,
+    "title": "Front Door Replacement Guide",
+    "slug": "front-door-replacement-guide",
+    "category": {
+      "slug": "door-installation",
+      "name": "Door Installation",
+      "description": "Exterior and interior door projects: sizing, security, energy performance and the installation details that decide whether a new door closes properly for years.",
+      "seoTitle": "Door Installation Guides",
+      "seoDescription": "Front door replacement explained: how to size a door, choose between steel, fiberglass and wood, and what a proper installation includes.",
+      "sortOrder": 12
+    },
+    "primaryKeyword": "front door replacement",
+    "secondaryKeywords": [
+      "new front door cost",
+      "steel vs fiberglass door",
+      "door installation near me",
+      "entry door replacement",
+      "door security",
+      "door energy efficiency"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners replacing an entry door and weighing material, security and installation quality.",
+    "cta": { "label": "See door installation options", "href": "/services/door-installation" },
+    "internalLinks": [
+      { "label": "Rekey or replace your locks?", "href": "/blog/rekey-vs-replace-locks" },
+      { "label": "Energy efficient windows: what the ratings mean", "href": "/blog/energy-efficient-windows-guide" },
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" }
+    ],
+    "image": "/images/blog/front-door-replacement-guide.svg",
+    "imageAlt": "Illustration of a panelled front door with a key and a security shield",
+    "seoTitle": "Front Door Replacement Guide: Materials, Cost and Fit",
+    "seoDescription": "Steel, fiberglass or wood, plus the installation details — sill pan, flashing and shimming — that decide whether a new front door seals and lasts.",
+    "excerpt": "A front door is bought for looks and judged on how it closes. The difference between a door that seals for twenty years and one that sticks by winter is almost always the installation, not the slab.",
+    "seoSummary": "Entry door buying guide covering material comparison, sizing, security and installation standards.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["doors", "replacement", "security", "energy"],
+    "visual": "Flat vector medallion: a panelled entry door with a key chip, a ruler chip and a star chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A front door does more work than any other door in the house: it is the primary security barrier, the largest single air leak in many homes, and the first thing anyone notices about the property.",
+          "Replacement is one of the better-value exterior projects, provided the opening is measured correctly and the door is installed with flashing and shimming rather than wedged in and foamed."
+        ]
+      },
+      {
+        "h2": "Choose the material first",
+        "table": {
+          "head": ["Material", "Strengths", "Watch out for"],
+          "rows": [
+            ["Steel", "Strong, affordable, secure, low maintenance", "Dents; rust if the paint film is damaged"],
+            ["Fiberglass", "Best balance of insulation, durability and look", "Higher cost; quality varies widely"],
+            ["Wood", "Beautiful, repairable, solid feel", "Needs refinishing; moves with the seasons"],
+            ["Aluminum with thermal break", "Modern look, excellent for large glazed units", "Conducts heat; must be thermally broken"],
+            ["Composite", "Stable and low maintenance", "Newer category; check warranty support"]
+          ]
+        },
+        "paras": [
+          "For most homes, a fiberglass or insulated steel door delivers the best combination of security, weather performance and price. Wood is beautiful and worth it where the house's architecture calls for it, but budget for refinishing every few years."
+        ]
+      },
+      {
+        "h2": "Sizing: measure the opening, not the old door",
+        "paras": [
+          "Doors are sold by slab size and by rough opening. A replacement that matches the existing frame is a straightforward swap; changing the size means framing work and possibly new trim and siding repair.",
+          "Measure the width at three heights and the height at three widths. Older openings are rarely square, and the largest measurement governs the size you need."
+        ],
+        "note": "If the existing door has a storm door, confirm the new door's hardware and hinge position do not interfere. It is a small detail that causes a surprising number of returns."
+      },
+      {
+        "h2": "Security is in the frame as much as the door",
+        "bullets": [
+          "A solid core and a reinforced strike plate matter more than the number of locks.",
+          "Long screws through the strike plate into the framing — not just the trim — are the single cheapest security upgrade.",
+          "Avoid decorative glass within arm's reach of the locks unless it is laminated.",
+          "A door viewer and a door limiter are worth more than a chain.",
+          "Hinges on the outside are a vulnerability; use security hinges or a pinned hinge set."
+        ]
+      },
+      {
+        "h2": "What a proper installation includes",
+        "ordered": [
+          "Remove the old door and inspect the rough opening for rot, water damage and level.",
+          "Install a sill pan or a fully sealed sill — the most commonly skipped step and the most common cause of a rotted threshold.",
+          "Flash the sides and head, lapping like shingles so water runs out and down.",
+          "Set the door in the opening with shims at hinges, lock and sill, checking plumb, level and square.",
+          "Insulate the perimeter with low-expansion foam or backer rod, not expanding foam that bows the frame.",
+          "Seal the interior air barrier as carefully as the exterior.",
+          "Adjust the strike, test the latch and the deadbolt, and confirm the door closes with a consistent gap."
+        ]
+      },
+      {
+        "h2": "What it should cost, roughly",
+        "paras": [
+          "The door itself is often the smaller half of the invoice. An entry door replacement typically includes removal and disposal, the new unit, hardware, trim, flashing, paint or stain and labour — and a pre-hung unit with a factory frame is usually cheaper to install than hanging a slab in an existing frame.",
+          "Comparing quotes means comparing the same door. Ask each contractor to list the specific model, the glass package, the hardware and whether the interior and exterior trim are included."
+        ]
+      },
+      {
+        "h2": "Maintenance that keeps it working",
+        "paras": [
+          "Adjust the hinges and the strike plate if the door starts to rub — most seasonal sticking is alignment, not warping. Check the weatherstripping annually, lubricate the lock cylinder once a year, and touch up any paint chip on a steel door before rust starts.",
+          "Keep the threshold clear of debris and confirm water drains away from the sill. Almost every rotted threshold started as a puddle that had nowhere to go."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long does a front door replacement take?",
+        "a": "A like-for-like pre-hung replacement is usually a few hours. Resizing the opening or replacing a door in a masonry wall can take a full day or more."
+      },
+      {
+        "q": "Is a steel or fiberglass front door better?",
+        "a": "Fiberglass insulates better, resists dents and can mimic wood grain; steel is cheaper and very strong but dents and can rust if the finish is damaged. Both are good choices — the installation matters more than the difference."
+      },
+      {
+        "q": "Should I replace the frame at the same time?",
+        "a": "If the frame is sound and square, a pre-hung door in a new frame is still usually the better route than reusing old jambs. If there is rot at the sill, replace the frame and repair the flashing."
+      },
+      {
+        "q": "Can a new front door reduce my energy bill?",
+        "a": "It reduces drafts noticeably, which improves comfort, but the bill impact is modest unless the old door was severely leaking. Air sealing the whole envelope delivers more."
+      }
+    ]
+  }
+]

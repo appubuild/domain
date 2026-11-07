@@ -163,6 +163,7 @@ export const NAV_LINKS = [
   { label: 'Home', to: '/' },
   { label: 'Services', to: '/services' },
   { label: 'How It Works', to: '/how-it-works' },
+  { label: 'Blog', to: '/blog' },
   { label: 'About Us', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ] as const

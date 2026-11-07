@@ -77,6 +77,11 @@ export const Footer = () => {
                   All {SERVICES.length} services
                 </Link>
               </li>
+              <li>
+                <Link to="/blog" className={`${footerLink} font-semibold text-white/85`}>
+                  Homeowner guides
+                </Link>
+              </li>
             </ul>
           </nav>
 

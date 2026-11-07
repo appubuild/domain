@@ -1,453 +1,244 @@
+/**
+ * Blog index.
+ *
+ * The old version edited posts in a modal; the editor now lives on its own
+ * route (/admin/blog/new and /admin/blog/:id) and this screen is the list:
+ * filter by status/category, search, see the schedule, then jump into the
+ * editor or flip a post live without leaving the table.
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Eye, EyeOff, ImageIcon, Newspaper, Pencil, Plus, Trash2 } from 'lucide-react'
-import { repository, type NewPost } from '@/admin/data/repository'
-import type { BlogPost, ContentStatus } from '@/admin/types/admin'
-import { contentStatusTone } from '@/admin/lib/selectors'
-import { formatDate } from '@/admin/lib/format'
-import { DataTable, type Column } from '@/admin/components/DataTable'
+import { useNavigate } from 'react-router-dom'
+import { CalendarClock, Eye, EyeOff, ExternalLink, Loader2, Newspaper, Pencil, Plus, Search, Trash2 } from 'lucide-react'
 import {
   Badge,
   Button,
   Card,
-  ConfirmDialog,
-  Field,
+  EmptyState,
   IconButton,
-  Input,
-  Modal,
   PageHeader,
+  SearchInput,
   Select,
-  Textarea,
+  cn,
 } from '@/admin/components/ui'
 import { useToast } from '@/admin/context/ToastContext'
+import { contentApi, formatUtc, type ContentCategory, type ContentPost } from '@/admin/data/contentApi'
+import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
 
-const CATEGORIES = ['Roofing', 'HVAC', 'Plumbing', 'Electrical', 'Restoration', 'Remodeling', 'Locksmith', 'Pest control', 'Windows', 'General']
-
-interface PostFormState {
-  title: string
-  slug: string
-  category: string
-  status: ContentStatus
-  excerpt: string
-  featuredImage: string
-  seoTitle: string
-  seoDescription: string
-  author: string
-  publishedAt: string
-}
-
-const today = (): string => new Date().toISOString().slice(0, 10)
-
-const emptyForm: PostFormState = {
-  title: '',
-  slug: '',
-  category: 'General',
-  status: 'draft',
-  excerpt: '',
-  featuredImage: '',
-  seoTitle: '',
-  seoDescription: '',
-  author: 'Editorial team',
-  publishedAt: today(),
-}
+const STATUS_TONE = { published: 'success', scheduled: 'amber', draft: 'slate' } as const
 
 export const BlogPage = () => {
+  const navigate = useNavigate()
   const toast = useToast()
-  const [posts, setPosts] = useState<BlogPost[]>([])
+  const [posts, setPosts] = useState<ContentPost[]>([])
+  const [categories, setCategories] = useState<ContentCategory[]>([])
   const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [editing, setEditing] = useState<BlogPost | null>(null)
-  const [form, setForm] = useState<PostFormState>(emptyForm)
-  const [modalOpen, setModalOpen] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [formError, setFormError] = useState<string | null>(null)
-  const [pendingDelete, setPendingDelete] = useState<BlogPost | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState('all')
+  const [category, setCategory] = useState('all')
+  const [query, setQuery] = useState('')
+  const [busyId, setBusyId] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    setError(null)
     try {
-      setPosts(await repository.listPosts())
-    } catch {
-      toast.error('Could not load blog posts')
+      const [result, categoryList] = await Promise.all([
+        contentApi.listPosts({ status, category, q: query, perPage: 100 }),
+        contentApi.listCategories(),
+      ])
+      setPosts(result.items)
+      setCategories(categoryList)
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Posts could not be loaded.')
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [status, category, query])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
-  const filtered = useMemo(
-    () =>
-      posts.filter((post) => {
-        if (statusFilter !== 'all' && post.status !== statusFilter) return false
-        if (categoryFilter !== 'all' && post.category !== categoryFilter) return false
-        return true
-      }),
-    [posts, statusFilter, categoryFilter],
+  const counts = useMemo(
+    () => ({
+      published: posts.filter((post) => post.status === 'published').length,
+      scheduled: posts.filter((post) => post.status === 'scheduled').length,
+      draft: posts.filter((post) => post.status === 'draft').length,
+    }),
+    [posts],
   )
 
-  const openCreate = () => {
-    setEditing(null)
-    setForm({ ...emptyForm, publishedAt: today() })
-    setFormError(null)
-    setModalOpen(true)
-  }
-
-  const openEdit = (post: BlogPost) => {
-    setEditing(post)
-    setForm({
-      title: post.title,
-      slug: post.slug,
-      category: post.category,
-      status: post.status,
-      excerpt: post.excerpt,
-      featuredImage: post.featuredImage,
-      seoTitle: post.seoTitle,
-      seoDescription: post.seoDescription,
-      author: post.author,
-      publishedAt: post.publishedAt.slice(0, 10),
-    })
-    setFormError(null)
-    setModalOpen(true)
-  }
-
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault()
-    if (!form.title.trim()) {
-      setFormError('A post title is required.')
-      return
-    }
-    setSaving(true)
-    setFormError(null)
-    const payload: NewPost = {
-      title: form.title.trim(),
-      slug: form.slug.trim() || form.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-      category: form.category,
-      status: form.status,
-      excerpt: form.excerpt.trim(),
-      featuredImage: form.featuredImage.trim(),
-      seoTitle: form.seoTitle.trim() || form.title.trim(),
-      seoDescription: form.seoDescription.trim(),
-      author: form.author.trim() || 'Editorial team',
-      publishedAt: new Date(`${form.publishedAt}T09:00:00.000Z`).toISOString(),
-    }
+  const toggleStatus = async (post: ContentPost): Promise<void> => {
+    setBusyId(post.id)
     try {
-      if (editing) {
-        await repository.updatePost(editing.id, payload)
-        toast.success('Post updated', payload.title)
-      } else {
-        await repository.createPost(payload)
-        toast.success('Post created', `${payload.title} saved as ${payload.status}.`)
-      }
-      setModalOpen(false)
+      const next = post.status === 'published' ? 'draft' : 'published'
+      await contentApi.setStatus(post.id, next)
+      toast.success(next === 'published' ? 'Post published' : 'Post moved to draft', post.title)
       await load()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not save the post.'
-      setFormError(message)
-      toast.error('Save failed', message)
+    } catch (cause) {
+      toast.error('Status not changed', cause instanceof Error ? cause.message : 'Try again.')
     } finally {
-      setSaving(false)
+      setBusyId(null)
     }
   }
 
-  const togglePublish = async (post: BlogPost) => {
-    const status: ContentStatus = post.status === 'published' ? 'draft' : 'published'
+  const remove = async (post: ContentPost): Promise<void> => {
+    if (!window.confirm(`Delete “${post.title}”?`)) return
+    setBusyId(post.id)
     try {
-      await repository.updatePost(post.id, { status })
-      toast.success(status === 'published' ? 'Post published' : 'Post unpublished', post.title)
+      await contentApi.deletePost(post.id)
+      toast.success('Post deleted', post.title)
       await load()
-    } catch {
-      toast.error('Could not change the post status')
-    }
-  }
-
-  const confirmDelete = async () => {
-    if (!pendingDelete) return
-    setDeleting(true)
-    try {
-      await repository.deletePost(pendingDelete.id)
-      toast.success('Post deleted', pendingDelete.title)
-      setPendingDelete(null)
-      await load()
-    } catch (error) {
-      toast.error('Delete failed', error instanceof Error ? error.message : undefined)
+    } catch (cause) {
+      toast.error('Not deleted', cause instanceof Error ? cause.message : 'Try again.')
     } finally {
-      setDeleting(false)
+      setBusyId(null)
     }
   }
-
-  const columns: Column<BlogPost>[] = [
-    {
-      key: 'title',
-      header: 'Post',
-      render: (row) => (
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-9 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-soft ring-1 ring-line">
-            {row.featuredImage ? (
-              // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-              <img src={row.featuredImage} alt="" className="h-full w-full object-cover" loading="lazy" />
-            ) : (
-              <ImageIcon className="h-4 w-4 text-muted" />
-            )}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate font-semibold text-ink">{row.title}</p>
-            <p className="truncate font-mono text-2xs text-muted">/blog/{row.slug}</p>
-          </div>
-        </div>
-      ),
-      sortValue: (row) => row.title,
-    },
-    {
-      key: 'category',
-      header: 'Category',
-      hideBelow: 'sm',
-      render: (row) => <Badge tone="slate">{row.category}</Badge>,
-      sortValue: (row) => row.category,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (row) => <Badge tone={contentStatusTone(row.status)}>{row.status}</Badge>,
-      sortValue: (row) => row.status,
-    },
-    {
-      key: 'publishedAt',
-      header: 'Publish date',
-      hideBelow: 'md',
-      render: (row) => <span className="text-xs text-muted">{formatDate(row.publishedAt)}</span>,
-      sortValue: (row) => row.publishedAt,
-    },
-    {
-      key: 'author',
-      header: 'Author',
-      hideBelow: 'lg',
-      render: (row) => <span className="text-xs text-muted">{row.author}</span>,
-      sortValue: (row) => row.author,
-    },
-    {
-      key: 'actions',
-      header: '',
-      align: 'right',
-      render: (row) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <IconButton
-            label={row.status === 'published' ? `Unpublish ${row.title}` : `Publish ${row.title}`}
-            onClick={() => togglePublish(row)}
-          >
-            {row.status === 'published' ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-          </IconButton>
-          <IconButton label={`Edit ${row.title}`} onClick={() => openEdit(row)}>
-            <Pencil className="h-3.5 w-3.5" />
-          </IconButton>
-          <IconButton label={`Delete ${row.title}`} tone="danger" onClick={() => setPendingDelete(row)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
-      ),
-    },
-  ]
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Blog"
-        description="Write, categorise and schedule posts with their own featured image and SEO metadata."
-        meta={
-          <>
-            <Badge tone="brand">{posts.length} posts</Badge>
-            <Badge tone="success">{posts.filter((post) => post.status === 'published').length} published</Badge>
-            <Badge tone="violet">{posts.filter((post) => post.status === 'scheduled').length} scheduled</Badge>
-          </>
-        }
+        description={`${posts.length} posts · ${counts.published} published · ${counts.scheduled} scheduled · ${counts.draft} drafts`}
         actions={
-          <Button size="sm" onClick={openCreate} iconLeft={<Plus className="h-4 w-4" />}>
+          <Button size="sm" iconLeft={<Plus className="h-4 w-4" />} onClick={() => navigate('/admin/blog/new')}>
             New post
           </Button>
         }
       />
 
       <Card>
-        <DataTable
-          rows={filtered}
-          columns={columns}
-          rowKey={(row) => row.id}
-          loading={loading}
-          searchText={(row) => `${row.title} ${row.slug} ${row.category} ${row.author}`}
-          searchPlaceholder="Search posts…"
-          pageSize={8}
-          initialSort={{ key: 'publishedAt', direction: 'desc' }}
-          emptyTitle="No posts match"
-          emptyDescription="Create a post or clear the filters."
-          toolbar={
-            <>
-              <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status" className="w-36">
-                <option value="all">All statuses</option>
-                <option value="published">Published</option>
-                <option value="draft">Draft</option>
-                <option value="scheduled">Scheduled</option>
-              </Select>
-              <Select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category" className="w-36">
-                <option value="all">All categories</option>
-                {Array.from(new Set(posts.map((post) => post.category))).map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
+        <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
+          <SearchInput
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onClear={() => setQuery('')}
+            placeholder="Search title, slug or excerpt"
+            className="min-w-[220px] flex-1"
+          />
+          <Select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter by status" className="w-auto">
+            <option value="all">All statuses</option>
+            <option value="published">Published</option>
+            <option value="scheduled">Scheduled</option>
+            <option value="draft">Drafts</option>
+          </Select>
+          <Select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filter by category" className="w-auto">
+            <option value="all">All categories</option>
+            {categories.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </Select>
+          <Button variant="ghost" size="sm" iconLeft={<Search className="h-4 w-4" />} onClick={() => void load()}>
+            Refresh
+          </Button>
+        </div>
+
+        {error ? (
+          <div className="border-b border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-700">{error}</div>
+        ) : null}
+
+        {loading ? (
+          <div className="flex items-center gap-2 p-8 text-sm text-muted">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading posts…
+          </div>
+        ) : posts.length === 0 ? (
+          <EmptyState
+            icon={<Newspaper className="h-5 w-5" />}
+            title="No posts match these filters"
+            description="Clear the filters, or start a new article in the full-page editor."
+            action={
+              <Button size="sm" onClick={() => navigate('/admin/blog/new')}>
+                New post
+              </Button>
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line bg-soft/60 text-left text-2xs uppercase tracking-wide text-muted">
+                  <th className="px-4 py-2 font-semibold">Post</th>
+                  <th className="px-4 py-2 font-semibold">Category</th>
+                  <th className="px-4 py-2 font-semibold">Status</th>
+                  <th className="px-4 py-2 font-semibold">Publish / schedule</th>
+                  <th className="px-4 py-2 text-right font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {posts.map((post) => (
+                  <tr key={post.id} className="border-b border-line last:border-0 hover:bg-soft/40">
+                    <td className="max-w-[420px] px-4 py-2.5">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/blog/${post.id}`)}
+                        className="block truncate text-left font-medium text-ink hover:text-brand-700"
+                      >
+                        {post.title}
+                      </button>
+                      <span className="block truncate font-mono text-2xs text-muted">/blog/{post.slug}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-xs text-muted">
+                      {categories.find((item) => item.id === post.categoryId)?.name ?? post.categoryName ?? '—'}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Badge tone={STATUS_TONE[post.status]}>{post.status}</Badge>
+                      {post.focusKeyword ? (
+                        <span className="mt-1 block truncate text-2xs text-muted" title={post.focusKeyword}>
+                          {post.focusKeyword}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-muted">
+                      {post.status === 'scheduled'
+                        ? formatUtc(post.scheduledAt || post.publishedAt, ADMIN_CONFIG.publishing.timezone)
+                        : post.status === 'published'
+                          ? formatUtc(post.publishedAt, ADMIN_CONFIG.publishing.timezone)
+                          : '—'}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-end gap-1">
+                        <IconButton label={`Edit ${post.title}`} onClick={() => navigate(`/admin/blog/${post.id}`)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </IconButton>
+                        <IconButton
+                          label={post.status === 'published' ? `Unpublish ${post.title}` : `Publish ${post.title}`}
+                          onClick={() => void toggleStatus(post)}
+                          disabled={busyId === post.id}
+                        >
+                          {post.status === 'published' ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </IconButton>
+                        {post.status === 'published' ? (
+                          <a
+                            href={`/blog/${post.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`View ${post.title}`}
+                            className={cn('inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-soft hover:text-ink')}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
+                        ) : null}
+                        <IconButton label={`Delete ${post.title}`} tone="danger" onClick={() => void remove(post)} disabled={busyId === post.id}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </IconButton>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </Select>
-            </>
-          }
-        />
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
-      <Modal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editing ? `Edit “${editing.title}”` : 'New blog post'}
-        description="Post records are managed here; the public site has no blog route yet."
-        size="lg"
-        footer={
-          <>
-            <Button variant="secondary" size="sm" onClick={() => setModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" form="post-form" type="submit" loading={saving}>
-              {editing ? 'Save changes' : 'Create post'}
-            </Button>
-          </>
-        }
-      >
-        <form id="post-form" onSubmit={submit} className="space-y-4">
-          {formError ? (
-            <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300">
-              {formError}
-            </p>
-          ) : null}
-
-          <Field label="Title" htmlFor="post-title" required>
-            <Input
-              id="post-title"
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              required
-            />
-          </Field>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Slug" htmlFor="post-slug" hint="Auto-generated from the title when empty.">
-              <Input
-                id="post-slug"
-                value={form.slug}
-                onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
-              />
-            </Field>
-            <Field label="Category" htmlFor="post-category">
-              <Select
-                id="post-category"
-                value={form.category}
-                onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-              >
-                {CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="Status" htmlFor="post-status">
-              <Select
-                id="post-status"
-                value={form.status}
-                onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as ContentStatus }))}
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="scheduled">Scheduled</option>
-              </Select>
-            </Field>
-            <Field label="Publish date" htmlFor="post-date">
-              <Input
-                id="post-date"
-                type="date"
-                value={form.publishedAt}
-                onChange={(event) => setForm((current) => ({ ...current, publishedAt: event.target.value }))}
-              />
-            </Field>
-            <Field label="Author" htmlFor="post-author">
-              <Input
-                id="post-author"
-                value={form.author}
-                onChange={(event) => setForm((current) => ({ ...current, author: event.target.value }))}
-              />
-            </Field>
-          </div>
-
-          <Field label="Featured image URL" htmlFor="post-image" hint="Path under /images or an absolute URL.">
-            <div className="flex items-center gap-2">
-              <Input
-                id="post-image"
-                value={form.featuredImage}
-                onChange={(event) => setForm((current) => ({ ...current, featuredImage: event.target.value }))}
-                placeholder="/images/services/roofing.jpg"
-              />
-              <span className="flex h-10 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-soft ring-1 ring-line">
-                {form.featuredImage ? (
-                  <img src={form.featuredImage} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <ImageIcon className="h-4 w-4 text-muted" />
-                )}
-              </span>
-            </div>
-          </Field>
-
-          <Field label="Excerpt" htmlFor="post-excerpt">
-            <Textarea
-              id="post-excerpt"
-              rows={2}
-              value={form.excerpt}
-              onChange={(event) => setForm((current) => ({ ...current, excerpt: event.target.value }))}
-            />
-          </Field>
-
-          <Field label="SEO title" htmlFor="post-seo-title">
-            <Input
-              id="post-seo-title"
-              value={form.seoTitle}
-              onChange={(event) => setForm((current) => ({ ...current, seoTitle: event.target.value }))}
-            />
-          </Field>
-
-          <Field label="SEO description" htmlFor="post-seo-description" hint={`${form.seoDescription.length}/160 characters`}>
-            <Textarea
-              id="post-seo-description"
-              rows={2}
-              value={form.seoDescription}
-              onChange={(event) => setForm((current) => ({ ...current, seoDescription: event.target.value.slice(0, 160) }))}
-            />
-          </Field>
-        </form>
-      </Modal>
-
-      <ConfirmDialog
-        open={Boolean(pendingDelete)}
-        title="Delete post?"
-        description={`“${pendingDelete?.title ?? ''}” will be removed from the demo workspace.`}
-        confirmLabel="Delete post"
-        loading={deleting}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={confirmDelete}
-      />
-
-      {!loading && posts.length === 0 ? (
-        <Card className="flex items-center gap-3 px-5 py-4 text-sm text-muted">
-          <Newspaper className="h-4 w-4" /> No posts yet — write the first one.
-        </Card>
-      ) : null}
+      <p className="flex items-center gap-1.5 text-2xs text-muted">
+        <CalendarClock className="h-3 w-3" /> Scheduled posts publish automatically within five minutes of their time.
+      </p>
     </div>
   )
 }
+
+export default BlogPage

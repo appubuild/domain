@@ -5,7 +5,7 @@
  *
  *   npm run sitemap
  */
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
@@ -16,6 +16,7 @@ const SITE_URL = 'https://safehomenetwork.com'
 const STATIC_ROUTES = [
   { path: '/', priority: '1.0', changefreq: 'weekly' },
   { path: '/services', priority: '0.9', changefreq: 'weekly' },
+  { path: '/blog', priority: '0.8', changefreq: 'weekly' },
   { path: '/how-it-works', priority: '0.8', changefreq: 'monthly' },
   { path: '/about', priority: '0.7', changefreq: 'monthly' },
   { path: '/contact', priority: '0.7', changefreq: 'yearly' },
@@ -35,6 +36,28 @@ if (slugs.length === 0) {
   process.exit(1)
 }
 
+/**
+ * Blog categories ship with the app, so they belong in the static sitemap too.
+ * Posts themselves are published over time by the scheduler, so they are added
+ * at runtime by api/services/SitemapBuilder.php instead of being frozen here.
+ */
+let blogCategories = []
+try {
+  const contentDir = resolve(root, 'api/database/content/articles')
+  const seen = new Set()
+  for (const file of readdirSync(contentDir).filter((name) => name.endsWith('.json')).sort()) {
+    for (const article of JSON.parse(readFileSync(resolve(contentDir, file), 'utf8'))) {
+      const category = article.category?.slug
+      if (category && !seen.has(category)) {
+        seen.add(category)
+        blogCategories.push(category)
+      }
+    }
+  }
+} catch {
+  console.warn('Blog categories unavailable — static sitemap will omit /blog/category/*.')
+}
+
 const today = new Date().toISOString().slice(0, 10)
 
 const urls = [
@@ -52,6 +75,14 @@ const urls = [
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>`,
+  ),
+  ...blogCategories.map(
+    (slug) => `  <url>
+    <loc>${SITE_URL}/blog/category/${slug}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
   </url>`,
   ),
 ].join('\n')

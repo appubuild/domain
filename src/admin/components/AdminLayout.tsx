@@ -24,8 +24,7 @@ import {
   ShieldCheck,
   Tags,
   Wrench,
-  X,
-} from 'lucide-react'
+  X, FolderTree, CalendarClock } from 'lucide-react'
 import { useAdminAuth } from '@/admin/context/AdminAuthContext'
 import { ADMIN_CONFIG, IS_DEMO_AUTH, storageKey } from '@/admin/config/adminConfig'
 import { readJSON, writeJSON } from '@/admin/data/storage'
@@ -67,6 +66,8 @@ export const ADMIN_NAV: NavGroup[] = [
     items: [
       { to: '/admin/pages', label: 'Pages', icon: FileText },
       { to: '/admin/blog', label: 'Blog', icon: Newspaper },
+      { to: '/admin/categories', label: 'Categories & Tags', icon: FolderTree },
+      { to: '/admin/publishing', label: 'Publishing', icon: CalendarClock },
       { to: '/admin/homepage', label: 'Homepage Sections', icon: LayoutTemplate },
     ],
   },

@@ -134,7 +134,10 @@ export const apiRequestEnvelope = async <T>(
     ...(options.headers ?? {}),
   }
 
-  if (options.body !== undefined) headers['Content-Type'] = 'application/json'
+  // FormData (media uploads) must keep the browser's multipart boundary; every
+  // other body is JSON.
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData
+  if (options.body !== undefined && !isFormData) headers['Content-Type'] = 'application/json'
 
   if (method !== 'GET') {
     const csrf = readCookie(CSRF_COOKIE)
@@ -151,7 +154,7 @@ export const apiRequestEnvelope = async <T>(
       headers,
       credentials: 'include',
       cache: 'no-store',
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body === undefined ? undefined : isFormData ? (options.body as FormData) : JSON.stringify(options.body),
       signal: controller.signal,
     })
 

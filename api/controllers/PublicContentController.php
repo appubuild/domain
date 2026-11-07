@@ -20,6 +20,7 @@ use Shn\Models\PageModel;
 use Shn\Models\SeoModel;
 use Shn\Models\ServiceModel;
 use Shn\Models\SettingModel;
+use Shn\Services\SitemapBuilder;
 
 final class PublicContentController extends Controller
 {
@@ -82,7 +83,34 @@ final class PublicContentController extends Controller
             throw ApiException::notFound('That article does not exist.');
         }
 
+        // Counted here (not on the list endpoint) so the figure reflects real
+        // article reads.
+        try {
+            $this->blog->incrementView((int) $post['id']);
+        } catch (\Throwable) {
+            // A failed counter must never break the article.
+        }
+
         Response::ok($post, $this->meta());
+    }
+
+    public function blogCategory(Request $request, string $slug): void
+    {
+        unset($request);
+
+        $category = $this->blog->publicCategoryBySlug($slug);
+        if ($category === null) {
+            throw ApiException::notFound('That category does not exist.');
+        }
+
+        ['page' => $page, 'per_page' => $perPage] = $this->pagination(10, 50);
+        $result = $this->blog->publicIndex(['category' => $slug], $page, $perPage);
+
+        Response::ok([
+            'category' => $category,
+            'posts' => $result['items'],
+            'pagination' => $result['meta'],
+        ], $this->meta());
     }
 
     public function blogCategories(Request $request): void
@@ -188,6 +216,13 @@ final class PublicContentController extends Controller
             'count' => count($entries),
             'entries' => $entries,
         ], $this->meta());
+    }
+
+    /** The sitemap as XML, for hosts that proxy /sitemap.xml to the API. */
+    public function sitemapXml(Request $request): void
+    {
+        unset($request);
+        Response::xml((new SitemapBuilder())->xml());
     }
 
     /* ----------------------------- health ---------------------------- */

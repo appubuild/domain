@@ -1,0 +1,257 @@
+[
+  {
+    "id": 19,
+    "title": "Kitchen Remodel Costs: A Line-by-Line Breakdown",
+    "slug": "kitchen-remodel-cost-breakdown",
+    "category": {
+      "slug": "kitchen-remodeling",
+      "name": "Kitchen Remodeling",
+      "description": "Budgeting and planning a kitchen remodel: where the money actually goes, what drives the range, and how to sequence a project without living in a construction site longer than necessary.",
+      "seoTitle": "Kitchen Remodeling Guides",
+      "seoDescription": "Plan a kitchen remodel with realistic numbers: cabinet and countertop costs, labour percentages, contingency, and the choices that move a budget most.",
+      "sortOrder": 9
+    },
+    "primaryKeyword": "kitchen remodel cost",
+    "secondaryKeywords": [
+      "kitchen renovation budget",
+      "how much does a kitchen remodel cost",
+      "kitchen cabinet cost",
+      "kitchen remodel ROI",
+      "mid-range kitchen remodel",
+      "kitchen labor cost"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners planning a kitchen project who need a realistic budget before requesting quotes.",
+    "cta": { "label": "See kitchen remodeling options", "href": "/services/kitchen-remodeling" },
+    "internalLinks": [
+      { "label": "How long does a kitchen remodel take?", "href": "/blog/kitchen-remodel-timeline" },
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" },
+      { "label": "Questions to ask before hiring a home service professional", "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional" }
+    ],
+    "image": "/images/blog/kitchen-remodel-cost-breakdown.svg",
+    "imageAlt": "Illustration of a kitchen counter with cabinets, a coin and a measuring ruler",
+    "seoTitle": "Kitchen Remodel Cost Breakdown: Where the Money Goes",
+    "seoDescription": "Cabinets, counters, labor, appliances and contingency: a realistic percentage breakdown of a kitchen remodel budget and the decisions that swing it most.",
+    "excerpt": "Kitchen budgets rarely fail because of the cabinets. They fail because of what is behind the wall, what was not in the plan, and a contingency that was never set aside.",
+    "seoSummary": "Percentage-based kitchen remodel budget model with cost drivers and a contingency guide.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["kitchen remodeling", "budget", "planning", "contractors"],
+    "visual": "Flat vector medallion: a kitchen counter with base cabinets, a coin chip and a ruler chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A kitchen remodel has an unusual cost profile: the visible parts — cabinets, counters, appliances — are the parts everyone budgets for, while the expensive surprises are invisible — wiring, plumbing, water damage, a floor that was never level.",
+          "The breakdown below is the shape of a typical mid-range project. Use it to sanity-check quotes, not to price a specific job, because regional labour rates vary by more than any material in the list."
+        ]
+      },
+      {
+        "h2": "The percentage model",
+        "table": {
+          "head": ["Category", "Share of budget", "What it covers"],
+          "rows": [
+            ["Cabinets and hardware", "25–35%", "Boxes, doors, drawer fronts, pulls, soft-close"],
+            ["Labor and installation", "20–30%", "Demolition, carpentry, plumbing, electrical, tile"],
+            ["Countertops", "10–15%", "Fabrication, templating, sink and cooktop cut-outs"],
+            ["Appliances", "10–20%", "Range, fridge, dishwasher, hood, microwave"],
+            ["Flooring", "5–10%", "Removal, subfloor prep, material, trim"],
+            ["Backsplash and tile", "4–8%", "Tile, adhesive, grout, waterproofing"],
+            ["Lighting and electrical", "4–8%", "Recessed lights, under-cabinet, outlets, circuits"],
+            ["Plumbing", "3–6%", "Sink, faucet, disposal, relocating supply or drain"],
+            ["Paint, trim and finishing", "3–5%", "Walls, ceiling, door casings, touch-up"],
+            ["Contingency", "10–20%", "The line item that saves the project"]
+          ]
+        }
+      },
+      {
+        "h2": "The four decisions that move the number most",
+        "paras": [
+          "Moving the sink, moving the range, changing the footprint and changing the layout are the four most expensive decisions in any kitchen, because they trigger plumbing, gas, electrical and sometimes structural work. A 'cosmetic' remodel keeps services where they are; a 'reconfiguration' is a different budget entirely.",
+          "Cabinet choice is the next biggest lever. Refacing or painting existing boxes typically costs a fraction of new cabinets and delivers most of the visual change. Full custom cabinetry can double the cabinet line of a stock or semi-custom kitchen."
+        ]
+      },
+      {
+        "h2": "Behind the wall: the surprises",
+        "bullets": [
+          "Knob-and-tube or aluminum wiring that must be brought up to code when the wall is open.",
+          "A drain that runs through the middle of a cabinet you wanted to remove.",
+          "Water damage around the sink or dishwasher that has rotted the subfloor.",
+          "No proper venting for the range hood, requiring a new roof or wall penetration.",
+          "Asbestos-containing floor tile or mastic in older homes, which requires licensed abatement.",
+          "An undersized electrical panel that cannot carry new appliance circuits."
+        ],
+        "note": "Open a wall before you sign a fixed-price contract if the house is older than about 40 years. A half-day of exploratory work can prevent a five-figure change order."
+      },
+      {
+        "h2": "What a contingency is really for",
+        "paras": [
+          "Ten percent is the minimum for a cosmetic kitchen; twenty percent is realistic for anything involving a wall, a service relocation or a house older than 1960. The contingency is not padding — it is the mechanism that lets you make a decision on day nine instead of stopping work for two weeks while you find more money.",
+          "If the contingency is unused at the end, it becomes the budget for the thing you actually wanted: better lighting, a pantry, or the patio door."
+        ]
+      },
+      {
+        "h2": "Where the money is worth spending",
+        "ordered": [
+          "Drawers over doors in base cabinets — daily usability beats any finish.",
+          "Task lighting under the upper cabinets and at the sink.",
+          "A quiet, correctly sized range hood ducted outside.",
+          "A single sink with a good faucet over a divided sink with a cheap one.",
+          "Durable flooring that tolerates water and dropped pans.",
+          "Soft-close hinges and full-extension drawer slides — cheap, transformative."
+        ]
+      },
+      {
+        "h2": "Resale: what actually returns",
+        "paras": [
+          "Kitchen remodels consistently rank among the higher-return interior projects, but rarely at 100%. A minor kitchen remodel — refaced cabinets, new counters, updated appliances — typically returns more per dollar than a high-end gut renovation, because the expensive end of the market is a smaller pool of buyers.",
+          "The practical rule: spend where a buyer will look first (counters, cabinets, lighting) and avoid personal statement pieces that narrow the audience."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How much does a kitchen remodel cost?",
+        "a": "It ranges enormously by region and scope. The useful approach is to price the four big lines — cabinets, labour, counters, appliances — then add contingency. Any quote significantly below the others usually has a line missing."
+      },
+      {
+        "q": "Is it cheaper to reface cabinets than replace them?",
+        "a": "Usually substantially cheaper, provided the boxes are square and the layout works. Refacing plus new counters and lighting can deliver most of the visual impact for a fraction of a full replacement."
+      },
+      {
+        "q": "How much should a kitchen remodel contingency be?",
+        "a": "At least 10% for cosmetic work, 15–20% when walls are being opened or services moved, and more for older homes with unknown wiring or plumbing."
+      },
+      {
+        "q": "Do I need permits for a kitchen remodel?",
+        "a": "Almost always for electrical, plumbing, gas or structural changes, and often for a full gut. Permits trigger inspections that protect you at resale — ask the contractor who pulls them."
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "title": "How Long Does a Kitchen Remodel Take?",
+    "slug": "kitchen-remodel-timeline",
+    "category": {
+      "slug": "kitchen-remodeling",
+      "name": "Kitchen Remodeling",
+      "description": "Budgeting and planning a kitchen remodel: where the money actually goes, what drives the range, and how to sequence a project without living in a construction site longer than necessary.",
+      "seoTitle": "Kitchen Remodeling Guides",
+      "seoDescription": "Plan a kitchen remodel with realistic numbers: cabinet and countertop costs, labour percentages, contingency, and the choices that move a budget most.",
+      "sortOrder": 9
+    },
+    "primaryKeyword": "how long does a kitchen remodel take",
+    "secondaryKeywords": [
+      "kitchen remodel timeline",
+      "kitchen renovation schedule",
+      "cabinet lead time",
+      "kitchen remodel delays",
+      "living without a kitchen",
+      "kitchen remodel phases"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners scheduling a kitchen project who need to plan around work, family and a temporary kitchen.",
+    "cta": { "label": "See kitchen remodeling options", "href": "/services/kitchen-remodeling" },
+    "internalLinks": [
+      { "label": "Kitchen remodel costs: a line-by-line breakdown", "href": "/blog/kitchen-remodel-cost-breakdown" },
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" }
+    ],
+    "image": "/images/blog/kitchen-remodel-timeline.svg",
+    "imageAlt": "Illustration of a calendar with a clock and a wrench",
+    "seoTitle": "How Long Does a Kitchen Remodel Take? A Real Timeline",
+    "seoDescription": "A week-by-week kitchen remodel schedule: design, permits, demolition, rough-in, cabinets, counters and punch list, plus the delays that are predictable.",
+    "excerpt": "The construction is usually the shortest part. Design, ordering and inspection hold the schedule — and cabinet lead time is the single biggest variable in the whole project.",
+    "seoSummary": "Phase-by-phase kitchen remodel schedule with typical durations and critical-path risks.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["kitchen remodeling", "planning", "project management", "timeline"],
+    "visual": "Flat vector medallion: a calendar with a clock chip and a wrench chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Ask how long a kitchen takes and most people answer with the construction phase: four to eight weeks. The honest answer is that the project starts when you choose a layout, and the calendar is dominated by ordering, permits and inspections rather than by sawdust.",
+          "Here is what a realistic schedule looks like, and where the delays usually come from."
+        ]
+      },
+      {
+        "h2": "Phase 1: design and decisions (2–6 weeks)",
+        "paras": [
+          "This is where the project is actually won or lost. Layout, appliance models and cabinet specifications all have to be fixed before anything can be ordered, and every change after that point ripples through the schedule.",
+          "Use this phase to make the boring decisions too: outlet positions, lighting circuits, where the bin goes, whether the microwave is built in. Undecided details become delays later."
+        ]
+      },
+      {
+        "h2": "Phase 2: permits and ordering (2–8 weeks, often in parallel)",
+        "table": {
+          "head": ["Item", "Typical lead time", "Notes"],
+          "rows": [
+            ["Building permit", "1–3 weeks", "Varies widely by jurisdiction"],
+            ["Semi-custom cabinets", "4–8 weeks", "The usual critical path"],
+            ["Custom cabinets", "8–14 weeks", "Order before demolition, not after"],
+            ["Countertop fabrication", "1–3 weeks after templating", "Templated only after cabinets are set"],
+            ["Appliances", "1–12 weeks", "Check stock as well as lead time"],
+            ["Tile and flooring", "3 days–3 weeks", "Order 10–15% overage and keep spares"]
+          ]
+        },
+        "note": "Never order cabinets based on a delivery date you have not seen in writing. A single delayed cabinet run can hold the entire project for a month, and nothing else can proceed without it."
+      },
+      {
+        "h2": "Phase 3: demolition and rough-in (1–2 weeks)",
+        "paras": [
+          "Demolition is fast; what follows is not. Rough-in — plumbing, electrical, gas and HVAC — happens after the walls are open and before any board goes back, and it is when hidden problems surface: a corroded drain, knob-and-tube wiring, or a joist exactly where a recessed light needs to go.",
+          "Inspections typically happen at rough-in and again at final. Build them into the schedule rather than treating them as a formality; a failed inspection can add days waiting for a reinspection slot."
+        ]
+      },
+      {
+        "h2": "Phase 4: drywall, flooring, cabinets (2–3 weeks)",
+        "ordered": [
+          "Insulation, drywall, taping and sanding — allow time for dust to settle and for paint.",
+          "Flooring in most sequences, with protection boards over it.",
+          "Cabinet installation and levelling: everything downstream depends on this being right.",
+          "Template for countertops — nothing moves until the template is taken.",
+          "Countertop fabrication and install, usually 1–3 weeks after templating."
+        ]
+      },
+      {
+        "h2": "Phase 5: finishing and punch list (1–2 weeks)",
+        "paras": [
+          "Tile, plumbing trim, appliance connection, lighting, paint touch-ups, backsplash grouting. This phase always feels slower than it should because it is a sequence of small trades waiting on each other.",
+          "Hold back a final payment until the punch list is complete, and walk the room with the contractor using a written list rather than memory."
+        ]
+      },
+      {
+        "h2": "Where the schedule actually slips",
+        "bullets": [
+          "A late change to cabinet layout after order — often the single most expensive delay.",
+          "Backordered appliances discovered at installation rather than at ordering.",
+          "Countertop templating before cabinets are final, producing a misfit and a remake.",
+          "Hidden damage behind a wall that needs a change order and a decision.",
+          "Inspection scheduling, especially in busy jurisdictions or at holiday periods.",
+          "Homeowner decisions deferred to the day the trade needs them."
+        ]
+      },
+      {
+        "h2": "Living through it",
+        "paras": [
+          "Set up a temporary kitchen before demolition: microwave, kettle, a small fridge, and a washing-up station in a bathroom or laundry. Move the essentials out of the work zone and seal the doorway with plastic and tape to keep dust out of the rest of the house.",
+          "Plan for the middle two weeks to be the hardest. If the household can be away for part of it, the project is easier on everyone and often finishes faster."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Can a kitchen be remodeled in two weeks?",
+        "a": "Only a cosmetic refresh with no layout change, no new cabinets and no permit work. Anything involving cabinets, counters or services takes longer because of fabrication and inspection."
+      },
+      {
+        "q": "What is the longest lead time in a kitchen remodel?",
+        "a": "Cabinets, usually. Custom cabinetry can take 8–14 weeks, which is why the order should be placed before demolition begins."
+      },
+      {
+        "q": "Do I need to move out during a kitchen remodel?",
+        "a": "Most families stay, using a temporary kitchen elsewhere in the house. Moving out shortens the practical timeline and reduces stress, but it is not usually necessary."
+      },
+      {
+        "q": "How long does countertop installation take?",
+        "a": "Fabrication is typically 1–3 weeks after templating, and installation itself is a single day for most kitchens."
+      }
+    ]
+  }
+]

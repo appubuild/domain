@@ -15,12 +15,15 @@ use Shn\Helpers\Response;
 use Shn\Helpers\Security;
 use Shn\Helpers\Validator;
 use Shn\Models\BlogModel;
+use Shn\Services\Scheduler;
+use Shn\Services\SitemapBuilder;
 
 final class AdminBlogController extends Controller
 {
     public function __construct(
         Request $request,
         private readonly BlogModel $blog = new BlogModel(),
+        private readonly Scheduler $scheduler = new Scheduler(),
     ) {
         parent::__construct($request);
     }
@@ -51,6 +54,7 @@ final class AdminBlogController extends Controller
     public function store(Request $request): void
     {
         $data = $this->validatePayload($request, true);
+        $data['updated_by'] = $this->adminId();
         $tagIds = $this->tagIds($request);
 
         try {
@@ -58,6 +62,9 @@ final class AdminBlogController extends Controller
         } catch (PDOException $exception) {
             $this->translate($exception);
         }
+
+        $this->syncMetadata($request, $id);
+        $this->afterWrite($request, $id, $data);
 
         Logger::audit($request->admin, 'post.created', 'blog_post', $id, 'Created post ' . ($data['title'] ?? ''), $request->ip());
         Response::created($this->blog->adminFind($id));
@@ -69,6 +76,7 @@ final class AdminBlogController extends Controller
         $this->blog->adminFind($postId);
 
         $data = $this->validatePayload($request, false);
+        $data['updated_by'] = $this->adminId();
         $tagIds = array_key_exists('tag_ids', $request->body()) ? $this->tagIds($request) : null;
 
         try {
@@ -77,8 +85,94 @@ final class AdminBlogController extends Controller
             $this->translate($exception);
         }
 
+        $this->syncMetadata($request, $postId);
+        $this->afterWrite($request, $postId, $data);
+
         Logger::audit($request->admin, 'post.updated', 'blog_post', $postId, 'Updated a post', $request->ip());
         Response::ok($this->blog->adminFind($postId));
+    }
+
+    /** Publishes a draft/scheduled post immediately. */
+    public function publish(Request $request, string $id): void
+    {
+        $postId = $this->id($id, 'post id');
+        $post = $this->blog->adminFind($postId);
+
+        $this->blog->update($postId, [
+            'status' => 'published',
+            'published_at' => gmdate('Y-m-d H:i:s'),
+            'scheduled_at' => null,
+            'updated_by' => $this->adminId(),
+        ]);
+
+        $this->rebuildSitemap();
+        Logger::audit($request->admin, 'post.published', 'blog_post', $postId, 'Published ' . $post['title'], $request->ip());
+
+        Response::ok($this->blog->adminFind($postId));
+    }
+
+    /** Takes a post offline without deleting it. */
+    public function unpublish(Request $request, string $id): void
+    {
+        $postId = $this->id($id, 'post id');
+        $this->blog->adminFind($postId);
+
+        $this->blog->update($postId, ['status' => 'draft', 'scheduled_at' => null, 'updated_by' => $this->adminId()]);
+        $this->rebuildSitemap();
+        Logger::audit($request->admin, 'post.unpublished', 'blog_post', $postId, 'Moved a post back to draft', $request->ip());
+
+        Response::ok($this->blog->adminFind($postId));
+    }
+
+    /* --------------------------- metadata ---------------------------- */
+
+    /** Stores the editorial extras sent as `metadata: {key: value}`. */
+    private function syncMetadata(Request $request, int $postId): void
+    {
+        $body = $request->body();
+        if (!array_key_exists('metadata', $body)) {
+            return;
+        }
+        $metadata = $body['metadata'];
+        if ($metadata === null) {
+            return;
+        }
+        if (!is_array($metadata)) {
+            throw ApiException::unprocessable('metadata must be an object.', ['metadata' => 'Must be an object of key/value pairs.']);
+        }
+        $this->blog->syncMetadata($postId, $metadata);
+    }
+
+    /**
+     * Side effects shared by create and update: log a scheduling decision and
+     * keep the public sitemap in sync when something becomes visible.
+     *
+     * @param array<string,mixed> $data
+     */
+    private function afterWrite(Request $request, int $postId, array $data): void
+    {
+        $status = $data['status'] ?? null;
+
+        if ($status === 'scheduled') {
+            $post = $this->blog->adminFind($postId);
+            $this->scheduler->logScheduled('post', $postId, $post['scheduled_at'] ?? null, 'admin:' . (string) ($this->admin()['email'] ?? 'unknown'));
+        }
+
+        if ($status === 'published' || $status === 'scheduled') {
+            $this->rebuildSitemap();
+        }
+
+        unset($request);
+    }
+
+    private function rebuildSitemap(): void
+    {
+        try {
+            (new SitemapBuilder())->write();
+        } catch (\Throwable $error) {
+            // A read-only public folder must not fail a save; the cron retries.
+            error_log('[sitemap] rebuild skipped: ' . $error->getMessage());
+        }
     }
 
     public function destroy(Request $request, string $id): void
@@ -117,6 +211,10 @@ final class AdminBlogController extends Controller
             'slug' => 'required|slug|max:120',
             'name' => 'required|string|min:2|max:160',
             'description' => 'nullable|string|max:400',
+            'seo_title' => 'nullable|string|max:200',
+            'seo_description' => 'nullable|string|max:320',
+            'sort_order' => 'nullable|int',
+            'noindex' => 'nullable|bool',
         ]);
 
         try {
@@ -137,6 +235,10 @@ final class AdminBlogController extends Controller
             'slug' => 'nullable|slug|max:120',
             'name' => 'nullable|string|min:2|max:160',
             'description' => 'nullable|string|max:400',
+            'seo_title' => 'nullable|string|max:200',
+            'seo_description' => 'nullable|string|max:320',
+            'sort_order' => 'nullable|int',
+            'noindex' => 'nullable|bool',
         ]);
 
         try {
@@ -215,7 +317,7 @@ final class AdminBlogController extends Controller
     private function validatePayload(Request $request, bool $isCreate): array
     {
         $rules = [
-            'slug' => ($isCreate ? 'required' : 'nullable') . '|slug|max:180',
+            'slug' => 'nullable|slug|max:180',
             'title' => ($isCreate ? 'required' : 'nullable') . '|string|min:3|max:220',
             'category_id' => 'nullable|int',
             'status' => 'nullable|in:published,draft,scheduled',
@@ -225,11 +327,33 @@ final class AdminBlogController extends Controller
             'featured_image_alt' => 'nullable|string|max:200',
             'seo_title' => 'nullable|string|max:200',
             'seo_description' => 'nullable|string|max:320',
+            'seo_summary' => 'nullable|string|max:500',
+            'focus_keyword' => 'nullable|string|max:160',
+            'secondary_keywords' => 'nullable|string|max:500',
+            'canonical_url' => 'nullable|string|max:500',
+            'noindex' => 'nullable|bool',
+            'social_image' => 'nullable|string|max:255',
             'author_name' => 'nullable|string|max:120',
             'published_at' => 'nullable|date',
+            'scheduled_at' => 'nullable|date',
         ];
 
         $data = Validator::validate($request->body(), $rules);
+
+        // The editor can send an empty slug while the admin is still typing a
+        // title; derive a unique one from the title instead of failing.
+        if ($isCreate && empty($data['slug'])) {
+            $data['slug'] = $this->uniqueSlug(Validator::slugify((string) ($data['title'] ?? 'post')));
+        }
+        if (!$isCreate && array_key_exists('slug', $request->body()) && empty($data['slug'])) {
+            unset($data['slug']);
+        }
+        if (array_key_exists('canonical_url', $data) && $data['canonical_url'] !== null && $data['canonical_url'] !== '' && !Security::isSafeUrl((string) $data['canonical_url'])) {
+            throw ApiException::unprocessable('The canonical URL must start with / or https://.', ['canonical_url' => 'Invalid URL.']);
+        }
+        if (array_key_exists('social_image', $data) && $data['social_image'] !== null && $data['social_image'] !== '' && !Security::isSafeUrl((string) $data['social_image'])) {
+            throw ApiException::unprocessable('Use an image path that starts with / or an https URL.', ['social_image' => 'Invalid image path.']);
+        }
 
         if (array_key_exists('body', $request->body())) {
             $data['body'] = Security::sanitizeHtml((string) ($data['body'] ?? ''));
@@ -241,8 +365,8 @@ final class AdminBlogController extends Controller
             throw ApiException::unprocessable('Use an image path that starts with / or an https URL.', ['featured_image' => 'Invalid image path.']);
         }
 
-        if (($data['status'] ?? null) === 'scheduled' && empty($data['published_at'])) {
-            throw ApiException::unprocessable('Choose a publish date for a scheduled post.', ['published_at' => 'Required when scheduling.']);
+        if (($data['status'] ?? null) === 'scheduled' && empty($data['scheduled_at']) && empty($data['published_at'])) {
+            throw ApiException::unprocessable('Choose a publish date for a scheduled post.', ['scheduled_at' => 'Required when scheduling.']);
         }
 
         return $data;
@@ -267,6 +391,26 @@ final class AdminBlogController extends Controller
         }
 
         return array_values(array_unique($ids));
+    }
+
+    /** Appends -2, -3 … until the slug is free (soft-deleted rows included). */
+    private function uniqueSlug(string $slug, int $ignoreId = 0): string
+    {
+        $slug = $slug === '' ? 'post' : $slug;
+        $candidate = $slug;
+        $suffix = 1;
+
+        while (true) {
+            $statement = $this->blog->slugTaken($candidate, $ignoreId);
+            if (!$statement) {
+                return $candidate;
+            }
+            $suffix++;
+            $candidate = $slug . '-' . $suffix;
+            if ($suffix > 50) {
+                return $slug . '-' . substr((string) time(), -5);
+            }
+        }
     }
 
     private function translate(PDOException $exception): never

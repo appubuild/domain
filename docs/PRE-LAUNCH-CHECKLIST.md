@@ -64,7 +64,22 @@ Choose one mode and confirm it explicitly.
 - [ ] HTTPS is enforced, `COOKIE_SECURE=true`, and `CORS_ALLOWED_ORIGINS` lists
       only your origins (same-origin hosting preferred).
 - [ ] `php api/tools/maintenance.php` is on a daily cron.
+- [ ] `api/cron/publish-scheduled.php` runs every 5 minutes and
+      `api/cron/build-sitemap.php` hourly (see [PUBLISHING.md](PUBLISHING.md)).
 - [ ] `robots.txt` disallows `/admin` and the console sets `noindex,nofollow`.
+
+## 3b. Blog and editorial content
+
+- [ ] The CMS migration ran, then `blog-content-import.sql` was imported and the
+      verification `SELECT` reports 10 published / 20 scheduled / 15 categories.
+- [ ] `/blog`, a category archive and an article open on the live domain, with
+      the illustration, table of contents and FAQ block rendering.
+- [ ] A post scheduled through the admin console publishes itself at the right
+      local time (check the console, then the public archive).
+- [ ] `/sitemap.xml` lists `/blog`, the category archives and the published
+      posts; `/blog` appears in the header and footer navigation.
+- [ ] The build is not a demo build: the “Sample content” note above the blog
+      list is absent once `VITE_API_BASE_URL` is set.
 
 ## 4. Contact form delivery
 

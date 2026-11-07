@@ -13,6 +13,20 @@ namespace Shn\Helpers;
 
 final class Response
 {
+    /** Plain XML body (sitemap feed) — no JSON envelope. */
+    public static function xml(string $xml, int $status = 200): void
+    {
+        if (!headers_sent()) {
+            http_response_code($status);
+            header('Content-Type: application/xml; charset=utf-8');
+            header('X-Content-Type-Options: nosniff');
+            header('Cache-Control: public, max-age=600');
+        }
+
+        echo $xml;
+        exit;
+    }
+
     /** @param array<string,mixed> $data */
     public static function json(array $data, int $status = 200, array $headers = []): void
     {

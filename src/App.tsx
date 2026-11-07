@@ -18,6 +18,9 @@ import Disclaimer from '@/pages/Disclaimer'
 import DoNotSellOrShare from '@/pages/DoNotSellOrShare'
 import Accessibility from '@/pages/Accessibility'
 import NotFound from '@/pages/NotFound'
+import Blog from '@/pages/Blog'
+import BlogPost from '@/pages/BlogPost'
+import BlogCategory from '@/pages/BlogCategory'
 
 /** The admin console is a separate chunk: public visitors never download it. */
 const AdminApp = lazy(() => import('@/admin/AdminApp'))
@@ -51,6 +54,9 @@ const App = () => (
           <Route path="/services" element={<Services />} />
           <Route path="/services/:slug" element={<ServiceDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/blog" element={<Blog />} />
+          <Route path="/blog/category/:slug" element={<BlogCategory />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/service-area" element={<ServiceArea />} />
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />

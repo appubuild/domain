@@ -1,0 +1,243 @@
+[
+  {
+    "id": 23,
+    "title": "Window Replacement: Cost and the Signs It Is Time",
+    "slug": "window-replacement-cost-and-signs",
+    "category": {
+      "slug": "window-installation",
+      "name": "Window Installation",
+      "description": "Window replacement and upgrade guidance: how to judge whether an old window is worth repairing, what installation quality depends on, and how to read efficiency ratings.",
+      "seoTitle": "Window Installation Guides",
+      "seoDescription": "Window replacement explained: the signs a window is failing, what drives the price, and the installation details that determine whether the new window performs.",
+      "sortOrder": 11
+    },
+    "primaryKeyword": "window replacement cost",
+    "secondaryKeywords": [
+      "replace windows",
+      "signs you need new windows",
+      "window installation cost",
+      "double glazing",
+      "window condensation",
+      "window replacement ROI"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners with drafty, foggy or difficult windows deciding between repair and replacement.",
+    "cta": { "label": "See window installation options", "href": "/services/window-installation" },
+    "internalLinks": [
+      { "label": "Energy efficient windows: what the ratings mean", "href": "/blog/energy-efficient-windows-guide" },
+      { "label": "Front door replacement guide", "href": "/blog/front-door-replacement-guide" },
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" }
+    ],
+    "image": "/images/blog/window-replacement-cost-and-signs.svg",
+    "imageAlt": "Illustration of a four-pane window with a coin and a measuring ruler",
+    "seoTitle": "Window Replacement Cost and When to Replace",
+    "seoDescription": "Fogged glass, drafts and hard-to-open sashes: when a window is repairable, when it has failed, and what replacement actually costs per opening.",
+    "excerpt": "Most windows are replaced years before they needed to be — and a few are replaced years after they should have been. The difference is knowing which failure you are looking at.",
+    "seoSummary": "Repair-versus-replace guide for windows with cost drivers and installation quality checks.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["windows", "replacement", "energy", "budget"],
+    "visual": "Flat vector medallion: a four-pane window with a coin chip, a ruler chip and a check chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A window is a hole in an insulated wall, and it is judged on three things: whether it keeps weather out, whether it opens and closes, and whether it looks right. Each of those fails differently, and only some failures justify replacement.",
+          "Here is how to tell what is actually wrong, what replacement costs, and why the installer matters more than the window."
+        ]
+      },
+      {
+        "h2": "The five real signs of failure",
+        "bullets": [
+          "Seals between the panes have failed: fogging, condensation between the glass, or a milky haze that does not clean off.",
+          "Drafts you can feel at the frame or the meeting rail, not just at the edges of a worn seal.",
+          "Rotten or soft wood in the frame or sill — the window is no longer structurally sound.",
+          "Sashes that will not stay up, will not close flush, or need force to operate.",
+          "Water staining or rot on the interior trim, which usually means the flashing outside has failed."
+        ]
+      },
+      {
+        "h2": "What is repairable",
+        "table": {
+          "head": ["Problem", "Repairable?", "Typical fix"],
+          "rows": [
+            ["Failed double-glazing seal", "Sometimes", "Replace the glass unit, keep the frame"],
+            ["Worn weatherstrip", "Yes", "New gaskets and sweeps"],
+            ["Stiff or drafty sash", "Yes", "Adjust hinges, replace balances"],
+            ["Painted-shut window", "Yes", "Release and re-finish"],
+            ["Soft or rotten frame", "Rarely", "Replacement, because the structure has gone"],
+            ["Failed flashing at the head", "Yes", "Re-flash and seal — this is a wall job, not a window job"]
+          ]
+        },
+        "note": "A window that fogs between the panes has a failed seal, but the frame may be perfectly sound. Replacing just the glass unit is often a fraction of the cost of a full replacement — ask for that option explicitly."
+      },
+      {
+        "h2": "What drives the price",
+        "ordered": [
+          "Size and number of openings — cost is quoted per window, so the count matters more than any single unit.",
+          "Frame material: vinyl is the cheapest, wood and aluminum-clad are higher, fibreglass sits between.",
+          "Glass specification: double or triple, low-E coatings, argon fill, laminated glass in hazardous locations.",
+          "Installation method: insert replacement into an existing frame is cheaper than a full-frame replacement with new flashing and trim.",
+          "Access and story count: second-floor and above adds labour and sometimes scaffolding.",
+          "Trim, interior casing and exterior capping, which are often excluded from the headline price.",
+          "Permits and any required egress compliance in bedrooms."
+        ]
+      },
+      {
+        "h2": "Why the installer matters more than the window",
+        "paras": [
+          "A premium window installed with compressed insulation, no sill pan and caulk instead of flashing will leak. A mid-range window installed with a proper sill pan, back-dammed flashing and a sealed air barrier will outperform it for decades.",
+          "Ask specifically: is there a sill pan, how is the rough opening flashed, what insulation goes in the gap, and is the interior air-sealed as well as the exterior. A contractor who answers those four questions precisely knows what they are doing."
+        ]
+      },
+      {
+        "h2": "Does replacement pay for itself?",
+        "paras": [
+          "Through energy savings alone, almost never on a normal timeline. The payback on a full house of new windows is measured in decades in most climates. The honest case for replacement is comfort, condensation control, noise, operation, appearance and the condition of the frames.",
+          "Where the case is stronger: single-pane windows in a cold climate, windows with failed seals throughout, or a home being re-sided anyway, when the incremental cost of doing windows at the same time drops significantly."
+        ]
+      },
+      {
+        "h2": "How to compare quotes",
+        "bullets": [
+          "Price per opening, with the same glass specification in every quote.",
+          "Installation method stated in writing: insert or full-frame.",
+          "Flashing and sill pan details included, not optional.",
+          "Whether interior trim, exterior capping and disposal are included.",
+          "Warranty split between glass, frame and labour, with the labour warranty period in writing.",
+          "Whether the company uses its own installers or subcontracts."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long do replacement windows last?",
+        "a": "Vinyl windows typically last 20–25 years, wood and aluminum-clad 25–30, and fibreglass longer. Sealed glass units often fail before the frame does, usually within 10–20 years."
+      },
+      {
+        "q": "Can I replace just the glass in a fogged window?",
+        "a": "Often yes, if the frame and sash are sound. It is usually much cheaper than a full replacement, though not every manufacturer supports glass-only swaps on older units."
+      },
+      {
+        "q": "Do new windows stop condensation?",
+        "a": "They reduce it, because warmer interior glass surfaces condense less. If condensation persists on new windows, the underlying issue is indoor humidity or ventilation, not the glass."
+      },
+      {
+        "q": "Is window replacement worth it before selling?",
+        "a": "Only if the windows are visibly failing or a home inspection flags them. Buyers discount for obvious problems; they rarely pay a premium for windows replaced shortly before listing."
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "title": "Energy Efficient Windows: What the Ratings Mean",
+    "slug": "energy-efficient-windows-guide",
+    "category": {
+      "slug": "window-installation",
+      "name": "Window Installation",
+      "description": "Window replacement and upgrade guidance: how to judge whether an old window is worth repairing, what installation quality depends on, and how to read efficiency ratings.",
+      "seoTitle": "Window Installation Guides",
+      "seoDescription": "Window replacement explained: the signs a window is failing, what drives the price, and the installation details that determine whether the new window performs.",
+      "sortOrder": 11
+    },
+    "primaryKeyword": "energy efficient windows",
+    "secondaryKeywords": [
+      "U-factor",
+      "solar heat gain coefficient",
+      "low-E glass",
+      "ENERGY STAR windows",
+      "double vs triple glazing",
+      "window efficiency ratings"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners specifying new windows who want to understand the labels before a salesperson explains them.",
+    "cta": { "label": "See window installation options", "href": "/services/window-installation" },
+    "internalLinks": [
+      { "label": "Window replacement: cost and the signs it is time", "href": "/blog/window-replacement-cost-and-signs" },
+      { "label": "A yearly furnace maintenance checklist", "href": "/blog/furnace-maintenance-checklist" }
+    ],
+    "image": "/images/blog/energy-efficient-windows-guide.svg",
+    "imageAlt": "Illustration of a window with a sun and a leaf, representing energy efficiency",
+    "seoTitle": "Energy Efficient Windows: U-Factor, SHGC and Low-E",
+    "seoDescription": "What U-factor, SHGC, VT and low-E coatings actually mean, how climate changes the right specification, and where upgrading glass stops paying back.",
+    "excerpt": "The sticker on a window has four numbers that matter and one that sells. Here is how to read them, and why the right specification in Miami is the wrong one in Minneapolis.",
+    "seoSummary": "Plain-English guide to window energy ratings and climate-specific specification choices.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["windows", "energy", "efficiency", "specification"],
+    "visual": "Flat vector medallion: a four-pane window with a sun chip, a leaf chip and a gauge chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Window efficiency is one of the few areas of home improvement with genuinely standardised labels — and one of the few where the label is routinely misread in a sales conversation.",
+          "Four numbers do almost all the work: U-factor, solar heat gain coefficient, visible transmittance and air leakage. Understand those and you can specify a window for your climate rather than accept whatever is on the truck."
+        ]
+      },
+      {
+        "h2": "The four numbers",
+        "table": {
+          "head": ["Rating", "What it measures", "Better is"],
+          "rows": [
+            ["U-factor", "Heat flow through the whole window assembly", "Lower (0.30 or below is good; 0.20 is excellent)"],
+            ["SHGC", "Fraction of solar heat admitted", "Depends on climate — lower in hot climates, higher in cold"],
+            ["VT (visible transmittance)", "How much daylight comes through", "Higher for brighter rooms"],
+            ["Air leakage (AL)", "Air infiltration at a standard pressure difference", "Lower (≤0.3 cfm/ft²)"]
+          ]
+        },
+        "paras": [
+          "Note the tension between SHGC and VT: a coating that blocks solar heat also blocks some light. In a hot climate that trade is usually worth it; in a cold climate where winter sun is free heat, a very low SHGC can cost you more than it saves."
+        ]
+      },
+      {
+        "h2": "Climate changes the specification",
+        "bullets": [
+          "Hot climates: low SHGC matters most, moderate U-factor, consider exterior shading.",
+          "Cold climates: low U-factor first, and a higher SHGC on south-facing glass to harvest winter sun.",
+          "Mixed climates: low U-factor with a moderate SHGC — the balance point depends on heating versus cooling dominance.",
+          "Coastal and humid regions: prioritise air leakage, corrosion-resistant hardware and laminated glass for storm resistance.",
+          "Noisy locations: laminated glass reduces sound noticeably more than extra panes alone."
+        ]
+      },
+      {
+        "h2": "Low-E, argon and the third pane",
+        "paras": [
+          "A low-E coating is a microscopically thin metallic layer that reflects long-wave heat radiation. There are two broad types: a solar-control coating that limits heat gain, and a low-solar-gain version tuned for cold climates that keeps heat in.",
+          "Argon or krypton fill slows conduction between the panes; a warm-edge spacer reduces the thermal bridge at the edge, which is where most condensation appears. A third pane helps in very cold climates, but the incremental benefit falls sharply and the weight and cost rise."
+        ],
+        "note": "Where glass surfaces meet a warm, humid interior, condensation is a symptom of the assembly, not the glass. A better spacer and frame usually fixes it more effectively than an extra pane."
+      },
+      {
+        "h2": "Where efficiency upgrades stop paying back",
+        "paras": [
+          "Windows are a small part of a home's heat loss compared with attic insulation, air sealing and duct leakage. If your goal is a lower energy bill, spend the first dollars on those — they are cheaper per unit of saving and often far more effective.",
+          "The exception is comfort: if a room is unusable in winter because of cold glass and drafts, better windows change how the house feels, which is a legitimate reason even when the payback is long."
+        ]
+      },
+      {
+        "h2": "Specifying without being sold to",
+        "ordered": [
+          "Ask for the full ratings label, not just the ENERGY STAR logo.",
+          "Specify U-factor, SHGC and VT in the contract so substitutions can be rejected.",
+          "Confirm the spacer type and the gas fill in writing.",
+          "Check the warranty covers seal failure and for how long.",
+          "Confirm installation details — flashing and air sealing matter more than the numbers on the sticker."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "What is a good U-factor for a window?",
+        "a": "Around 0.30 or lower for most of the US, and 0.20–0.25 in cold climates. Lower is better, but the return diminishes and frame quality becomes the limiting factor."
+      },
+      {
+        "q": "Are triple-pane windows worth it?",
+        "a": "In very cold climates, yes — they improve comfort and reduce condensation. In mild or mixed climates the extra cost rarely pays back compared with air sealing and insulation."
+      },
+      {
+        "q": "Does low-E glass block sunlight?",
+        "a": "It reduces heat gain and some visible light, but modern coatings are selective: they block infrared heat while transmitting most visible light. Check the VT rating for how bright the room will be."
+      },
+      {
+        "q": "Are energy efficient windows tax-deductible or rebated?",
+        "a": "Incentives change frequently and vary by state and utility. Check the ENERGY STAR and local utility sites before ordering, and keep the ratings labels with your receipts."
+      }
+    ]
+  }
+]

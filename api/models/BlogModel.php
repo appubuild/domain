@@ -17,10 +17,18 @@ final class BlogModel extends BaseModel
     private const WRITABLE = [
         'slug', 'title', 'category_id', 'status', 'excerpt', 'body',
         'featured_image', 'featured_image_alt', 'seo_title', 'seo_description',
-        'author_name', 'published_at',
+        'seo_summary', 'focus_keyword', 'secondary_keywords', 'canonical_url',
+        'noindex', 'social_image', 'author_name', 'published_at', 'scheduled_at',
+        'updated_by',
     ];
 
-    private const PUBLIC_CONDITION = '(b.status = "published" OR (b.status = "scheduled" AND b.published_at IS NOT NULL AND b.published_at <= UTC_TIMESTAMP()))';
+    /** Editorial extras stored in blog_post_metadata (one row per key). */
+    public const METADATA_KEYS = [
+        'search_intent', 'target_audience', 'article_length', 'cta_target',
+        'internal_links', 'visual_direction', 'editor_notes',
+    ];
+
+    private const PUBLIC_CONDITION = '(b.status = "published" OR (b.status = "scheduled" AND b.scheduled_at IS NOT NULL AND b.scheduled_at <= UTC_TIMESTAMP()))';
 
     /* ------------------------------------------------------------------ */
     /*  Public reads                                                       */
@@ -61,7 +69,9 @@ final class BlogModel extends BaseModel
         $offset = ($page - 1) * $perPage;
         $sql = 'SELECT b.id, b.slug, b.title, b.excerpt, b.featured_image, b.featured_image_alt,
                        b.author_name, b.published_at, b.seo_title, b.seo_description,
-                       c.slug AS category_slug, c.name AS category_name
+                       b.focus_keyword, b.social_image, b.view_count,
+                       c.slug AS category_slug, c.name AS category_name,
+                       c.seo_title AS category_seo_title, c.seo_description AS category_seo_description
                   FROM blog_posts b
                   LEFT JOIN blog_categories c ON c.id = b.category_id'
             . $where
@@ -87,6 +97,13 @@ final class BlogModel extends BaseModel
                 ],
                 'seo_title' => $row['seo_title'],
                 'seo_description' => $row['seo_description'],
+                'focus_keyword' => $row['focus_keyword'],
+                'social_image' => $row['social_image'],
+                'view_count' => (int) $row['view_count'],
+                'category_seo' => $row['category_seo_title'] === null ? null : [
+                    'title' => $row['category_seo_title'],
+                    'description' => $row['category_seo_description'],
+                ],
                 'tags' => $this->tagsFor((int) $row['id']),
             ], $rows),
             'meta' => $this->paginationMeta($total, $page, $perPage),
@@ -109,8 +126,11 @@ final class BlogModel extends BaseModel
             return null;
         }
 
+        $postId = (int) $row['id'];
+        $categoryId = $row['category_id'] !== null ? (int) $row['category_id'] : null;
+
         return [
-            'id' => (int) $row['id'],
+            'id' => $postId,
             'slug' => $row['slug'],
             'title' => $row['title'],
             'excerpt' => $row['excerpt'],
@@ -124,26 +144,39 @@ final class BlogModel extends BaseModel
                 'slug' => $row['category_slug'],
                 'name' => $row['category_name'],
             ],
-            'tags' => $this->tagsFor((int) $row['id']),
+            'tags' => $this->tagsFor($postId),
             'seo_title' => $row['seo_title'],
             'seo_description' => $row['seo_description'],
+            'focus_keyword' => $row['focus_keyword'] ?? null,
+            'secondary_keywords' => $row['secondary_keywords'] ?? null,
+            'canonical_url' => $row['canonical_url'] ?? null,
+            'noindex' => (int) ($row['noindex'] ?? 0),
+            'social_image' => $row['social_image'] ?? null,
+            'seo_summary' => $row['seo_summary'] ?? null,
+            'read_time_minutes' => $this->readTime((string) ($row['body'] ?? '')),
+            'metadata' => $this->metadataFor($postId),
+            'related' => $this->relatedPosts($categoryId, $postId, 3),
         ];
     }
 
     /** @return array<int,array<string,mixed>> */
     public function publicCategories(): array
     {
-        $sql = 'SELECT c.id, c.slug, c.name, c.description,
+        $sql = 'SELECT c.id, c.slug, c.name, c.description, c.seo_title, c.seo_description,
+                       c.noindex, c.sort_order,
                        (SELECT COUNT(*) FROM blog_posts b
                          WHERE b.category_id = c.id AND b.deleted_at IS NULL AND ' . self::PUBLIC_CONDITION . ') AS post_count
                   FROM blog_categories c
-                 ORDER BY c.name ASC';
+                 ORDER BY c.sort_order ASC, c.name ASC';
         $rows = $this->pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
         return array_map(static fn (array $row): array => [
             'id' => (int) $row['id'],
             'slug' => $row['slug'],
             'name' => $row['name'],
             'description' => $row['description'],
+            'seo_title' => $row['seo_title'],
+            'seo_description' => $row['seo_description'],
+            'noindex' => (int) $row['noindex'],
             'post_count' => (int) $row['post_count'],
         ], $rows);
     }
@@ -236,6 +269,7 @@ final class BlogModel extends BaseModel
 
         $post = $this->hydrateAdmin($row);
         $post['tag_ids'] = array_map(static fn (array $tag): int => (int) $tag['id'], $this->tagsFor($id));
+        $post['metadata'] = $this->metadataFor($id);
         return $post;
     }
 
@@ -318,13 +352,17 @@ final class BlogModel extends BaseModel
     public function adminCategories(): array
     {
         $sql = 'SELECT c.*, (SELECT COUNT(*) FROM blog_posts b WHERE b.category_id = c.id AND b.deleted_at IS NULL) AS post_count
-                  FROM blog_categories c ORDER BY c.name ASC';
+                  FROM blog_categories c ORDER BY c.sort_order ASC, c.name ASC';
         $rows = $this->pdo()->query($sql)->fetchAll(PDO::FETCH_ASSOC) ?: [];
         return array_map(static fn (array $row): array => [
             'id' => (int) $row['id'],
             'slug' => $row['slug'],
             'name' => $row['name'],
             'description' => $row['description'],
+            'seo_title' => $row['seo_title'] ?? null,
+            'seo_description' => $row['seo_description'] ?? null,
+            'sort_order' => (int) ($row['sort_order'] ?? 0),
+            'noindex' => (int) ($row['noindex'] ?? 0),
             'post_count' => (int) $row['post_count'],
         ], $rows);
     }
@@ -333,12 +371,17 @@ final class BlogModel extends BaseModel
     public function createCategory(array $data): int
     {
         $statement = $this->pdo()->prepare(
-            'INSERT INTO blog_categories (slug, name, description) VALUES (:slug, :name, :description)',
+            'INSERT INTO blog_categories (slug, name, description, seo_title, seo_description, sort_order, noindex)
+             VALUES (:slug, :name, :description, :seo_title, :seo_description, :sort_order, :noindex)',
         );
         $statement->execute([
             ':slug' => $data['slug'],
             ':name' => $data['name'],
             ':description' => $data['description'] ?? null,
+            ':seo_title' => $data['seo_title'] ?? null,
+            ':seo_description' => $data['seo_description'] ?? null,
+            ':sort_order' => (int) ($data['sort_order'] ?? 0),
+            ':noindex' => !empty($data['noindex']) ? 1 : 0,
         ]);
         return (int) $this->pdo()->lastInsertId();
     }
@@ -348,7 +391,7 @@ final class BlogModel extends BaseModel
     {
         $fields = [];
         $bindings = [':id' => $id];
-        foreach (['slug', 'name', 'description'] as $column) {
+        foreach (['slug', 'name', 'description', 'seo_title', 'seo_description', 'sort_order', 'noindex'] as $column) {
             if (array_key_exists($column, $data)) {
                 $fields[] = '`' . $column . '` = :' . $column;
                 $bindings[':' . $column] = $data[$column];
@@ -419,6 +462,171 @@ final class BlogModel extends BaseModel
     }
 
     /* ------------------------------------------------------------------ */
+    /*  Related content, views and metadata                                */
+    /* ------------------------------------------------------------------ */
+
+    /** @return array<int,array<string,mixed>> */
+    public function relatedPosts(?int $categoryId, int $excludeId = 0, int $limit = 3): array
+    {
+        if ($categoryId === null) {
+            $statement = $this->pdo()->prepare(
+                'SELECT b.slug, b.title, b.excerpt, b.featured_image, b.featured_image_alt, b.published_at,
+                        c.slug AS category_slug, c.name AS category_name
+                   FROM blog_posts b
+                   LEFT JOIN blog_categories c ON c.id = b.category_id
+                  WHERE b.id <> :exclude AND b.deleted_at IS NULL AND ' . self::PUBLIC_CONDITION . '
+                  ORDER BY b.published_at DESC, b.id DESC
+                  LIMIT ' . max(1, min(9, $limit)),
+            );
+            $statement->execute([':exclude' => $excludeId]);
+        } else {
+            $statement = $this->pdo()->prepare(
+                'SELECT b.slug, b.title, b.excerpt, b.featured_image, b.featured_image_alt, b.published_at,
+                        c.slug AS category_slug, c.name AS category_name
+                   FROM blog_posts b
+                   LEFT JOIN blog_categories c ON c.id = b.category_id
+                  WHERE b.id <> :exclude AND b.deleted_at IS NULL AND ' . self::PUBLIC_CONDITION . '
+                  ORDER BY (b.category_id = :category) DESC, b.published_at DESC, b.id DESC
+                  LIMIT ' . max(1, min(9, $limit)),
+            );
+            $statement->execute([':exclude' => $excludeId, ':category' => $categoryId]);
+        }
+
+        return array_map(static fn (array $row): array => [
+            'slug' => $row['slug'],
+            'title' => $row['title'],
+            'excerpt' => $row['excerpt'],
+            'featured_image' => $row['featured_image'],
+            'featured_image_alt' => $row['featured_image_alt'],
+            'published_at' => $row['published_at'],
+            'category' => $row['category_slug'] === null ? null : [
+                'slug' => $row['category_slug'],
+                'name' => $row['category_name'],
+            ],
+        ], $statement->fetchAll(PDO::FETCH_ASSOC) ?: []);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function publicCategoryBySlug(string $slug): ?array
+    {
+        $statement = $this->pdo()->prepare(
+            'SELECT c.id, c.slug, c.name, c.description, c.seo_title, c.seo_description, c.noindex,
+                    (SELECT COUNT(*) FROM blog_posts b WHERE b.category_id = c.id AND b.deleted_at IS NULL AND ' . self::PUBLIC_CONDITION . ') AS post_count
+               FROM blog_categories c WHERE c.slug = :slug LIMIT 1',
+        );
+        $statement->execute([':slug' => $slug]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        if (!is_array($row)) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $row['id'],
+            'slug' => $row['slug'],
+            'name' => $row['name'],
+            'description' => $row['description'],
+            'seo_title' => $row['seo_title'],
+            'seo_description' => $row['seo_description'],
+            'noindex' => (int) $row['noindex'],
+            'post_count' => (int) $row['post_count'],
+        ];
+    }
+
+    /** True when another post already uses this slug (deleted rows included). */
+    public function slugTaken(string $slug, int $ignoreId = 0): bool
+    {
+        $statement = $this->pdo()->prepare('SELECT COUNT(*) FROM blog_posts WHERE slug = :slug AND id <> :id');
+        $statement->execute([':slug' => $slug, ':id' => $ignoreId]);
+        return (int) $statement->fetchColumn() > 0;
+    }
+
+    public function incrementView(int $postId): void
+    {
+        $statement = $this->pdo()->prepare('UPDATE blog_posts SET view_count = view_count + 1 WHERE id = :id');
+        $statement->execute([':id' => $postId]);
+    }
+
+    /** Estimated reading time in minutes, from the rendered body. */
+    public function readTime(string $html): int
+    {
+        $text = trim(preg_replace('/\s+/', ' ', strip_tags($html)) ?? '');
+        $words = $text === '' ? 1 : count(explode(' ', $text));
+        return max(1, (int) round($words / 220));
+    }
+
+    /** @return array<string,string> */
+    public function metadataFor(int $postId): array
+    {
+        $statement = $this->pdo()->prepare('SELECT meta_key, meta_value FROM blog_post_metadata WHERE post_id = :id');
+        $statement->execute([':id' => $postId]);
+        $out = [];
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $out[(string) $row['meta_key']] = (string) ($row['meta_value'] ?? '');
+        }
+        return $out;
+    }
+
+    /** @param array<string,mixed> $metadata */
+    public function syncMetadata(int $postId, array $metadata): void
+    {
+        $delete = $this->pdo()->prepare('DELETE FROM blog_post_metadata WHERE post_id = :id AND meta_key = :key');
+        $upsert = $this->pdo()->prepare(
+            'INSERT INTO blog_post_metadata (post_id, meta_key, meta_value) VALUES (:id, :key, :value)
+             ON DUPLICATE KEY UPDATE meta_value = VALUES(meta_value)',
+        );
+
+        foreach ($metadata as $key => $value) {
+            if (!in_array($key, self::METADATA_KEYS, true)) {
+                continue;
+            }
+            if ($value === null || $value === '') {
+                $delete->execute([':id' => $postId, ':key' => $key]);
+                continue;
+            }
+            $upsert->execute([
+                ':id' => $postId,
+                ':key' => $key,
+                ':value' => mb_substr((string) $value, 0, 2000),
+            ]);
+        }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Scheduling                                                         */
+    /* ------------------------------------------------------------------ */
+
+    /** @return array<int,array<string,mixed>> */
+    public function dueScheduled(int $limit = 50): array
+    {
+        $statement = $this->pdo()->prepare(
+            'SELECT id, slug, title, scheduled_at FROM blog_posts
+              WHERE status = "scheduled" AND deleted_at IS NULL
+                AND scheduled_at IS NOT NULL AND scheduled_at <= UTC_TIMESTAMP()
+              ORDER BY scheduled_at ASC
+              LIMIT ' . max(1, min(200, $limit)),
+        );
+        $statement->execute();
+        return $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    }
+
+    /**
+     * Publishes one scheduled post. Returns true only for the call that
+     * actually performed the transition, so a double cron run cannot publish
+     * (or log) the same post twice.
+     */
+    public function publishScheduled(int $postId): bool
+    {
+        $statement = $this->pdo()->prepare(
+            'UPDATE blog_posts
+                SET status = "published", published_at = UTC_TIMESTAMP()
+              WHERE id = :id AND status = "scheduled" AND deleted_at IS NULL
+                AND scheduled_at IS NOT NULL AND scheduled_at <= UTC_TIMESTAMP()',
+        );
+        $statement->execute([':id' => $postId]);
+        return $statement->rowCount() === 1;
+    }
+
+    /* ------------------------------------------------------------------ */
     /*  Helpers                                                            */
     /* ------------------------------------------------------------------ */
 
@@ -439,11 +647,20 @@ final class BlogModel extends BaseModel
             'featured_image_alt' => $row['featured_image_alt'],
             'seo_title' => $row['seo_title'],
             'seo_description' => $row['seo_description'],
+            'seo_summary' => $row['seo_summary'] ?? null,
+            'focus_keyword' => $row['focus_keyword'] ?? null,
+            'secondary_keywords' => $row['secondary_keywords'] ?? null,
+            'canonical_url' => $row['canonical_url'] ?? null,
+            'noindex' => (int) ($row['noindex'] ?? 0),
+            'social_image' => $row['social_image'] ?? null,
+            'view_count' => (int) ($row['view_count'] ?? 0),
+            'scheduled_at' => $row['scheduled_at'] ?? null,
             'author' => $row['author_name'],
             'published_at' => $row['published_at'],
             'created_at' => $row['created_at'],
             'updated_at' => $row['updated_at'],
             'deleted_at' => $row['deleted_at'],
+            'read_time_minutes' => $this->readTime((string) ($row['body'] ?? '')),
             'tags' => $this->tagsFor((int) $row['id']),
         ];
     }
@@ -474,8 +691,23 @@ final class BlogModel extends BaseModel
             ];
         }
 
+        if (array_key_exists('noindex', $payload)) {
+            $payload['noindex'] = $payload['noindex'] ? 1 : 0;
+        }
+
         if (($payload['status'] ?? null) === 'published' && empty($payload['published_at'])) {
             $payload['published_at'] = gmdate('Y-m-d H:i:s');
+        }
+
+        // Scheduling uses scheduled_at (UTC). Accept published_at as a fallback
+        // so older clients keep working.
+        if (($payload['status'] ?? null) === 'scheduled') {
+            if (empty($payload['scheduled_at']) && !empty($payload['published_at'])) {
+                $payload['scheduled_at'] = $payload['published_at'];
+            }
+            if (!empty($payload['scheduled_at'])) {
+                $payload['published_at'] = $payload['scheduled_at'];
+            }
         }
 
         return $payload;

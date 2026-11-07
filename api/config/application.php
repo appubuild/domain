@@ -113,6 +113,20 @@ return [
         'analytics_retention_days' => Env::int('ANALYTICS_RETENTION', 400),
     ],
 
+    /* Scheduled publishing.
+     * Timestamps are always stored in UTC (the whole API runs on UTC); the
+     * timezone below only decides how a local wall-clock time typed in the
+     * admin is converted to UTC, and how the admin renders it back. */
+    'publishing' => [
+        'timezone' => Env::get('PUBLISH_TIMEZONE', 'America/New_York'),
+        'batch' => Env::int('PUBLISH_BATCH', 50),
+    ],
+
+    /* Where the regenerated XML sitemap is written. */
+    'sitemap' => [
+        'path' => Env::get('SITEMAP_PATH', dirname(__DIR__, 2) . '/public/sitemap.xml'),
+    ],
+
     /* Public response caching hints (seconds, 0 = no cache). */
     'cache' => [
         'public_ttl' => Env::int('PUBLIC_CACHE_TTL', 0),

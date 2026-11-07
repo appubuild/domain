@@ -15,12 +15,15 @@ use Shn\Helpers\Response;
 use Shn\Helpers\Security;
 use Shn\Helpers\Validator;
 use Shn\Models\PageModel;
+use Shn\Services\Scheduler;
+use Shn\Services\SitemapBuilder;
 
 final class AdminPageController extends Controller
 {
     public function __construct(
         Request $request,
         private readonly PageModel $pages = new PageModel(),
+        private readonly Scheduler $scheduler = new Scheduler(),
     ) {
         parent::__construct($request);
     }
@@ -55,6 +58,7 @@ final class AdminPageController extends Controller
             $this->translate($exception);
         }
 
+        $this->afterWrite($id, $data);
         Logger::audit($request->admin, 'page.created', 'page', $id, 'Created page ' . ($data['title'] ?? ''), $request->ip());
         Response::created($this->pages->adminFind($id));
     }
@@ -72,6 +76,7 @@ final class AdminPageController extends Controller
             $this->translate($exception);
         }
 
+        $this->afterWrite($pageId, $data);
         Logger::audit($request->admin, 'page.updated', 'page', $pageId, 'Updated a page', $request->ip());
         Response::ok($this->pages->adminFind($pageId));
     }
@@ -110,7 +115,15 @@ final class AdminPageController extends Controller
             'body' => 'nullable|string|max:200000',
             'seo_title' => 'nullable|string|max:200',
             'seo_description' => 'nullable|string|max:320',
+            'focus_keyword' => 'nullable|string|max:160',
+            'secondary_keywords' => 'nullable|string|max:500',
+            'canonical_url' => 'nullable|string|max:500',
+            'noindex' => 'nullable|bool',
+            'og_image' => 'nullable|string|max:255',
+            'page_group' => 'nullable|string|max:80',
+            'sort_order' => 'nullable|int',
             'published_at' => 'nullable|date',
+            'scheduled_at' => 'nullable|date',
         ];
 
         $data = Validator::validate($request->body(), $rules);
@@ -122,11 +135,40 @@ final class AdminPageController extends Controller
             $data['excerpt'] = Security::plainText((string) $data['excerpt'], 400);
         }
 
-        if (($data['status'] ?? null) === 'scheduled' && empty($data['published_at'])) {
-            throw ApiException::unprocessable('Choose a publish date for a scheduled page.', ['published_at' => 'Required when scheduling.']);
+        if (array_key_exists('canonical_url', $data) && $data['canonical_url'] !== null && $data['canonical_url'] !== '' && !Security::isSafeUrl((string) $data['canonical_url'])) {
+            throw ApiException::unprocessable('The canonical URL must start with / or https://.', ['canonical_url' => 'Invalid URL.']);
+        }
+        if (array_key_exists('og_image', $data) && $data['og_image'] !== null && $data['og_image'] !== '' && !Security::isSafeUrl((string) $data['og_image'])) {
+            throw ApiException::unprocessable('Use an image path that starts with / or an https URL.', ['og_image' => 'Invalid image path.']);
+        }
+
+        if (($data['status'] ?? null) === 'scheduled' && empty($data['scheduled_at']) && empty($data['published_at'])) {
+            throw ApiException::unprocessable('Choose a publish date for a scheduled page.', ['scheduled_at' => 'Required when scheduling.']);
         }
 
         return $data;
+    }
+
+    /** @param array<string,mixed> $data */
+    private function afterWrite(?int $pageId, array $data): void
+    {
+        if ($pageId === null) {
+            return;
+        }
+
+        $status = $data['status'] ?? null;
+        if ($status === 'scheduled') {
+            $page = $this->pages->adminFind($pageId);
+            $this->scheduler->logScheduled('page', $pageId, $page['scheduled_at'] ?? null, 'admin');
+        }
+
+        if ($status === 'published' || $status === 'scheduled') {
+            try {
+                (new SitemapBuilder())->write();
+            } catch (\Throwable $error) {
+                error_log('[sitemap] rebuild skipped: ' . $error->getMessage());
+            }
+        }
     }
 
     private function translate(PDOException $exception): never

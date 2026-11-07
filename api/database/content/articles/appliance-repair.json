@@ -1,0 +1,592 @@
+[
+  {
+    "id": 1,
+    "title": "Common Appliance Problems and When to Call a Repair Professional",
+    "slug": "common-appliance-problems-when-to-call-a-repair-professional",
+    "category": {
+      "slug": "appliance-repair",
+      "name": "Appliance Repair",
+      "description": "Diagnostics, repair-or-replace decisions and what a technician should check for the appliances a home actually runs on.",
+      "seoTitle": "Appliance Repair Guides for Homeowners",
+      "seoDescription": "Plain-English appliance repair guides: what common symptoms mean, which checks are safe to do yourself, and when a qualified technician should take over.",
+      "sortOrder": 1
+    },
+    "primaryKeyword": "appliance repair",
+    "secondaryKeywords": [
+      "appliance repair near me",
+      "home appliance problems",
+      "appliance not working",
+      "appliance repair cost",
+      "when to call appliance repair",
+      "refrigerator repair",
+      "washer repair"
+    ],
+    "intent": "Informational",
+    "audience": "US homeowners deciding whether a failing appliance is a quick fix, a repair job or a replacement.",
+    "cta": {
+      "label": "Browse home service categories",
+      "href": "/services"
+    },
+    "internalLinks": [
+      {
+        "label": "How to choose a reliable appliance repair service",
+        "href": "/blog/how-to-choose-a-reliable-appliance-repair-service"
+      },
+      {
+        "label": "Refrigerator not cooling: common causes",
+        "href": "/blog/refrigerator-not-cooling-common-causes"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
+    ],
+    "image": "/images/blog/common-appliance-problems-when-to-call-a-repair-professional.svg",
+    "imageAlt": "Illustration of a technician checking the inside of a wall oven while a homeowner looks on",
+    "seoTitle": "Common Appliance Problems and When to Call a Pro",
+    "seoDescription": "The symptoms homeowners see most often, the checks that are safe to do yourself, and the point where an appliance repair professional should take over.",
+    "excerpt": "Most appliance failures announce themselves before they stop working. Here are the symptoms worth acting on, the checks that are safe to do yourself, and the point where a technician should take over.",
+    "seoSummary": "Diagnostic guide to the ten most common appliance failures, with a safe-to-check / call-a-pro split.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "diagnostics",
+      "safety",
+      "repair or replace",
+      "appliances"
+    ],
+    "visual": "Flat vector scene: technician with a multimeter at an open oven, homeowner holding a manual, warm kitchen background.",
+    "sections": [
+      {
+        "paras": [
+          "An appliance rarely fails without warning. A fridge runs a little longer, a washer thumps on the spin cycle, an oven takes twenty minutes to reach temperature. Those small changes are the cheapest moment to act, because the repair is usually a part rather than the whole machine.",
+          "This guide covers the failures homeowners report most often, what each symptom usually points to, and which checks are genuinely safe to do yourself. It also explains when stopping and calling a qualified appliance technician is the cheaper and safer decision.",
+          "One rule applies to every appliance in this article: anything that involves gas, a sealed refrigerant circuit, or opening a panel that exposes mains wiring is a job for a professional. The rest is about gathering evidence so the conversation with a technician starts from facts."
+        ]
+      },
+      {
+        "h2": "Start with the three questions that solve most cases",
+        "paras": [
+          "Before diagnosing anything, answer three questions. They remove a surprising share of service calls that turn out to be user error or a household supply problem."
+        ],
+        "ordered": [
+          "**Is it receiving power?** Check the plug is fully seated, the socket works with another device, and the breaker has not tripped. For a gas appliance, confirm the gas supply was not shut off during other work.",
+          "**Is it receiving water or drainage?** Dishwashers and washing machines fail on a kinked inlet hose or a blocked standpipe at least as often as on a pump.",
+          "**Did anything change?** A new outlet strip, a kitchen remodel, a power cut, a moved appliance, a filter change \u2014 most \"it just stopped\" stories have a trigger."
+        ],
+        "note": "Never pull an appliance out by its cord, and never test a socket with a screwdriver. A plug-in socket tester costs a few dollars and removes the guesswork."
+      },
+      {
+        "h2": "The failures homeowners meet most often",
+        "table": {
+          "head": [
+            "Appliance",
+            "Typical symptom",
+            "Common causes",
+            "Reasonable first step"
+          ],
+          "rows": [
+            [
+              "Refrigerator",
+              "Fridge warm, freezer cold",
+              "Blocked evaporator airflow, dirty condenser coils, door seal, failed fan",
+              "Check seals, clear vents, vacuum the coils"
+            ],
+            [
+              "Dishwasher",
+              "Standing water after a cycle",
+              "Blocked filter, kinked drain hose, disposer plug, failing pump",
+              "Clean the filter and check the drain hose route"
+            ],
+            [
+              "Washing machine",
+              "Won't drain or spins loudly",
+              "Clogged pump filter, unbalanced load, worn shock absorbers",
+              "Clear the filter, rebalance the load"
+            ],
+            [
+              "Dryer",
+              "Clothes take two cycles",
+              "Lint-blocked duct, crushed vent hose, failing heating element",
+              "Clean the lint path; stop if airflow is still weak"
+            ],
+            [
+              "Oven",
+              "Uneven baking or slow heat-up",
+              "Failed bake element, faulty temperature sensor, worn door seal",
+              "Check the seal and note the temperature pattern"
+            ],
+            [
+              "Range hood",
+              "Weak extraction",
+              "Saturated charcoal filter, blocked duct flap",
+              "Replace the filter, check the exterior flap"
+            ],
+            [
+              "Microwave",
+              "Runs but does not heat",
+              "Failed magnetron or capacitor",
+              "Stop using it \u2014 the capacitor holds a lethal charge"
+            ],
+            [
+              "Water heater",
+              "Lukewarm water",
+              "Failed element (electric), sediment build-up, pilot or thermocouple (gas)",
+              "Note whether it is electric or gas before calling"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "What a technician actually checks",
+        "h3": "Refrigerant and sealed systems",
+        "paras": [
+          "If a refrigerator or air conditioner has lost refrigerant, the system has a leak, and the leak must be found and repaired before recharging. Topping up a leaking system is a temporary fix that damages the compressor. This work needs certification and gauges \u2014 it is never a homeowner task."
+        ]
+      },
+      {
+        "h2": "Repair or replace? A decision homeowners can make",
+        "paras": [
+          "The industry rule of thumb is simple enough to use: multiply the appliance's age by the repair cost, and compare the result with the price of a comparable new unit. Above roughly half the replacement price, replacement usually wins \u2014 especially for appliances already past their expected service life.",
+          "That rule is a starting point, not a verdict. Efficiency matters too: a fifteen-year-old refrigerator can use meaningfully more electricity than a current model, which changes the maths over a few years. Rebates and tax incentives for efficient appliances vary by state and utility, so check locally before assuming a new unit costs the full sticker price."
+        ],
+        "table": {
+          "head": [
+            "Appliance",
+            "Typical service life",
+            "Repair usually sensible when\u2026"
+          ],
+          "rows": [
+            [
+              "Refrigerator",
+              "12\u201315 years",
+              "Under 10 years old and the sealed system is intact"
+            ],
+            [
+              "Dishwasher",
+              "9\u201312 years",
+              "A pump, valve or control board, not a leaking tub"
+            ],
+            [
+              "Washing machine",
+              "10\u201313 years",
+              "Bearings and drum are sound"
+            ],
+            [
+              "Dryer",
+              "10\u201313 years",
+              "The duct is clear and the drum turns freely"
+            ],
+            [
+              "Oven / range",
+              "13\u201315 years",
+              "A heating element, igniter or thermostat"
+            ],
+            [
+              "Microwave",
+              "9\u201310 years",
+              "Rarely worth repairing beyond a fuse or door switch"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "The checks worth doing before you book a visit",
+        "bullets": [
+          "Write down the exact model and serial number \u2014 it is on a plate inside the door or behind the kick panel, and it determines part availability.",
+          "Record the symptom with a short video, including any sound the machine makes.",
+          "Note what you already tried so the technician is not billed for repeating it.",
+          "Confirm the appliance is level and the door seals sit flush; a misaligned door is a common and cheap fix.",
+          "Ask whether the company's diagnostic fee is credited against the repair \u2014 a fair policy either way, but it should be stated up front."
+        ]
+      },
+      {
+        "h2": "When to stop and call a professional",
+        "paras": [
+          "Stop immediately if you smell gas, see scorched wiring, notice water pooling near an electrical component, or the breaker trips every time the appliance runs. Unplug the appliance if you can reach the plug safely and call a qualified technician or your gas utility.",
+          "Also call for anything behind a sealed panel, anything involving refrigerant, and any repair that requires moving a unit heavier than you can handle safely. Appliance injuries are usually back injuries or cuts from sharp sheet-metal edges, both avoidable."
+        ],
+        "note": "If the appliance is still under a manufacturer warranty, call the manufacturer's authorised service first. Opening the cabinet yourself can void the warranty."
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How much does an appliance repair usually cost?",
+        "a": "Pricing depends entirely on the appliance, the part and your market, so any national figure is a guess. Ask for the diagnostic fee, whether it is credited against the repair, and the parts-and-labour price in writing before work begins. Compare the quote with the replacement cost of a comparable unit \u2014 that comparison matters more than the absolute number."
+      },
+      {
+        "q": "Is it worth repairing a 12-year-old appliance?",
+        "a": "Sometimes. If the machine is otherwise sound and the fault is a single inexpensive part, repair can buy several more years. If the repair approaches half the price of a new unit, or the appliance is already past its expected service life, replacement is usually the better use of the money."
+      },
+      {
+        "q": "Can I repair my own appliances?",
+        "a": "You can safely do the external checks: power, water, filters, seals, level, and clearing lint or debris. Anything that requires opening a panel, touching a capacitor, working on a gas line or handling refrigerant should be left to a qualified technician \u2014 microwave capacitors in particular can hold a lethal charge long after the unit is unplugged."
+      },
+      {
+        "q": "Why did the technician ask for the model number first?",
+        "a": "Because the same symptom can need a different part on different revisions of the same model. The model and serial number identify the exact build, which is what makes a first-visit repair possible instead of a second appointment."
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "title": "Refrigerator Not Cooling? Common Causes Homeowners Should Know",
+    "slug": "refrigerator-not-cooling-common-causes",
+    "category": {
+      "slug": "appliance-repair",
+      "name": "Appliance Repair",
+      "description": "Diagnostics, repair-or-replace decisions and what a technician should check for the appliances a home actually runs on.",
+      "seoTitle": "Appliance Repair Guides for Homeowners",
+      "seoDescription": "Plain-English appliance repair guides: what common symptoms mean, which checks are safe to do yourself, and when a qualified technician should take over.",
+      "sortOrder": 1
+    },
+    "primaryKeyword": "refrigerator not cooling",
+    "secondaryKeywords": [
+      "fridge not cold",
+      "refrigerator warm but freezer cold",
+      "refrigerator repair",
+      "refrigerator not cooling but light on",
+      "fridge compressor not running",
+      "how to check refrigerator condenser coils"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners with a refrigerator that runs but is not holding temperature, deciding between a DIY check and a service call.",
+    "cta": {
+      "label": "Browse home service categories",
+      "href": "/services"
+    },
+    "internalLinks": [
+      {
+        "label": "Common appliance problems and when to call a pro",
+        "href": "/blog/common-appliance-problems-when-to-call-a-repair-professional"
+      },
+      {
+        "label": "How to choose a reliable appliance repair service",
+        "href": "/blog/how-to-choose-a-reliable-appliance-repair-service"
+      }
+    ],
+    "image": "/images/blog/refrigerator-not-cooling-common-causes.svg",
+    "imageAlt": "Illustration of an open refrigerator with warm air indicated, a thermometer and a technician's tool bag",
+    "seoTitle": "Refrigerator Not Cooling? 8 Causes and What to Check",
+    "seoDescription": "Fridge warm but freezer cold? Work through the safe causes first \u2014 airflow, seals, coils and controls \u2014 then learn which faults need a certified technician.",
+    "excerpt": "A refrigerator that runs but will not cool is usually one of eight things. Start with the checks that cost nothing, then decide whether the sealed system needs a professional.",
+    "seoSummary": "Ordered troubleshooting guide for a refrigerator that is not cooling, with a clear stop line before refrigerant work.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "refrigerator",
+      "diagnostics",
+      "food safety",
+      "energy"
+    ],
+    "visual": "Flat vector: open fridge with a warm-air wavy line, thermometer reading, coils behind the unit.",
+    "sections": [
+      {
+        "paras": [
+          "The refrigerator is the one appliance where the failure costs money by the hour. Before anything else: if the interior is above 40\u00b0F (4\u00b0C), food safety becomes the priority. Perishables that have been above that temperature for more than about two hours are better discarded than risked \u2014 and that decision should be made before you start troubleshooting.",
+          "Once the food is dealt with, the cause is usually one of eight things. Four are safe and sensible for a homeowner to check. Four involve sealed-system or electrical work that belongs with a qualified appliance technician."
+        ]
+      },
+      {
+        "h2": "1. Airflow inside the cabinet",
+        "paras": [
+          "Cold air is produced in the freezer and travels into the fresh-food compartment through a vent, often driven by a fan. Overload the shelves, push a cereal box against the vent, or let the freezer fill to the door and the fridge section stops receiving cold air. The symptom is unmistakable: the freezer is fine, the fridge is warm.",
+          "Pull everything away from the vents, leave a couple of inches of clearance at the back, and give the unit a few hours. If the fridge recovers, nothing is broken \u2014 the layout was."
+        ]
+      },
+      {
+        "h2": "2. Door seals and alignment",
+        "paras": [
+          "A seal that does not sit flush lets warm, humid room air in continuously. The compressor runs without ever catching up, and you may notice condensation or frost near the door frame. Test with the dollar-bill trick: close the door on a note and pull gently at several points. It should resist all the way around; a spot that slides out freely is a gap.",
+          "Clean the gasket with warm soapy water, check the door is level and that the hinges have not sagged. Replacement gaskets are inexpensive and are a reasonable homeowner job on most models."
+        ]
+      },
+      {
+        "h2": "3. Condenser coils and ventilation",
+        "paras": [
+          "Coils at the back or underneath the unit shed heat into the room. When they are caked in dust and pet hair, heat cannot escape and cooling performance drops \u2014 often worst in summer, which is when people notice. Vacuum the coils with a brush attachment and clear the gap around the cabinet.",
+          "This is one of the few genuinely valuable maintenance tasks on a refrigerator, and it also reduces energy use. Do it twice a year with pets in the house."
+        ]
+      },
+      {
+        "h2": "4. Settings and controls",
+        "paras": [
+          "It sounds trivial until it happens: a child has turned the temperature dial, a demo mode is on, or the control panel was bumped during cleaning. Check the set point against the manual, confirm the unit is not in a display or vacation mode, and look for an error code on the panel.",
+          "Also confirm the appliance is plugged into a working socket \u2014 a fridge on a switched outlet that someone switched off will run on nothing at all. A refrigerator that is completely silent with the light on points at the control board rather than cooling."
+        ]
+      },
+      {
+        "h2": "5. Evaporator fan failure",
+        "paras": [
+          "The evaporator fan moves air across the cold coil. When it fails, the freezer may still be cold but the fridge section warms, and you may hear nothing where you previously heard a hum. Some models show a fan error code.",
+          "You can listen for the fan by opening the freezer door and pressing the door switch; if the fan does not spin up and there is no obstruction, the motor or its control is at fault. Replacement requires dismantling the freezer interior, which is a technician job on most models."
+        ]
+      },
+      {
+        "h2": "6. Frost build-up on the evaporator",
+        "paras": [
+          "A defrost system failure lets ice coat the evaporator until airflow stops entirely. Symptoms include a fridge that gradually warms over days, frost visible at the back of the freezer, and a compressor that runs constantly.",
+          "A one-time manual defrost \u2014 empty the unit, unplug it, leave the doors open for 24 hours with towels down \u2014 will restore cooling temporarily. If the problem returns within weeks, the defrost heater, thermostat or timer needs replacement. That is a technician repair, not a permanent fix."
+        ]
+      },
+      {
+        "h2": "7. Start relay or compressor problems",
+        "paras": [
+          "If the compressor tries to start, clicks, and stops, the start relay may have failed. Sometimes the compressor itself has. You may hear a click every few minutes and feel the side of the cabinet staying cold to the touch.",
+          "A failed relay is a modest repair; a failed compressor usually is not, especially on an older unit. A technician diagnoses this with a meter rather than by substitution, which is why it is worth paying for the diagnostic instead of buying parts on suspicion."
+        ]
+      },
+      {
+        "h2": "8. Refrigerant leak",
+        "paras": [
+          "A sealed system that has lost refrigerant cannot cool, no matter how clean the coils are. Signs include a compressor that runs continuously without getting warm, no frost pattern on the evaporator, and sometimes an oily residue at a joint.",
+          "Refrigerant work requires certification, gauges and a leak search. Recharging a leaking system is not a repair \u2014 it is a delay that damages the compressor. If a technician confirms a leak in an accessible component, repair can be worthwhile; if the leak is in the sealed evaporator of an older unit, replacement is usually the honest recommendation."
+        ],
+        "note": "Never add refrigerant or \"top up\" a domestic refrigerator yourself. It is illegal without certification in the US, and it does not fix the underlying leak."
+      },
+      {
+        "h2": "A sensible order of work",
+        "ordered": [
+          "Move perishables to a cooler with ice; discard anything that has been warm for hours.",
+          "Confirm power, then check the set point and any error code.",
+          "Clear vents and rebalance the shelves; test the door seals.",
+          "Vacuum the condenser coils and confirm the unit has rear clearance.",
+          "If it still will not cool, book a technician and describe the freezer-versus-fridge pattern \u2014 that single detail tells them which subsystem to bring parts for."
+        ]
+      },
+      {
+        "h2": "What the freezer-versus-fridge pattern tells a technician",
+        "table": {
+          "head": [
+            "Pattern",
+            "Most likely area",
+            "Typical next step"
+          ],
+          "rows": [
+            [
+              "Both sections warm, compressor silent",
+              "Power, control board, start relay",
+              "Electrical diagnosis"
+            ],
+            [
+              "Freezer cold, fridge warm",
+              "Airflow, evaporator fan, damper",
+              "Fan or damper replacement"
+            ],
+            [
+              "Everything warm, compressor hot and running",
+              "Condenser airflow, sealed system",
+              "Coil clean, then pressure test"
+            ],
+            [
+              "Frost at the back of the freezer",
+              "Defrost system",
+              "Heater, thermostat or timer"
+            ],
+            [
+              "Cooling returns after a 24-hour defrost, then fails again",
+              "Defrost system",
+              "Same as above \u2014 the defrost is not completing"
+            ]
+          ]
+        }
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long can food stay safe in a fridge that is not cooling?",
+        "a": "The USDA guidance is that perishable food should be discarded if it has been above 40\u00b0F for more than two hours. A closed refrigerator holds cold for roughly four hours; a full freezer rather longer. When in doubt, throw it out \u2014 the cost of replacing food is far lower than the cost of a foodborne illness."
+      },
+      {
+        "q": "Why is my freezer cold but the refrigerator warm?",
+        "a": "That pattern almost always means cold air is not reaching the fresh-food compartment: a blocked vent, a failed evaporator fan, a stuck air damper, or heavy frost from a defrost failure. It is rarely a refrigerant problem, which is good news for the repair bill."
+      },
+      {
+        "q": "Can I just turn the temperature down to fix it?",
+        "a": "Lowering the set point masks a mild airflow or seal problem and makes the compressor run continuously, which wastes energy and shortens its life. Find the cause instead; if the unit cannot hold 37\u00b0F at the normal setting, something needs attention."
+      },
+      {
+        "q": "Is a refrigerator repair worth it on a 10-year-old unit?",
+        "a": "Often yes for a fan, relay, thermostat or defrost component. A sealed-system repair on a unit near the end of its 12\u201315 year life is usually not, because the labour is significant and the rest of the appliance is also ageing. Ask for both numbers before deciding."
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "title": "How to Choose a Reliable Appliance Repair Service",
+    "slug": "how-to-choose-a-reliable-appliance-repair-service",
+    "category": {
+      "slug": "appliance-repair",
+      "name": "Appliance Repair",
+      "description": "Diagnostics, repair-or-replace decisions and what a technician should check for the appliances a home actually runs on.",
+      "seoTitle": "Appliance Repair Guides for Homeowners",
+      "seoDescription": "Plain-English appliance repair guides: what common symptoms mean, which checks are safe to do yourself, and when a qualified technician should take over.",
+      "sortOrder": 1
+    },
+    "primaryKeyword": "appliance repair service",
+    "secondaryKeywords": [
+      "reliable appliance repair",
+      "appliance repair near me",
+      "appliance repair company",
+      "professional appliance technician",
+      "appliance repair estimate",
+      "appliance repair warranty"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners about to hire an appliance repair company and comparing local options.",
+    "cta": {
+      "label": "Browse home service categories",
+      "href": "/services"
+    },
+    "internalLinks": [
+      {
+        "label": "Common appliance problems and when to call a pro",
+        "href": "/blog/common-appliance-problems-when-to-call-a-repair-professional"
+      },
+      {
+        "label": "Questions to ask before hiring a home service professional",
+        "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
+    ],
+    "image": "/images/blog/how-to-choose-a-reliable-appliance-repair-service.svg",
+    "imageAlt": "Illustration of a homeowner comparing two repair quotes on a clipboard beside a washing machine",
+    "seoTitle": "How to Choose a Reliable Appliance Repair Service",
+    "seoDescription": "What separates a good appliance repair company from a bad one: licensing, diagnostic fees, parts policy, warranty terms and the questions worth asking.",
+    "excerpt": "Diagnostic fees, parts policies, warranty wording and the questions that reveal how a repair company actually works \u2014 a practical checklist for choosing well the first time.",
+    "seoSummary": "Hiring checklist for appliance repair: credentials, fee structures, warranty terms, red flags.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "hiring",
+      "appliance repair",
+      "quotes",
+      "consumer protection"
+    ],
+    "visual": "Flat vector: homeowner with clipboard comparing two quotes, washing machine and fridge icons, checkmarks.",
+    "sections": [
+      {
+        "paras": [
+          "Appliance repair is one of the few trades where a homeowner often calls someone without any personal reference, in a hurry, with a machine full of food or washing. That combination makes it worth knowing what a good operator looks like before you need one.",
+          "This guide is deliberately practical. It covers what to verify, what to ask, how the money usually works, and the specific behaviours that should make you choose someone else."
+        ]
+      },
+      {
+        "h2": "Verify three things before you book",
+        "h3": "Manufacturer authorisation",
+        "paras": [
+          "If your appliance is still under warranty, work by an unauthorised technician can void it. Ask whether the company is authorised for your brand, and check with the manufacturer if the answer is vague. For out-of-warranty work it matters less, but authorisation is a signal that the technician has access to current parts and service documentation."
+        ]
+      },
+      {
+        "h2": "Understand how the money works",
+        "table": {
+          "head": [
+            "Charge type",
+            "What it should mean",
+            "What to confirm"
+          ],
+          "rows": [
+            [
+              "Diagnostic fee",
+              "Pays for travel and fault-finding",
+              "Is it credited against the repair if you proceed?"
+            ],
+            [
+              "Flat-rate repair",
+              "One price for the job, parts included",
+              "Does it cover the part, labour, and a return visit if the fault persists?"
+            ],
+            [
+              "Time and materials",
+              "Hourly labour plus parts at cost or list",
+              "What is the hourly rate, and is there a minimum?"
+            ],
+            [
+              "Trip charge",
+              "Travel only, on top of labour",
+              "Is it charged again if parts must be ordered?"
+            ]
+          ]
+        },
+        "paras": [
+          "None of these structures is inherently dishonest \u2014 but the diagnostic fee policy is the one that most often surprises homeowners. A company that credits the fee against the repair is telling you it expects to do the work; a company that charges a full diagnostic and then quotes a separate inflated repair is a different proposition.",
+          "Get the total in writing before work starts. A verbal \"around two hundred\" is not a quote, and it is not enforceable."
+        ]
+      },
+      {
+        "h2": "Ask these eight questions",
+        "ordered": [
+          "Are you licensed or registered where my state or city requires it, and what is the number?",
+          "Do you carry liability insurance and workers' compensation?",
+          "Is the diagnostic fee credited if I approve the repair?",
+          "Will you give me a written price before starting work?",
+          "What warranty do you provide on the part, and separately on the labour?",
+          "Do you use original manufacturer parts, and if not, what are you fitting?",
+          "If the part has to be ordered, is the return visit charged?",
+          "What happens if the same fault returns within 30 days?"
+        ],
+        "note": "A good sign is a company that answers these by email without being pushed. A bad sign is irritation at being asked."
+      },
+      {
+        "h2": "Parts policy matters more than people expect",
+        "paras": [
+          "Original equipment manufacturer (OEM) parts fit and carry the manufacturer's quality control. Aftermarket parts are often perfectly serviceable and cheaper, but quality varies widely by category, and some cheap control boards fail quickly.",
+          "Ask which is being fitted and what it changes about the warranty. If a company will not tell you, that is the answer."
+        ]
+      },
+      {
+        "h2": "Warranty wording to read closely",
+        "paras": [
+          "A typical trade warranty covers the part for 90 days to a year and the labour for 30 to 90 days. The wording matters in three places: whether the warranty covers the part only or the whole repair, whether it is void if you use another company, and whether a repeat visit carries a new trip charge.",
+          "Ask for the warranty in writing. If a company offers \"a guarantee\" with no terms, that guarantee is a mood rather than a promise."
+        ]
+      },
+      {
+        "h2": "Red flags worth walking away from",
+        "bullets": [
+          "A price quoted over the phone without the model number \u2014 it is a number designed to get the visit booked.",
+          "Pressure to decide immediately, or a discount that expires while the technician is standing in your kitchen.",
+          "Refusal to put the diagnosis or the price in writing.",
+          "A diagnosis that changes after the appliance is opened, with no explanation of what was found.",
+          "Cash-only payment with no invoice.",
+          "A call centre that cannot name the technician who will arrive or the company's local address."
+        ]
+      },
+      {
+        "h2": "How to get the best outcome from the visit",
+        "bullets": [
+          "Have the model and serial number ready; it is usually inside the door or behind the kick panel.",
+          "Clear access to the appliance and protect the floor.",
+          "Describe the symptom precisely: when it starts, what it sounds like, what changed.",
+          "Ask the technician to show you the failed part and explain the diagnosis.",
+          "Keep the invoice, the warranty terms and any part numbers for future reference."
+        ]
+      },
+      {
+        "h2": "A short checklist before you say yes",
+        "paras": [
+          "Business name and address confirmed, insurance checked, diagnostic fee policy understood, written price received, parts policy and warranty terms in hand. If any of those is missing, you are not being difficult \u2014 you are doing what the company should expect."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Should I use a manufacturer-authorised repair service?",
+        "a": "If the appliance is under warranty, yes \u2014 authorised service is usually required to keep the warranty valid, and it is often free. Out of warranty, authorisation still means access to current parts and documentation, but a well-reviewed independent technician can be equally good and sometimes quicker."
+      },
+      {
+        "q": "Is a diagnostic fee normal?",
+        "a": "Yes. Travel and fault-finding are real work, and a fee is reasonable. What matters is that the policy is stated up front and, ideally, credited against the repair if you approve it."
+      },
+      {
+        "q": "How long should an appliance repair warranty last?",
+        "a": "Common terms are 90 days to one year on parts and 30 to 90 days on labour. Anything shorter than 30 days deserves a question; anything longer than a year on labour is unusual and worth reading carefully."
+      },
+      {
+        "q": "Can I get a repair quote over the phone?",
+        "a": "You can usually get a range, not a quote. Exact pricing needs the model number and often a diagnosis. Be wary of a firm price quoted before anyone knows what is wrong \u2014 it tends to be revised upward once the appliance is open."
+      }
+    ]
+  }
+]

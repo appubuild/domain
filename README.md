@@ -251,6 +251,9 @@ and settings. It runs in one of two modes, chosen by `VITE_API_BASE_URL`:
 
 See **[docs/ADMIN-PANEL.md](docs/ADMIN-PANEL.md)** for screens and
 **[docs/API-INTEGRATION.md](docs/API-INTEGRATION.md)** for the mode switch.
+Editorial workflow — the article JSON, the SQL generator, the illustrations and
+the publishing cron — is documented in
+**[docs/PUBLISHING.md](docs/PUBLISHING.md)**.
 
 - **Login:** `info@safehomenetwork.com` / `Sa123456` — set in
   `src/admin/config/adminConfig.ts` (`ADMIN_CONFIG.demo`).

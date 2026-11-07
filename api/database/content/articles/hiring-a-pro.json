@@ -1,0 +1,260 @@
+[
+  {
+    "id": 29,
+    "title": "How to Compare Home Service Estimates",
+    "slug": "how-to-compare-home-service-estimates",
+    "category": {
+      "slug": "hiring-a-pro",
+      "name": "Hiring a Pro",
+      "description": "How to vet, quote and manage a home service professional: what a proper proposal contains, the questions that reveal experience, and how to handle changes and payment.",
+      "seoTitle": "Hiring a Home Service Professional",
+      "seoDescription": "Compare home service quotes properly: scope, exclusions, labour rates, warranty and payment terms, plus the questions that expose an inexperienced contractor.",
+      "sortOrder": 15
+    },
+    "primaryKeyword": "how to compare contractor estimates",
+    "secondaryKeywords": [
+      "contractor quote comparison",
+      "home service estimate",
+      "how to read a contractor bid",
+      "contractor change order",
+      "fixed price vs time and materials",
+      "contractor deposit"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners holding two or three quotes that look similar on price and completely different on detail.",
+    "cta": { "label": "Browse home service categories", "href": "/services" },
+    "internalLinks": [
+      { "label": "Questions to ask before hiring a home service professional", "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional" },
+      { "label": "Kitchen remodel costs: a line-by-line breakdown", "href": "/blog/kitchen-remodel-cost-breakdown" },
+      { "label": "How to choose a roofing contractor", "href": "/blog/how-to-choose-a-roofing-contractor" }
+    ],
+    "image": "/images/blog/how-to-compare-home-service-estimates.svg",
+    "imageAlt": "Illustration of a clipboard with a completed checklist beside a coin",
+    "seoTitle": "How to Compare Home Service Estimates Properly",
+    "seoDescription": "Three quotes are only useful if they cover the same work. A line-by-line method for comparing contractor estimates, spotting exclusions and judging value.",
+    "excerpt": "The cheapest quote is usually the one with the most missing lines. Comparing estimates is really an exercise in reading what is not there.",
+    "seoSummary": "Framework for normalising and comparing contractor quotes, including a comparison table.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["hiring", "estimates", "contractors", "budgeting"],
+    "visual": "Flat vector medallion: a clipboard with a checked line, a coin chip, a document chip and a check chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "Three quotes for the same job rarely describe the same job. One includes permits, one assumes you will handle disposal, one prices materials at today's rate and another at last year's, and one has a single line that says 'labour and materials' and no detail at all.",
+          "Comparing them is not a matter of looking at the bottom number. It is a matter of normalising the scope first, so the number means something."
+        ]
+      },
+      {
+        "h2": "Step one: put every quote on the same page",
+        "paras": [
+          "Create a simple table with one row per line item and one column per contractor. Fill it from their documents, not from memory, and leave a blank where a quote does not address an item. The blanks are the whole exercise."
+        ],
+        "table": {
+          "head": ["Line item", "Contractor A", "Contractor B", "Contractor C"],
+          "rows": [
+            ["Scope described in writing", "Yes", "Yes", "No — verbal only"],
+            ["Materials specified by brand/model", "Yes", "Partly", "No"],
+            ["Permits included", "Yes", "Excluded", "Yes"],
+            ["Disposal and cleanup", "Yes", "Excluded", "Yes"],
+            ["Labour rate and estimated hours", "Stated", "Lump sum", "Stated"],
+            ["Warranty (workmanship / materials)", "2 yr / manufacturer", "None stated", "1 yr / manufacturer"],
+            ["Payment schedule", "30 / 40 / 30", "50% deposit", "Cash on completion"],
+            ["Start date and duration", "3 weeks / 5 days", "\"Soon\"", "4 weeks / 4 days"]
+          ]
+        }
+      },
+      {
+        "h2": "Step two: understand the pricing model",
+        "bullets": [
+          "Fixed price — best when the scope is fully defined and unlikely to change. Ask what triggers a change order.",
+          "Time and materials — fair for diagnostic work and small repairs; requires a not-to-exceed cap to be safe.",
+          "Cost plus a percentage — common on large remodels; ask for an open-book breakdown of materials.",
+          "Lump sum with allowances — reasonable, but the allowance amounts matter: a low allowance is how a quote looks cheaper than it is."
+        ],
+        "note": "Allowances are the most common hidden cost in renovation quotes. Ask what happens if the allowance is exceeded and who approves the overage in writing."
+      },
+      {
+        "h2": "Step three: check the exclusions line",
+        "paras": [
+          "Every credible quote has an exclusions section. Common ones are permits, hauling, drywall repair after plumbing, painting, and 'unforeseen conditions'. None of those are unreasonable individually; the problem is when they are not listed and become surprise invoices.",
+          "Ask each contractor to add anything they are assuming you will handle. A contractor who cannot list their exclusions has not thought about the job."
+        ]
+      },
+      {
+        "h2": "Step four: judge the person, not just the paper",
+        "paras": [
+          "A detailed quote from someone who never visited the property is a guess. A cheap quote from someone who cannot produce a licence or an insurance certificate is a risk you are accepting on your own policy.",
+          "The quotes worth comparing come from people who walked the job, asked questions, and can explain their sequence — what happens first, what they need from you, and what could change the plan."
+        ]
+      },
+      {
+        "h2": "Step five: payment and warranty terms",
+        "ordered": [
+          "A deposit that covers materials is normal; a demand for the majority upfront is not.",
+          "Progress payments should follow completed milestones, not the calendar.",
+          "Hold back a final payment until the punch list is done.",
+          "Get the workmanship warranty period in writing, and whether it is transferable.",
+          "Confirm lien waivers or paid receipts from subcontractors on larger jobs.",
+          "Read the cancellation and change-order clauses before signing."
+        ]
+      },
+      {
+        "h2": "The decision that is not purely financial",
+        "paras": [
+          "Between two comparable quotes, choose on communication. The contractor who answers questions, documents decisions and tells you when something changed is the one who will handle an unexpected problem well — and unexpected problems are the only certainty in home improvement.",
+          "A slightly higher price from a contractor who communicates clearly is usually the cheapest outcome in the long run."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Is the lowest quote usually the best?",
+        "a": "Rarely. The lowest quote is often the one with the most exclusions or the thinnest scope. Compare what is included, then compare price."
+      },
+      {
+        "q": "What is a reasonable deposit for home services?",
+        "a": "Enough to cover materials, typically 10–30% depending on the trade. Large upfront payments reduce your leverage if the work stalls."
+      },
+      {
+        "q": "Should I get a written contract for a small job?",
+        "a": "Yes, even a one-page one stating scope, price, payment and warranty. It takes five minutes and settles most disputes before they start."
+      },
+      {
+        "q": "How many quotes should I get?",
+        "a": "Two for a simple repair, three for anything significant. More than three rarely improves the decision and delays the work."
+      }
+    ]
+  },
+  {
+    "id": 30,
+    "title": "Questions to Ask Before Hiring a Home Service Professional",
+    "slug": "questions-to-ask-before-hiring-a-home-service-professional",
+    "category": {
+      "slug": "hiring-a-pro",
+      "name": "Hiring a Pro",
+      "description": "How to vet, quote and manage a home service professional: what a proper proposal contains, the questions that reveal experience, and how to handle changes and payment.",
+      "seoTitle": "Hiring a Home Service Professional",
+      "seoDescription": "Compare home service quotes properly: scope, exclusions, labour rates, warranty and payment terms, plus the questions that expose an inexperienced contractor.",
+      "sortOrder": 15
+    },
+    "primaryKeyword": "questions to ask a contractor",
+    "secondaryKeywords": [
+      "how to vet a contractor",
+      "contractor license check",
+      "contractor insurance certificate",
+      "hiring a tradesperson",
+      "contractor red flags",
+      "home service professional"
+    ],
+    "intent": "Informational",
+    "audience": "First-time homeowners and anyone hiring a trade without a personal recommendation.",
+    "cta": { "label": "Browse home service categories", "href": "/services" },
+    "internalLinks": [
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" },
+      { "label": "How to choose a roofing contractor", "href": "/blog/how-to-choose-a-roofing-contractor" },
+      { "label": "Rekey or replace your locks?", "href": "/blog/rekey-vs-replace-locks" }
+    ],
+    "image": "/images/blog/questions-to-ask-before-hiring-a-home-service-professional.svg",
+    "imageAlt": "Illustration of a speech bubble with a document and a review star",
+    "seoTitle": "12 Questions to Ask Before Hiring a Contractor",
+    "seoDescription": "The questions that separate a professional from a gamble: licence, insurance, experience, subcontractors, warranty and who actually shows up on the day.",
+    "excerpt": "Most bad contractor experiences trace back to a question nobody asked at the start. These twelve take ten minutes and change the entire relationship.",
+    "seoSummary": "Twelve vetting questions for choosing a home service professional, with what a good answer sounds like.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["hiring", "contractors", "consumer protection", "vetting"],
+    "visual": "Flat vector medallion: a speech bubble with a document chip, a star chip and a shield chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "A good contractor will welcome most of the questions below, because they are the same questions a good contractor asks a subcontractor. If any of them produce defensiveness, that is the answer.",
+          "Ask them in one conversation, note the answers, and verify the two that can be verified independently: the licence and the insurance."
+        ]
+      },
+      {
+        "h2": "The twelve questions",
+        "ordered": [
+          "Are you licensed for this type of work, and what is your licence number?",
+          "Can you send a certificate of insurance for liability and workers' compensation?",
+          "How long have you been doing this specific kind of work in this area?",
+          "Will your own crew do the work, or will it be subcontracted?",
+          "Who is my point of contact during the project, and how do I reach them?",
+          "What is included in the price, and what is explicitly excluded?",
+          "What could change the price, and how are changes approved?",
+          "What is the payment schedule, and what does the deposit cover?",
+          "What warranty do you provide on labour, and how long does it last?",
+          "How many other jobs will be running at the same time as mine?",
+          "What is the start date and the expected duration, and what could move them?",
+          "Can I have three recent references, including one from at least a year ago?"
+        ]
+      },
+      {
+        "h2": "What good answers sound like",
+        "table": {
+          "head": ["Question", "A good answer", "A warning sign"],
+          "rows": [
+            ["Licence", "Number offered without hesitation", "\"We don't need one for this\""],
+            ["Insurance", "Certificate sent before work starts", "\"We're covered, don't worry\""],
+            ["Crew", "Names the crew or the subcontractor", "Vague about who will be on site"],
+            ["Exclusions", "A written list", "\"Everything's included\""],
+            ["Changes", "Written change order, signed by you", "\"We'll sort it out at the end\""],
+            ["Warranty", "Specific years, in writing", "\"Lifetime\" with no terms"],
+            ["References", "Three, with addresses or numbers", "One phone number, unlisted"]
+          ]
+        }
+      },
+      {
+        "h2": "The two checks you do not take on trust",
+        "paras": [
+          "Verify the licence yourself against the state or local licensing board — a scan of a card proves nothing. Then call the insurer on the certificate and confirm the policy is active and covers the work being done.",
+          "This takes ten minutes and it is the difference between a contractor's mistake being their problem and it becoming yours."
+        ],
+        "note": "If a contractor asks you to pull the permit in your own name, that is usually a sign they cannot or will not. Permits exist to protect you; the person doing the work should be accountable for them."
+      },
+      {
+        "h2": "Questions about the money",
+        "bullets": [
+          "Does the deposit cover materials, and what happens to it if the job is delayed?",
+          "Are progress payments tied to completed milestones?",
+          "What is your policy on change orders — who signs, and when is the price fixed?",
+          "Do you require a final payment before the punch list is complete?",
+          "Are you able to provide lien waivers or paid receipts for subcontractors?"
+        ]
+      },
+      {
+        "h2": "The behavioural signals",
+        "paras": [
+          "Shows up on time for the estimate, listens more than talks, and asks about the house rather than about the budget. Writes things down. Mentions what could go wrong before you ask. Replies to messages within a day during the quoting stage.",
+          "Those signals predict project behaviour far better than a glossy brochure. The reverse — late arrival, pressure to sign today, a quote with no detail, ignoring questions — predicts exactly what you would expect."
+        ]
+      },
+      {
+        "h2": "Before you sign",
+        "ordered": [
+          "Get the scope, price, payment schedule and warranty in the contract.",
+          "Confirm the start date and duration in writing.",
+          "Ask what the contractor needs from you and when — access, parking, decisions, payments.",
+          "Photograph the existing condition of the work area.",
+          "Read the cancellation clause, and keep a signed copy."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How do I verify a contractor's licence?",
+        "a": "Search your state or local licensing board's public database using the licence number or business name. Ask for the number in writing so you can check the exact entity."
+      },
+      {
+        "q": "What should I do if a contractor will not provide insurance details?",
+        "a": "Do not hire them. If an uninsured worker is injured on your property, the claim can fall on your homeowner policy."
+      },
+      {
+        "q": "Is a verbal agreement enough for small jobs?",
+        "a": "It is a risk. Even a short written note covering scope, price and warranty prevents most disputes and makes expectations explicit."
+      },
+      {
+        "q": "Should I use a contractor recommended by an insurer?",
+        "a": "You can, but you are not obliged to. Compare any recommended contractor with one or two independent quotes, and never sign a document assigning your claim to a contractor."
+      }
+    ]
+  }
+]

@@ -18,6 +18,10 @@ import { NumbersPage } from '@/admin/pages/NumbersPage'
 import { NichesPage } from '@/admin/pages/NichesPage'
 import { PagesPage } from '@/admin/pages/PagesPage'
 import { BlogPage } from '@/admin/pages/BlogPage'
+import { BlogEditorPage } from '@/admin/pages/BlogEditorPage'
+import { PageEditorPage } from '@/admin/pages/PageEditorPage'
+import { CategoriesPage } from '@/admin/pages/CategoriesPage'
+import { PublishingPage } from '@/admin/pages/PublishingPage'
 import { HomepagePage } from '@/admin/pages/HomepagePage'
 import { LeadsPage } from '@/admin/pages/LeadsPage'
 import { SettingsPage } from '@/admin/pages/SettingsPage'
@@ -86,7 +90,13 @@ export const AdminApp = () => (
           <Route path="numbers" element={<NumbersPage />} />
           <Route path="niches" element={<NichesPage />} />
           <Route path="pages" element={<PagesPage />} />
+          <Route path="pages/new" element={<PageEditorPage />} />
+          <Route path="pages/:id" element={<PageEditorPage />} />
           <Route path="blog" element={<BlogPage />} />
+          <Route path="blog/new" element={<BlogEditorPage />} />
+          <Route path="blog/:id" element={<BlogEditorPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="publishing" element={<PublishingPage />} />
           <Route path="homepage" element={<HomepagePage />} />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="settings" element={<SettingsPage />} />

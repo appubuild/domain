@@ -13,6 +13,8 @@ dist-ssr
 .smoke
 .smoke-smoke
 .smoke-admin
+.smoke-content
+.tmp-previews
 *.local
 
 # Editor directories and files

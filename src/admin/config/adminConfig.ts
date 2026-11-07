@@ -38,6 +38,18 @@ export const ADMIN_CONFIG = {
     tagline: 'Directory, content and call tracking',
   },
 
+  /**
+   * Editorial defaults for the blog editor / page builder. Timestamps are
+   * stored in UTC; this zone decides how a wall-clock time typed in the editor
+   * is converted, and how scheduled dates are displayed back.
+   */
+  publishing: {
+    timezone: 'America/New_York',
+    timezoneLabel: 'America/New_York (ET)',
+    /** Statuses in the order the editor offers them. */
+    statuses: ['draft', 'published', 'scheduled'] as const,
+  },
+
   /** `api` = PHP session cookie; `demo` = client-side check (no backend). */
   authMode: (API_BASE_URL.length > 0 ? 'api' : 'demo') as AuthMode,
 
