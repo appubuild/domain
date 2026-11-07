@@ -32,6 +32,7 @@ from typing import TYPE_CHECKING, Final
 from nova_studio.core.errors import ErrorDomain
 from nova_studio.core.result import Result, error_result, ok
 from nova_studio.domain.persistence import CacheEntry, CacheKind
+from nova_studio.infra.persistence.migrations import CACHE_MIGRATIONS, ensure_schema
 from nova_studio.infra.persistence.sqlite import SqliteError, SqliteGateway
 from nova_studio.ports.persistence import PersistenceErrorCode
 
@@ -41,23 +42,14 @@ if TYPE_CHECKING:
 
 __all__ = ["CACHE_INDEX_DDL", "SqliteCacheIndex", "open_cache_index", "open_shared_cache_index"]
 
-#: The one table this adapter owns.
-#:
-#: ``key`` is the primary key because a cache is a key-value store that happens
-#: to have a size; the index on ``(kind, last_used_ms)`` is the one the eviction
-#: planner's ordering wants, so "oldest thumbnail first" is not a table scan.
-CACHE_INDEX_DDL: Final[str] = """
-CREATE TABLE IF NOT EXISTS cache_index (
-    key          TEXT    PRIMARY KEY,
-    kind         TEXT    NOT NULL,
-    size_bytes   INTEGER NOT NULL,
-    created_ms   INTEGER NOT NULL,
-    last_used_ms INTEGER NOT NULL,
-    pinned       INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS cache_index_by_kind
-    ON cache_index (kind, last_used_ms);
-"""
+#: The DDL the index needs, as one script, for the caller who wants to create
+#: the table outside the migration runner — a repair tool, a fixture. Derived
+#: from :data:`~nova_studio.infra.persistence.migrations.CACHE_MIGRATIONS`
+#: rather than written twice, because a second copy is a copy that drifts the
+#: first time one of them is changed.
+CACHE_INDEX_DDL: Final[str] = "".join(
+    f"{statement.strip()};\n" for statement in CACHE_MIGRATIONS[0].statements
+)
 
 _COLUMNS: Final[tuple[str, ...]] = (
     "key",
@@ -115,7 +107,10 @@ class SqliteCacheIndex:
         self._gateway = gateway
         if not gateway.is_open:
             gateway.open()
-        gateway.script(CACHE_INDEX_DDL)
+        # Through the migration runner rather than a `CREATE TABLE IF NOT
+        # EXISTS` of its own: an existing install's index predates versioning,
+        # and this is what adopts it instead of building a second one beside it.
+        ensure_schema(gateway, migrations=CACHE_MIGRATIONS)
 
     # -- reads -------------------------------------------------------------
 

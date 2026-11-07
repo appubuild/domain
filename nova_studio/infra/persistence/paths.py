@@ -60,12 +60,14 @@ __all__ = [
     "BACKUP_SUFFIX",
     "CACHE_DATABASE_NAME",
     "CACHE_SUBDIR",
+    "INSTALL_DATABASE_NAME",
     "JOURNAL_PREFIX",
     "JOURNAL_SUFFIX",
     "backup_path",
     "cache_database_path",
     "cache_root",
     "ensure_cache_layout",
+    "install_database_path",
     "is_journal_name",
     "is_safe_project_id",
     "journal_dir",
@@ -79,7 +81,19 @@ __all__ = [
 AUTOSAVE_SUBDIR: Final[str] = "autosave"
 
 #: One install-wide SQLite database of derived artefacts.
+#:
+#: Its own file, and not a table in `nova.db`, for one reason that outweighs
+#: the tidiness of having a single database: the cache index may be deleted
+#: wholesale — `rm cache.sqlite3` costs a rebuild and loses nothing — and a
+#: table cannot be deleted by a user who wants their disk back.
 CACHE_DATABASE_NAME: Final[str] = "cache.sqlite3"
+
+#: One install-wide database of the state that cannot be recomputed: settings,
+#: the projects this install has seen, and the job history (ADR-0004 §6).
+#:
+#: Small, written rarely, and never deleted — the three properties that say it
+#: does not belong in the same file as the cache index.
+INSTALL_DATABASE_NAME: Final[str] = "nova.db"
 
 #: Where the derived bytes themselves live, one subdirectory per
 #: :class:`~nova_studio.domain.persistence.CacheKind`. Separate directories
@@ -162,6 +176,11 @@ def journal_started_ms(name: str) -> int:
 def cache_database_path(data_root: Path) -> Path:
     """The one cache index for this install."""
     return data_root / CACHE_DATABASE_NAME
+
+
+def install_database_path(data_root: Path) -> Path:
+    """The one database of install state: settings, recent files, job history."""
+    return data_root / INSTALL_DATABASE_NAME
 
 
 def cache_root(data_root: Path) -> Path:
