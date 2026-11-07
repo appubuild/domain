@@ -116,6 +116,10 @@ export default {
           '0%': { transform: 'translate3d(100%, 0, 0)' },
           '100%': { transform: 'translate3d(0, 0, 0)' },
         },
+        'slide-in-left': {
+          '0%': { transform: 'translate3d(-100%, 0, 0)' },
+          '100%': { transform: 'translate3d(0, 0, 0)' },
+        },
         shimmer: {
           '100%': { transform: 'translateX(100%)' },
         },
@@ -126,6 +130,7 @@ export default {
         'scale-in': 'scale-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both',
         'slide-down': 'slide-down 0.2s ease-out both',
         'slide-in-right': 'slide-in-right 0.32s cubic-bezier(0.22, 1, 0.36, 1) both',
+        'slide-in-left': 'slide-in-left 0.3s cubic-bezier(0.22, 1, 0.36, 1) both',
       },
     },
   },

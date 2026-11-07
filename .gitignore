@@ -12,6 +12,7 @@ dist
 dist-ssr
 .smoke
 .smoke-smoke
+.smoke-admin
 *.local
 
 # Editor directories and files

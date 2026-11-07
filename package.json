@@ -13,7 +13,9 @@
     "lint": "tsc --noEmit -p tsconfig.app.json",
     "audit": "vite build --ssr scripts/audit.tsx --outDir .smoke --logLevel error && node .smoke/audit.js",
     "smoke": "vite build --ssr scripts/smoke.tsx --outDir .smoke-smoke --logLevel error && node .smoke-smoke/smoke.js",
-    "test": "vite build --ssr scripts/test-directory.tsx --outDir .smoke-test --logLevel error && node .smoke-test/test-directory.js"
+    "test": "npm run test:directory && npm run test:admin",
+    "test:directory": "vite build --ssr scripts/test-directory.tsx --outDir .smoke-test --logLevel error && node .smoke-test/test-directory.js",
+    "test:admin": "vite build --ssr scripts/test-admin.tsx --outDir .smoke-admin --logLevel error && node .smoke-admin/test-admin.js"
   },
   "dependencies": {
     "lucide-react": "^0.454.0",

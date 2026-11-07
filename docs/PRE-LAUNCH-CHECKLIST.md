@@ -38,6 +38,19 @@ this file in the repo (or in Drive) as the internal checklist instead.
       `tel:` links appear on non-service pages, which `npm run audit` currently
       treats as an error — update that check if you set it.
 
+## 3b. Admin console (Phase 1 demo)
+
+- [ ] `/admin` is live for review only. It uses **demo credentials stored in the
+      browser bundle** (`info@safehomenetwork.com` / `Sa123456`) — not real
+      security. Do not share the URL publicly and do not store real business
+      data behind it.
+- [ ] `robots.txt` disallows `/admin` and the console sets `noindex,nofollow`.
+- [ ] Phase 2 (PHP + MySQL auth + REST API) must be approved and completed before
+      the panel is treated as production: hashed passwords, server sessions,
+      CSRF, rate limiting, per-endpoint authorisation.
+- [ ] The panel's dashboards are simulated data — never quote those figures as
+      real traffic, calls or revenue.
+
 ## 4. Contact form delivery
 
 The form is usable today: submitting opens the visitor's email app with the

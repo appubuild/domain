@@ -55,6 +55,7 @@ Node 18+ required. `npm run build` regenerates `public/sitemap.xml` automaticall
 | `/disclaimer` | Referral-model disclaimer |
 | `/do-not-sell-or-share` | Privacy choices / opt-out request page |
 | `/accessibility` | Accessibility statement |
+| `/admin` | Admin console (Phase 1 static demo — sign-in required, `noindex`) |
 | `*` | 404 page (noindex) |
 
 Every page is a real page with unique content, metadata and breadcrumbs. No dead
@@ -215,6 +216,26 @@ Verify a deep link (e.g. `/services/locksmith`) after deploying, not just the ho
 
 ---
 
+## Admin console (Phase 1)
+
+A separate, lazy-loaded admin panel at **`/admin`** manages the directory, content
+and settings. Phase 1 is static: no PHP, no MySQL, no API — data lives in
+`localStorage` and analytics are simulated. See
+**[docs/ADMIN-PANEL.md](docs/ADMIN-PANEL.md)** for the full guide.
+
+- **Login:** `info@safehomenetwork.com` / `Sa123456` — set in
+  `src/admin/config/adminConfig.ts` (`ADMIN_CONFIG.demo`).
+- **Screens:** dashboard, analytics & reports, services, tracking numbers, niches,
+  pages, blog, homepage sections, leads, website settings, SEO settings, profile
+  & security.
+- **Data layer:** `src/admin/data/repository.ts` (interface + localStorage
+  implementation). `apiRepository.ts` and `apiClient.ts` are the prepared Phase 2
+  REST equivalents; `ADMIN_CONFIG.api.enabled` is `false`, so nothing is fetched.
+- **Seed:** services and numbers come from the live `services.ts` /
+  `serviceNumbers.ts` — the panel starts in sync with the public directory.
+- **Not real:** traffic, calls, revenue and leads are clearly labelled simulated
+  or fictional demo data.
+
 ## Quality checks performed
 
 - `npx tsc -b` — clean, zero errors under `strict` + `noUnusedLocals`.
@@ -222,10 +243,12 @@ Verify a deep link (e.g. `/services/locksmith`) after deploying, not just the ho
 - `npm run smoke` — SSR render test across all 26 routes plus 404 cases.
 - `npm run audit` — link, in-page anchor, image-source, duplicate-id and
   single-`h1` audit across every route (26 routes, all passing).
-- `npm run test` — 28 assertions over the phone directory, service→number
-  mapping, publication rules, campaign permissions, and the rendered markup:
-  numbers never appear before a service is selected, and each service page shows
-  only its own two lines.
+- `npm run test` — 111 assertions: 28 over the public phone directory
+  (mapping, publication rules, campaign permissions, rendered markup — numbers
+  never appear before a service is selected) and 83 over the admin console
+  (demo credentials, protected routes, every admin screen rendering, repository
+  CRUD and validation, seed fidelity, analytics maths).
+- `npm run test:admin` — the admin suite on its own.
 - All internal links resolve to real routes; all CTA buttons are wired to a
   working action (dialog, navigation or form).
 - Call flow tested end to end: every one of the 15 service pages either renders

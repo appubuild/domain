@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { CallSheetProvider } from '@/components/calls/CallContext'
@@ -16,10 +17,30 @@ import DoNotSellOrShare from '@/pages/DoNotSellOrShare'
 import Accessibility from '@/pages/Accessibility'
 import NotFound from '@/pages/NotFound'
 
+/** The admin console is a separate chunk: public visitors never download it. */
+const AdminApp = lazy(() => import('@/admin/AdminApp'))
+
+const AdminLoadingFallback = () => (
+  <div className="flex min-h-dvh items-center justify-center bg-page">
+    <div className="flex flex-col items-center gap-3 text-center">
+      <span className="h-8 w-8 animate-spin rounded-full border-2 border-line border-t-brand-600" aria-hidden="true" />
+      <p className="text-sm font-medium text-muted">Loading admin console…</p>
+    </div>
+  </div>
+)
+
 const App = () => (
   <ThemeProvider>
     <CallSheetProvider>
       <Routes>
+        <Route
+          path="/admin/*"
+          element={
+            <Suspense fallback={<AdminLoadingFallback />}>
+              <AdminApp />
+            </Suspense>
+          }
+        />
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />

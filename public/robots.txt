@@ -5,6 +5,9 @@ User-agent: *
 Allow: /
 Disallow: /404
 
+# Admin console — internal screens are never indexed.
+Disallow: /admin
+
 # No crawl-delay directives: crawl rate is controlled in Google Search Console.
 
 Sitemap: https://safehomenetwork.com/sitemap.xml
