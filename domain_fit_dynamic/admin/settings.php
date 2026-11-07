@@ -6,6 +6,16 @@ require_once __DIR__ . '/../includes/cache.php';
 require_once __DIR__ . '/../includes/gemini.php';
 admin_require_permission($pdo,$admin,'manage_settings');
 $errorMessage='';
+$databaseFingerprint=static function(PDO $connection):?string{
+    try{
+        $identity=$connection->query('SELECT DATABASE() AS database_name, @@hostname AS server_name, @@port AS server_port')->fetch(PDO::FETCH_ASSOC);
+        if(!is_array($identity)||!isset($identity['database_name'],$identity['server_name'],$identity['server_port']))return null;
+        return hash('sha256',(string)$identity['database_name']."\0".(string)$identity['server_name']."\0".(string)$identity['server_port']);
+    }catch(Throwable $error){
+        error_log('Site settings database identity check unavailable: '.$error->getMessage());
+        return null;
+    }
+};
 $customHeadCode = (string) private_setting($pdo,'custom_head_code','');
 $customFooterCode = (string) private_setting($pdo,'custom_footer_code','');
 if ($_SERVER['REQUEST_METHOD']==='POST') {
@@ -90,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $canonicalJson=json_encode($value,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
             $readbackHashes[$key]=hash('sha256',$canonicalJson);
         }
-        flash('settings_readback_receipt',json_encode(['created_at'=>time(),'hashes'=>$readbackHashes],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        flash('settings_readback_receipt',json_encode(['created_at'=>time(),'hashes'=>$readbackHashes,'database_fingerprint'=>$databaseFingerprint($pdo)],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
         cache_clear_all();
         flash('success','Site settings saved.');
         redirect_to('admin/site-settings');
@@ -132,8 +142,19 @@ if($readbackReceiptRaw!==null&&$_SERVER['REQUEST_METHOD']==='GET'){
         }
         if($mismatchedKeys){
             $mismatchedKeys=array_values(array_unique($mismatchedKeys));
-            error_log('Site settings changed after save or were read from a different database endpoint; mismatched keys: '.implode(',',$mismatchedKeys));
-            $saveReadbackWarning='The save request succeeded, but this fresh page load could not read back the same values. Confirm that the active deployment and database endpoint are the intended ones; check the private PHP log for the affected setting keys.';
+            $currentDatabaseFingerprint=$databaseFingerprint($pdo);
+            $storedDatabaseFingerprint=$receipt['database_fingerprint']??null;
+            $databaseIdentityKnown=is_string($storedDatabaseFingerprint)&&is_string($currentDatabaseFingerprint);
+            $databaseEndpointChanged=$databaseIdentityKnown&&!hash_equals($storedDatabaseFingerprint,$currentDatabaseFingerprint);
+            if($databaseEndpointChanged){
+                $diagnostic='The save and reload requests reached different database servers or databases.';
+            }elseif($databaseIdentityKnown){
+                $diagnostic='The database identity appears unchanged, so check for a second app instance or a process that overwrites these rows.';
+            }else{
+                $diagnostic='The database identity could not be compared; confirm that every app instance uses the same database endpoint.';
+            }
+            error_log('Site settings changed after save; endpoint_changed='.($databaseEndpointChanged?'yes':'no').'; mismatched keys: '.implode(',',$mismatchedKeys));
+            $saveReadbackWarning='The save request succeeded, but the fresh page load could not read back the same values. '.$diagnostic.' Affected setting keys: '.implode(', ',$mismatchedKeys).'.';
             flash('success');
         }
     }
