@@ -6,7 +6,9 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleHelp,
+  Loader2,
   MapPin,
+  RefreshCw,
   Search,
   X,
 } from 'lucide-react'
@@ -14,9 +16,11 @@ import { SERVICE_CATEGORIES, SERVICES, getService, servicePath } from '@/config/
 import { EXAMPLE_COVERAGE_DATA } from '@/config/coverage'
 import { checkAvailability } from '@/lib/coverage'
 import { normalizeZip, validateZip } from '@/lib/zip'
+import { lookupZip, formatLocation, type UsLocation } from '@/lib/zipLookup'
 import { tracking } from '@/lib/tracking'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { ProviderContact } from './ProviderContact'
+import { CallConnectionPanel } from '@/components/calls/CallConnectionPanel'
 import type { AvailabilityResult } from '@/types'
 
 interface AvailabilityModalProps {
@@ -38,6 +42,9 @@ export const AvailabilityModal = ({
   const [serviceSlug, setServiceSlug] = useState(initialServiceSlug)
   const [zip, setZip] = useState(initialZip)
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [location, setLocation] = useState<UsLocation | null>(null)
+  const [lookupNotice, setLookupNotice] = useState<string | null>(null)
   const [result, setResult] = useState<AvailabilityResult | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const zipInputRef = useRef<HTMLInputElement>(null)
@@ -50,6 +57,9 @@ export const AvailabilityModal = ({
     setZip(initialZip || '')
     setError(null)
     setResult(null)
+    setChecking(false)
+    setLocation(null)
+    setLookupNotice(null)
   }, [isOpen, initialServiceSlug, initialZip])
 
   // Lock scroll, handle Escape, and move focus into the dialog.
@@ -94,7 +104,7 @@ export const AvailabilityModal = ({
   }, [isOpen, onClose, initialServiceSlug])
 
   const submit = useCallback(
-    (event?: React.FormEvent) => {
+    async (event?: React.FormEvent) => {
       event?.preventDefault()
       if (!serviceSlug) {
         setError('Choose the service you need first.')
@@ -107,18 +117,56 @@ export const AvailabilityModal = ({
         zipInputRef.current?.focus()
         return
       }
+
+      setChecking(true)
+      setError(null)
+      setLookupNotice(null)
+      tracking.onZipCheck({ service: serviceSlug, zip: normalizeZip(zip) })
+
+      // 1) Confirm the ZIP is a real US location (city + state).
+      const lookup = await lookupZip(zip)
+
+      // A ZIP the national database does not recognise is a hard stop.
+      if (!lookup.ok && (lookup.error === 'not-found' || lookup.error === 'invalid')) {
+        setChecking(false)
+        setError(lookup.message)
+        zipInputRef.current?.focus()
+        return
+      }
+
+      setLocation(lookup.ok ? lookup.location : null)
+      setLookupNotice(lookup.ok ? null : lookup.message)
+
+      // 2) Coverage records are checked offline and still work if the lookup fails.
       const next = checkAvailability(serviceSlug, zip)
       if (!next) {
+        setChecking(false)
         setError('We could not check that ZIP code. Please try again.')
         return
       }
-      setError(null)
+
+      setChecking(false)
       setResult(next)
       tracking.onZipResult({ service: serviceSlug, zip: next.zip, status: next.status })
       window.setTimeout(() => dialogRef.current?.focus(), 30)
     },
     [serviceSlug, zip],
   )
+
+  const retryLookup = useCallback(async () => {
+    if (!result) return
+    setChecking(true)
+    setLookupNotice(null)
+    const lookup = await lookupZip(result.zip, { force: true })
+    setChecking(false)
+    if (lookup.ok) {
+      setLocation(lookup.location)
+      setLookupNotice(null)
+    } else {
+      setLocation(null)
+      setLookupNotice(lookup.message)
+    }
+  }, [result])
 
   const selectedService = useMemo(() => getService(serviceSlug), [serviceSlug])
   const related = useMemo(
@@ -134,7 +182,7 @@ export const AvailabilityModal = ({
           icon: CheckCircle2,
           tone: 'success',
           title: 'Good News! Service Options Are Available in Your Area.',
-          body: `Our coverage notes list ${result.serviceName.toLowerCase()} options for ZIP ${result.zip}. Review the participating provider options below, or contact our team and we will help you compare what is available.`,
+          body: `Our coverage notes list ${result.serviceName.toLowerCase()} options for ZIP ${result.zip}. Review the call options and provider information below, or contact our team and we will help you compare what is available.`,
         },
         unavailable: {
           icon: AlertTriangle,
@@ -208,7 +256,8 @@ export const AvailabilityModal = ({
             <form onSubmit={submit} noValidate>
               <p className="text-sm leading-6 text-muted">
                 Service availability depends on participating providers and their coverage areas. Choose a
-                service and enter a 5-digit US ZIP code to see what our coverage notes show.
+                service and enter a 5-digit US ZIP code to see what our records show — including the city and
+                state for that ZIP.
               </p>
 
               <div className="mt-5 space-y-4">
@@ -272,7 +321,7 @@ export const AvailabilityModal = ({
                     />
                   </div>
                   <p id="availability-hint" className="mt-1.5 text-xs text-muted">
-                    Example: 30301. We use your ZIP code only to check coverage.
+                    Example: 30301. We use your ZIP code to confirm your city and state, and to check coverage.
                   </p>
                 </div>
               </div>
@@ -288,9 +337,18 @@ export const AvailabilityModal = ({
                 </p>
               ) : null}
 
-              <button type="submit" className="btn-primary mt-5 w-full">
-                <Search className="h-4 w-4" aria-hidden="true" />
-                Check Availability
+              <button type="submit" disabled={checking} className="btn-primary mt-5 w-full">
+                {checking ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Confirming ZIP code…
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-4 w-4" aria-hidden="true" />
+                    Check Availability
+                  </>
+                )}
               </button>
 
               <p className="mt-3 text-center text-xs leading-5 text-muted">
@@ -325,8 +383,13 @@ export const AvailabilityModal = ({
                 </span>
                 <span className="chip">
                   <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-                  ZIP {result.zip}
+                  {location ? `ZIP ${result.zip} · ${formatLocation(location)}` : `ZIP ${result.zip}`}
                 </span>
+                {location ? (
+                  <span className="chip">
+                    {location.state} ({location.stateAbbr})
+                  </span>
+                ) : null}
                 {result.dataSource === 'example' ? (
                   <span className="chip border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
                     Example coverage data
@@ -334,52 +397,81 @@ export const AvailabilityModal = ({
                 ) : null}
               </div>
 
+              {lookupNotice ? (
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-50/70 px-3 py-2 text-xs leading-5 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="flex-1">
+                    We could not confirm your city and state just now: {lookupNotice} Coverage below still
+                    reflects our records for ZIP {result.zip}.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void retryLookup()}
+                    disabled={checking}
+                    className="inline-flex shrink-0 items-center gap-1 font-semibold underline underline-offset-2"
+                  >
+                    <RefreshCw className={`h-3 w-3 ${checking ? 'animate-spin' : ''}`} aria-hidden="true" />
+                    Retry
+                  </button>
+                </div>
+              ) : null}
+
+              {/* Call connections for this service + confirmed location */}
               <div className="mt-5">
-                {result.status === 'available' ? (
+                <CallConnectionPanel
+                  serviceSlug={result.serviceSlug}
+                  serviceName={result.serviceName}
+                  location={location}
+                  embedded
+                />
+              </div>
+
+              {result.providers.length > 0 ? (
+                <div className="mt-5">
                   <ProviderContact
                     serviceSlug={result.serviceSlug}
                     serviceName={result.serviceName}
                     zip={result.zip}
                     providers={result.providers}
                   />
-                ) : null}
+                </div>
+              ) : null}
 
-                {result.status === 'unavailable' && related.length > 0 ? (
-                  <div className="rounded-xl border border-line bg-soft p-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                      Related services to try
-                    </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {related.map((service) =>
-                        service ? (
-                          <Link
-                            key={service.slug}
-                            to={servicePath(service.slug)}
-                            onClick={onClose}
-                            className="group flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-brand-300 hover:text-brand-700 dark:hover:border-brand-500/50 dark:hover:text-brand-300"
-                          >
-                            <span className="flex items-center gap-2">
-                              <ServiceIcon name={service.icon} className="h-4 w-4 text-brand-600 dark:text-brand-300" />
-                              {service.name}
-                            </span>
-                            <ArrowRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
-                          </Link>
-                        ) : null,
-                      )}
-                    </div>
+              {result.status === 'unavailable' && related.length > 0 ? (
+                <div className="mt-5 rounded-xl border border-line bg-soft p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
+                    Related services to try
+                  </p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {related.map((service) =>
+                      service ? (
+                        <Link
+                          key={service.slug}
+                          to={servicePath(service.slug)}
+                          onClick={onClose}
+                          className="group flex items-center justify-between gap-2 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-brand-300 hover:text-brand-700 dark:hover:border-brand-500/50 dark:hover:text-brand-300"
+                        >
+                          <span className="flex items-center gap-2">
+                            <ServiceIcon name={service.icon} className="h-4 w-4 text-brand-600 dark:text-brand-300" />
+                            {service.name}
+                          </span>
+                          <ArrowRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+                        </Link>
+                      ) : null,
+                    )}
                   </div>
-                ) : null}
+                </div>
+              ) : null}
 
-                {result.status === 'unverified' ? (
-                  <div className="rounded-xl border border-line bg-soft p-4 text-sm leading-6 text-muted">
-                    <p className="font-semibold text-ink">Why we ask you to contact us</p>
-                    <p className="mt-1">
-                      We only confirm availability from verified coverage records. Rather than guess, our team
-                      will check whether a provider is listed near {result.zip} and get back to you.
-                    </p>
-                  </div>
-                ) : null}
-              </div>
+              {result.status === 'unverified' ? (
+                <div className="mt-5 rounded-xl border border-line bg-soft p-4 text-sm leading-6 text-muted">
+                  <p className="font-semibold text-ink">Why we ask you to contact us</p>
+                  <p className="mt-1">
+                    We only confirm availability from verified coverage records. Rather than guess, our team
+                    will check whether a provider is listed near {result.zip} and get back to you.
+                  </p>
+                </div>
+              ) : null}
 
               {result.dataSource === 'example' && EXAMPLE_COVERAGE_DATA ? (
                 <p className="mt-4 flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-50/60 px-3 py-2 text-xs leading-5 text-amber-800 dark:bg-amber-400/10 dark:text-amber-200">
@@ -396,6 +488,8 @@ export const AvailabilityModal = ({
                   onClick={() => {
                     setResult(null)
                     setError(null)
+                    setLocation(null)
+                    setLookupNotice(null)
                   }}
                   className="btn-secondary flex-1"
                 >

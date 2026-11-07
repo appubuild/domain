@@ -29,3 +29,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+.smoke-test
+
+# TypeScript incremental build info
+*.tsbuildinfo

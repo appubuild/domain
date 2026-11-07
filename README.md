@@ -74,6 +74,8 @@ Everything an owner needs to change lives in `src/config/`:
 | `src/config/providers.ts` | Provider records: name, services, phone, coverage, availability, disclosure |
 | `src/config/faqs.ts` | Homepage and How It Works FAQ sets |
 | `src/config/integrations.ts` | Contact endpoint, spam protection, call tracking, analytics (env-driven) |
+| `src/data/serviceNumbers.ts` | **All service phone numbers** (10 groups, 20 numbers), statuses and campaign permissions |
+| `src/data/serviceNumberMapping.ts` | Which phone group serves which website service, plus the finder categories |
 
 Navigation, routes, the services dropdown, the directory search, related-service
 lists, the sitemap and structured data are all derived from these files. Adding a
@@ -108,7 +110,26 @@ Optional per-service ZIP exclusions are supported via `COVERAGE_EXCLUSIONS`.
 
 ---
 
-## Phone numbers and providers
+## Service phone directory
+
+Every call button on the site reads from `src/data/serviceNumbers.ts` —
+see **[docs/PHONE-DIRECTORY.md](docs/PHONE-DIRECTORY.md)** for the operations guide.
+
+- 10 service groups × 2 numbers = **20 numbers**, all currently
+  `pending-verification`, so **none are published**. Visitors see a contact
+  message instead.
+- A number is published only when `status: 'active'` **and** its campaign
+  permissions allow the visitor's location (`nationwide`, or a `states` /
+  `zipCodes` allow-list).
+- Primary/alternate ordering comes from `priority`; each renders its own
+  `tel:+1…` link. Calls are never auto-dialled, redirected or forwarded.
+- The homepage and `/service-area` include a ZIP-first finder: it confirms the
+  **city and state** through the Zippopotam.us ZIP API, then shows the call
+  options authorized for that location.
+- In `npm run dev` only, unpublished numbers appear with a "Not published" badge
+  and a preview notice so the layout can be reviewed without publishing.
+
+### Website business contact (not the call directory)
 
 - `SITE.contact.phone` and `SITE.contact.phoneDisplay` are **empty on purpose**.
   The UI hides every call button and shows a "contact our team" fallback until a
@@ -206,6 +227,9 @@ Verify a deep link (e.g. `/services/locksmith`) after deploying, not just the ho
 - `npm run smoke` — SSR render test across all 26 routes plus 404 cases.
 - `npm run audit` — link, in-page anchor, image-source, duplicate-id and
   single-`h1` audit across every route (26 routes, all passing).
+- `npm run test` — 33 assertions over the phone directory, service→number
+  mapping, publication rules, campaign eligibility, ZIP validation and the ZIP
+  API (success, cache, 404, 5xx, network, abort).
 - All internal links resolve to real routes; all CTA buttons are wired to a
   working action (dialog, navigation or form).
 - Availability states tested: available (e.g. `30301` for roofing), unavailable

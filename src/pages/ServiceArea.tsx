@@ -9,6 +9,7 @@ import { ZipCheckForm } from '@/components/availability/ZipCheckForm'
 import { useAvailability } from '@/components/availability/AvailabilityContext'
 import { ServiceIcon } from '@/components/ServiceIcon'
 import { CtaBand } from '@/components/CtaBand'
+import { ServiceCallFinder } from '@/components/calls/ServiceCallFinder'
 import { LaunchNotice } from '@/components/LaunchNotice'
 import { SITE } from '@/config/site'
 
@@ -165,6 +166,12 @@ const ServiceArea = () => {
           </div>
         </div>
       </section>
+
+      <ServiceCallFinder
+        eyebrow="ZIP code and call eligibility"
+        title="Confirm your location, then see the call options for your area"
+        description="Your ZIP code tells us the city and state. Campaign eligibility is a separate check — we only show a phone line when the campaign permits calls from your location."
+      />
 
       <CtaBand
         headline="Find out what is available near you"

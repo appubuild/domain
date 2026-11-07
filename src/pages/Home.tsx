@@ -25,6 +25,7 @@ import { FaqAccordion } from '@/components/FaqAccordion'
 import { CtaBand } from '@/components/CtaBand'
 import { Reveal } from '@/components/Reveal'
 import { ServiceIcon } from '@/components/ServiceIcon'
+import { ServiceCallFinder } from '@/components/calls/ServiceCallFinder'
 
 const TRUST_ITEMS = [
   {
@@ -243,6 +244,8 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      <ServiceCallFinder />
 
       {/* ------------------------------------------------------ Popular services */}
       <section className="section" aria-labelledby="popular-services">

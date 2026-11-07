@@ -22,6 +22,7 @@ import { FaqAccordion } from '@/components/FaqAccordion'
 import { SectionHeading } from '@/components/SectionHeading'
 import { ServiceCard } from '@/components/ServiceCard'
 import { CtaBand } from '@/components/CtaBand'
+import { CallConnectionPanel } from '@/components/calls/CallConnectionPanel'
 import { Reveal } from '@/components/Reveal'
 import NotFound from '@/pages/NotFound'
 
@@ -279,6 +280,23 @@ const ServiceDetail = () => {
               </div>
             </div>
 
+            {/* Call connection */}
+            <div id="call" className="mt-12 scroll-mt-28">
+              <SectionHeading
+                as="h2"
+                eyebrow="Call connection"
+                title={`Call a ${service.name.toLowerCase()} service line`}
+                description="Call connections are permissioned by location. Confirm your ZIP code and we will show the line authorized for your area — or tell you if none is confirmed yet."
+              />
+              <div className="mt-6">
+                <CallConnectionPanel
+                  serviceSlug={service.slug}
+                  serviceName={service.name}
+                  onRequestLocation={() => open({ serviceSlug: service.slug })}
+                />
+              </div>
+            </div>
+
             {/* FAQ */}
             <div id="faq" className="mt-12 scroll-mt-28">
               <SectionHeading
@@ -333,6 +351,7 @@ const ServiceDetail = () => {
                       { id: 'common-needs', label: 'Common situations' },
                       { id: 'options', label: 'Options' },
                       { id: 'how-it-works', label: 'How connections work' },
+                      { id: 'call', label: 'Call connection' },
                       { id: 'availability', label: 'Availability checker' },
                       { id: 'faq', label: `${service.name} FAQs` },
                     ].map((item) => (
