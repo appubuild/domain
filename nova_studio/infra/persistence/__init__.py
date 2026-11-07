@@ -2,7 +2,7 @@
 
 **Purpose.** Be the only place in Nova Studio that knows what a `.nova` file
 *is* on the inside, where the app's data lives, and how a crash is survived.
-`ports/persistence.py` declares the four capabilities; `domain/persistence.py`
+`ports/persistence.py` declares the six capabilities; `domain/persistence.py`
 owns the vocabulary; this package is the machinery. A service asks for an
 archive and gets one — it never opens a ZIP, never names a column and never
 calls `fsync`.
@@ -34,9 +34,21 @@ infra/persistence/
 ├── archive.py     ZipProjectArchive — the .nova container
 ├── journal.py     NdjsonJournal — the append-only command log
 ├── sqlite.py      SqliteGateway — the ONLY module that may import sqlite3
+├── migrations.py  the ONLY module that may CREATE a table; the ledger and the
+│                  chain, with one chain per database
 ├── cache.py       SqliteCacheIndex — derived artefacts and what they cost
-├── jobs.py        JsonJobStore — the job history, one JSON document
+├── job_store.py   SqliteJobStore — the job history in rows
+├── jobs.py        JsonJobStore — the job history as one JSON document, kept so
+│                  a file from before the rows can be upgraded
+├── settings.py    SqliteSettingsStore — scoped key/value install state
+├── recent.py      SqliteRecentFiles — the projects this install has seen
 └── work.py        PersistenceUnitOfWork — document first, then rows
+
+No adapter in this list creates its own table. `migrations.py` is the only
+place a `CREATE` is written, because an adapter that ran its own
+`CREATE TABLE IF NOT EXISTS` at open time would race the migration that
+renames that table two versions later, and the loser would be whichever
+process happened to start first.
 ```
 
 **Backend / frontend.** Nothing in the frontend speaks to this package. The API
@@ -64,7 +76,12 @@ global state, no singletons, no caches that outlive their owner.
 | `.commit()` / `.discard()` | "make it durable" / "I have changed my mind" |
 | `open_journal(data_root, project_id, started_ms)` | "the crash log for this project" |
 | `open_cache_index(path)` · `SqliteCacheIndex` | "what derived bytes do we hold" |
-| `job_history_path(root)` · `JsonJobStore` | "what jobs ran, and how did they end" |
+| `open_job_store(root)` · `SqliteJobStore` | "what jobs ran, and how did they end" |
+| `import_json_history(store, path)` | "adopt the history from before the rows" |
+| `job_history_path(root)` · `JsonJobStore` | the same history as one JSON document; kept only for that upgrade |
+| `open_settings_store(root)` · `SqliteSettingsStore` | "what did this install decide to remember" |
+| `open_recent_files(root)` · `SqliteRecentFiles` | "which projects has this install seen, and was one left dirty" |
+| `ensure_schema(gateway, migrations=…)` | "bring this database up to this build, or refuse it" |
 | `PersistenceUnitOfWork(archive=…, rows=…)` | "commit these two together or not at all" |
 
 **Events.** None. Persistence is called, it does not announce itself — the
@@ -96,9 +113,21 @@ journal tail — are exactly the properties an in-memory fake cannot witness. Th
 port contract itself is pinned against fakes in
 `tests/ports/test_persistence_ports.py`, so the two suites meet in the middle.
 
-**Database schema.** One table, `cache_index`, declared in `cache.py` beside the
-adapter that owns it. Per-project data is **not** in a database: it is the
-document set inside the `.nova` file (ADR-0004 §3).
+**Database schema.** Two databases, and `docs/architecture/database-schema.md` is
+the normative description of both: every table, every index, the reason each
+column is a column, and the migration that created it.
+
+| Database | Tables | May it be deleted? |
+| --- | --- | --- |
+| `nova.db` | `schema_migrations`, `settings`, `recent_files`, `jobs` | No — it is the history |
+| `cache.sqlite3` | `schema_migrations`, `cache_index` | Yes — costs a rebuild, loses nothing |
+
+Per-project data is **not** in a database: it is the document set inside the
+`.nova` file (ADR-0004 §3). Two rules hold across both files. **Rows are an
+index, `record_json` is the record** — adding a field to `JobRecord` is not a
+migration. And **a read never raises**: a row that will not parse hides itself,
+because a corrupt thumbnail is a regeneration, not a refusal to open someone's
+edit.
 
 **Future expansion.**
 
@@ -128,6 +157,11 @@ from nova_studio.infra.persistence.canonical import (
     digest_of,
     dumps_canonical,
     loads_canonical,
+)
+from nova_studio.infra.persistence.job_store import (
+    SqliteJobStore,
+    import_json_history,
+    open_job_store,
 )
 from nova_studio.infra.persistence.jobs import JOB_HISTORY_NAME, JsonJobStore, job_history_path
 from nova_studio.infra.persistence.journal import NdjsonJournal, open_journal
@@ -190,6 +224,7 @@ __all__ = [
     "SqliteCacheIndex",
     "SqliteError",
     "SqliteGateway",
+    "SqliteJobStore",
     "SqliteRecentFiles",
     "SqliteSettingsStore",
     "ZipProjectArchive",
@@ -201,6 +236,7 @@ __all__ = [
     "digest_of",
     "dumps_canonical",
     "ensure_schema",
+    "import_json_history",
     "install_database_path",
     "is_journal_name",
     "is_safe_project_id",
@@ -208,6 +244,7 @@ __all__ = [
     "journal_dir",
     "loads_canonical",
     "open_cache_index",
+    "open_job_store",
     "open_journal",
     "open_recent_files",
     "open_settings_store",
