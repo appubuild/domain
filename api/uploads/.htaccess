@@ -1,0 +1,31 @@
+# Serve images only — never execute anything uploaded here.
+Options -Indexes -ExecCGI
+
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(php|phtml|phar|php\d|cgi|pl|py|sh|asp|aspx|jsp|htaccess)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.(php|phtml|phar|php\d|cgi|pl|py|sh|asp|aspx|jsp|htaccess)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+  php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+  php_flag engine off
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set Content-Disposition "inline"
+  Header set Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'"
+</IfModule>

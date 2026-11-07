@@ -1,0 +1,5 @@
+# Static hosting rewrite rules (Netlify / Cloudflare Pages format).
+# Guarantees direct refresh and deep links resolve to the SPA shell.
+/*
+  /index.html
+  200

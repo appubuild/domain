@@ -1,0 +1,332 @@
+[
+  {
+    "id": 15,
+    "title": "The First 24 Hours After Water Damage",
+    "slug": "first-24-hours-after-water-damage",
+    "category": {
+      "slug": "water-damage",
+      "name": "Water Damage Restoration",
+      "description": "What to do when water gets into a home: immediate mitigation, drying timelines, mold risk and how a restoration job is scoped.",
+      "seoTitle": "Water Damage Guides for Homeowners",
+      "seoDescription": "Practical water damage advice: the first-hour actions that limit loss, what professional drying involves, and the point at which mold becomes the bigger cost.",
+      "sortOrder": 7
+    },
+    "primaryKeyword": "water damage restoration",
+    "secondaryKeywords": [
+      "first 24 hours water damage",
+      "water extraction",
+      "wet drywall",
+      "water damage cost",
+      "emergency water damage",
+      "dehumidifier drying"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners facing an active leak or flood who need to act immediately and want to know what is salvageable.",
+    "cta": {
+      "label": "See water damage service options",
+      "href": "/services/water-damage"
+    },
+    "internalLinks": [
+      {
+        "label": "Hidden mold after a leak: what to look for",
+        "href": "/blog/hidden-mold-after-a-leak"
+      },
+      {
+        "label": "Warning signs you need a plumber",
+        "href": "/blog/warning-signs-you-need-a-plumber"
+      },
+      {
+        "label": "Roof leak warning signs every homeowner should know",
+        "href": "/blog/roof-leak-warning-signs"
+      }
+    ],
+    "image": "/images/blog/first-24-hours-after-water-damage.svg",
+    "imageAlt": "Illustration of a large water droplet with a clock and an emergency phone icon",
+    "seoTitle": "First 24 Hours After Water Damage: What to Do",
+    "seoDescription": "Stop the water, protect what can be saved, start drying and document everything. A hour-by-hour plan for the first day of a water emergency.",
+    "excerpt": "Water damage is a race against absorption. The actions in the first hour decide whether you are drying a floor or replacing one — and whether mold becomes part of the story.",
+    "seoSummary": "Hour-by-hour emergency water response plan with salvage and documentation guidance.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "water damage",
+      "emergency",
+      "restoration",
+      "insurance"
+    ],
+    "visual": "Flat vector medallion: a large blue droplet with a clock chip, a shield chip and an emergency call chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Clean water from a burst supply line and dirty water from a backed-up drain are different emergencies, but they share a clock: materials absorb water in minutes, swell in hours and grow mold in days.",
+          "What you do in the first day determines how much of the house you keep. It also determines how easy the insurance conversation is, because documentation made while the water is still visible is worth far more than a description a week later."
+        ]
+      },
+      {
+        "h2": "Hour 0–1: stop the source and make it safe",
+        "ordered": [
+          "Shut off the water at the fixture valve or the main. For a roof leak, you cannot stop the source — contain it instead.",
+          "Switch off power to any circuit that serves a wet area, at the breaker, without walking through standing water to reach the panel.",
+          "If the water is near outlets, appliances or the panel, leave the room and call for help.",
+          "Photograph the scene before you move anything, including the water line on walls and furniture legs.",
+          "Call your insurer to open a claim, and ask whether they will dispatch a restoration firm."
+        ]
+      },
+      {
+        "h2": "Hour 1–4: extract, lift, ventilate",
+        "paras": [
+          "Standing water should be extracted, not mopped — a wet/dry vacuum or a rented extractor removes far more water per hour than towels. Once the bulk is gone, the goal is airflow and dehumidification, because evaporation is what actually dries a structure.",
+          "Lift furniture legs onto foil or blocks, pull rugs out to dry flat, and open interior doors so air can move. If the outdoor humidity is lower than indoors, open windows; if it is a humid summer day, close up and rely on dehumidifiers instead."
+        ],
+        "note": "Never use a household fan to dry a space that has been flooded with category 3 water — sewage or outdoor floodwater. It aerosolises contaminants. Those jobs belong with a restoration professional in PPE."
+      },
+      {
+        "h2": "What can be saved and what cannot",
+        "table": {
+          "head": [
+            "Material",
+            "Outlook after clean water",
+            "Outlook after contaminated water"
+          ],
+          "rows": [
+            [
+              "Hardwood flooring",
+              "Sometimes salvageable if dried fast with mat drying",
+              "Usually removed"
+            ],
+            [
+              "Laminate flooring",
+              "Almost always replaced — the core swells",
+              "Replaced"
+            ],
+            [
+              "Drywall (less than 24h, clean water)",
+              "Can be dried in place with air movers",
+              "Cut out to the flood line"
+            ],
+            [
+              "Carpet and underlay",
+              "Often salvageable if extracted same day",
+              "Discard"
+            ],
+            [
+              "Solid wood furniture",
+              "Dry slowly, away from direct heat",
+              "Assess case by case"
+            ],
+            [
+              "Insulation (batts)",
+              "Usually replaced once wet",
+              "Replaced"
+            ],
+            [
+              "Cabinets (particleboard)",
+              "Swollen and non-structural — replace",
+              "Replace"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "The 24–48 hour window",
+        "paras": [
+          "Mold can begin colonising wet porous materials within 24–48 hours in warm conditions. That is not a reason to panic, but it is a reason to have drying equipment running by the end of the first day rather than the third.",
+          "A professional assessment typically includes moisture meters and thermal imaging to find water that has travelled behind baseboards, under tile or into a ceiling cavity. Visible water is rarely the whole story."
+        ]
+      },
+      {
+        "h2": "Documentation that makes a claim easier",
+        "bullets": [
+          "Date-stamped photos and video of every affected room before cleanup.",
+          "A written list of damaged items with age and approximate replacement value.",
+          "Receipts for any rental equipment, dehumidifiers or emergency purchases.",
+          "The plumber's or restoration firm's written report naming the cause.",
+          "A moisture reading log if a contractor is involved — before and after values."
+        ]
+      },
+      {
+        "h2": "When to call a professional immediately",
+        "paras": [
+          "Call the same day for: contaminated water, more than a few square meters of wet flooring, water in a ceiling or wall cavity, any wet area near electrical services, or a home that will be unoccupied in the following days.",
+          "For a small clean-water spill caught within an hour, a homeowner with a wet/dry vac and a dehumidifier can often handle it. The dividing line is whether the water has gone where you cannot see or reach."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long does it take to dry a house after water damage?",
+        "a": "With professional equipment, most clean-water losses dry in three to five days. Materials like hardwood or dense plaster can take longer, and readings — not the calendar — decide when drying is finished."
+      },
+      {
+        "q": "Does homeowner insurance cover water damage?",
+        "a": "Sudden and accidental discharge, such as a burst pipe or a failed appliance hose, is usually covered. Gradual leaks, poor maintenance and flood from outside the home are typically excluded or need separate flood cover."
+      },
+      {
+        "q": "Can I stay in the house during drying?",
+        "a": "Often yes for a small clean-water loss in one room, though the noise and humidity are unpleasant. If the water was contaminated, or if mold is already present, stay elsewhere until the space is cleared."
+      },
+      {
+        "q": "Should I cut out wet drywall myself?",
+        "a": "Only if it is clean water, the damage is obvious and you are comfortable doing it. Restoration firms cut to a measured line and document it for the claim; a homeowner cut that is too shallow often leaves wet material behind."
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "title": "Hidden Mold After a Leak: What to Look For",
+    "slug": "hidden-mold-after-a-leak",
+    "category": {
+      "slug": "water-damage",
+      "name": "Water Damage Restoration",
+      "description": "What to do when water gets into a home: immediate mitigation, drying timelines, mold risk and how a restoration job is scoped.",
+      "seoTitle": "Water Damage Guides for Homeowners",
+      "seoDescription": "Practical water damage advice: the first-hour actions that limit loss, what professional drying involves, and the point at which mold becomes the bigger cost.",
+      "sortOrder": 7
+    },
+    "primaryKeyword": "hidden mold after a leak",
+    "secondaryKeywords": [
+      "mold symptoms in house",
+      "black mold",
+      "mold in walls",
+      "mold remediation cost",
+      "musty smell",
+      "mold testing"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners who had a leak or a damp area and are worried about mold they cannot see.",
+    "cta": {
+      "label": "See water damage service options",
+      "href": "/services/water-damage"
+    },
+    "internalLinks": [
+      {
+        "label": "The first 24 hours after water damage",
+        "href": "/blog/first-24-hours-after-water-damage"
+      },
+      {
+        "label": "Roof leak warning signs every homeowner should know",
+        "href": "/blog/roof-leak-warning-signs"
+      }
+    ],
+    "image": "/images/blog/hidden-mold-after-a-leak.svg",
+    "imageAlt": "Illustration of mold spore clusters with a shield and a water droplet",
+    "seoTitle": "Hidden Mold After a Leak: Signs and Next Steps",
+    "seoDescription": "Musty smells, peeling paint and dark speckles are the visible clues. How hidden mold is found, what remediation involves, and when testing is worth paying for.",
+    "excerpt": "Mold does not need a visible leak — it needs moisture and 48 hours. The clues are usually smell, texture and a building that never quite dries.",
+    "seoSummary": "Detection and remediation guide for hidden mold after water intrusion.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "water damage",
+      "mold",
+      "health",
+      "restoration"
+    ],
+    "visual": "Flat vector medallion: a cluster of mold spores with a droplet chip, a shield chip and a leaf chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "Mold is a symptom, not a cause. It appears wherever moisture has persisted long enough for spores to colonise a porous surface — usually 24 to 48 hours of damp in warm conditions. Finding the mold without finding the moisture only guarantees it comes back.",
+          "The reason it hides is structural: the wettest part of a wall is rarely the part you can see. Water wicks along studs, sits on the bottom plate and soaks into the back of the drywall, where the paper facing is an ideal food source."
+        ]
+      },
+      {
+        "h2": "The five clues that are easy to miss",
+        "bullets": [
+          "A musty smell that is strongest in one room, one cupboard or one corner.",
+          "Paint or wallpaper that peels, blisters or lifts in a vertical strip.",
+          "Skirting boards or door frames that feel soft, or that have gone darker than the rest.",
+          "Allergy-like symptoms that improve when you leave the house and return when you come back.",
+          "A cold spot on a wall in winter — often a sign of missing insulation and condensation."
+        ]
+      },
+      {
+        "h2": "Where to look first",
+        "table": {
+          "head": [
+            "Location",
+            "Why it is a common hiding place"
+          ],
+          "rows": [
+            [
+              "Behind a washing machine or dishwasher",
+              "Supply and drain leaks that stay small for years"
+            ],
+            [
+              "Under a bathroom vanity",
+              "A trap or supply line weeping into the cabinet base"
+            ],
+            [
+              "Behind kitchen base units",
+              "Slow leaks run along the toe kick and stay invisible"
+            ],
+            [
+              "Attic decking and rafters",
+              "Roof leaks and condensation from bath fans"
+            ],
+            [
+              "Around window frames",
+              "Failed seals and condensation on cold glass"
+            ],
+            [
+              "Basement rim joists",
+              "The coldest spot in the house and the first to condense"
+            ],
+            [
+              "Inside a wall below a bathroom",
+              "Water travels down before it shows on a ceiling"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "Condensation versus a leak",
+        "paras": [
+          "Not all mold is caused by a leak. A bathroom fan that vents into the attic, a dryer ducted into a crawlspace, an unsealed rim joist in a humid climate or simply a poorly ventilated room can produce enough condensation to grow mold without a single failed pipe.",
+          "The distinction changes the fix. A leak is a repair; condensation is ventilation, insulation and air sealing. Homes with recurrent mold in the same spot almost always have the second problem."
+        ],
+        "note": "Small patches on a hard surface — a windowsill, a tile grout line, a painted frame — can be cleaned with detergent and water while wearing gloves, then dried thoroughly. Porous materials such as drywall, carpet and insulation with visible mold should be removed rather than cleaned."
+      },
+      {
+        "h2": "Is testing worth paying for?",
+        "paras": [
+          "In most cases, no. If you can see or smell mold, you already know it is there. Air sampling is occasionally useful to confirm a hidden problem before opening a wall, or to document a remediation for a landlord or an insurer, but it rarely changes the practical next step: find and fix the moisture, then remove the affected material.",
+          "Be cautious with anyone who arrives with a test kit and a remediation quote in the same visit. The diagnosis should be separable from the sale."
+        ]
+      },
+      {
+        "h2": "What remediation actually involves",
+        "ordered": [
+          "Identify and repair the moisture source first — remediation without this is decoration.",
+          "Contain the work area with plastic sheeting and negative air pressure if the area is larger than about a square meter.",
+          "Remove porous materials that show mold; bag and dispose of them.",
+          "Clean structural surfaces, then dry the cavity completely and verify with moisture readings.",
+          "Replace removed materials and confirm the area stays dry through a full weather cycle."
+        ]
+      },
+      {
+        "h2": "The health question, honestly",
+        "paras": [
+          "Mold is a common trigger for allergic symptoms and asthma, and the evidence for that is solid. Claims about specific 'toxic black mold' causing unrelated illnesses are much less settled. The sensible position is that visible mold in a home should be removed and the moisture fixed, without either panicking or dismissing it.",
+          "Anyone with asthma, a compromised immune system or young children in the home should treat an active mold problem as a reason to move quickly rather than monitor."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How quickly does mold grow after a leak?",
+        "a": "Spores can germinate within 24–48 hours on wet porous material in warm conditions. Visible growth typically appears within a week, sooner in humid climates."
+      },
+      {
+        "q": "Can I just paint over mold?",
+        "a": "No. Paint seals the surface but the mold continues underneath and the moisture remains. Mold-resistant paint is useful after remediation, not instead of it."
+      },
+      {
+        "q": "Does bleach kill mold?",
+        "a": "Bleach kills surface mold on non-porous materials but does not penetrate porous ones, and it is not recommended on wood or drywall because it leaves moisture behind. Detergent and thorough drying are more effective."
+      },
+      {
+        "q": "Will insurance cover mold remediation?",
+        "a": "Usually only when it results directly from a covered sudden event, and often with a sub-limit. Long-term seepage and neglect are typically excluded, which is another reason to document the original leak carefully."
+      }
+    ]
+  }
+]

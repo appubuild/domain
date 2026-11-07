@@ -1,0 +1,340 @@
+[
+  {
+    "id": 17,
+    "title": "Termite Warning Signs Around Your Home",
+    "slug": "termite-warning-signs",
+    "category": {
+      "slug": "pest-control",
+      "name": "Pest Control",
+      "description": "Prevention and treatment guides for the pests that damage property, from subterranean termites to rodents, with the early signs that make treatment cheaper.",
+      "seoTitle": "Pest Control Guides for Homeowners",
+      "seoDescription": "Identify pest problems early: termite warning signs, rodent entry points, and the difference between a DIY fix and a treatment that needs a licensed applicator.",
+      "sortOrder": 8
+    },
+    "primaryKeyword": "termite warning signs",
+    "secondaryKeywords": [
+      "signs of termites",
+      "termite damage",
+      "subterranean termites",
+      "termite inspection",
+      "termite treatment cost",
+      "mud tubes"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners in termite-prone regions who want to check their property before damage becomes structural.",
+    "cta": {
+      "label": "See pest control options",
+      "href": "/services/pest-control"
+    },
+    "internalLinks": [
+      {
+        "label": "Rodent proofing: keeping mice out of your home",
+        "href": "/blog/rodent-proofing-your-home"
+      },
+      {
+        "label": "The first 24 hours after water damage",
+        "href": "/blog/first-24-hours-after-water-damage"
+      }
+    ],
+    "image": "/images/blog/termite-warning-signs.svg",
+    "imageAlt": "Illustration of a termite with a house and a clipboard inspection report",
+    "seoTitle": "Termite Warning Signs Every Homeowner Should Know",
+    "seoDescription": "Mud tubes, hollow-sounding wood, discarded wings and bubbling paint: the seven termite signs to check, where to look, and what an inspection should cover.",
+    "excerpt": "Termites are rarely seen. They leave evidence instead — tunnels, wings, sagging trim and paint that bubbles for no reason. Here is where to look and when to call.",
+    "seoSummary": "Field guide to subterranean and drywood termite evidence with an inspection checklist.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "pest control",
+      "termites",
+      "inspection",
+      "prevention"
+    ],
+    "visual": "Flat vector medallion: a termite with a house chip and an inspection document chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Termites cause more structural damage in the United States each year than fires and storms combined, and almost all of it happens quietly. They eat from the inside out, so the surface of a timber can look intact while the core is hollow.",
+          "That is why the signs matter more than the insects. You will almost never see a colony; you will see what it leaves behind, usually within a few feet of the ground."
+        ]
+      },
+      {
+        "h2": "The signs, in order of how often they are real",
+        "bullets": [
+          "Mud tubes on foundation walls, piers or crawlspace supports — pencil-width tunnels of soil and saliva running upward.",
+          "Wood that sounds hollow when tapped, or that gives slightly under a screwdriver.",
+          "Bubbling or blistered paint on timber, which looks like water damage but is often termites pushing against the surface.",
+          "Discarded wings near windowsills and doors after a swarm, usually in spring.",
+          "Frass — small, uniform, sawdust-like pellets — beneath furniture or in a crawlspace.",
+          "Sagging door frames or floors that have become springy near a bathroom or exterior wall.",
+          "Tight-fitting doors and windows that were fine last year: the frame has absorbed moisture and termite activity."
+        ]
+      },
+      {
+        "h2": "Where to look, and when",
+        "paras": [
+          "Spring, after the first warm rain, is when swarmers appear and when evidence is easiest to spot. Walk the exterior once a season: check the foundation line for tubes, look at the base of any wood in contact with soil, and inspect the crawlspace with a flashlight.",
+          "Pay attention to the damp places. Termites need moisture, so leaking gutters, downspouts discharging against the foundation and sprinklers hitting the siding are all invitations."
+        ],
+        "table": {
+          "head": [
+            "Area",
+            "What you are looking for"
+          ],
+          "rows": [
+            [
+              "Foundation wall",
+              "Mud tubes, especially in corners and behind planting"
+            ],
+            [
+              "Crawlspace",
+              "Tubes on piers, frass, damp wood, standing water"
+            ],
+            [
+              "Sill plate and rim joist",
+              "Hollow sound, soft timber, tubes entering the framing"
+            ],
+            [
+              "Deck and porch posts",
+              "Wood-to-soil contact without a barrier"
+            ],
+            [
+              "Bathroom and laundry walls",
+              "Soft baseboards, loose tiles, persistent damp"
+            ],
+            [
+              "Attic (drywood termites)",
+              "Frass piles, galleries in rafters, discarded wings"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "Termites or something else?",
+        "paras": [
+          "Carpenter ants also hollow timber, but they leave clean galleries and push out sawdust that looks like coarse shavings. Termite frass is fine and uniform. Carpenter bees leave perfectly round holes; wood-boring beetles leave powdery dust and small exit holes.",
+          "If you are unsure, do not treat. A misdiagnosis wastes money and can hide a termite problem for another season."
+        ]
+      },
+      {
+        "h2": "What an inspection should include",
+        "ordered": [
+          "Exterior walk of the foundation, siding, deck and any wood-to-soil contact.",
+          "Crawlspace or basement inspection with moisture readings.",
+          "Interior check of accessible walls, especially bathrooms, kitchens and utility areas.",
+          "Probe of suspect timber where it is safe to do so.",
+          "A written report with photographs, findings and a treatment recommendation.",
+          "A clear statement of what was not accessible — behind finished walls, under tile, inside cabinets."
+        ],
+        "note": "Most termite warranties require an annual inspection to stay valid. Put the date in a calendar; a lapsed warranty is the most common reason a claim is declined."
+      },
+      {
+        "h2": "Treatment, briefly",
+        "paras": [
+          "Subterranean termites are usually treated with a liquid soil barrier around the foundation, bait stations, or both. Drywood termites in a contained area may be treated locally or with whole-structure fumigation. Each has a different cost, disruption level and warranty.",
+          "Ask for the product name, the active ingredient, the application rate, the re-treatment terms and whether the warranty covers damage or only re-treatment. 'Warranty' can mean very different things."
+        ]
+      },
+      {
+        "h2": "Prevention that actually helps",
+        "bullets": [
+          "Keep soil at least six inches below any siding or wood sill.",
+          "Fix gutter leaks and extend downspouts well away from the foundation.",
+          "Remove woodpiles, formwork and stumps from against the house.",
+          "Correct crawlspace moisture with a vapor barrier and ventilation.",
+          "Use pressure-treated timber anywhere wood meets soil.",
+          "Keep mulch thin against the foundation — thick beds hold moisture."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How do I know if I have termites or ants?",
+        "a": "Termites have a thick waist, straight antennae and wings of equal length. Ants have a pinched waist, elbowed antennae and unequal wings. Termite frass is fine and uniform; ant debris looks like coarse sawdust."
+      },
+      {
+        "q": "How often should a home be inspected for termites?",
+        "a": "Annually in termite-prone regions, and after any major water event. In high-pressure areas some warranties require inspection every six months."
+      },
+      {
+        "q": "Does homeowner insurance cover termite damage?",
+        "a": "Almost never. Termite damage is treated as a maintenance issue, not a sudden event. That is why prevention and an active warranty matter."
+      },
+      {
+        "q": "Can I treat termites myself?",
+        "a": "Retail sprays do not reach a colony and often make diagnosis harder. Soil treatments and fumigation are licensed work; a DIY attempt usually costs more in the long run."
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "title": "Rodent Proofing: Keeping Mice and Rats Out of Your Home",
+    "slug": "rodent-proofing-your-home",
+    "category": {
+      "slug": "pest-control",
+      "name": "Pest Control",
+      "description": "Prevention and treatment guides for the pests that damage property, from subterranean termites to rodents, with the early signs that make treatment cheaper.",
+      "seoTitle": "Pest Control Guides for Homeowners",
+      "seoDescription": "Identify pest problems early: termite warning signs, rodent entry points, and the difference between a DIY fix and a treatment that needs a licensed applicator.",
+      "sortOrder": 8
+    },
+    "primaryKeyword": "how to keep mice out of house",
+    "secondaryKeywords": [
+      "rodent proofing",
+      "signs of mice",
+      "rat entry points",
+      "mouse droppings",
+      "rodent exclusion",
+      "pest control cost"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners hearing noises in walls or finding droppings, who want to stop the next rodent rather than just remove this one.",
+    "cta": {
+      "label": "See pest control options",
+      "href": "/services/pest-control"
+    },
+    "internalLinks": [
+      {
+        "label": "Termite warning signs around your home",
+        "href": "/blog/termite-warning-signs"
+      },
+      {
+        "label": "A yearly furnace maintenance checklist",
+        "href": "/blog/furnace-maintenance-checklist"
+      }
+    ],
+    "image": "/images/blog/rodent-proofing-your-home.svg",
+    "imageAlt": "Illustration of a mouse beside a shield and a house icon",
+    "seoTitle": "Rodent Proofing: How to Keep Mice Out for Good",
+    "seoDescription": "Mice fit through a gap the width of a pencil. Where to seal, what to seal it with, and why trapping without exclusion means the problem returns in weeks.",
+    "excerpt": "Trapping a mouse solves this mouse. Sealing the gap solves the next five. Here are the entry points that actually matter and the materials that last more than one season.",
+    "seoSummary": "Exclusion-first rodent control guide with a gap-by-gap sealing checklist.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "pest control",
+      "rodents",
+      "prevention",
+      "sealing"
+    ],
+    "visual": "Flat vector medallion: a gray mouse with a shield chip, a check chip and a house chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A mouse can pass through a gap about the width of a pencil; a rat needs only the width of a thumb. That single fact explains why most rodent work fails: people trap what is inside and never close what let it in.",
+          "Exclusion — sealing the structure — is the only permanent fix. Trapping and baiting are how you clear the current population so that exclusion has something to protect."
+        ]
+      },
+      {
+        "h2": "How to tell mice from rats",
+        "table": {
+          "head": [
+            "Evidence",
+            "Mice",
+            "Rats"
+          ],
+          "rows": [
+            [
+              "Droppings",
+              "3–6 mm, pointed ends",
+              "12–18 mm, blunt ends"
+            ],
+            [
+              "Noises",
+              "Light scratching and scurrying",
+              "Heavy thumping, gnawing in walls"
+            ],
+            [
+              "Grease marks",
+              "Rare",
+              "Dark smears along walls and pipes"
+            ],
+            [
+              "Nests",
+              "Shredded paper in drawers and cupboards",
+              "Larger nests in voids and under decks"
+            ],
+            [
+              "Behaviour",
+              "Curious, ranges close to cover",
+              "Wary of new objects — needs pre-baiting"
+            ]
+          ]
+        },
+        "paras": [
+          "The difference matters for treatment. Rats are neophobic: they avoid new objects for days, so traps and stations need to sit unset for a while before they work."
+        ]
+      },
+      {
+        "h2": "How to inspect your home",
+        "ordered": [
+          "Walk the exterior at dusk with a flashlight and look for gaps at ground level and above.",
+          "Check the roof line and eaves — mice climb brick and enter at the top as readily as the bottom.",
+          "Inspect where utilities enter: gas, water, electric, air conditioning lines, cable and dryer vents.",
+          "Look at garage doors, especially the bottom seal and the corners.",
+          "Inside, check the attic and crawlspace for runs, nests and droppings."
+        ]
+      },
+      {
+        "h2": "The entry points that matter most",
+        "bullets": [
+          "The gap under an exterior door, including the garage door bottom seal.",
+          "Utility penetrations through siding and foundation walls.",
+          "Dryer vents and any flexible duct with a damaged flap.",
+          "Roof-to-wall junctions, soffits and gable vents without mesh.",
+          "Weep holes and foundation vents without hardware cloth.",
+          "Gaps around plumbing under sinks where pipes pass through cabinets.",
+          "Chimney flashing gaps and the space around a flue."
+        ]
+      },
+      {
+        "h2": "Seal with the right material",
+        "paras": [
+          "Mice gnaw through foam, plastic and even soft mortar. Use steel wool or copper mesh packed into the gap, then seal over it with an exterior-grade sealant or cement. For larger openings, use hardware cloth at 6 mm or smaller mesh, or sheet metal.",
+          "Check the seal after the first hard freeze. Rodents move indoors with the cold, and a gap that was 'probably fine' in October is a highway in December."
+        ],
+        "note": "Never seal a gap you have not confirmed is empty. Sealing an active run traps rodents inside, and the smell is a problem you will not forget."
+      },
+      {
+        "h2": "Clearing what is already inside",
+        "ordered": [
+          "Set traps along walls and in corners — rodents travel with one side against a surface.",
+          "Use snap traps or enclosed traps rather than glue boards, which are indiscriminate and inhumane.",
+          "Check traps daily; a dead rodent left for days attracts insects.",
+          "Wear gloves and a mask when cleaning droppings, and disinfect the area — hantavirus is a real risk in some regions.",
+          "Keep baits away from pets and children, and prefer professional placement for outdoor stations."
+        ]
+      },
+      {
+        "h2": "When to call a professional",
+        "paras": [
+          "A single mouse caught within a week of first hearing it is a homeowner job. Call a professional when droppings appear in food preparation areas, when activity continues after sealing, when the building has a crawlspace or attic you cannot inspect safely, or when the species matters — rats, squirrels and raccoons need different methods and, in some states, a licence.",
+          "Professional exclusion usually costs more than traps but less than a re-infestation cycle, and it comes with a documented seal of the building envelope, which is the part that actually solves the problem."
+        ]
+      },
+      {
+        "h2": "The prevention habits that keep them out",
+        "paras": [
+          "Rodents need food, water and shelter. Store dry goods in metal or thick plastic containers, take bins out at night, fix dripping outdoor taps and keep pet food indoors. Clear ivy and shrubs back from the walls, and keep firewood off the ground and away from the house.",
+          "A clean, sealed, dry house with no accessible food is a house rodents leave alone — not because they cannot get in, but because there is nothing worth staying for."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How small a gap can a mouse get through?",
+        "a": "About 6 mm — roughly the width of a pencil. Rats need around 20 mm. Assume any gap you can see from outside is usable."
+      },
+      {
+        "q": "Do ultrasonic repellents work?",
+        "a": "Evidence is weak. Rodents habituate quickly and the devices do not stop entry. Sealing gaps and removing food sources are far more reliable."
+      },
+      {
+        "q": "Is it safe to clean mouse droppings myself?",
+        "a": "For a small amount, yes, with gloves, a mask and disinfectant, and by dampening the area first so dust does not become airborne. For heavy infestations in a crawlspace or attic, use a professional."
+      },
+      {
+        "q": "How long does professional rodent control take?",
+        "a": "An exclusion visit is usually a single day, with a follow-up check in two to four weeks. Ongoing monitoring is often monthly in high-pressure areas."
+      }
+    ]
+  }
+]

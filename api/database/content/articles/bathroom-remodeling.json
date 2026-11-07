@@ -1,0 +1,337 @@
+[
+  {
+    "id": 21,
+    "title": "Bathroom Remodel Planning Checklist",
+    "slug": "bathroom-remodel-planning-checklist",
+    "category": {
+      "slug": "bathroom-remodeling",
+      "name": "Bathroom Remodeling",
+      "description": "Planning a bathroom that stays dry and works hard: ventilation, waterproofing, layout constraints and the upgrades that justify their cost.",
+      "seoTitle": "Bathroom Remodeling Guides",
+      "seoDescription": "Bathroom remodel planning made practical: the order of decisions, waterproofing that matters, ventilation requirements and where to spend versus save.",
+      "sortOrder": 10
+    },
+    "primaryKeyword": "bathroom remodel checklist",
+    "secondaryKeywords": [
+      "bathroom renovation planning",
+      "bathroom waterproofing",
+      "bathroom ventilation",
+      "bathroom remodel cost",
+      "small bathroom layout",
+      "bathroom permit"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners planning a bathroom renovation who want a decision order that avoids rework.",
+    "cta": {
+      "label": "See bathroom remodeling options",
+      "href": "/services/bathroom-remodeling"
+    },
+    "internalLinks": [
+      {
+        "label": "Small bathroom remodels that add value",
+        "href": "/blog/small-bathroom-remodel-that-adds-value"
+      },
+      {
+        "label": "Hidden mold after a leak: what to look for",
+        "href": "/blog/hidden-mold-after-a-leak"
+      },
+      {
+        "label": "Kitchen remodel costs: a line-by-line breakdown",
+        "href": "/blog/kitchen-remodel-cost-breakdown"
+      }
+    ],
+    "image": "/images/blog/bathroom-remodel-planning-checklist.svg",
+    "imageAlt": "Illustration of a shower head with a checklist and a measuring ruler",
+    "seoTitle": "Bathroom Remodel Planning Checklist (Step by Step)",
+    "seoDescription": "Decide layout, ventilation and waterproofing before you choose tile. A 12-point bathroom remodel checklist that prevents the expensive rework.",
+    "excerpt": "Bathrooms go wrong in the order decisions are made. Tile is the last thing to choose and the first thing people pick — then the drain will not fit and the fan cannot vent.",
+    "seoSummary": "12-step bathroom remodel planning sequence with waterproofing and ventilation requirements.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "bathroom remodeling",
+      "planning",
+      "waterproofing",
+      "ventilation"
+    ],
+    "visual": "Flat vector medallion: a shower head with falling water, a checklist chip and a ruler chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "A bathroom is the smallest room in the house and has the highest concentration of systems: water supply, waste, electricity, ventilation and waterproofing in a space the size of a parking bay. Almost every expensive mistake comes from deciding finishes before deciding how the room works.",
+          "Use the sequence below. It is ordered so that each decision constrains the next rather than contradicting it."
+        ]
+      },
+      {
+        "h2": "1. Fix the layout before anything else",
+        "paras": [
+          "Moving a toilet or a shower drain is the most expensive change you can make in a bathroom, because it involves cutting structure and re-sloping waste pipe. Keeping the fixtures where they are frees budget for everything else.",
+          "If you do move them, confirm the waste run and the joist direction before demolition. A toilet that needs a 2% fall over a certain distance may not go where the drawing says it will."
+        ]
+      },
+      {
+        "h2": "2. Ventilation is not optional",
+        "paras": [
+          "Every bathroom needs mechanical ventilation — an openable window does not count in most codes. The fan should be sized to the room and ducted to the outside, not into the attic or a wall cavity.",
+          "A fan ducted into the attic is one of the most common causes of hidden mold: warm moist air condenses on cold roof decking and the problem is invisible from the bathroom."
+        ],
+        "note": "Choose a fan rated for continuous or intermittent operation with a low sone rating, and put it on a timer or a humidity sensor. A quiet fan runs longer, and running longer is what actually removes moisture."
+      },
+      {
+        "h2": "3. Waterproofing, then tile",
+        "table": {
+          "head": [
+            "Area",
+            "What is required"
+          ],
+          "rows": [
+            [
+              "Shower walls",
+              "Cement board or backer board plus a bonded waterproof membrane"
+            ],
+            [
+              "Shower floor",
+              "Pre-sloped mortar bed, waterproof membrane, proper drain flange"
+            ],
+            [
+              "Tub surround",
+              "Waterproof backer to at least the showerhead height"
+            ],
+            [
+              "Bathroom floor",
+              "Water-resistant underlayment; waterproofing mandatory in wet rooms"
+            ],
+            [
+              "Behind a freestanding tub",
+              "Sealed, splash-rated wall finish, not standard drywall"
+            ],
+            [
+              "Niches and benches",
+              "Membrane continuity and sealed penetrations"
+            ]
+          ]
+        },
+        "paras": [
+          "The single most common failure in a tiled shower is not the tile or the grout — it is a missing or discontinuous membrane behind them. Once water is behind the tile, everything in the assembly is wet and the repair is a full rebuild."
+        ]
+      },
+      {
+        "h2": "4. Electrical and lighting",
+        "bullets": [
+          "All bathroom circuits need GFCI protection, and receptacles must be positioned away from water sources.",
+          "Plan layers of light: general, task at the mirror, and a soft light for night use.",
+          "Light at the mirror should come from the sides, not straight above, to avoid shadows.",
+          "If you add a heated floor or a towel rail, its circuit belongs in the plan now, not later.",
+          "Confirm exhaust fan location so it does not fight the supply air."
+        ]
+      },
+      {
+        "h2": "5. Storage and the boring details",
+        "paras": [
+          "Decide where everything lives before you choose vanity size: towels, cleaning products, a step stool, spare toilet rolls. A vanity with drawers usually stores more usefully than one with doors and a shelf.",
+          "Consider the door swing. An outswing or a pocket door can free enough space for a larger vanity in a small room, and a shower door that opens outward is safer in an emergency."
+        ]
+      },
+      {
+        "h2": "6. Budget lines people forget",
+        "ordered": [
+          "Permit and inspection fees.",
+          "Waterproofing materials — often more than the tile itself.",
+          "Plumbing and electrical rough-in, especially if anything moves.",
+          "Tile overage: order 10–15% extra, plus a few spares for future repairs.",
+          "Disposal of demolition waste.",
+          "A contingency of 10–15% for what is behind the wall.",
+          "The finishing items: mirrors, towel bars, shower screen, seals."
+        ]
+      },
+      {
+        "h2": "7. Sequence for the build",
+        "paras": [
+          "Demolition, then rough-in and inspection, then waterproofing and flood test, then tile, then fixtures, then paint and trim. The flood test — filling the shower pan and leaving it 24 hours — is the step people skip and regret.",
+          "Photograph the open walls before they close. Ten years later, when someone needs to know where a supply line runs, those photos are worth more than the drawings."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Do I need a permit for a bathroom remodel?",
+        "a": "Usually for any plumbing, electrical or structural change, and for a full gut. Cosmetic work such as replacing a vanity, tile or fixtures in the same location often does not require one — confirm with your local building department."
+      },
+      {
+        "q": "How long does a bathroom remodel take?",
+        "a": "A full remodel typically takes three to six weeks on site, with tile and waterproofing driving the schedule. A cosmetic refresh can be done in under a week."
+      },
+      {
+        "q": "Can I tile over existing tile?",
+        "a": "Sometimes, if the substrate is sound and the added height does not break thresholds or fixtures. In a wet area it is usually a false economy, because you cannot inspect or waterproof the layer underneath."
+      },
+      {
+        "q": "How much ventilation does a bathroom need?",
+        "a": "A fan sized to the room's volume, ducted outside, running long enough to clear the moisture — typically 20 minutes after a shower. Humidity-sensing or timer fans handle that automatically."
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "title": "Small Bathroom Remodels That Add Value",
+    "slug": "small-bathroom-remodel-that-adds-value",
+    "category": {
+      "slug": "bathroom-remodeling",
+      "name": "Bathroom Remodeling",
+      "description": "Planning a bathroom that stays dry and works hard: ventilation, waterproofing, layout constraints and the upgrades that justify their cost.",
+      "seoTitle": "Bathroom Remodeling Guides",
+      "seoDescription": "Bathroom remodel planning made practical: the order of decisions, waterproofing that matters, ventilation requirements and where to spend versus save.",
+      "sortOrder": 10
+    },
+    "primaryKeyword": "small bathroom remodel ideas",
+    "secondaryKeywords": [
+      "small bathroom renovation",
+      "bathroom remodel value",
+      "powder room remodel",
+      "space saving bathroom",
+      "bathroom remodel ROI",
+      "small bathroom layout ideas"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners with a compact bathroom or powder room who want the changes that improve daily use and resale without a full gut.",
+    "cta": {
+      "label": "See bathroom remodeling options",
+      "href": "/services/bathroom-remodeling"
+    },
+    "internalLinks": [
+      {
+        "label": "Bathroom remodel planning checklist",
+        "href": "/blog/bathroom-remodel-planning-checklist"
+      },
+      {
+        "label": "Kitchen remodel costs: a line-by-line breakdown",
+        "href": "/blog/kitchen-remodel-cost-breakdown"
+      }
+    ],
+    "image": "/images/blog/small-bathroom-remodel-that-adds-value.svg",
+    "imageAlt": "Illustration of a bathtub with a coin and a measuring ruler",
+    "seoTitle": "Small Bathroom Remodels That Add Value",
+    "seoDescription": "The upgrades that make a compact bathroom feel bigger and worth more: lighting, storage, a glass screen and the layout moves that cost least.",
+    "excerpt": "In a small bathroom, value comes from usable space and good light, not from expensive tile. These are the moves that change how a compact room feels and what it is worth.",
+    "seoSummary": "Value-focused small bathroom upgrade list ranked by cost per impact.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "bathroom remodeling",
+      "small spaces",
+      "home value",
+      "budget"
+    ],
+    "visual": "Flat vector medallion: a bathtub with a coin chip, a ruler chip and a star chip on a warm sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A small bathroom has less room for error than any other project: every centimeter of wasted depth reads as clutter, and every dark corner makes the room feel smaller than it is. The good news is that the highest-impact changes are also among the cheapest.",
+          "Ranked below from least to most disruptive, with an honest note on which ones actually move resale value."
+        ]
+      },
+      {
+        "h2": "Start with light, because it is the cheapest change",
+        "bullets": [
+          "Replace a single ceiling fixture with two or three layers: a general light, a mirror light and a soft night light.",
+          "Move the mirror light to the sides of the mirror rather than above it — faces look better and the room feels wider.",
+          "Use a mirror that reaches near the ceiling to add visual height.",
+          "Swap a dated shade or diffuser for a clean, bright one; it changes the whole room for very little.",
+          "Consider a skylight or a solar tube if the ceiling allows it — the single biggest transformation per dollar in a windowless bathroom."
+        ]
+      },
+      {
+        "h2": "Then storage, because clutter shrinks a room",
+        "paras": [
+          "A shallow recessed niche in the shower wall, a medicine cabinet that sits inside the wall rather than on it, and a vanity with drawers instead of a shelf will together add more usable storage than a larger cabinet would.",
+          "Look for dead space: the gap above the toilet, the wall beside the vanity, the space between studs. A 100 mm deep recess holds more than it sounds like."
+        ]
+      },
+      {
+        "h2": "The layout moves worth paying for",
+        "table": {
+          "head": [
+            "Change",
+            "Impact",
+            "Disruption"
+          ],
+          "rows": [
+            [
+              "Glass screen instead of a shower curtain",
+              "High — makes the room read larger",
+              "Low"
+            ],
+            [
+              "Wall-hung vanity",
+              "High — floor visible under it",
+              "Medium (waste relocation)"
+            ],
+            [
+              "Pocket or outswing door",
+              "High in very small rooms",
+              "Medium"
+            ],
+            [
+              "Walk-in shower replacing a tub-shower",
+              "High for daily use, mixed at resale",
+              "High"
+            ],
+            [
+              "Niche in the shower wall",
+              "Medium-high",
+              "Medium"
+            ],
+            [
+              "Frameless mirror to the ceiling",
+              "Medium-high",
+              "Low"
+            ]
+          ]
+        },
+        "note": "Keep at least one bathtub in the house if you have children or plan to sell to families. Removing the only tub can narrow the buyer pool more than the nicer shower widens it."
+      },
+      {
+        "h2": "Where to save, where not to",
+        "paras": [
+          "Save on tile you will not touch — a large-format floor tile in a neutral tone looks expensive and costs less than mosaic. Save on the vanity cabinet if the countertop and faucet are good. Do not save on waterproofing, ventilation or the shower valve: those are the items whose failure means rebuilding the room.",
+          "A cheap faucet on a good vanity is a visible compromise; a good faucet on a modest vanity reads as quality. Spend where hands and eyes land."
+        ]
+      },
+      {
+        "h2": "Six choices that make a small bathroom feel smaller",
+        "bullets": [
+          "A dark floor with dark walls and no contrast — the room reads as a box.",
+          "A large mirror that stops short of the ceiling, chopping the wall in half.",
+          "A shower curtain in a heavy print instead of a clear screen or a light textile.",
+          "Deep cabinets that push the vanity out into the walking space.",
+          "A single central ceiling light, which leaves every corner in shadow.",
+          "Busy mosaic on every surface, which removes the calm a small room needs."
+        ],
+        "note": "If you change only two things in a compact bathroom, change the lighting and the mirror. They cost the least and change the perception of the room the most."
+      },
+      {
+        "h2": "What actually returns at resale",
+        "paras": [
+          "Bathrooms matter to buyers mostly as a hygiene and condition signal: a clean, dry, bright bathroom suggests a well-kept house. A mid-range remodel of a small bathroom usually returns a solid share of its cost; a high-end spa bathroom in a modest house rarely does.",
+          "The consistently rewarded items are a working fan, no visible mold or water staining, a modern faucet and shower head, good light and adequate storage. None of those require a gut renovation."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Does a bathroom remodel add value?",
+        "a": "Yes, particularly when it fixes a functional or condition problem such as poor ventilation, dated fixtures or a failing shower. The return is highest on mid-range updates in keeping with the house."
+      },
+      {
+        "q": "Should I remove the bathtub to fit a bigger shower?",
+        "a": "Only if another bathroom in the house has a tub. Families with young children still value a tub, and removing the only one can limit resale."
+      },
+      {
+        "q": "What is the cheapest way to make a small bathroom feel bigger?",
+        "a": "Lighting and a mirror. Better light from two directions, a larger mirror and a lighter wall color typically cost less than any fixture change and have the largest perceived effect."
+      },
+      {
+        "q": "Is a skylight worth it in a windowless bathroom?",
+        "a": "Often yes — a solar tube costs far less than a skylight and delivers most of the daylight. Both require roof work, so plan them alongside any roofing project."
+      }
+    ]
+  }
+]

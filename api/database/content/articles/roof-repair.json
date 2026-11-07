@@ -1,0 +1,242 @@
+[
+  {
+    "id": 13,
+    "title": "Roof Repair or Full Replacement: How to Decide",
+    "slug": "roof-repair-vs-replacement",
+    "category": {
+      "slug": "roof-repair",
+      "name": "Roof Repair",
+      "description": "Targeted roof repairs: how to scope a leak, what a repair should include, and the honest point at which patching stops being worth the money.",
+      "seoTitle": "Roof Repair Guides for Homeowners",
+      "seoDescription": "Roof repair explained: what a proper repair covers, what it should cost, and the age and damage thresholds that make replacement the cheaper long-term choice.",
+      "sortOrder": 6
+    },
+    "primaryKeyword": "roof repair or replace",
+    "secondaryKeywords": [
+      "roof repair cost",
+      "roof replacement cost",
+      "how long does a roof last",
+      "patch a roof leak",
+      "roof repair near me",
+      "asphalt shingle lifespan"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners quoted for a repair who suspect they are being pushed toward a full replacement, or the reverse.",
+    "cta": { "label": "See roof repair options", "href": "/services/roof-repair" },
+    "internalLinks": [
+      { "label": "Roof leak warning signs every homeowner should know", "href": "/blog/roof-leak-warning-signs" },
+      { "label": "Storm damage roof repair and insurance claims", "href": "/blog/storm-damage-roof-repair-and-insurance" },
+      { "label": "How to compare home service estimates", "href": "/blog/how-to-compare-home-service-estimates" }
+    ],
+    "image": "/images/blog/roof-repair-vs-replacement.svg",
+    "imageAlt": "Illustration of a stepladder with a coin and a house icon",
+    "seoTitle": "Roof Repair or Replacement? How to Decide",
+    "seoDescription": "Age, extent and repeat repairs decide most roof questions. A practical framework for choosing between a targeted repair and a full replacement.",
+    "excerpt": "The decision is rarely about one leak. It is about the age of the roof, how much of it is failing, and whether you are paying for the same repair twice.",
+    "seoSummary": "Decision matrix comparing repair and replacement by roof age, damage extent and cost per square.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["roofing", "roof repair", "repair or replace", "budgeting"],
+    "visual": "Flat vector medallion: a stepladder with a coin chip, a wrench chip and a small house chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Every roofing conversation eventually reaches the same fork: patch it, or replace it. The answer is usually clear once you know three facts — the age of the roof, the extent of the damage, and how many repairs it has already had.",
+          "What follows is the framework a good inspector uses, so you can follow the reasoning rather than take a verdict on faith."
+        ]
+      },
+      {
+        "h2": "Start with age and expected life",
+        "table": {
+          "head": ["Material", "Typical service life", "Repair-friendly?"],
+          "rows": [
+            ["3-tab asphalt shingle", "15–20 years", "Yes, in the first half of life"],
+            ["Architectural asphalt shingle", "20–30 years", "Yes, for isolated damage"],
+            ["Metal standing seam", "40–70 years", "Yes, but specialists only"],
+            ["Clay or concrete tile", "40–50+ years", "Yes — the tile outlives the underlayment"],
+            ["Wood shake", "25–30 years", "Condition-dependent; often replaced"],
+            ["Flat membrane (EPDM/TPO)", "20–25 years", "Yes, patch and seam repairs are routine"]
+          ]
+        },
+        "paras": [
+          "A roof in the first half of its life with one isolated failure is a repair. A roof in its last quarter with three failures in two years is a replacement wearing a repair's clothes."
+        ]
+      },
+      {
+        "h2": "Then judge the extent, not the count",
+        "paras": [
+          "One leak near a vent boot is a repair. Ten failed shingles spread across three slopes is a replacement, even though the individual repairs are small. Ask the inspector to show you photographs and mark the affected areas on a simple roof diagram.",
+          "Look at how the failure happened. Impact damage from a branch or hail is localised and repairable. General granule loss, curling and brittleness across the whole field is age, and age is not repairable."
+        ]
+      },
+      {
+        "h2": "The repeat-repair rule",
+        "paras": [
+          "If you have spent more than about a third of the replacement cost on repairs over the past few years, stop repairing. The next leak is already queued up, and each repair is money that does not carry forward into a new roof.",
+          "The corollary matters too: a repair is worth doing when it buys you real time — five years or more — or when it is genuinely localised on a young roof."
+        ],
+        "note": "Never let a contractor talk you into a repair on a roof that is already at end of life simply to avoid a bigger conversation. Ask directly: 'If this were your house, what would you do, and why?'"
+      },
+      {
+        "h2": "What a proper repair actually includes",
+        "ordered": [
+          "Diagnosis of the source, not just the stain.",
+          "Removal of the damaged shingles or membrane in a neat rectangle.",
+          "Inspection of the deck beneath — soft spots get replaced, not covered.",
+          "New underlayment and correct flashing at any penetration.",
+          "Color-matched shingles and proper sealing of the tabs.",
+          "A written note of what was done, with photographs."
+        ]
+      },
+      {
+        "h2": "The hidden costs of delaying replacement",
+        "paras": [
+          "A repair is only cheaper if the roof underneath is sound. Once water reaches decking, insulation or framing, the repair cost stops being a roofing number. Rot in a fascia or a ceiling joist is carpentry; wet insulation is removal and replacement; mold is remediation.",
+          "There is also an insurance angle: a claim for interior damage caused by a roof you knew was failing is the kind of claim that gets scrutinised and often declined."
+        ]
+      },
+      {
+        "h2": "How to compare the two quotes fairly",
+        "bullets": [
+          "Compare cost per square, and confirm both quotes include tear-off, underlayment and flashing.",
+          "Ask what the repair buys in years, in the contractor's own estimate.",
+          "For replacement, ask for the workmanship warranty in writing, separate from the material warranty.",
+          "Check whether the repair scope includes making good inside the house or only the roof.",
+          "Ask whether a repair now would void any existing manufacturer warranty — sometimes it does."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long can I wait before replacing a leaking roof?",
+        "a": "An active leak into living space is urgent. A single isolated leak on a young roof can be repaired and monitored for years. A roof past its expected life with repeated leaks should be replaced before the next storm season, not after."
+      },
+      {
+        "q": "Can you replace only part of a roof?",
+        "a": "Yes — a single slope or a section around an addition is sometimes viable, especially if the failure is localised. Blending new and old shingles on a visible elevation is the usual trade-off."
+      },
+      {
+        "q": "Does a new roof add value to a house?",
+        "a": "It removes a common objection and makes the house insurable, which matters at sale. The return varies by market, but a documented, warrantied roof is one of the more reliable upgrades."
+      },
+      {
+        "q": "Will my insurer pay for a repair or a replacement?",
+        "a": "Insurers pay for sudden, accidental damage such as a storm event, usually on a repair basis first. Wear and age are excluded, and a replacement is often only covered where repair cannot restore the roof to its pre-loss condition."
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "title": "Storm Damage Roof Repair and Insurance Claims",
+    "slug": "storm-damage-roof-repair-and-insurance",
+    "category": {
+      "slug": "roof-repair",
+      "name": "Roof Repair",
+      "description": "Targeted roof repairs: how to scope a leak, what a repair should include, and the honest point at which patching stops being worth the money.",
+      "seoTitle": "Roof Repair Guides for Homeowners",
+      "seoDescription": "Roof repair explained: what a proper repair covers, what it should cost, and the age and damage thresholds that make replacement the cheaper long-term choice.",
+      "sortOrder": 6
+    },
+    "primaryKeyword": "storm damage roof repair",
+    "secondaryKeywords": [
+      "hail damage roof",
+      "roof insurance claim",
+      "wind damage shingles",
+      "storm chaser contractors",
+      "roof inspection after storm",
+      "emergency roof tarp"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners dealing with a roof after a hailstorm or high wind, and deciding whether to claim on insurance.",
+    "cta": { "label": "See roof repair options", "href": "/services/roof-repair" },
+    "internalLinks": [
+      { "label": "Roof leak warning signs every homeowner should know", "href": "/blog/roof-leak-warning-signs" },
+      { "label": "Roof repair or full replacement: how to decide", "href": "/blog/roof-repair-vs-replacement" },
+      { "label": "How to choose a roofing contractor", "href": "/blog/how-to-choose-a-roofing-contractor" }
+    ],
+    "image": "/images/blog/storm-damage-roof-repair-and-insurance.svg",
+    "imageAlt": "Illustration of a storm cloud with rain, a claim document and a house icon",
+    "seoTitle": "Storm Damage Roof Repair and Insurance Claims",
+    "seoDescription": "What to do in the first 48 hours after a storm, how to document hail and wind damage for a claim, and how to avoid the contractors who follow the weather.",
+    "excerpt": "The claim is usually decided in the first two days, long before an adjuster arrives. Document the damage, mitigate further loss, and be careful who you let on the roof.",
+    "seoSummary": "Storm response playbook: emergency mitigation, evidence gathering, claim process and contractor vetting.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["roofing", "storm damage", "insurance", "hiring"],
+    "visual": "Flat vector medallion: a rain cloud with a claim document chip, a house chip and a shield chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "After a major storm, three groups of people arrive within days: neighbors checking on each other, contractors looking for work, and adjusters working through a queue. The homeowner who has documented the damage before any of them arrives is the one who gets a clean claim.",
+          "This guide covers the first 48 hours, what evidence actually supports a claim, and how to tell a legitimate storm contractor from someone following the weather."
+        ]
+      },
+      {
+        "h2": "The first 48 hours",
+        "ordered": [
+          "Make the home safe: check for water near electrical fittings, and keep people away from sagging ceilings.",
+          "Photograph and video everything before anyone touches it — wide shots of each elevation, close-ups of damage, and anything that hit the roof.",
+          "Stop further damage. A tarp over a missing section is mitigation, and insurers expect it; keep the receipt.",
+          "Call your insurer and open the claim. Ask what your deductible is and whether emergency mitigation is reimbursed.",
+          "Do not sign anything from a contractor who knocks on your door before you have spoken to your insurer."
+        ]
+      },
+      {
+        "h2": "What storm damage actually looks like",
+        "table": {
+          "head": ["Cause", "Evidence on the roof", "Often missed"],
+          "rows": [
+            ["Hail", "Soft spots, bruised shingle mat, dented vents and gutters", "Granule loss that looks like normal ageing"],
+            ["High wind", "Lifted or missing tabs, broken seals, creased shingles", "Damage on one elevation only"],
+            ["Fallen debris", "Punctures, cracked tiles, crushed ridge caps", "Damage to flashing beneath the impact"],
+            ["Ice and snow load", "Sagging deck, popped nails, ice dam staining", "Interior water tracks far from the roof"]
+          ]
+        },
+        "paras": [
+          "Hail bruises are easiest to see when the shingle is warm and slightly soft. An inspector will often mark suspect areas with chalk and photograph them; a good one will show you the marks rather than describe them."
+        ]
+      },
+      {
+        "h2": "Working with the adjuster",
+        "paras": [
+          "You are entitled to be present at the inspection, and you should be. Bring your photographs, your notes on the storm date, and any invoices for emergency work. Ask the adjuster to explain anything they exclude.",
+          "If the offer seems low, you can request a re-inspection, get an independent contractor's written scope and submit it, or in many states use the appraisal process in your policy. Read the policy's loss settlement section before arguing about the number."
+        ],
+        "note": "Never sign a document that assigns your claim proceeds to a contractor — sometimes called a direction to pay or an assignment of benefits. It transfers control of your claim, and it is restricted in several states for good reason."
+      },
+      {
+        "h2": "Storm chasers: how to spot them",
+        "bullets": [
+          "They arrive days after the storm with out-of-state plates and no local address.",
+          "They offer to waive your deductible, which is insurance fraud in most states.",
+          "They want a large cash deposit before any materials arrive.",
+          "They cannot produce a licence, insurance certificate or a local reference.",
+          "They ask you to sign a contract before you have even seen a written scope."
+        ]
+      },
+      {
+        "h2": "Do you have to claim at all?",
+        "paras": [
+          "Not every storm justifies a claim. If the repair is close to your deductible, paying directly avoids a claim on your history that can affect future premiums. But if there is any chance of hidden damage — a bruised mat that will fail in two winters — get the inspection first and decide with the facts.",
+          "One practical rule: a claim for a few hundred dollars over the deductible is rarely worth it. A claim for a full slope or a replacement is."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long do I have to file a storm damage claim?",
+        "a": "It varies by state and policy, commonly from one to two years from the date of loss, with a shorter window to notify the insurer promptly. Report the damage as soon as you are safely able to."
+      },
+      {
+        "q": "Will filing a claim raise my premium?",
+        "a": "It can. Weather claims are treated differently from at-fault claims in many states, but repeated claims still affect your history. Ask your insurer directly before filing, and weigh the claim against your deductible."
+      },
+      {
+        "q": "Can I choose my own contractor for insurance work?",
+        "a": "Yes in nearly all cases. The insurer pays for the loss; you choose who does the work. Be wary of any arrangement that requires you to use a preferred vendor."
+      },
+      {
+        "q": "What if the adjuster's estimate is lower than my contractor's?",
+        "a": "Send the contractor's itemised scope to the adjuster and ask for a re-inspection. Differences are often about code upgrades, matching materials or items the adjuster could not see from the ground."
+      }
+    ]
+  }
+]

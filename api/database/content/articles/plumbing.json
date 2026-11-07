@@ -1,0 +1,356 @@
+[
+  {
+    "id": 7,
+    "title": "Warning Signs You Need a Plumber (and the Ones You Cannot Ignore)",
+    "slug": "warning-signs-you-need-a-plumber",
+    "category": {
+      "slug": "plumbing",
+      "name": "Plumbing",
+      "description": "Leaks, pressure problems, water heaters and drains explained in plain English, with a clear line between a five-minute check and a call to a licensed plumber.",
+      "seoTitle": "Plumbing Guides for Homeowners",
+      "seoDescription": "Practical plumbing guides: how to read the warning signs of a leak, when a slow drain is a symptom rather than a nuisance, and which jobs belong with a licensed plumber.",
+      "sortOrder": 3
+    },
+    "primaryKeyword": "signs you need a plumber",
+    "secondaryKeywords": [
+      "plumber near me",
+      "when to call a plumber",
+      "emergency plumber",
+      "water leak signs",
+      "low water pressure",
+      "plumbing repair cost"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners noticing a plumbing symptom they are not sure is urgent, and renters who need to describe the problem clearly to a landlord.",
+    "cta": {
+      "label": "See plumbing service options",
+      "href": "/services/plumbing"
+    },
+    "internalLinks": [
+      {
+        "label": "Water heater problems: repair or replace?",
+        "href": "/blog/water-heater-problems-repair-or-replace"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      },
+      {
+        "label": "The first 24 hours after water damage",
+        "href": "/blog/first-24-hours-after-water-damage"
+      }
+    ],
+    "image": "/images/blog/warning-signs-you-need-a-plumber.svg",
+    "imageAlt": "Illustration of a kitchen faucet with a drip, a pressure gauge and a wrench",
+    "seoTitle": "8 Warning Signs You Need a Plumber",
+    "seoDescription": "Dripping taps, rising bills, banging pipes and slow drains: the eight plumbing symptoms worth acting on, which are urgent, and what to check first.",
+    "excerpt": "Most plumbing failures give you days of warning before they become an emergency. Here are the eight symptoms worth acting on, the two that cannot wait, and the checks that are safe to do yourself first.",
+    "seoSummary": "Symptom-led guide to household plumbing problems with an urgency ranking and pre-visit checklist.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "plumbing",
+      "leaks",
+      "diagnostics",
+      "prevention"
+    ],
+    "visual": "Flat vector medallion: a chrome faucet with a drip, a pressure gauge chip and a wrench chip on a warm sand background.",
+    "sections": [
+      {
+        "paras": [
+          "Plumbing rarely fails without warning. A pipe that bursts on a Sunday night has usually been telling you something for weeks — a faint damp smell under the sink, a water bill that crept up, a drain that gurgles when the washing machine empties.",
+          "The value of noticing early is not just money. A supply line leak behind a cabinet can run for months inside a wall cavity before the paint blisters, and by then you are paying for drywall, insulation and possibly mold as well as a washer."
+        ]
+      },
+      {
+        "h2": "1. A water bill that jumps without explanation",
+        "paras": [
+          "Seasonal change explains some variation, but a bill that rises 20% or more with the same household habits usually means water is going somewhere it should not. Toilets are the most common culprit: a flapper that fails to seal can waste hundreds of liters a day while sounding like nothing at all.",
+          "Put a few drops of food coloring in the tank and leave it for fifteen minutes without flushing. Color in the bowl means the flapper is leaking and needs replacing — a five-minute job with a part that costs less than a coffee."
+        ]
+      },
+      {
+        "h2": "2. Damp patches, musty smells and bubbling paint",
+        "paras": [
+          "Water travels. A stain on a ceiling rarely sits directly under the leak; it sits under the lowest point the water reached. Look for the source uphill and above: a bathroom above, a roof penetration, a supply line running through the joist space.",
+          "A musty smell in a cabinet, a swollen skirting board or paint that bubbles rather than peels all point to slow, ongoing moisture. These are the failures that turn a plumbing bill into a restoration bill."
+        ]
+      },
+      {
+        "h2": "3. Pressure that drops when something else runs",
+        "paras": [
+          "A shower that loses half its flow when the kitchen tap opens is a symptom of a restriction, not of the shower. Common causes are a failing pressure-reducing valve, scale in an older galvanised line, or a partially closed isolation valve someone forgot to reopen after a repair.",
+          "If the drop is sudden and affects the whole house, check with a neighbor before calling anyone — a utility-side issue is not your repair."
+        ]
+      },
+      {
+        "h2": "4. Drains that are slow in more than one place",
+        "paras": [
+          "One slow sink is usually a local clog of hair, soap and grease. Two or more slow drains on the same floor, or gurgling from a floor drain when the washer empties, points to a blockage in the main line or a venting problem.",
+          "That distinction matters because chemical drain cleaners make main-line blockages worse: they do not clear the clog, they sit in the pipe and corrode it. A plumber with a camera and an auger solves in twenty minutes what a bottle cannot solve at all."
+        ]
+      },
+      {
+        "h2": "5. Water where water should not be",
+        "bullets": [
+          "A puddle under the water heater — the tank itself has failed and no repair will fix a rusted shell.",
+          "Water staining around the base of a toilet — a failed wax ring, which is cheap to fix now and expensive after the subfloor softens.",
+          "Green or white crust on copper or brass fittings — a slow weep that has been evaporating for months.",
+          "A washing machine supply hose that feels stiff or has a bubble — replace both hoses before they split, not after."
+        ]
+      },
+      {
+        "h2": "6. Noise: banging, hammering, whistling",
+        "paras": [
+          "A single bang when a tap closes is water hammer, and it is fixable with an arrestor or a new valve. Repeated hammering, a shriek from a tap or a rattle in the wall when a toilet refills all suggest loose pipes or a worn valve washer.",
+          "Noise is rarely urgent on its own, but it is the cheapest stage to fix. Loose pipes chafe against joists and fittings, and a chafed pipe is a future leak."
+        ]
+      },
+      {
+        "h2": "The two symptoms that cannot wait",
+        "paras": [
+          "Water you can see running, or a smell of sewage inside the house, are same-day calls. Everything else can usually wait for a scheduled visit during working hours, which is also when you will get the best price."
+        ],
+        "note": "If water is running and you cannot find the isolation valve, turn off the main at the meter. Know where it is before you need it — it takes one minute today and saves a floor later."
+      },
+      {
+        "h2": "What to do before the plumber arrives",
+        "ordered": [
+          "Shut off the supply to the affected fixture, or the whole house if you cannot isolate it.",
+          "Photograph everything — the leak, the damage, the meter reading — before anything is moved.",
+          "Clear access to the fixture and to the main valve; cupboards full of cleaning products cost time.",
+          "Write down when the problem started and what changed just before it did.",
+          "If the water reached carpet or a ceiling, start drying and read our water damage first-24-hours guide."
+        ]
+      },
+      {
+        "h2": "Which plumbing jobs are genuinely DIY",
+        "table": {
+          "head": [
+            "Job",
+            "DIY or licensed",
+            "Why"
+          ],
+          "rows": [
+            [
+              "Replacing a toilet flapper or fill valve",
+              "DIY",
+              "No soldering, no gas, no permit; shut the supply first"
+            ],
+            [
+              "Swapping a shower head or tap aerator",
+              "DIY",
+              "Threaded parts, hand-tight plus a quarter turn"
+            ],
+            [
+              "Clearing a single sink trap",
+              "DIY",
+              "Bucket underneath, gloves, reassemble in reverse"
+            ],
+            [
+              "Replacing a washing machine hose",
+              "DIY",
+              "Accessible, but buy braided stainless hoses"
+            ],
+            [
+              "Anything inside a wall or under a slab",
+              "Licensed",
+              "Cutting into structure needs a permit in most jurisdictions"
+            ],
+            [
+              "Gas lines, water heater swaps, main line repairs",
+              "Licensed",
+              "Legally restricted work with real safety consequences"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "What a plumbing visit actually costs",
+        "paras": [
+          "Most providers charge a call-out or diagnostic fee that is credited against the repair if you go ahead. Simple fixture repairs sit in the low hundreds; anything requiring access behind a wall or under a floor climbs quickly, and the access work — not the plumbing — is usually the expensive part.",
+          "Ask for the diagnostic fee, the hourly rate and the after-hours multiplier before booking, and ask whether the quote includes making good. Those three questions are the difference between two quotes that look similar and two that are not comparable at all."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How do I know if a leak is an emergency?",
+        "a": "If water is actively running, if it is near electrical fittings, or if it has reached a ceiling or a floor above another room, treat it as an emergency: shut off the supply and call. A slow drip into a bucket is not an emergency, but it should not be left for weeks."
+      },
+      {
+        "q": "Can I use chemical drain cleaner on a slow drain?",
+        "a": "For a single slow sink, a plunger or a manual snake is safer and just as effective. Chemical cleaners are harsh on older pipework and can cause injury if a plumber later opens the drain. For multiple slow drains, skip chemicals entirely and have the main line looked at."
+      },
+      {
+        "q": "Is a dripping tap really worth fixing?",
+        "a": "Yes. A tap dripping once a second wastes thousands of liters a year and the washer usually costs very little. It also keeps the drain wet, which shortens the life of the trap and can stain the basin."
+      },
+      {
+        "q": "What should I check before calling a plumber about low pressure?",
+        "a": "Check whether the drop affects the whole house or one fixture, look for a partly closed isolation valve, clean the aerator on the affected tap, and ask a neighbor whether they have the same problem. Those four checks tell a plumber a lot before the visit."
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "title": "Water Heater Problems: Repair or Replace?",
+    "slug": "water-heater-problems-repair-or-replace",
+    "category": {
+      "slug": "plumbing",
+      "name": "Plumbing",
+      "description": "Leaks, pressure problems, water heaters and drains explained in plain English, with a clear line between a five-minute check and a call to a licensed plumber.",
+      "seoTitle": "Plumbing Guides for Homeowners",
+      "seoDescription": "Practical plumbing guides: how to read the warning signs of a leak, when a slow drain is a symptom rather than a nuisance, and which jobs belong with a licensed plumber.",
+      "sortOrder": 3
+    },
+    "primaryKeyword": "water heater repair or replace",
+    "secondaryKeywords": [
+      "water heater not working",
+      "no hot water",
+      "water heater leaking",
+      "water heater lifespan",
+      "tankless water heater",
+      "water heater replacement cost"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners with a failing tank water heater who need to decide between a repair visit and a replacement quote.",
+    "cta": {
+      "label": "See plumbing service options",
+      "href": "/services/plumbing"
+    },
+    "internalLinks": [
+      {
+        "label": "Warning signs you need a plumber",
+        "href": "/blog/warning-signs-you-need-a-plumber"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
+    ],
+    "image": "/images/blog/water-heater-problems-repair-or-replace.svg",
+    "imageAlt": "Illustration of a tank water heater with a temperature gauge and a coin icon",
+    "seoTitle": "Water Heater: Repair or Replace? A Decision Guide",
+    "seoDescription": "Tank age, leak location and rising energy bills decide most water heater questions. Here is how to tell a repair from a replacement, and what each one costs.",
+    "excerpt": "A water heater usually fails in a way that answers the repair-or-replace question for you. The trick is recognising which symptom you are looking at before you pay for a visit.",
+    "seoSummary": "Decision framework for failing water heaters: symptom, age and cost thresholds.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "plumbing",
+      "water heaters",
+      "repair or replace",
+      "energy"
+    ],
+    "visual": "Flat vector medallion: a tall tank water heater with a dial, a gauge chip, a clock chip and a coin chip.",
+    "sections": [
+      {
+        "paras": [
+          "A water heater is one of the few appliances in a home that fails in a way that gives you a clear answer. A leaking tank is finished. A failed element is a repair. Between those two extremes sit the decisions homeowners actually agonise over: an eleven-year-old tank that still works but costs more to run, or a pilot that keeps going out.",
+          "The framework below is about turning symptoms into a decision instead of a guess."
+        ]
+      },
+      {
+        "h2": "First, identify what kind of unit you have",
+        "paras": [
+          "Tank, tankless, heat pump or indirect — each has different failure modes and different economics. A tank unit is expected to last around 8–12 years; a tankless unit can run 20 with annual descaling. Knowing the type and the install date matters more than the brand.",
+          "If you cannot read the label, the serial number usually encodes the manufacture date. Photograph the label before any technician arrives; it is the first thing they will ask for."
+        ]
+      },
+      {
+        "h2": "Symptoms that mean replace, not repair",
+        "bullets": [
+          "Water on the floor from the tank body itself — the steel has corroded through and no liner repair is a real fix.",
+          "A tank that is 10+ years old and now leaking from any point, including the drain valve area.",
+          "Repeated element or thermostat failures in the same year — usually a sign of scale build-up and a tank near the end.",
+          "Rust-colored hot water that continues after flushing the tank and replacing the anode rod.",
+          "A flue that is corroded or a unit that has been back-vented incorrectly."
+        ]
+      },
+      {
+        "h2": "Symptoms that are usually a repair",
+        "table": {
+          "head": [
+            "Symptom",
+            "Likely cause",
+            "Typical fix"
+          ],
+          "rows": [
+            [
+              "No hot water, breaker fine",
+              "Failed heating element (electric)",
+              "Element swap after testing"
+            ],
+            [
+              "Hot water runs out quickly",
+              "Failed lower element or heavy sediment",
+              "Element or full flush"
+            ],
+            [
+              "Water too hot or scalding",
+              "Thermostat or mixing valve",
+              "Thermostat or valve replacement"
+            ],
+            [
+              "Pilot will not stay lit (gas)",
+              "Thermocouple, flame sensor or venting",
+              "Sensor replacement — gas work, licensed"
+            ],
+            [
+              "Rotten-egg smell",
+              "Bacteria in the anode/water",
+              "Anode replacement and flush"
+            ],
+            [
+              "Ticking or popping sounds",
+              "Sediment boiling under the burner",
+              "Flush; if it returns, plan replacement"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "The age-and-cost rule that actually holds",
+        "paras": [
+          "A common rule in the trade: if the unit is more than halfway through its expected life and the repair costs more than about a third of a replacement, replace it. A $600 repair on a nine-year-old tank buys you a few more years at best, and the next failure usually arrives during a cold snap.",
+          "The rule is not a law. If you are selling the house in six months, a repair may be the rational choice. If you are staying, the efficiency gain from a modern unit is itself part of the return."
+        ],
+        "note": "Ask the technician for the measured condition, not just the verdict: tank age, anode condition, sediment level, and whether the relief valve still opens. Those four facts make the decision much less of a sales conversation."
+      },
+      {
+        "h2": "Replacement: what changes the price",
+        "ordered": [
+          "Capacity and recovery rate — a larger tank or a faster recovery unit costs more.",
+          "Fuel type and venting — a gas replacement must match the existing flue or the venting work adds real money.",
+          "Location — a basement or garage swap is straightforward; a closet or attic unit needs code-compliant clearances and often a pan and drain.",
+          "Permits and inspection — most jurisdictions require a permit for a water heater swap, and skipping it can surface at resale.",
+          "Efficiency upgrades — a heat pump water heater costs more upfront and needs space and condensate drainage, but cuts running costs substantially."
+        ]
+      },
+      {
+        "h2": "Do not skip the maintenance that prevents this",
+        "paras": [
+          "Flushing the tank once a year removes the sediment thatshortens element life and causes popping. Checking the anode rod every few years — and replacing it before it is consumed — is the single cheapest way to extend a tank's life.",
+          "Test the temperature and pressure relief valve annually by lifting the lever and letting it snap back. A valve that weeps or will not reseat is a safety device that has failed, and it should be replaced rather than ignored."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How long does a water heater last?",
+        "a": "Tank units typically last 8–12 years; tankless units 15–20 with annual descaling. Hard water, high usage and a neglected anode rod shorten those numbers considerably."
+      },
+      {
+        "q": "Can a leaking water heater be repaired?",
+        "a": "If the leak is from a fitting, the drain valve or the relief valve, yes. If water is coming through the tank shell or from the base, no — the steel has failed and the unit needs replacing."
+      },
+      {
+        "q": "Is it worth replacing a working water heater?",
+        "a": "Rarely on its own. It becomes worth considering when the unit is near the end of its life, energy costs have risen sharply, or you are already doing adjacent work such as a basement remodel."
+      },
+      {
+        "q": "Should I switch to tankless when replacing?",
+        "a": "Tankless suits homes with gas supply, space constraints and moderate simultaneous demand. It needs a larger gas line and proper venting in most retrofits, so get a quote that includes those items rather than comparing unit prices alone."
+      }
+    ]
+  }
+]

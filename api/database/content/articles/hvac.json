@@ -1,0 +1,320 @@
+[
+  {
+    "id": 9,
+    "title": "Air Conditioner Not Cooling? A Homeowner Troubleshooting Guide",
+    "slug": "ac-not-cooling-troubleshooting-guide",
+    "category": {
+      "slug": "hvac",
+      "name": "HVAC",
+      "description": "Heating and cooling guides for the checks a homeowner can safely make, plus the symptoms that mean a technician needs to look at the system.",
+      "seoTitle": "HVAC Guides for Homeowners",
+      "seoDescription": "Understand your heating and cooling system: why the AC is not cooling, what a furnace service actually includes, and how to tell a filter problem from a refrigerant fault.",
+      "sortOrder": 4
+    },
+    "primaryKeyword": "air conditioner not cooling",
+    "secondaryKeywords": [
+      "AC blowing warm air",
+      "air conditioner troubleshooting",
+      "AC frozen coil",
+      "AC not cooling house",
+      "hvac repair near me",
+      "air conditioner maintenance"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners whose air conditioner runs but does not cool the house, looking for checks to try before booking a technician.",
+    "cta": {
+      "label": "See HVAC service options",
+      "href": "/services/hvac"
+    },
+    "internalLinks": [
+      {
+        "label": "A yearly furnace maintenance checklist",
+        "href": "/blog/furnace-maintenance-checklist"
+      },
+      {
+        "label": "When should you hire a licensed electrician?",
+        "href": "/blog/when-should-you-hire-a-licensed-electrician"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
+    ],
+    "image": "/images/blog/ac-not-cooling-troubleshooting-guide.svg",
+    "imageAlt": "Illustration of a wall-mounted air conditioner beside a sun and a gauge",
+    "seoTitle": "AC Not Cooling? 7 Things to Check Before You Call",
+    "seoDescription": "If your air conditioner runs but the house stays warm, start with the filter, the thermostat, the outdoor unit and the coil — in that order.",
+    "excerpt": "An air conditioner that runs but does not cool is usually failing at one of five points. Three of them you can check in ten minutes without tools — and one of them can freeze the coil if you ignore it.",
+    "seoSummary": "Step-by-step AC troubleshooting ladder from thermostat to refrigerant, with a safety line.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "hvac",
+      "air conditioning",
+      "diagnostics",
+      "maintenance"
+    ],
+    "visual": "Flat vector medallion: a wall air conditioning unit with a sun chip, a gauge chip and a check chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "The most common air conditioning call is not a broken system. It is a system that is working hard against something — a filter packed solid, a thermostat set to fan, a condenser unit boxed in by shrubs, or a coil that has frozen into a block of ice because the airflow is restricted.",
+          "Work through the checks below in order. Each one rules out a whole category of fault, and the list ends at the point where the next step needs gauges and refrigerant handling that belong with a licensed technician."
+        ]
+      },
+      {
+        "h2": "1. Confirm the thermostat is actually calling for cooling",
+        "paras": [
+          "Set the thermostat several degrees below room temperature, set the mode to cool rather than auto or fan, and wait five minutes. If the indoor unit runs but the outdoor unit never starts, the problem may be a tripped breaker, a float switch or a control fault rather than the compressor.",
+          "Smart thermostats add their own layer: check the app for a schedule override, a demand-response event or a filter reminder that has paused the system."
+        ]
+      },
+      {
+        "h2": "2. Change the filter — and check the return",
+        "paras": [
+          "A clogged filter is the single most common cause of poor cooling, and it is also the one that causes the most expensive damage. Restricted airflow drops the coil temperature until it ices over, and an iced coil cools almost nothing while the compressor runs continuously.",
+          "Check the filter every month during cooling season if you have pets or live somewhere dusty, and replace it every one to three months. Confirm that return grilles are not covered by rugs or furniture."
+        ],
+        "note": "If you can see ice on the indoor coil or the refrigerant line, switch the system to fan only — not off — and let the ice melt before running it again. Running a frozen coil can damage the compressor."
+      },
+      {
+        "h2": "3. Look at the outdoor unit",
+        "bullets": [
+          "Is the fan turning? A stopped fan with a humming compressor is a capacitor or motor fault.",
+          "Is the coil clear? Leaves, grass clippings and dryer lint block heat transfer.",
+          "Is there at least two feet of clear space around it? Shrubs and fencing choke the airflow.",
+          "Is the disconnect switch on? Someone doing yard work may have pulled it.",
+          "Check the breaker at the panel: a dedicated AC breaker that has tripped is common after a heatwave."
+        ]
+      },
+      {
+        "h2": "4. Check the condensate drain",
+        "paras": [
+          "A working air conditioner pulls liters of water out of the air every day. If the condensate line clogs, many systems have a float switch that shuts the unit down to prevent a flood — which presents as an AC that will not start at all.",
+          "Look for water in the drain pan or a line that has stopped dripping. Flushing the drain with a cup of vinegar a few times a season prevents most of these calls."
+        ]
+      },
+      {
+        "h2": "5. Measure the temperature split",
+        "paras": [
+          "With the system running steadily for fifteen minutes, measure the air at a return grille and at a supply register. A healthy system delivers air 8–11°C (15–20°F) cooler than the return. Much less than that points to low refrigerant, a dirty coil or a duct problem — none of which are homeowner fixes.",
+          "This single measurement is the most useful thing you can bring to a technician, because it separates an airflow problem from a refrigeration problem."
+        ]
+      },
+      {
+        "h2": "What is never a homeowner job",
+        "table": {
+          "head": [
+            "Task",
+            "Why it belongs with a licensed technician"
+          ],
+          "rows": [
+            [
+              "Adding refrigerant",
+              "Requires recovery equipment, gauges and a leak diagnosis; venting refrigerant is illegal"
+            ],
+            [
+              "Cleaning the indoor coil",
+              "Involves opening the plenum and often a drain pan that can overflow"
+            ],
+            [
+              "Electrical diagnosis inside the unit",
+              "Capacitors hold a lethal charge after power is off"
+            ],
+            [
+              "Duct sealing and sizing",
+              "Affects static pressure; poor fixes make cooling worse"
+            ],
+            [
+              "Compressor or motor replacement",
+              "Refrigerant circuit work plus a warranty question"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "When it is worth replacing rather than repairing",
+        "paras": [
+          "Repair makes sense while the system is under about ten years old and the fault is a component — a capacitor, a contactor, a blower motor. Past 12–15 years, a refrigerant leak or a compressor failure usually tips the balance toward replacement, especially if the unit still uses an older refrigerant that is being phased down.",
+          "Ask for a written comparison: the repair cost, the age of the system, the expected remaining life and the efficiency of a replacement. A technician who cannot or will not put those numbers in writing is selling, not advising."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Why is my AC running but blowing warm air?",
+        "a": "The usual causes are a clogged filter, a frozen indoor coil, a thermostat set to fan, or low refrigerant from a leak. Check the filter and look for ice first — both are visible without tools."
+      },
+      {
+        "q": "How often should an air conditioner be serviced?",
+        "a": "Once a year before cooling season. A service should include coil cleaning, a refrigerant charge check, electrical inspection, condensate drain flushing and a filter change."
+      },
+      {
+        "q": "Is it normal for the outdoor unit to run constantly on a hot day?",
+        "a": "Long run times are normal in extreme heat, particularly for a correctly sized unit. Constant running with poor cooling is not — that combination points to airflow or refrigerant problems."
+      },
+      {
+        "q": "Can I just add refrigerant myself with a kit?",
+        "a": "No. Refrigerant is a regulated substance, systems must be charged by weight against measured pressures and temperatures, and adding refrigerant without finding the leak simply delays the same failure."
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "title": "A Yearly Furnace Maintenance Checklist",
+    "slug": "furnace-maintenance-checklist",
+    "category": {
+      "slug": "hvac",
+      "name": "HVAC",
+      "description": "Heating and cooling guides for the checks a homeowner can safely make, plus the symptoms that mean a technician needs to look at the system.",
+      "seoTitle": "HVAC Guides for Homeowners",
+      "seoDescription": "Understand your heating and cooling system: why the AC is not cooling, what a furnace service actually includes, and how to tell a filter problem from a refrigerant fault.",
+      "sortOrder": 4
+    },
+    "primaryKeyword": "furnace maintenance checklist",
+    "secondaryKeywords": [
+      "annual furnace service",
+      "furnace tune up",
+      "furnace not heating",
+      "furnace filter change",
+      "carbon monoxide furnace",
+      "heating maintenance cost"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners with a gas or electric furnace who want a maintenance routine that keeps heating reliable and safe through winter.",
+    "cta": {
+      "label": "See HVAC service options",
+      "href": "/services/hvac"
+    },
+    "internalLinks": [
+      {
+        "label": "Air conditioner not cooling? A troubleshooting guide",
+        "href": "/blog/ac-not-cooling-troubleshooting-guide"
+      },
+      {
+        "label": "Questions to ask before hiring a home service professional",
+        "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional"
+      }
+    ],
+    "image": "/images/blog/furnace-maintenance-checklist.svg",
+    "imageAlt": "Illustration of a home furnace with a calendar and a safety shield",
+    "seoTitle": "Furnace Maintenance Checklist for Homeowners",
+    "seoDescription": "A month-by-month furnace routine: filter changes, the annual service, what a technician checks, and the carbon monoxide symptoms that mean turn it off now.",
+    "excerpt": "Most winter heating failures are predictable: a filter nobody changed, a flame sensor nobody cleaned, a vent nobody inspected. This checklist covers what to do monthly, yearly and never.",
+    "seoSummary": "Annual furnace maintenance schedule split into monthly homeowner tasks and the professional service visit.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "hvac",
+      "heating",
+      "maintenance",
+      "safety"
+    ],
+    "visual": "Flat vector medallion: a furnace cabinet with a flue, a calendar chip and a shield chip on a warm sand background.",
+    "sections": [
+      {
+        "paras": [
+          "A furnace is a simple machine with a few parts that matter: a filter, a blower, a burner or element, a flame sensor and a heat exchanger. Almost every winter breakdown traces back to one of them being neglected rather than to a manufacturing fault.",
+          "The checklist below separates what you can do yourself, what an annual service should cover, and the handful of symptoms that mean shut it down and call someone today."
+        ]
+      },
+      {
+        "h2": "Monthly: the five-minute routine",
+        "ordered": [
+          "Change or clean the filter. This is the highest-value task on the list and the most skipped.",
+          "Check that return and supply vents are open and unobstructed.",
+          "Look at the condensate line on a high-efficiency unit and make sure it is draining.",
+          "Clear the area around the furnace — paint cans, boxes and anything flammable should not live there.",
+          "Listen at startup: a boom, a rattle or a whistle is worth noting before it becomes a no-heat call."
+        ]
+      },
+      {
+        "h2": "Before the heating season starts",
+        "paras": [
+          "Book the annual service in early fall, before the first cold snap fills every technician's calendar. Test the heat on a mild day so a failure surfaces while the house is still comfortable and a repair can be scheduled normally.",
+          "Replace the batteries in carbon monoxide and smoke alarms, and confirm there is an alarm on every level of the home and outside sleeping areas."
+        ],
+        "note": "If you smell gas, do not test anything. Leave the building, do not switch lights or appliances on or off, and call the gas emergency line from outside."
+      },
+      {
+        "h2": "What a proper annual service includes",
+        "table": {
+          "head": [
+            "Check",
+            "Why it matters"
+          ],
+          "rows": [
+            [
+              "Combustion analysis",
+              "Confirms the burner is burning cleanly and not producing excess CO"
+            ],
+            [
+              "Heat exchanger inspection",
+              "A cracked exchanger can leak combustion gases into the supply air"
+            ],
+            [
+              "Flame sensor and igniter cleaning",
+              "The most common cause of intermittent no-heat"
+            ],
+            [
+              "Blower motor inspection and lubrication",
+              "Worn bearings draw more current and eventually seize"
+            ],
+            [
+              "Vent and flue inspection",
+              "Blocked or back-sloped vents are a carbon monoxide risk"
+            ],
+            [
+              "Gas pressure and manifold check",
+              "Out-of-spec pressure soots the exchanger and wastes fuel"
+            ],
+            [
+              "Thermostat calibration and safeties test",
+              "Confirms limit switches and rollout sensors still trip"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "The filters that are not filters",
+        "paras": [
+          "A one-inch fibreglass filter protects the blower; it does not clean the air in any meaningful way. If someone in the house has allergies and you are buying high-MERV filters, check the pressure drop — a filter that is too restrictive starves the system of airflow and can ice the coil in summer or overheat the exchanger in winter.",
+          "Ultraviolet lights, electronic air cleaners and media cabinets all add maintenance of their own. Whatever you install, put the cleaning interval on the calendar the day it goes in."
+        ]
+      },
+      {
+        "h2": "Noises and smells worth taking seriously",
+        "bullets": [
+          "A deep boom at ignition — delayed ignition, which can crack the exchanger over time.",
+          "A metallic scrape or squeal — blower bearing or a loose panel.",
+          "A smell of burning dust at the first start of the season is normal for an hour; a persistent burnt or acrid smell is not.",
+          "Soot around the burner compartment — a combustion problem, not a cleaning problem.",
+          "Headaches, nausea or a stuffy feeling that improves when you leave the house — treat as a possible CO issue and ventilate immediately."
+        ]
+      },
+      {
+        "h2": "Repair or replace: the furnace version",
+        "paras": [
+          "Furnaces commonly last 15–20 years. The decision points are similar to any appliance: a heat exchanger failure on an older unit is usually a replacement, because the part cost plus labour approaches half of a new installation. A blower motor or igniter on a ten-year-old unit is a straightforward repair.",
+          "Efficiency also matters at replacement time. An older 80% furnace vented into a chimney may need a different venting strategy to move to a 90%+ condensing unit, and that changes the installed price far more than the equipment price does."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How often should a furnace be serviced?",
+        "a": "Once a year, ideally in early fall. Manufacturers usually require documented annual service to keep the warranty valid, so keep the invoice."
+      },
+      {
+        "q": "Can I skip the annual service if the furnace is working fine?",
+        "a": "The service is less about fixing and more about safety and efficiency: combustion, the heat exchanger and venting are not things a homeowner can inspect. It is also the cheapest way to catch a failing igniter before a cold night."
+      },
+      {
+        "q": "What MERV rating should my furnace filter be?",
+        "a": "MERV 8 is a sensible default for most residential systems. Higher ratings capture more particles but restrict airflow, so confirm the system can handle the pressure drop before going above MERV 11."
+      },
+      {
+        "q": "Why does my furnace smell when it first comes on in fall?",
+        "a": "Dust burning off the heat exchanger after months idle. It should fade within an hour. A persistent smell, a smell of gas, or soot around the unit means switch it off and call a technician."
+      }
+    ]
+  }
+]

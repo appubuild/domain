@@ -1,0 +1,468 @@
+[
+  {
+    "id": 4,
+    "title": "Warning Signs Your Home May Have Electrical Problems",
+    "slug": "warning-signs-your-home-may-have-electrical-problems",
+    "category": {
+      "slug": "electrical",
+      "name": "Electrical Services",
+      "description": "Safe diagnostics for the electrical issues homeowners can observe, and clear guidance on what must be handled by a licensed electrician.",
+      "seoTitle": "Electrical Safety Guides for Homeowners",
+      "seoDescription": "Recognise the warning signs of electrical problems in a house — warm outlets, flickering lights, buzzing panels — and know which ones need an electrician today.",
+      "sortOrder": 2
+    },
+    "primaryKeyword": "electrical problems in house",
+    "secondaryKeywords": [
+      "electrical warning signs",
+      "flickering lights cause",
+      "warm outlet cover",
+      "burning smell electrical",
+      "house electrical safety",
+      "when to call electrician"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners noticing odd electrical behaviour and unsure whether it is normal or urgent.",
+    "cta": {
+      "label": "See electrical service options",
+      "href": "/services/electrical"
+    },
+    "internalLinks": [
+      {
+        "label": "When should you hire a licensed electrician?",
+        "href": "/blog/when-should-you-hire-a-licensed-electrician"
+      },
+      {
+        "label": "Common causes of circuit breaker trips",
+        "href": "/blog/common-causes-of-circuit-breaker-trips"
+      }
+    ],
+    "image": "/images/blog/warning-signs-your-home-may-have-electrical-problems.svg",
+    "imageAlt": "Illustration of a homeowner noticing a warm wall outlet with a subtle warning indicator on a home electrical panel",
+    "seoTitle": "8 Warning Signs of Electrical Problems in a House",
+    "seoDescription": "Warm outlets, buzzing panels, flickering lights and burning smells: what each electrical warning sign usually means and which ones need same-day attention.",
+    "excerpt": "Most house fires of electrical origin start with a symptom someone noticed and dismissed. These eight signs are the ones worth acting on — and three need attention today.",
+    "seoSummary": "Symptom-by-symptom electrical safety guide with urgency ratings.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "electrical safety",
+      "fire prevention",
+      "diagnostics",
+      "safety"
+    ],
+    "visual": "Flat vector: wall outlet with heat waves, hand reaching for it, panel in background with a caution badge.",
+    "sections": [
+      {
+        "paras": [
+          "Electrical faults are unusual among home problems because the early warning is often sensory rather than visible: a warmth you notice when plugging something in, a buzz you hear near the panel, a light that dims when the dryer starts. Those are the moments when an electrician is inexpensive and a fire is not.",
+          "This guide lists the signs homeowners report most often, what each usually means, and how quickly it should be looked at. It deliberately does not explain how to open a panel, replace a breaker or re-terminate a cable — those are licensed work for good reasons."
+        ]
+      },
+      {
+        "h2": "Signs that need attention today",
+        "h3": "3. Buzzing or crackling at the panel",
+        "paras": [
+          "Breakers can hum faintly; they should not buzz, crackle or feel hot. Crackling inside a panel is arcing, and arcing generates heat. This is a same-day call. Do not open the panel cover yourself."
+        ]
+      },
+      {
+        "h2": "Signs to schedule within a week or two",
+        "h3": "6. Two-prong outlets and missing GFCIs",
+        "paras": [
+          "Ungrounded two-prong receptacles in kitchens, bathrooms, laundry rooms, garages and outdoors are both a shock risk and a code problem. So is the absence of ground-fault protection in wet areas. Upgrading is not glamorous work, but it is among the highest-value safety improvements in an older home."
+        ]
+      },
+      {
+        "h2": "Signs that point at age and capacity",
+        "h3": "8. Insufficient outlets and constant extension cords",
+        "paras": [
+          "A house that runs on daisy-chained power strips is a house with a capacity problem. Extension cords are for temporary use; used permanently, especially under rugs or through doorways, they overheat. The durable answer is additional circuits — not more strips."
+        ]
+      },
+      {
+        "h2": "What is usually harmless",
+        "bullets": [
+          "A faint click from a switch — mechanical, normal.",
+          "A single LED bulb flickering on a dimmer that is not LED-rated — swap the dimmer or the bulb.",
+          "A GFCI that trips when a hair dryer is used in the bathroom — the device is doing its job; if it trips with nothing plugged in, investigate.",
+          "A brief dim when the air conditioner starts — normal on many services, but worth mentioning at the next electrical visit."
+        ]
+      },
+      {
+        "h2": "Why these warnings matter more than they seem",
+        "paras": [
+          "The US Fire Administration attributes a substantial share of home fires to electrical distribution and lighting equipment, with arcing and loose connections among the common mechanisms. The pattern is consistent: a small, ignorable symptom precedes most of them.",
+          "Adding arc-fault circuit interrupters (AFCIs) and ground-fault protection where the code requires them is the structural fix. Smoke alarms that actually work are the backstop. Neither substitutes for the other."
+        ]
+      },
+      {
+        "h2": "What to do tonight, before anyone arrives",
+        "paras": [
+          "If a sign appears in the evening and nothing is sparking, the practical steps are small: stop using the affected circuit, unplug what you can reach, and move anything flammable away from a warm outlet or panel. Do not open the panel cover to look inside.",
+          "Write down what you noticed and when. An electrician diagnosing an intermittent fault will get much further with \"the bathroom light flickered for ten minutes after the dryer started\" than with a general description of the problem."
+        ]
+      },
+      {
+        "h2": "What to do while you wait for the electrician",
+        "ordered": [
+          "Stop using the affected circuit; unplug appliances on it.",
+          "Switch the circuit off at the breaker if you can reach the panel safely.",
+          "Do not open outlets, switches or the panel cover.",
+          "Keep anything flammable away from the area and make sure a smoke alarm is working nearby.",
+          "If you see smoke, flames or smell burning and cannot isolate the circuit, leave the building and call the fire service."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How do I know if flickering lights are dangerous?",
+        "a": "If one lamp flickers, suspect the bulb, socket or dimmer. If lights across several rooms dim together — especially when a large appliance starts — that points to the service or a connection problem and deserves a professional inspection."
+      },
+      {
+        "q": "Is it normal for an outlet cover to feel slightly warm?",
+        "a": "No. A cover plate should not be noticeably warm. Warmth suggests resistance from a loose connection or an overloaded circuit, both of which are fire risks over time. Have it checked rather than continuing to use that outlet."
+      },
+      {
+        "q": "Can I replace a breaker myself?",
+        "a": "In most US jurisdictions, no — replacing or adding breakers, and any work inside the panel, is licensed electrical work. Beyond the legal question, the panel remains live with the main breaker on, and a mistake can be fatal."
+      },
+      {
+        "q": "My house has two-prong outlets. Do they have to be replaced?",
+        "a": "They are not automatically illegal to keep, but they offer no equipment ground and are a shock risk. In wet areas they are a clear problem. An electrician can explain the realistic options — grounding, GFCI protection, or a partial rewire — and the cost of each."
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "title": "When Should You Hire a Licensed Electrician?",
+    "slug": "when-should-you-hire-a-licensed-electrician",
+    "category": {
+      "slug": "electrical",
+      "name": "Electrical Services",
+      "description": "Safe diagnostics for the electrical issues homeowners can observe, and clear guidance on what must be handled by a licensed electrician.",
+      "seoTitle": "Electrical Safety Guides for Homeowners",
+      "seoDescription": "Recognise the warning signs of electrical problems in a house — warm outlets, flickering lights, buzzing panels — and know which ones need an electrician today.",
+      "sortOrder": 2
+    },
+    "primaryKeyword": "licensed electrician",
+    "secondaryKeywords": [
+      "when to hire an electrician",
+      "electrician near me",
+      "licensed electrician requirements",
+      "electrical permit",
+      "electrician vs handyman",
+      "electrical inspection"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners planning electrical work and deciding whether a handyman, a DIY approach or a licensed electrician is appropriate.",
+    "cta": {
+      "label": "See electrical service options",
+      "href": "/services/electrical"
+    },
+    "internalLinks": [
+      {
+        "label": "Warning signs your home may have electrical problems",
+        "href": "/blog/warning-signs-your-home-may-have-electrical-problems"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
+    ],
+    "image": "/images/blog/when-should-you-hire-a-licensed-electrician.svg",
+    "imageAlt": "Illustration of a licensed electrician checking a residential panel while a homeowner reviews a permit document",
+    "seoTitle": "When Should You Hire a Licensed Electrician?",
+    "seoDescription": "Which electrical jobs legally and practically require a licensed electrician, what a licence and permit actually protect you from, and how to verify both.",
+    "excerpt": "Some electrical work is a straightforward swap; the rest is licensed work for legal and safety reasons. Here is where the line sits, and how to check a licence properly.",
+    "seoSummary": "Decision guide: DIY vs handyman vs licensed electrician, with licence and permit verification steps.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "hiring",
+      "electrical",
+      "permits",
+      "safety"
+    ],
+    "visual": "Flat vector: electrician at a panel with a clipboard and licence badge, permit document on a table.",
+    "sections": [
+      {
+        "paras": [
+          "\"Do I need an electrician for this?\" is usually asked in one of two situations: the job looks small, or the job looks expensive. Both deserve an honest answer, because the legal line and the safety line are not always in the same place.",
+          "Here is the practical version. It describes what is generally allowed for homeowners, what almost always requires a licensed electrician, and how to verify a licence rather than take it on trust. Local rules vary — the AHJ (authority having jurisdiction) is your city or county building department, and their answer wins."
+        ]
+      },
+      {
+        "h2": "Jobs that almost always require a licence",
+        "bullets": [
+          "Anything inside the electrical panel: adding, replacing or moving breakers, or upgrading the service.",
+          "New circuits, new outlets, or extending an existing circuit into another room.",
+          "Kitchen, bathroom and outdoor circuits where GFCI protection and code details apply.",
+          "Replacing or adding hardwired equipment — water heaters, EV chargers, ranges, dryers, HVAC disconnects.",
+          "Rewiring, aluminum branch-circuit remediation, and knob-and-tube or cloth-wiring replacement.",
+          "Grounding and bonding work, including upgrading a service ground.",
+          "Anything requiring a permit, which in most jurisdictions means most of the above."
+        ],
+        "note": "Even where a homeowner is legally permitted to do their own electrical work, an insurer may treat unpermitted work differently after a fire. That asymmetry is worth considering before deciding to save a few hundred dollars."
+      },
+      {
+        "h2": "Jobs a homeowner can generally do",
+        "bullets": [
+          "Replacing a lamp, a bulb or a plug-in fixture that hangs from an existing outlet.",
+          "Swapping a light switch or receptacle cover — the cover only, not the device behind it.",
+          "Resetting a tripped breaker once and identifying which circuit it protects.",
+          "Replacing a plug-in smoke detector, or testing and vacuuming existing alarms.",
+          "Installing a smart plug, a plug-in timer or a battery-powered doorbell."
+        ],
+        "paras": [
+          "If the job needs the circuit isolated at the panel and a device removed from the wall, you have crossed into work that most jurisdictions restrict and that carries real shock and fire risk."
+        ]
+      },
+      {
+        "h2": "What a licence and a permit actually protect",
+        "table": {
+          "head": [
+            "Safeguard",
+            "What it covers",
+            "What it does not cover"
+          ],
+          "rows": [
+            [
+              "Licence",
+              "Minimum training and code knowledge; a complaint route through the state board",
+              "The quality of a specific job"
+            ],
+            [
+              "Permit",
+              "Independent inspection of the work against the adopted code",
+              "Design choices, or work not described on the permit"
+            ],
+            [
+              "Insurance",
+              "Damage to your property, and injuries to workers",
+              "Poor workmanship itself"
+            ],
+            [
+              "Written contract",
+              "Scope, price, schedule, warranty",
+              "Anything not written down"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "How to verify an electrician in five minutes",
+        "ordered": [
+          "Ask for the licence number and the name it is issued to.",
+          "Look the number up on your state's licensing board website — most publish a searchable register.",
+          "Confirm the licence class covers residential work and is current, not expired or suspended.",
+          "Ask for the certificate of insurance and check the dates.",
+          "Ask who will pull the permit; the answer should be the contractor, in their name."
+        ]
+      },
+      {
+        "h2": "Why \"the handyman can do it cheaper\" is often a false economy",
+        "paras": [
+          "A handyman doing electrical work without a licence is doing work that may not be inspected, may not be insured, and may not be legal. If something goes wrong later, the homeowner is typically the one holding the problem — with an insurer asking for the permit and an inspector asking who did the work.",
+          "Where a handyman genuinely helps is everything adjacent to the electrical job: patching drywall after a rewire, painting, mounting a TV on a wall with an existing outlet. Splitting the work that way is both legal and cheaper."
+        ]
+      },
+      {
+        "h2": "Signals that a quote is too good",
+        "bullets": [
+          "A price far below two other quotes with no explanation of difference in scope.",
+          "Reluctance to put the scope in writing, or to name the permit.",
+          "No business address, no licence number, and a request for cash.",
+          "\"We do not need a permit for that\" — sometimes true, often not; the building department decides, not the contractor."
+        ]
+      },
+      {
+        "h2": "Questions worth asking every electrician",
+        "ordered": [
+          "Is this job permitted, and who pulls the permit?",
+          "Will the work be inspected, and will you send me the inspection result?",
+          "What is included — materials, patching, cleanup, disposal?",
+          "What warranty do you offer on labour, and for how long?",
+          "Will the same electrician who quoted do the work?",
+          "What happens if the inspection finds something else?"
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Can I replace a light switch myself?",
+        "a": "In many jurisdictions a homeowner may replace a like-for-like switch in their own home, but the circuit must be isolated at the panel and the wiring must be correct. If you are unsure how to confirm the power is off, or the box contains aluminum wiring or more wires than the switch needs, stop and hire an electrician."
+      },
+      {
+        "q": "Do small electrical jobs need a permit?",
+        "a": "It depends on the jurisdiction and the job. Replacing a fixture often does not; adding a circuit, an outlet or a hardwired appliance usually does. Call your local building department and ask — they answer this question all day and the answer is free."
+      },
+      {
+        "q": "What happens if I sell a house with unpermitted electrical work?",
+        "a": "A home inspector may flag it, a buyer's lender may require correction, and an insurer may refuse to cover related damage. The cleanest path is to have the work permitted and inspected, even retroactively where the jurisdiction allows it."
+      },
+      {
+        "q": "Is a licensed electrician always more expensive?",
+        "a": "The hourly rate is usually higher than a handyman's, but the job is done once, inspected, insured and warrantied. For anything beyond swapping a fixture, the total cost of doing it twice — or of an insurance denial — is the more useful comparison."
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "title": "Common Causes of Circuit Breaker Trips",
+    "slug": "common-causes-of-circuit-breaker-trips",
+    "category": {
+      "slug": "electrical",
+      "name": "Electrical Services",
+      "description": "Safe diagnostics for the electrical issues homeowners can observe, and clear guidance on what must be handled by a licensed electrician.",
+      "seoTitle": "Electrical Safety Guides for Homeowners",
+      "seoDescription": "Recognise the warning signs of electrical problems in a house — warm outlets, flickering lights, buzzing panels — and know which ones need an electrician today.",
+      "sortOrder": 2
+    },
+    "primaryKeyword": "circuit breaker keeps tripping",
+    "secondaryKeywords": [
+      "breaker trips repeatedly",
+      "why does my breaker keep tripping",
+      "overloaded circuit",
+      "short circuit",
+      "ground fault",
+      "AFCI GFCI tripping"
+    ],
+    "intent": "Informational",
+    "audience": "Homeowners whose breaker trips repeatedly and who want to understand whether it is an overload or a fault.",
+    "cta": {
+      "label": "See electrical service options",
+      "href": "/services/electrical"
+    },
+    "internalLinks": [
+      {
+        "label": "Warning signs your home may have electrical problems",
+        "href": "/blog/warning-signs-your-home-may-have-electrical-problems"
+      },
+      {
+        "label": "When should you hire a licensed electrician?",
+        "href": "/blog/when-should-you-hire-a-licensed-electrician"
+      }
+    ],
+    "image": "/images/blog/common-causes-of-circuit-breaker-trips.svg",
+    "imageAlt": "Illustration of a homeowner resetting a breaker in a panel with circuit diagrams shown alongside",
+    "seoTitle": "Why Your Circuit Breaker Keeps Tripping (and What to Do)",
+    "seoDescription": "Overload, short circuit, ground fault or a failing breaker: how to tell which is tripping the circuit, what is safe to check, and when to call an electrician.",
+    "excerpt": "A breaker that trips is doing its job. The question is which of four faults it is protecting you from — and three of them need an electrician rather than a bigger breaker.",
+    "seoSummary": "Four-cause breakdown of repeated breaker trips with safe isolation steps.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "electrical",
+      "circuit breakers",
+      "diagnostics",
+      "safety"
+    ],
+    "visual": "Flat vector: electrical panel with one breaker in the tripped position, icons for overload, short and ground fault.",
+    "sections": [
+      {
+        "paras": [
+          "A tripping breaker is not a malfunction. It is a switch designed to open when current exceeds a safe level, and it is the reason a bad appliance becomes a nuisance instead of a fire.",
+          "The useful question is which of four conditions is opening it: an overload, a short circuit, a ground fault, or a breaker that has itself failed. Overloads are a homeowner problem. The other three need an electrician."
+        ]
+      },
+      {
+        "h2": "1. Overload: too much on one circuit",
+        "paras": [
+          "An overload happens when the total draw on a circuit exceeds its rating — a space heater and a hair dryer on the same 15-amp circuit, or a microwave and a kettle in an older kitchen. The breaker warms up and trips, sometimes after several minutes rather than instantly.",
+          "The clue is timing and correlation: it trips when specific appliances run together, and it stops tripping when one of them is moved to another circuit. That is a genuine fix, not a workaround, as long as the other circuit has capacity."
+        ],
+        "bullets": [
+          "Map the circuit: switch the breaker off and note every dead outlet and fixture.",
+          "Add up the watts of everything that was running (appliance labels list watts or amps).",
+          "Move one high-draw appliance to a different circuit, or run them at different times.",
+          "Avoid extension cords and multi-plugs as a permanent solution."
+        ]
+      },
+      {
+        "h2": "2. Short circuit: two conductors touching",
+        "paras": [
+          "A short circuit bypasses the normal load, producing a very large current. The breaker trips immediately, often with a snap or a flash, sometimes with a burning smell. Causes include a damaged cord, a failed appliance, a pinched wire behind a wall, or a receptacle that has come apart internally.",
+          "Unplug the appliances on that circuit one at a time and try to reset. If the breaker holds with everything unplugged, the fault is in an appliance or a cord. If it trips with nothing plugged in, the wiring itself is faulty and the circuit should stay off until an electrician inspects it."
+        ],
+        "note": "Never keep resetting a breaker that trips instantly with a bang. Each attempt sends a fault current through the wiring and can start a fire inside a wall."
+      },
+      {
+        "h2": "3. Ground fault: current leaking to earth",
+        "paras": [
+          "A ground fault is current escaping to earth through moisture, damaged insulation or a faulty appliance. GFCI and AFCI breakers detect it and trip quickly — often the trip is what saves someone from a shock in a bathroom or kitchen.",
+          "If a GFCI trips repeatedly with a particular appliance, that appliance is the suspect: a kettle with a damp base, a hair dryer with a worn cord, a pump with a failing seal. Test the appliance on a different GFCI circuit before concluding the wiring is at fault."
+        ]
+      },
+      {
+        "h2": "4. A failing breaker or connection",
+        "paras": [
+          "Breakers wear out. A breaker that is warm to the touch, will not stay reset without any load, or trips at a load well below its rating is suspect. So is a breaker whose terminal has loosened — a loose connection creates heat, and heat nuisance-trips the device.",
+          "Diagnosing this requires the panel open while live, which is licensed work. It also explains why \"just fit a bigger breaker\" is dangerous advice: the breaker is sized to protect the wire, not the appliance."
+        ]
+      },
+      {
+        "h2": "The reset procedure that tells you the most",
+        "ordered": [
+          "Unplug or switch off everything on the affected circuit.",
+          "Push the breaker fully to OFF, then firmly to ON.",
+          "If it holds, plug devices back in one at a time until it trips — that device or its cord is the problem.",
+          "If it trips with nothing connected, leave it off and call an electrician.",
+          "If it trips as soon as you touch it, or the panel is warm or buzzing, stop and call an electrician immediately."
+        ]
+      },
+      {
+        "h2": "Why upsizing the breaker is never the answer",
+        "table": {
+          "head": [
+            "Approach",
+            "What actually happens"
+          ],
+          "rows": [
+            [
+              "Fit a larger breaker",
+              "The wire is now undersized for the protection; it overheats before the breaker trips"
+            ],
+            [
+              "Replace the breaker with the same rating",
+              "Reasonable if the device has failed — but only after the cause is confirmed"
+            ],
+            [
+              "Move appliances to other circuits",
+              "Fine for a genuine overload, provided those circuits have capacity"
+            ],
+            [
+              "Add a dedicated circuit",
+              "The correct fix for a kitchen or laundry that is chronically overloaded"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "When to call an electrician",
+        "bullets": [
+          "The breaker trips immediately with nothing plugged in.",
+          "Any burning smell, scorch mark, buzzing or warm panel.",
+          "Repeated tripping after you have removed the obvious overload.",
+          "A GFCI or AFCI that will not reset.",
+          "An older panel with mismatched or double-tapped breakers.",
+          "Any work that requires the panel cover to come off."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Is it safe to reset a tripped breaker?",
+        "a": "Resetting once after removing the load is normal and safe. Repeatedly resetting a breaker that trips immediately is not — each attempt pushes fault current through the circuit. If it will not hold with everything unplugged, leave it off and call an electrician."
+      },
+      {
+        "q": "Why does my breaker trip only sometimes?",
+        "a": "Intermittent trips usually point to an overload that occurs when specific appliances coincide, or to a marginal connection that heats up under load. Note the time, what was running, and the weather — a pattern is diagnostic information for the electrician."
+      },
+      {
+        "q": "Can a bad appliance trip the breaker without damaging it?",
+        "a": "Yes. A failing motor or a damaged heating element can draw excessive current and trip a healthy breaker. Test by unplugging that appliance and resetting; if the circuit holds, have the appliance looked at rather than the wiring."
+      },
+      {
+        "q": "Should I replace an old breaker panel?",
+        "a": "Sometimes the panel is fine and only a breaker needs replacement; sometimes the panel is obsolete, has known failure modes, or has no capacity left. An electrician can assess it against current code and tell you which of those you are dealing with."
+      }
+    ]
+  }
+]

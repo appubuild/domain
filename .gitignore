@@ -1,0 +1,49 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+.smoke
+.smoke-smoke
+.smoke-admin
+.smoke-content
+.tmp-previews
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment (never commit real endpoints or keys)
+.env
+.env.local
+.env.*.local
+.smoke-test
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# PHP API — never commit credentials, logs or uploaded files
+api/.env
+api/storage/*
+!api/storage/.gitkeep
+api/uploads/library/*
+!api/uploads/library/.gitkeep
+api/uploads/index.html
+
+.smoke-api
+.api-seed-build

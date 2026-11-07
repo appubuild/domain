@@ -1,0 +1,128 @@
+[
+  {
+    "id": 28,
+    "title": "Rekey or Replace Your Locks?",
+    "slug": "rekey-vs-replace-locks",
+    "category": {
+      "slug": "locksmith",
+      "name": "Locksmith",
+      "description": "Locks, keys and home security: when rekeying is enough, when hardware has to be replaced, and how to avoid the locksmith scams that follow a lockout.",
+      "seoTitle": "Locksmith Guides for Homeowners",
+      "seoDescription": "Rekeying versus replacement explained: costs, when each makes sense, what a locksmith should charge, and how to spot an unlicensed operator.",
+      "sortOrder": 14
+    },
+    "primaryKeyword": "rekey vs replace locks",
+    "secondaryKeywords": [
+      "rekey locks cost",
+      "change locks after moving",
+      "locksmith near me",
+      "bump proof locks",
+      "lock replacement cost",
+      "smart lock installation"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "New homeowners and anyone who has lost a key, ended a tenancy or inherited unknown keys.",
+    "cta": { "label": "See locksmith options", "href": "/services/locksmith" },
+    "internalLinks": [
+      { "label": "Front door replacement guide", "href": "/blog/front-door-replacement-guide" },
+      { "label": "Questions to ask before hiring a home service professional", "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional" }
+    ],
+    "image": "/images/blog/rekey-vs-replace-locks.svg",
+    "imageAlt": "Illustration of a key with a security shield and a coin",
+    "seoTitle": "Rekey or Replace Your Locks? Costs and When to Do Each",
+    "seoDescription": "Rekeying changes the pins, replacement changes the hardware. Which one you need after moving house, losing a key or upgrading security — and what each costs.",
+    "excerpt": "Rekeying is cheaper, faster and just as secure for most homes. Replacement is for hardware that is failing, outdated or not worth keeping — and the difference matters.",
+    "seoSummary": "Comparison of rekeying and lock replacement with cost, security and scenario guidance.",
+    "author": "Safe Home Network Editorial",
+    "tags": ["locksmith", "security", "locks", "home safety"],
+    "visual": "Flat vector medallion: a brass key with a shield chip, a coin chip and a check chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "Rekeying and replacing are often treated as the same job. They are not. Rekeying changes the pins inside an existing lock so the old key no longer works; replacement changes the whole lock body, handles, and sometimes the door preparation.",
+          "For most homeowners who simply need to know that no one else has a key, rekeying is the right answer and costs a fraction of replacement."
+        ]
+      },
+      {
+        "h2": "What each one involves",
+        "table": {
+          "head": ["", "Rekey", "Replace"],
+          "rows": [
+            ["What changes", "The pins inside the cylinder", "The entire lock and handle set"],
+            ["Typical cost", "Lower per lock", "Higher per lock, plus hardware"],
+            ["Time", "Minutes per cylinder", "Longer, especially if the door needs modification"],
+            ["Security outcome", "Identical to a new lock of the same grade", "Better only if the new hardware is a higher grade"],
+            ["Best for", "Lost keys, new home, tenant turnover", "Worn locks, broken hardware, upgrades"]
+          ]
+        }
+      },
+      {
+        "h2": "Rekey when the hardware is fine",
+        "bullets": [
+          "You have just moved in and do not know who else has a key.",
+          "A key was lost or stolen, or a roommate or tenant has moved out.",
+          "You want every exterior door on one key instead of a ring of five.",
+          "The locks work smoothly and are a reasonable grade.",
+          "You have bought a home with a builder-grade lock that still functions well."
+        ],
+        "paras": [
+          "Rekeying also lets a locksmith key all exterior doors alike — one key for the front, back and side — which is a genuine convenience and often costs little more than rekeying a single cylinder."
+        ]
+      },
+      {
+        "h2": "Replace when the hardware is the problem",
+        "bullets": [
+          "The lock is loose, wobbly or has a cylinder that turns without engaging.",
+          "The key sticks, or the lock must be jiggled to work — worn pins or a damaged cylinder.",
+          "The door has settled and the lock no longer aligns with the strike.",
+          "The lock is a low-grade builder model on an entry door and you want a deadbolt with a proper ANSI grade.",
+          "You want a smart lock or a keypad, which replaces the hardware by definition.",
+          "There is visible damage from a break-in attempt or forced entry."
+        ]
+      },
+      {
+        "h2": "Security grades, in one paragraph",
+        "paras": [
+          "Deadbolts are graded by ANSI: Grade 3 is builder-grade, Grade 2 is a solid residential step up, Grade 1 is the strongest commonly available. The other half of the equation is installation: a Grade 1 deadbolt held by half-inch screws into a soft frame is weaker than a Grade 2 with a reinforced strike and long screws into the stud.",
+          "If you upgrade one thing, upgrade the strike plate and the screws holding it. It is cheap and it addresses the most common way a door is defeated."
+        ],
+        "note": "Never hide a spare key outside. Leave one with a trusted neighbor or use a keypad; a fake rock is the first place anyone looks."
+      },
+      {
+        "h2": "What a locksmith should cost, and what should worry you",
+        "paras": [
+          "A rekey is usually a service call plus a per-cylinder charge; a replacement adds hardware cost. Ask for the total before work starts, including the service call, and confirm whether the price is per lock or per visit.",
+          "Be careful with the companies that dominate emergency-lockout search results. Warning signs: no local address, a call center that will not quote a price, a technician who arrives without identification, and a bill far above the quoted amount once the door is open. Look up the business licence and ask for the total in writing before anyone touches the lock."
+        ]
+      },
+      {
+        "h2": "After a break-in or a lost key",
+        "ordered": [
+          "Rekey every exterior lock, not just the one that was used.",
+          "Check the door frame and strike for damage — a kicked door often damages the frame, not the lock.",
+          "Consider a reinforced strike and longer screws while the locksmith is there.",
+          "If the door itself is damaged, read our front door replacement guide before authorising a full replacement.",
+          "Update any insurance records and photographs of the property."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Is rekeying as secure as replacing?",
+        "a": "Yes, if the existing hardware is in good condition and of a decent grade. Rekeying gives you a brand-new key series; it does not improve the physical strength of the lock."
+      },
+      {
+        "q": "How much does rekeying cost?",
+        "a": "Typically a service call plus a modest charge per cylinder. It is considerably cheaper than replacing locks, which adds hardware cost on top of labour."
+      },
+      {
+        "q": "Can I rekey locks myself?",
+        "a": "On standard cylindrical locksets, yes, with a rekey kit and some patience. On high-security or smart locks, and on any lock you rely on for security, a professional is the safer choice."
+      },
+      {
+        "q": "Should I change the locks when I move into a rental?",
+        "a": "Ask the landlord first — tenants usually cannot change locks without permission. Many jurisdictions require the landlord to rekey between tenancies; check your lease and local rules."
+      }
+    ]
+  }
+]

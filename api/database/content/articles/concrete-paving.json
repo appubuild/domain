@@ -1,0 +1,330 @@
+[
+  {
+    "id": 26,
+    "title": "Driveway Replacement Cost: What You Are Actually Paying For",
+    "slug": "driveway-replacement-cost",
+    "category": {
+      "slug": "concrete-paving",
+      "name": "Concrete & Paving",
+      "description": "Driveways, patios and concrete repair: how a slab is built, why it fails, and the base preparation that separates a 30-year driveway from a five-year one.",
+      "seoTitle": "Concrete & Paving Guides",
+      "seoDescription": "Concrete and paving guides for homeowners: what a driveway replacement should include, how base preparation decides longevity, and when repair beats replacement.",
+      "sortOrder": 13
+    },
+    "primaryKeyword": "driveway replacement cost",
+    "secondaryKeywords": [
+      "concrete driveway cost",
+      "asphalt vs concrete driveway",
+      "driveway resurfacing",
+      "driveway removal cost",
+      "concrete slab thickness",
+      "paving contractor"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners with a cracked or settling driveway who need to understand what a replacement involves before getting quotes.",
+    "cta": {
+      "label": "See concrete and paving options",
+      "href": "/services/concrete-paving"
+    },
+    "internalLinks": [
+      {
+        "label": "Concrete repair or replace?",
+        "href": "/blog/concrete-repair-vs-replace"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      },
+      {
+        "label": "Questions to ask before hiring a home service professional",
+        "href": "/blog/questions-to-ask-before-hiring-a-home-service-professional"
+      }
+    ],
+    "image": "/images/blog/driveway-replacement-cost.svg",
+    "imageAlt": "Illustration of a concrete driveway slab with a coin and a ruler",
+    "seoTitle": "Driveway Replacement Cost: A Realistic Breakdown",
+    "seoDescription": "What a driveway replacement includes — removal, base, thickness, reinforcement, joints and sealing — and the shortcuts that show up three winters later.",
+    "excerpt": "Two quotes for the same driveway can differ by thousands because one includes six inches of compacted base and the other includes four. Here is what you are actually buying.",
+    "seoSummary": "Cost-driver breakdown for driveway replacement with a base-and-joint quality checklist.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "concrete",
+      "driveways",
+      "budget",
+      "contractors"
+    ],
+    "visual": "Flat vector medallion: a perspective concrete slab with a coin chip, a ruler chip and a calendar chip on a cream background.",
+    "sections": [
+      {
+        "paras": [
+          "A driveway is priced by area, but it is built from layers. The visible slab is the cheapest part of the job; the excavation, the base and the drainage are where the money goes and where the quality lives.",
+          "That is why two quotes for the same square footage can be thousands apart and both be honest. They are not quoting the same driveway."
+        ]
+      },
+      {
+        "h2": "What a proper driveway is made of",
+        "ordered": [
+          "Excavation — remove the old surface and enough soil to reach a stable subgrade.",
+          "Base — typically 4–6 inches of compacted crushed stone, in lifts, not one thick layer.",
+          "Compaction — plate or roller compaction at each lift, tested for density.",
+          "Reinforcement — mesh or rebar, placed on chairs in the middle of the slab, not on the ground.",
+          "Concrete — commonly 4 inches for cars, 5–6 inches where trucks or RVs park.",
+          "Joints — control joints at regular intervals and isolation joints at walls and existing concrete.",
+          "Curing and sealing — damp curing, then a sealer after the slab has cured."
+        ]
+      },
+      {
+        "h2": "The four things that decide whether it lasts",
+        "table": {
+          "head": [
+            "Detail",
+            "Good practice",
+            "What failing looks like"
+          ],
+          "rows": [
+            [
+              "Base depth",
+              "4–6 inches compacted crushed stone",
+              "Cracks and settlement within two winters"
+            ],
+            [
+              "Drainage",
+              "Slope away from the house and garage, no ponding",
+              "Standing water and heaving at the edges"
+            ],
+            [
+              "Joint spacing",
+              "Control joints every 8–10 feet, cut to depth",
+              "Random cracking across the slab"
+            ],
+            [
+              "Thickness",
+              "4 inches minimum, thicker where loaded",
+              "Spider cracks and edge break-up"
+            ]
+          ]
+        },
+        "note": "Ask how the subgrade is prepared and whether the base is compacted in lifts. A contractor who cannot explain compaction in layers is planning to pour on whatever is there."
+      },
+      {
+        "h2": "Concrete or asphalt?",
+        "paras": [
+          "Concrete costs more upfront, lasts longer, handles heat and heavy loads better and needs less routine maintenance. Asphalt is cheaper, faster to install and easier to patch, but needs resealing every few years and has a shorter life.",
+          "In cold climates, both depend on drainage. A base that holds water will destroy either surface, and freeze-thaw cycles find every weak spot."
+        ]
+      },
+      {
+        "h2": "What changes the price most",
+        "bullets": [
+          "Area — cost scales almost linearly, so measure before you call.",
+          "Removal and disposal of the old driveway, including hauling.",
+          "Access — a narrow side yard or a gate that excludes a truck adds labour.",
+          "Base work — deep excavation or poor soil means importing and compacting stone.",
+          "Slope and drainage — grading, retaining and drainage channels.",
+          "Decorative finishes — exposed aggregate, stamped or colored concrete add real cost.",
+          "Permits and any right-of-way requirements for the apron."
+        ]
+      },
+      {
+        "h2": "Cheap shortcuts and how they show up",
+        "paras": [
+          "Pouring over an existing slab, skipping the base, using fibre mesh instead of steel, placing mesh on the dirt, or pouring too thin in hot weather all look fine on the day. They show up as cracks and settlement two or three winters later — usually just outside the workmanship warranty.",
+          "A written scope that names base depth, slab thickness, reinforcement type and joint spacing is the single best protection you have."
+        ]
+      },
+      {
+        "h2": "Maintenance that keeps it looking new",
+        "paras": [
+          "Seal a new concrete driveway after 28 days, then every two to three years. Keep joints clear, keep water running away from the house, and avoid de-icing salt in the first winter — it accelerates surface scaling.",
+          "Repair small cracks promptly with a flexible sealant. Water in a crack freezes, widens it, and turns a two-dollar repair into a slab replacement."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "How much does a driveway replacement cost?",
+        "a": "Cost is driven by area, thickness, base work and finish. Ask for a quote that itemises removal, base, concrete and finishing so you can compare like for like rather than a single lump sum."
+      },
+      {
+        "q": "How thick should a concrete driveway be?",
+        "a": "Four inches is the common minimum for passenger cars, with 5–6 inches where heavier vehicles park. The base beneath matters just as much as the slab thickness."
+      },
+      {
+        "q": "How long does a concrete driveway last?",
+        "a": "A properly built one lasts 25–30 years or more with sealing and drainage maintained. Most early failures are base or drainage problems rather than the concrete itself."
+      },
+      {
+        "q": "Can I pour a new driveway over the old one?",
+        "a": "Occasionally, if the old slab is sound and drainage allows the added height, but it usually shortens the life of the new surface and can trap water against the house. Full removal is the better long-term choice."
+      }
+    ]
+  },
+  {
+    "id": 27,
+    "title": "Concrete Repair or Replace? How to Judge a Failing Slab",
+    "slug": "concrete-repair-vs-replace",
+    "category": {
+      "slug": "concrete-paving",
+      "name": "Concrete & Paving",
+      "description": "Driveways, patios and concrete repair: how a slab is built, why it fails, and the base preparation that separates a 30-year driveway from a five-year one.",
+      "seoTitle": "Concrete & Paving Guides",
+      "seoDescription": "Concrete and paving guides for homeowners: what a driveway replacement should include, how base preparation decides longevity, and when repair beats replacement.",
+      "sortOrder": 13
+    },
+    "primaryKeyword": "concrete repair or replace",
+    "secondaryKeywords": [
+      "cracked concrete driveway",
+      "concrete crack repair",
+      "mudjacking",
+      "slab lifting",
+      "concrete resurfacing",
+      "settled concrete"
+    ],
+    "intent": "Commercial investigation",
+    "audience": "Homeowners with cracked, settled or spalling concrete who want to know which failures are cosmetic.",
+    "cta": {
+      "label": "See concrete and paving options",
+      "href": "/services/concrete-paving"
+    },
+    "internalLinks": [
+      {
+        "label": "Driveway replacement cost: what you are paying for",
+        "href": "/blog/driveway-replacement-cost"
+      },
+      {
+        "label": "How to compare home service estimates",
+        "href": "/blog/how-to-compare-home-service-estimates"
+      }
+    ],
+    "image": "/images/blog/concrete-repair-vs-replace.svg",
+    "imageAlt": "Illustration of a cracked concrete slab with a wrench and a coin",
+    "seoTitle": "Concrete Repair or Replace? How to Tell",
+    "seoDescription": "Hairline cracks are normal; differential settlement is not. How to read a failing slab, which repairs work, and when resurfacing is money down the drain.",
+    "excerpt": "Not every crack means a new driveway. The deciding question is whether the slab is still supported — and that is something you can check with a golf ball and a straight edge.",
+    "seoSummary": "Diagnostic framework for cracked and settled concrete with repair-option comparison.",
+    "author": "Safe Home Network Editorial",
+    "tags": [
+      "concrete",
+      "repair",
+      "driveways",
+      "maintenance"
+    ],
+    "visual": "Flat vector medallion: a concrete slab with a zigzag crack, a wrench chip and a coin chip on a sand background.",
+    "sections": [
+      {
+        "paras": [
+          "All concrete cracks. It is a brittle material that shrinks as it cures and moves with the ground beneath it. The presence of a crack tells you very little; its width, its pattern and whether the two sides are still level tell you everything.",
+          "This guide separates the three failure modes — cracking, settlement and surface failure — because each has a different set of options."
+        ]
+      },
+      {
+        "h2": "Failure one: cracking",
+        "table": {
+          "head": [
+            "What you see",
+            "Likely cause",
+            "Verdict"
+          ],
+          "rows": [
+            [
+              "Hairline cracks under 1 mm",
+              "Normal curing shrinkage",
+              "Monitor; seal if water gets in"
+            ],
+            [
+              "Straight cracks at regular intervals",
+              "Control joints doing their job",
+              "Normal, not a defect"
+            ],
+            [
+              "Cracks wider than 3 mm",
+              "Base movement or missing joints",
+              "Repair the cause before sealing"
+            ],
+            [
+              "Spider-web pattern",
+              "Shallow surface shrinkage or over-finishing",
+              "Cosmetic unless spalling follows"
+            ],
+            [
+              "Cracks following a tree line",
+              "Roots and soil moisture change",
+              "Investigate the subgrade"
+            ]
+          ]
+        }
+      },
+      {
+        "h2": "Failure two: settlement and heaving",
+        "paras": [
+          "A slab that has dropped on one side creates a trip hazard and holds water. Drop a golf ball on the surface: if it rolls determinedly toward a crack or an edge, the slab has moved. A straight edge across a joint shows the step in millimeters.",
+          "Localised settlement can often be lifted — mudjacking or polyurethane foam injection raises the slab and fills the void. This is dramatically cheaper than replacement and works well when the concrete itself is sound. It does not work when the concrete is broken into pieces."
+        ],
+        "note": "Lifting a slab without fixing the drainage that caused the void just postpones the same failure. Ask what is being done about the water."
+      },
+      {
+        "h2": "Failure three: surface damage",
+        "paras": [
+          "Spalling — flaking and pitting of the top layer — is usually caused by de-icing salt, freeze-thaw cycles, an over-wet mix or finishing too early. Scaling and pop-outs fall into the same family.",
+          "Light spalling can be resurfaced with a bonded overlay, which buys years of appearance at modest cost. Deep spalling that exposes aggregate, or that covers most of the slab, is a sign the whole surface is compromised."
+        ]
+      },
+      {
+        "h2": "When repair genuinely works",
+        "bullets": [
+          "Isolated cracks cleaned, filled and sealed with a flexible sealant.",
+          "A settled but structurally sound slab lifted by foam or slurry injection.",
+          "Localised spalling patched with a polymer-modified repair mortar.",
+          "A sound slab given a resurfacing overlay for appearance.",
+          "Joint and edge repairs where the failure is at a control joint."
+        ]
+      },
+      {
+        "h2": "When replacement is the honest answer",
+        "bullets": [
+          "Cracking through the full thickness in multiple directions — the slab has broken into pieces.",
+          "Settlement across a large area or repeated lifting in the same spot.",
+          "Spalling across most of the surface with exposed aggregate.",
+          "A slab that ponds water against the house or the garage.",
+          "A base that has failed, which cannot be fixed without removing the slab anyway."
+        ]
+      },
+      {
+        "h2": "What a repair quote should include",
+        "ordered": [
+          "The method: crack injection, overlay, lifting, or partial replacement.",
+          "The preparation: crack cleaning, routing, and any concrete removal.",
+          "The material and its intended service life in years.",
+          "Whether the underlying drainage or base problem is being addressed.",
+          "A workmanship warranty period for the repair itself.",
+          "A clear statement of what happens if the repair fails in the same place."
+        ]
+      },
+      {
+        "h2": "The economics",
+        "paras": [
+          "As a rule, if the repair cost approaches a third of replacement and the slab is already twenty years old, replacement is the better investment. Lifting or sealing a young slab is almost always worth doing.",
+          "Resurfacing deserves a warning: an overlay on a slab that is still moving will crack again within a season. It is a finish, not a structural fix, and it should only go on a slab whose base is stable."
+        ]
+      }
+    ],
+    "faqs": [
+      {
+        "q": "Are cracks in a concrete driveway normal?",
+        "a": "Hairline cracks and cracks along control joints are normal. Cracks wider than about 3 mm, or ones with a vertical step, indicate movement and should be investigated."
+      },
+      {
+        "q": "What is mudjacking?",
+        "a": "Pumping a slurry or expanding foam under a settled slab to raise it back to level and fill the void beneath. It is faster and cheaper than replacement when the concrete itself is intact."
+      },
+      {
+        "q": "Can resurfacing fix a cracked driveway?",
+        "a": "It can hide cosmetic cracks on a stable slab, but it will not stop movement. On a slab that is still settling, an overlay typically cracks again within a year or two."
+      },
+      {
+        "q": "How do I stop concrete from spalling?",
+        "a": "Avoid de-icing salt in the first winter, seal the surface, keep water draining away, and ensure a proper air-entrained mix was used in cold climates."
+      }
+    ]
+  }
+]
