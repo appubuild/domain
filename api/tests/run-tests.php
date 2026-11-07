@@ -235,6 +235,53 @@ check('trailing slash removed', Request::normalisePath('/api/v1/services/') === 
 check('root survives normalisation', Request::normalisePath('/api/') === '/');
 
 /* ---------------------------------------------------------------------- */
+/*  Sample analytics pack (preview data)                                  */
+/* ---------------------------------------------------------------------- */
+
+$schemaSql = (string) @file_get_contents(dirname(__DIR__) . '/database/schema.sql');
+$sampleSql = (string) @file_get_contents(dirname(__DIR__) . '/database/sample-analytics.sql');
+$removeSql = (string) @file_get_contents(dirname(__DIR__) . '/database/sample-analytics-remove.sql');
+
+check('schema.sql is readable', $schemaSql !== '');
+check('sample-analytics.sql exists', $sampleSql !== '');
+check('sample-analytics-remove.sql exists', $removeSql !== '');
+
+preg_match_all('/CREATE TABLE `(\w+)`/', $schemaSql, $schemaTables);
+$knownTables = $schemaTables[1] ?? [];
+
+preg_match_all('/INSERT INTO\s+`?(\w+)`?/', $sampleSql, $insertTargets);
+$insertTargets = array_values(array_unique(array_filter(
+    $insertTargets[1] ?? [],
+    // tmp_* are the file's own temporary helper tables, not schema tables.
+    static fn (string $table): bool => !str_starts_with($table, 'tmp_'),
+)));
+check('sample pack inserts into tables that exist in schema.sql', $insertTargets !== [], 'no INSERT statements found');
+foreach ($insertTargets as $table) {
+    check('sample pack target table exists: ' . $table, in_array($table, $knownTables, true));
+}
+foreach (['analytics_events', 'leads', 'call_records', 'revenue_records', 'analytics_daily'] as $table) {
+    check('sample pack fills ' . $table, in_array($table, $insertTargets, true));
+}
+
+/* Every row the sample pack creates must be findable by the removal script. */
+$markers = [
+    'demo0000'        => "analytics_events (visitor_id)",
+    'sess0000'        => "analytics_events (session_id)",
+    'SMPL-'           => 'leads.reference',
+    'sample-call-'    => 'call_records.external_call_id',
+    'SAMPLE-PREVIEW'  => 'revenue_records.source',
+];
+foreach ($markers as $marker => $where) {
+    check('sample pack tags rows: ' . $where, str_contains($sampleSql, $marker));
+    check('removal script deletes tagged rows: ' . $where, str_contains($removeSql, $marker));
+}
+
+check('sample pack rebuilds the daily rollup', str_contains($sampleSql, 'ON DUPLICATE KEY UPDATE'));
+check('removal script rebuilds the daily rollup', str_contains($removeSql, 'ON DUPLICATE KEY UPDATE'));
+check('removal script never touches admins', !str_contains($removeSql, 'DELETE FROM admins'));
+check('removal script never truncates tables', !preg_match('/TRUNCATE/i', $removeSql));
+
+/* ---------------------------------------------------------------------- */
 /*  Result                                                                */
 /* ---------------------------------------------------------------------- */
 

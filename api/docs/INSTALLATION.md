@@ -111,6 +111,27 @@ UPDATE admins
  WHERE email = 'info@safehomenetwork.com';
 ```
 
+### 3a. Optional: sample analytics for a preview
+
+The admin panel starts with empty charts, because every figure is measured — there is
+no built-in fake data any more. If you need a populated dashboard for a walkthrough or a
+client preview, import **`database/sample-analytics.sql`** (phpMyAdmin → Import):
+
+* ~2,700 page views, 1,500 unique visitors, 676 service clicks and 202 call clicks over the
+  last 30 days (dates are relative to `CURDATE()`, so import any time)
+* 10 leads in **Leads & Support**, 78 connected calls and $407.55 of revenue
+* realistic source / device / landing-page split, and the `analytics_daily` rollup rebuilt
+
+The rows are invented, not measured, and each one carries a marker so it can be deleted in
+one step: `analytics_events.visitor_id` starts with `demo0000`, `leads.reference` starts with
+`SMPL-` (emails use `@example.com`), `call_records.external_call_id` starts with
+`sample-call-`, and `revenue_records.source` is `SAMPLE-PREVIEW`.
+
+**Remove it before launch.** Import `database/sample-analytics-remove.sql`: it deletes only
+the marked rows, rebuilds the daily rollup, and ends with a report showing `0` left behind.
+Prefer not to show invented revenue at all? Delete section 6 of the sample file before
+importing, and the revenue card stays at `$0.00`.
+
 ---
 
 ## 4. Configure `.env`
