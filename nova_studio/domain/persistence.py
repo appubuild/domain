@@ -34,6 +34,8 @@ that the adapter and its tests are checked against the same predicate.
 
 from __future__ import annotations
 
+import json
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from enum import StrEnum
@@ -70,8 +72,9 @@ __all__ = [
     "JournalEntry",
     "JournalWindow",
     "ProjectManifest",
+    "RecentProject",
     "RevisionRef",
-    "caption_document",
+    "Setting",
     "caption_document",
     "derived_path",
     "is_valid_document_name",
@@ -601,6 +604,179 @@ def select_for_eviction(
 
 def _over_entry_budget(count: int, budget: CacheBudget) -> bool:
     return budget.max_entries > 0 and count >= budget.max_entries
+
+
+# -- install state (ADR-0004 §6: the global database) -------------------------
+#
+# The two rows in `nova.db` that are not derived and cannot be recomputed. Both
+# are small, both are read at boot, and both are shared by every project — which
+# is why they are not in the cache database and not in the project file.
+
+#: A scope or a key is a *name*, not free text: the column is a primary key
+#: component and a name that could contain anything is a name that could
+#: collide, or be mistaken for another scope's.
+_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9._:-]{0,63}$")
+
+
+def is_valid_setting_name(name: str) -> bool:
+    """Whether ``name`` may be a scope or a key.
+
+    Lower-case and separated, because the two are compared, sorted and joined in
+    a table where ``Install`` and ``install`` would be two settings that look
+    like one bug.
+    """
+    return bool(_NAME_PATTERN.match(name))
+
+
+@dataclass(frozen=True, slots=True)
+class Setting:
+    """One key's value, in one scope (ADR-0004 §1, table ``settings``).
+
+    Scoped because a setting is not one namespace: the install has some, a
+    project has some, a plugin has some — and a plugin that could write into the
+    install's own keys could turn the editor off. *Which* scope a caller may
+    write is a rule for the settings service that arrives with the settings
+    panel; what this object enforces is the part that is true of every caller:
+    a scope and a key are names, and a value is something JSON can spell.
+    """
+
+    scope: str
+    key: str
+    value: object
+    updated_ms: int = 0
+
+    def __post_init__(self) -> None:
+        if not is_valid_setting_name(self.scope):
+            raise NovaInvariantError(f"invalid setting scope {self.scope!r}")
+        if not is_valid_setting_name(self.key):
+            raise NovaInvariantError(f"invalid setting key {self.key!r}")
+        if self.updated_ms < 0:
+            raise NovaInvariantError(f"updated_ms must not be negative, got {self.updated_ms}")
+        try:
+            json.dumps(self.value, allow_nan=False)
+        except (TypeError, ValueError) as error:
+            # Refused here rather than at the column: a value that cannot be
+            # written is a bug in the caller, and a database that stored it
+            # would fail on the read, in a different process, with no stack.
+            raise NovaInvariantError(
+                f"setting {self.scope}/{self.key} is not JSON: {error}"
+            ) from error
+
+    @property
+    def qualified(self) -> str:
+        """The name a log line or an error message uses."""
+        return f"{self.scope}/{self.key}"
+
+    def with_value(self, value: object, *, at_ms: int) -> Setting:
+        """This key holding ``value``, as of ``at_ms``."""
+        return replace(self, value=value, updated_ms=at_ms)
+
+    def to_wire(self) -> dict[str, object]:
+        return {
+            "scope": self.scope,
+            "key": self.key,
+            "value": self.value,
+            "updated_ms": self.updated_ms,
+        }
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, object]) -> Setting:
+        _reject_unknown_fields(data, _SETTING_FIELDS)
+        return cls(
+            scope=_wire_str(data, "scope"),
+            key=_wire_str(data, "key"),
+            value=data["value"],
+            updated_ms=_wire_int(data, "updated_ms"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class RecentProject:
+    """One project this install has seen (ADR-0004 §1, table ``recent_files``).
+
+    Not "the project" — the *file*, keyed by where the user put it. A project
+    that was renamed or moved is a different path and therefore a different row,
+    which is the honest answer: the editor cannot know that two paths are one
+    project without opening both.
+
+    ``dirty`` and ``last_status`` are the last thing this install knew, not a
+    promise: another window may have saved since. They exist so the home screen
+    can say "unsaved" without opening the file to find out.
+    """
+
+    path: str
+    project_id: str
+    name: str
+    opened_ms: int
+    closed_ms: int | None = None
+    dirty: bool = False
+    last_status: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.path:
+            raise NovaInvariantError("a recent project must carry a path")
+        if not self.project_id:
+            raise NovaInvariantError("a recent project must carry a project id")
+        if not self.name:
+            raise NovaInvariantError("a recent project must carry a name")
+        if self.opened_ms < 0:
+            raise NovaInvariantError(f"opened_ms must not be negative, got {self.opened_ms}")
+        if self.closed_ms is not None and self.closed_ms < self.opened_ms:
+            raise NovaInvariantError(
+                f"closed_ms must not precede opened_ms: {self.closed_ms} < {self.opened_ms}"
+            )
+
+    def closed(self, at_ms: int, *, dirty: bool = False) -> RecentProject:
+        """This project, closed at ``at_ms``.
+
+        ``dirty`` is passed rather than read from the caller's object because
+        the workspace knows the project's state at close, and the row we hold
+        may be several sessions old.
+        """
+        return replace(self, closed_ms=at_ms, dirty=dirty)
+
+    def reopened(self, at_ms: int) -> RecentProject:
+        """This project, opened again."""
+        return replace(self, opened_ms=at_ms, closed_ms=None)
+
+    def to_wire(self) -> dict[str, object]:
+        return {
+            "path": self.path,
+            "project_id": self.project_id,
+            "name": self.name,
+            "opened_ms": self.opened_ms,
+            "closed_ms": self.closed_ms,
+            "dirty": self.dirty,
+            "last_status": self.last_status,
+        }
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, object]) -> RecentProject:
+        _reject_unknown_fields(data, _RECENT_FIELDS)
+        raw_closed = data["closed_ms"]
+        if raw_closed is not None and not isinstance(raw_closed, int):
+            raise NovaInvariantError("closed_ms must be an integer or null")
+        return cls(
+            path=_wire_str(data, "path"),
+            project_id=_wire_str(data, "project_id"),
+            name=_wire_str(data, "name"),
+            opened_ms=_wire_int(data, "opened_ms"),
+            closed_ms=raw_closed,
+            dirty=bool(data["dirty"]),
+            last_status=_wire_str(data, "last_status"),
+        )
+
+
+_SETTING_FIELDS: Final[set[str]] = {"scope", "key", "value", "updated_ms"}
+_RECENT_FIELDS: Final[set[str]] = {
+    "path",
+    "project_id",
+    "name",
+    "opened_ms",
+    "closed_ms",
+    "dirty",
+    "last_status",
+}
 
 
 # -- wire helpers -------------------------------------------------------------

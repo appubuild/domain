@@ -53,6 +53,7 @@ from nova_studio.api.ws import (
 from nova_studio.core.clock import SystemClock
 from nova_studio.infra.jobs import ConcurrentJobExecutor, spawn_context
 from nova_studio.infra.persistence.job_store import open_job_store
+from nova_studio.infra.persistence.recent import open_recent_files
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -60,6 +61,7 @@ if TYPE_CHECKING:
 
     from nova_studio.core.events import EventBus
     from nova_studio.ports.jobs import Unsubscribe
+    from nova_studio.ports.persistence import RecentFiles
 
 __all__ = ["ApiSettings", "create_app"]
 
@@ -132,7 +134,8 @@ def create_app(
     # The projects this session has open. Built before the application because
     # the lifespan closes them, and held on `app.state` so a handler's dependency
     # can reach them without a global.
-    workspace = ProjectWorkspace(bus, data_dir=state.data_dir)
+    recent = open_recent_files(state.data_dir)
+    workspace = ProjectWorkspace(bus, data_dir=state.data_dir, recent=recent)
     # The pools this session runs background work on, and the history it is
     # written to. Built here rather than in a module global for the same reason
     # the workspace is: a second window is a second session, and its exports
@@ -161,7 +164,7 @@ def create_app(
         docs_url="/docs" if settings.docs else None,
         redoc_url=None,
         openapi_url="/openapi.json" if settings.docs else None,
-        lifespan=_lifespan(state, bus, workspace, executor, exec_unsubscribe),
+        lifespan=_lifespan(state, bus, workspace, executor, exec_unsubscribe, recent),
     )
 
     # The session travels with the app rather than living in a module global:
@@ -222,6 +225,7 @@ def _lifespan(
     workspace: ProjectWorkspace,
     executor: ConcurrentJobExecutor,
     unsubscribe: Unsubscribe,
+    recent: RecentFiles,
 ) -> Callable[[FastAPI], AbstractAsyncContextManager[None]]:
     """Start and stop the bus with the application, and announce both.
 
@@ -253,6 +257,7 @@ def _lifespan(
             # Last, because the cache index outlives any one project: closing
             # every project does not end the session.
             workspace.close_cache()
+            recent.close()
             bus.publish("api.stopped", {"port": state.port})
             bus.shutdown()
 

@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
-from nova_studio.core import ErrorDomain, error_result, ok
+from nova_studio.core import ErrorDomain, Result, error_result, ok
 from nova_studio.domain.persistence import (
     CAPTION_PREFIX,
     CacheBudget,
@@ -32,7 +32,9 @@ from nova_studio.domain.persistence import (
     JournalEntry,
     JournalWindow,
     ProjectManifest,
+    RecentProject,
     RevisionRef,
+    Setting,
     is_valid_document_name,
     revision_document,
     select_for_eviction,
@@ -42,6 +44,8 @@ from nova_studio.ports.persistence import (
     Journal,
     PersistenceErrorCode,
     ProjectArchive,
+    RecentFiles,
+    SettingsStore,
     UnitOfWork,
 )
 
@@ -282,6 +286,63 @@ class MemoryCacheIndex:
         self.closed = True
 
 
+class MemorySettings:
+    """A `SettingsStore` that keeps a dict per scope."""
+
+    def __init__(self) -> None:
+        self._rows: dict[tuple[str, str], Setting] = {}
+        self.closed = False
+
+    def get(self, scope: str, key: str) -> Setting | None:
+        return self._rows.get((scope, key))
+
+    def put(self, setting: Setting) -> Result[None]:
+        self._rows[(setting.scope, setting.key)] = setting
+        return ok(None)
+
+    def delete(self, scope: str, key: str) -> Result[None]:
+        self._rows.pop((scope, key), None)
+        return ok(None)
+
+    def entries(self, scope: str) -> Mapping[str, Setting]:
+        return {key: row for (row_scope, key), row in self._rows.items() if row_scope == scope}
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class MemoryRecentFiles:
+    """A `RecentFiles` that keeps a list, newest first, bounded like the real one."""
+
+    def __init__(self, *, keep: int = 20) -> None:
+        self._keep = keep
+        self._rows: dict[str, RecentProject] = {}
+        self.closed = False
+
+    def record(self, entry: RecentProject) -> Result[None]:
+        self._rows[entry.path] = entry
+        for stale in sorted(self._rows.values(), key=lambda e: e.opened_ms)[: -self._keep]:
+            del self._rows[stale.path]
+        return ok(None)
+
+    def mark_closed(self, path: str, *, at_ms: int, dirty: bool = False) -> Result[None]:
+        row = self._rows.get(path)
+        if row is not None:
+            self._rows[path] = row.closed(at_ms, dirty=dirty)
+        return ok(None)
+
+    def recent(self, *, limit: int = 20) -> tuple[RecentProject, ...]:
+        ordered = sorted(self._rows.values(), key=lambda e: e.opened_ms, reverse=True)
+        return tuple(ordered[:limit])
+
+    def forget(self, path: str) -> Result[None]:
+        self._rows.pop(path, None)
+        return ok(None)
+
+    def close(self) -> None:
+        self.closed = True
+
+
 class MemoryUnitOfWork:
     """A transaction that records how it was left."""
 
@@ -320,6 +381,8 @@ class MemoryUnitOfWork:
 
 class TestProtocolConformance:
     def test_each_double_satisfies_its_port(self) -> None:
+        assert isinstance(MemorySettings(), SettingsStore)
+        assert isinstance(MemoryRecentFiles(), RecentFiles)
         assert isinstance(MemoryArchive(), ProjectArchive)
         assert isinstance(MemoryJournal(), Journal)
         assert isinstance(MemoryCacheIndex(), CacheIndex)
@@ -342,6 +405,10 @@ class TestNarrowness:
         cache = MemoryCacheIndex()
         assert isinstance(cache, CacheIndex)
         assert not isinstance(cache, Journal)
+
+    def test_a_settings_store_is_not_a_recent_list(self) -> None:
+        assert not isinstance(MemorySettings(), RecentFiles)
+        assert not isinstance(MemoryRecentFiles(), SettingsStore)
 
     def test_a_partial_double_is_refused(self) -> None:
         class OnlyClose:

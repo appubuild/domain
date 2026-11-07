@@ -50,7 +50,7 @@ from nova_studio.core.commands import CommandHistory, CommandOutcome
 from nova_studio.core.errors import ErrorDomain, ErrorSeverity, NovaError
 from nova_studio.core.ident import IdFactory, new_entity_id
 from nova_studio.core.result import Result, err, ok
-from nova_studio.domain.persistence import JournalEntry
+from nova_studio.domain.persistence import JournalEntry, RecentProject
 from nova_studio.domain.project import Project, ProjectMetadata
 from nova_studio.infra.imaging import OpenCVImageOps
 from nova_studio.infra.media import PyAVDecoder, PyAVProber
@@ -92,7 +92,7 @@ if TYPE_CHECKING:
     from nova_studio.domain.persistence import CheckpointPolicy, ProjectManifest, RevisionRef
     from nova_studio.ports.clock import Clock
     from nova_studio.ports.media import MediaProber
-    from nova_studio.ports.persistence import Journal, ProjectArchive
+    from nova_studio.ports.persistence import Journal, ProjectArchive, RecentFiles
     from nova_studio.services.media import IngestReport
 
 __all__ = [
@@ -341,6 +341,9 @@ class ProjectWorkspace:
             `data_dir` when omitted — one cache index for the session, opened
             here and closed by :meth:`close`. Injected so a test can say "we
             have a proxy" without a disk.
+        recent: Where this install remembers the projects it has seen. `None`
+            disables it, which is the default because a workspace is also built
+            in tests that have no data directory at all.
 
     Every method returns a `Result`: refusing is an answer, not an exception,
     because "this project is already open" and "this file is not a project" are
@@ -363,6 +366,7 @@ class ProjectWorkspace:
         preview_format: FrameFormat = FrameFormat.JPEG,
         preview_quality: int = DEFAULT_PREVIEW_QUALITY,
         media_cache: MediaCache | None = None,
+        recent: RecentFiles | None = None,
     ) -> None:
         self._bus = bus
         self._data_dir = data_dir
@@ -389,7 +393,33 @@ class ProjectWorkspace:
         self._media_cache: MediaCache = media_cache or self._build_cache(data_dir)
 
         self._owns_cache = media_cache is None
+        self._recent = recent
         self._guard = threading.RLock()
+
+    def _remember_opened(self, path: Path, project_id: str, name: str) -> None:
+        """Note that this project was opened, if anything is listening.
+
+        Deliberately a decoration: **a failure here is swallowed.** Opening a
+        project is the user's work; remembering that they did is a convenience,
+        and refusing the first because the second could not be written would be
+        absurd — as would raising into a path that has already succeeded.
+        """
+        if self._recent is None:
+            return
+        self._recent.record(
+            RecentProject(
+                path=str(path),
+                project_id=project_id,
+                name=name,
+                opened_ms=self._clock.now_ms(),
+            )
+        )
+
+    def _remember_closed(self, entry: _Entry) -> None:
+        """Note that this project was closed, and whether it was left dirty."""
+        if self._recent is None or entry.path is None:
+            return
+        self._recent.mark_closed(str(entry.path), at_ms=self._clock.now_ms(), dirty=entry.dirty)
 
     def _build_cache(self, data_dir: Path) -> MediaCache:
         """The one derived-artefact cache this session reads and writes.
@@ -514,6 +544,8 @@ class ProjectWorkspace:
                 entry.session.close()
                 entry.session = None
             self._close_journal(entry)
+        if entry.path is not None:
+            self._remember_closed(entry)
         self._publish("closed", project_id, name=entry.project.name, dirty=entry.dirty)
         return ok(True)
 
@@ -923,7 +955,15 @@ class ProjectWorkspace:
         with self._entry_for(project_id) as entry:
             if entry is None:
                 return err(not_open(project_id))
-            return self._write(entry, path)
+            written = self._write(entry, path)
+            name = entry.project.name
+        if written.is_ok():
+            # "Save as" moves the project's home, so the list has to move with
+            # it: the old file is still there, but the new one is where the
+            # user is working, and a list that pointed at the old path would
+            # reopen yesterday's copy.
+            self._remember_opened(path, project_id, name)
+        return written
 
     def checkpoint(self, project_id: str, *, label: str = "") -> Result[Checkpoint]:
         """Take an autosave revision, and truncate the journal behind it.
@@ -1084,6 +1124,10 @@ class ProjectWorkspace:
             )
             self._open[project_id] = entry
             value = entry.as_value()
+        if path is not None:
+            # A project with nowhere to live is not "recent": it has never been
+            # saved, so there is nothing to come back to.
+            self._remember_opened(path, project_id, project.name)
         self._publish(
             topic,
             project_id,

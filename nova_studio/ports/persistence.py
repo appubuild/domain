@@ -1,6 +1,6 @@
 """L2 port — persistence: how durable state is written without naming SQLite.
 
-Four capabilities, four lifetimes, declared narrowest-first in the same style as
+Six capabilities, six lifetimes, declared narrowest-first in the same style as
 ``ports/media.py``:
 
 ``UnitOfWork``
@@ -21,6 +21,13 @@ Four capabilities, four lifetimes, declared narrowest-first in the same style as
     *Which* entries to drop is decided by
     :func:`nova_studio.domain.persistence.select_for_eviction` — a pure
     function — and this port only executes the decision.
+``SettingsStore``
+    Scoped key/value state that outlives every project: what the install
+    remembers between launches (ADR-0004 §1, table ``settings``).
+``RecentFiles``
+    The projects this install has seen, keyed by where the user put them
+    (table ``recent_files``). Bounded by the store, because a list of "the last
+    twenty projects" that grows forever is a list of every project.
 
 Why a port, and why this shape
 ------------------------------
@@ -89,7 +96,9 @@ if TYPE_CHECKING:
         JournalEntry,
         JournalWindow,
         ProjectManifest,
+        RecentProject,
         RevisionRef,
+        Setting,
     )
 
 __all__ = [
@@ -97,6 +106,8 @@ __all__ = [
     "Journal",
     "PersistenceErrorCode",
     "ProjectArchive",
+    "RecentFiles",
+    "SettingsStore",
     "UnitOfWork",
 ]
 
@@ -384,4 +395,92 @@ class CacheIndex(Protocol):
 
     def close(self) -> None:
         """Release the index."""
+        ...
+
+
+@runtime_checkable
+class SettingsStore(Protocol):
+    """Scoped key/value state that outlives every project.
+
+    Scoped, not flat: the install has settings, a project has settings, and a
+    plugin has settings, and a plugin that could write the install's keys could
+    turn the editor off. *Which* scope a caller may write is a rule for the
+    settings service; what this port enforces is only the storage half — one
+    value per ``(scope, key)``, and a read that answers ``None`` rather than
+    raising when the row is missing or unreadable.
+
+    A value is whatever JSON can spell. Typed access is the caller's job: a
+    store that knew every setting's type would have to be changed every time a
+    setting was added.
+    """
+
+    def get(self, scope: str, key: str) -> Setting | None:
+        """The setting, or ``None`` when this key has never been written.
+
+        ``None`` for an unreadable row as well: a corrupt setting is a reason to
+        fall back to the default, never a reason to fail the window that is
+        still drawing itself.
+        """
+        ...
+
+    def put(self, setting: Setting) -> Result[None]:
+        """Write or overwrite one setting. One row, one statement."""
+        ...
+
+    def delete(self, scope: str, key: str) -> Result[None]:
+        """Forget one key. Deleting what is not there is not an error."""
+        ...
+
+    def entries(self, scope: str) -> Mapping[str, Setting]:
+        """Every setting in one scope, keyed by name.
+
+        One scope at a time, because the caller that reads settings reads the
+        ones it owns: a panel asking for its own keys must not be handed a
+        plugin's.
+        """
+        ...
+
+    def close(self) -> None:
+        """Release the store."""
+        ...
+
+
+@runtime_checkable
+class RecentFiles(Protocol):
+    """The projects this install has seen (ADR-0004 §1).
+
+    Not a list of "recently used files" in the operating system's sense — the
+    editor's own, which is the one that can say whether a project was left
+    unsaved. Keyed by path, because a project is where the user put it, and two
+    entries for one path are the duplicate the home screen would then have to
+    de-duplicate.
+
+    The store is **bounded**: `record` keeps the newest ``keep`` entries and
+    drops the rest. A table that grew without limit would be a table of every
+    project ever opened, which is the opposite of "recent".
+    """
+
+    def record(self, entry: RecentProject) -> Result[None]:
+        """Remember that this project was opened, replacing any earlier row."""
+        ...
+
+    def mark_closed(self, path: str, *, at_ms: int, dirty: bool = False) -> Result[None]:
+        """Record that the project at ``path`` was closed.
+
+        A close is not a deletion: the project stays in the list, which is the
+        point of the list. What changes is whether it was left dirty — the one
+        thing the home screen cannot find out without opening the file.
+        """
+        ...
+
+    def recent(self, *, limit: int = 20) -> tuple[RecentProject, ...]:
+        """The most recently opened projects, newest first."""
+        ...
+
+    def forget(self, path: str) -> Result[None]:
+        """Remove one entry, because the user asked. Absent is not an error."""
+        ...
+
+    def close(self) -> None:
+        """Release the store."""
         ...

@@ -154,6 +154,12 @@ from nova_studio.infra.persistence.paths import (
     is_safe_project_id,
     journal_dir,
 )
+from nova_studio.infra.persistence.recent import (
+    DEFAULT_KEEP,
+    SqliteRecentFiles,
+    open_recent_files,
+)
+from nova_studio.infra.persistence.settings import SqliteSettingsStore, open_settings_store
 from nova_studio.infra.persistence.sqlite import SqliteError, SqliteGateway
 from nova_studio.infra.persistence.work import (
     PersistenceCommitError,
@@ -167,6 +173,7 @@ __all__ = [
     "CACHE_INDEX_DDL",
     "CACHE_MIGRATIONS",
     "CACHE_SCHEMA_VERSION",
+    "DEFAULT_KEEP",
     "DEFAULT_MAX_REVISIONS",
     "INSTALL_DATABASE_NAME",
     "INSTALL_MIGRATIONS",
@@ -183,6 +190,8 @@ __all__ = [
     "SqliteCacheIndex",
     "SqliteError",
     "SqliteGateway",
+    "SqliteRecentFiles",
+    "SqliteSettingsStore",
     "ZipProjectArchive",
     "applied_versions",
     "backup_path",
@@ -200,4 +209,6 @@ __all__ = [
     "loads_canonical",
     "open_cache_index",
     "open_journal",
+    "open_recent_files",
+    "open_settings_store",
 ]
