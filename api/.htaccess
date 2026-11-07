@@ -1,0 +1,57 @@
+# ============================================================================
+#  Safe Home Network API — front controller rules (Apache / LiteSpeed)
+#  Deploy this folder as https://safehomenetwork.com/api/
+# ============================================================================
+
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /api/
+
+  # Never rewrite a real file (uploads are served directly, .php is blocked below)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Everything else goes to the front controller
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# --- Block direct access to application internals --------------------------
+# (each folder also ships its own deny-all .htaccess as a second layer)
+RedirectMatch 404 ^/api/(config|controllers|models|middleware|services|helpers|database|docs|routes|storage|tests|tools)(/|$)
+
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(env|ini|log|sql|md|json|lock|example)$">
+  Require all denied
+</FilesMatch>
+
+# --- Security headers -------------------------------------------------------
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set X-XSS-Protection "0"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  # API responses are JSON, never HTML — a strict CSP costs nothing.
+  Header always set Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+</IfModule>
+
+# --- PHP hardening (ignored when the host does not allow overrides) ---------
+<IfModule mod_php.c>
+  php_flag display_errors Off
+  php_flag log_errors On
+  php_value upload_max_filesize 8M
+  php_value post_max_size 10M
+  php_value session.cookie_httponly 1
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
