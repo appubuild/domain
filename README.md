@@ -270,7 +270,7 @@ See **[docs/ADMIN-PANEL.md](docs/ADMIN-PANEL.md)** for screens and
 ## PHP API (Phase 2)
 
 `api/` is a dependency-free PHP 8.1+ backend with one MySQL schema (22 tables) and
-129 routes under `/v1`.
+129 routes under `/v1`. Start with **[API.md](API.md)**.
 
 * **Install:** import `api/database/safehomenetwork.sql` in phpMyAdmin, copy
   `api/.env.example` → `.env`, verify `/api/v1/health`. Full guide:
