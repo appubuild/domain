@@ -1,0 +1,35 @@
+{
+  "locale": "bn",
+  "label": "বাংলা",
+  "messages": {
+    "app": {
+      "name": "নোভা স্টুডিও"
+    },
+    "splash": {
+      "starting": "এডিটর চালু হচ্ছে…",
+      "ready": "প্রস্তুত।",
+      "service": "সার্ভিস",
+      "projectFormat": "প্রজেক্ট ফরম্যাট",
+      "dataDir": "ডেটা",
+      "unreachable": "এডিটরে পাওয়া যাচ্ছে না ({code})।",
+      "unreachableTimeout": "এডিটর কোনো উত্তর দেয়নি। হয়তো এখনো চালু হচ্ছে।"
+    },
+    "projects": {
+      "heading": "প্রজেক্টসমূহ",
+      "refresh": "রিফ্রেশ",
+      "loading": "লোড হচ্ছে…",
+      "empty": "কোনো প্রজেক্ট খোলা নেই।",
+      "newPlaceholder": "নতুন প্রজেক্ট",
+      "newLabel": "নতুন প্রজেক্টের নাম",
+      "create": "তৈরি করুন",
+      "close": "বন্ধ",
+      "closeNamed": "{name} বন্ধ করুন",
+      "neverSaved": "কখনো সংরক্ষিত হয়নি",
+      "unsavedSuffix": " · সংরক্ষিত নয়",
+      "clips": {
+        "one": " · {count} ক্লিপ",
+        "other": " · {count} ক্লিপ"
+      }
+    }
+  }
+}

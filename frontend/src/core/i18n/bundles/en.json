@@ -1,0 +1,35 @@
+{
+  "locale": "en",
+  "label": "English",
+  "messages": {
+    "app": {
+      "name": "Nova Studio"
+    },
+    "splash": {
+      "starting": "Starting the editor…",
+      "ready": "Ready.",
+      "service": "Service",
+      "projectFormat": "Project format",
+      "dataDir": "Data",
+      "unreachable": "The editor is unreachable ({code}).",
+      "unreachableTimeout": "The editor did not answer. It may still be starting."
+    },
+    "projects": {
+      "heading": "PROJECTS",
+      "refresh": "Refresh",
+      "loading": "Loading…",
+      "empty": "No projects open.",
+      "newPlaceholder": "New project",
+      "newLabel": "New project name",
+      "create": "Create",
+      "close": "Close",
+      "closeNamed": "Close {name}",
+      "neverSaved": "never saved",
+      "unsavedSuffix": " · unsaved",
+      "clips": {
+        "one": " · {count} clip",
+        "other": " · {count} clips"
+      }
+    }
+  }
+}

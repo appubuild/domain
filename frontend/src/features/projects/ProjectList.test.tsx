@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import type { ApiClient } from '../../core/api/client';
 import type { ProjectSummary } from '../../core/api/contract';
 import type { ApiProblem } from '../../core/api/problem';
+import { I18nProvider } from '../../core/i18n/I18nProvider';
 import { err, ok } from '../../core/result';
 import { createProjectStore, ProjectStoreContext } from '../../stores/project';
 import { ProjectList } from './ProjectList';
@@ -78,12 +79,14 @@ function problem(code: string): ApiProblem {
   return { kind: 'api', status: 500, code, detail: code };
 }
 
-function renderPanel(script: Scripted): void {
+function renderPanel(script: Scripted, locale = 'en'): void {
   const store = createProjectStore(client(script));
   render(
-    <ProjectStoreContext.Provider value={store}>
-      <ProjectList />
-    </ProjectStoreContext.Provider>,
+    <I18nProvider locale={locale}>
+      <ProjectStoreContext.Provider value={store}>
+        <ProjectList />
+      </ProjectStoreContext.Provider>
+    </I18nProvider>,
   );
 }
 
@@ -199,5 +202,17 @@ describe('closing', () => {
       expect(screen.queryByRole('alert')).not.toBeNull();
     });
     expect(screen.queryByText('Holiday')).not.toBeNull();
+  });
+});
+
+describe('in another language', () => {
+  it('a count is pluralised by that language, not by English', async () => {
+    renderPanel({ list: { projects: [summary('a', { name: 'Holiday', clip_count: 1 })] } }, 'bn');
+
+    await waitFor(() => {
+      expect(screen.queryByText('Holiday')).not.toBeNull();
+    });
+    // One clip, and the Bangla bundle's `one` form, not a hardcoded "clips".
+    expect(screen.getByText(/1 ক্লিপ/)).toBeTruthy();
   });
 });

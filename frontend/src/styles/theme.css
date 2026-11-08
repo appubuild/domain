@@ -1,30 +1,94 @@
-/* The one place a colour is allowed to exist (ARCHITECTURE.md §10).
+/* The one place a colour, a radius, a duration or a depth is allowed to exist
+ * (ARCHITECTURE.md §10).
  *
- * Every value below is a CSS custom property, so a theme is a JSON document
- * that overrides them and a component never names one. The lint rule that
- * forbids colour literals in `src/` is what keeps this true: without it, the
- * first deadline turns `#0b0b0f` into a literal and theming quietly dies.
+ * Every value below is a CSS custom property inside a Tailwind v4 `@theme`
+ * block, which is what makes a theme a *document that overrides properties*
+ * rather than a second stylesheet: `core/theme/` holds those documents as data,
+ * `applyTheme()` writes them onto `<html>`, and a component never names one.
+ * The lint rule that forbids colour literals in `src/` is what keeps this true:
+ * without it, the first deadline turns `#0b0b0f` into a literal and theming
+ * quietly dies.
+ *
+ * The block below is the **reference theme** (`nova-dark`), and it is also the
+ * fallback every other theme is applied on top of. `core/theme/tokens.test.ts`
+ * reads this file and asserts the two agree, so a token renamed here and not
+ * there is a failing test rather than a panel that quietly went transparent.
  */
 @import 'tailwindcss';
 
-@theme {
+/* `static` and not `@theme`: Tailwind emits only the variables a utility it
+ * generated actually uses, which is the right default for a stylesheet and the
+ * wrong one for a *contract*. These properties are read by hand as well as by
+ * utility classes — `themeDuration()` reads `--duration-base`, a modal reads
+ * `--z-modal`, and a theme document overrides any of them whether or not this
+ * build happens to generate a class for it. */
+@theme static {
+  /* Surfaces. 0 is the floor the window is painted on; each step above it is
+   * one more layer raised off it, so a panel is 1, a panel inside a panel is 2,
+   * and the raised chrome of a menu is 3. */
   --color-surface-0: oklch(0.16 0.01 265);
   --color-surface-1: oklch(0.21 0.012 265);
   --color-surface-2: oklch(0.26 0.014 265);
   --color-surface-3: oklch(0.32 0.016 265);
+
+  /* The one line colour: borders, dividers, the edge of a control. */
   --color-line: oklch(0.35 0.015 265);
+
+  /* Ink. `ink` is a label, `ink-dim` is a value, `ink-faint` is metadata. */
   --color-ink: oklch(0.95 0.005 265);
   --color-ink-dim: oklch(0.72 0.012 265);
   --color-ink-faint: oklch(0.55 0.014 265);
+
+  /* Accent: the one saturated thing on screen. `accent-ink` is what is legible
+   * on top of it — an editor that put `ink` on `accent` would fail contrast in
+   * whichever theme was designed second. */
   --color-accent: oklch(0.72 0.16 250);
   --color-accent-ink: oklch(0.16 0.02 250);
+
+  /* Feedback. Warning and info are here because a render that is still running
+   * and a render that failed are not the same sentence, and a design system
+   * that only has danger and success calls one of them "danger". */
   --color-danger: oklch(0.66 0.19 25);
   --color-success: oklch(0.75 0.16 145);
+  --color-warning: oklch(0.8 0.16 85);
+  --color-info: oklch(0.75 0.14 230);
+
+  /* The scrim behind a modal, and the ring around whatever has focus. The ring
+   * is a token rather than a utility argument because focus has to look the
+   * same in every theme and on every surface — including the ones a plugin
+   * ships. */
+  --color-scrim: oklch(0.1 0.01 265 / 0.65);
+  --color-focus: oklch(0.8 0.15 250);
 
   --font-ui: 'Inter var', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
+  /* Two radii, and two is the point: `panel` is the outside of a container,
+   * `control` is the outside of something you click. Nesting the same radius
+   * inside itself reads as a mistake. */
   --radius-panel: 0.5rem;
+  --radius-control: 0.375rem;
+
+  --shadow-panel: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-overlay: 0 16px 40px oklch(0 0 0 / 0.55);
+
+  /* Motion. Fast is a hover, base is a state change, slow is a panel arriving.
+   * These are also read by JS (`useThemeMotion`) for the one thing CSS cannot
+   * time: an animation that ends and then calls something — a toast dismissing
+   * itself, a menu closing before its action runs. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Depth. Four layers, and a component that needs a fifth is stacking
+   * contexts by accident. */
+  --z-panel: 10;
+  --z-overlay: 100;
+  --z-modal: 200;
+  --z-toast: 300;
 }
 
 html,
@@ -35,4 +99,28 @@ body,
   background: var(--color-surface-0);
   color: var(--color-ink);
   font-family: var(--font-ui);
+}
+
+/* A keyboard user and a mouse user are asking different questions, so the ring
+ * is shown only for the one who is navigating. `:focus-visible` is the browser
+ * answering that question; all this does is make the answer ours. */
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Honour the OS preference. `prefers-reduced-motion` is not a request for
+ * "slightly faster": it is a request for no animation at all, and an editor
+ * that slides a panel while someone's vestibular system is objecting is an
+ * editor they cannot use. Components that animate in JS read whether this is
+ * in force through `useReducedMotion()`. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

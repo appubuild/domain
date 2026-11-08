@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SystemInfoResponse } from '../../core/api/contract';
 import type { ApiProblem } from '../../core/api/problem';
+import { I18nProvider } from '../../core/i18n/I18nProvider';
 import { Splash } from './Splash';
 import type { ServiceState } from './useServiceInfo';
 
@@ -35,21 +36,35 @@ function unreachable(problem: ApiProblem): ServiceState {
   return { kind: 'unreachable', problem };
 }
 
+/** The splash inside the one provider it cannot do without.
+ *
+ *  Not a convenience wrapper: a component that renders without a translator
+ *  throws, and a test that only ever wrapped its component in a provider it did
+ *  not need would not notice the day the component started needing one.
+ */
+function renderSplash(state: ServiceState, locale = 'en'): void {
+  render(
+    <I18nProvider locale={locale}>
+      <Splash state={state} />
+    </I18nProvider>,
+  );
+}
+
 describe('while the service is starting', () => {
   it('says it is starting rather than showing nothing', () => {
-    render(<Splash state={{ kind: 'connecting' }} />);
+    renderSplash({ kind: 'connecting' });
     expect(screen.getByRole('status').textContent).toContain('Starting the editor');
   });
 
   it('does not call a splash that is still waiting a failure', () => {
-    render(<Splash state={{ kind: 'connecting' }} />);
+    renderSplash({ kind: 'connecting' });
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
 describe('when the service answers', () => {
   it('says who it is, so a bug report can name the build', () => {
-    render(<Splash state={{ kind: 'ready', info: INFO }} />);
+    renderSplash({ kind: 'ready', info: INFO });
 
     expect(screen.getByText('0.1.0')).toBeTruthy();
     expect(screen.getByText('v3')).toBeTruthy();
@@ -59,32 +74,41 @@ describe('when the service answers', () => {
 
 describe('when the service is not there', () => {
   it('names the failure instead of hanging on "starting"', () => {
-    render(
-      <Splash
-        state={unreachable({
-          kind: 'transport',
-          status: 0,
-          code: 'transport/unreachable',
-          detail: 'fetch failed',
-        })}
-      />,
+    renderSplash(
+      unreachable({
+        kind: 'transport',
+        status: 0,
+        code: 'transport/unreachable',
+        detail: 'fetch failed',
+      }),
     );
 
     expect(screen.getByRole('alert').textContent).toContain('unreachable');
   });
 
   it('tells a slow start apart from a dead service', () => {
-    render(
-      <Splash
-        state={unreachable({
-          kind: 'timeout',
-          status: 0,
-          code: 'transport/timeout',
-          detail: 'the service did not answer in time',
-        })}
-      />,
+    renderSplash(
+      unreachable({
+        kind: 'timeout',
+        status: 0,
+        code: 'transport/timeout',
+        detail: 'the service did not answer in time',
+      }),
     );
 
     expect(screen.getByRole('alert').textContent).toContain('still be starting');
+  });
+});
+
+describe('in another language', () => {
+  it('the same screen says the same thing, in it', () => {
+    renderSplash({ kind: 'connecting' }, 'bn');
+
+    // Proves the wiring rather than the translation: the English string is gone
+    // and the document now claims to be Bangla, which is what a screen reader
+    // picks its voice from.
+    expect(screen.getByRole('status').textContent).not.toContain('Starting');
+    expect(screen.getByRole('status').textContent).toContain('এডিটর');
+    expect(document.documentElement.getAttribute('lang')).toBe('bn');
   });
 });

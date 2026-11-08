@@ -13,10 +13,12 @@
 
 import { useState } from 'react';
 
+import { useI18n } from '../../core/i18n/context';
 import { useProjects } from './useProjects';
 import type { ProjectSummary } from '../../core/api/contract';
 
 export function ProjectList(): React.JSX.Element {
+  const { t } = useI18n();
   const view = useProjects();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -36,7 +38,9 @@ export function ProjectList(): React.JSX.Element {
   return (
     <section className="w-[32rem] rounded-panel border border-line bg-surface-1 p-6">
       <header className="flex items-baseline justify-between">
-        <h2 className="text-sm font-semibold tracking-wide text-ink-dim">PROJECTS</h2>
+        <h2 className="text-sm font-semibold tracking-wide text-ink-dim">
+          {t('projects.heading')}
+        </h2>
         <button
           type="button"
           className="text-xs text-accent hover:text-ink"
@@ -44,7 +48,7 @@ export function ProjectList(): React.JSX.Element {
             view.refresh();
           }}
         >
-          Refresh
+          {t('projects.refresh')}
         </button>
       </header>
 
@@ -56,13 +60,13 @@ export function ProjectList(): React.JSX.Element {
 
       {view.loading && view.projects.length === 0 ? (
         <p className="mt-4 text-sm text-ink-faint" role="status">
-          Loading…
+          {t('projects.loading')}
         </p>
       ) : null}
 
       {!view.loading && view.projects.length === 0 ? (
         <p className="mt-4 text-sm text-ink-faint" role="status">
-          No projects open.
+          {t('projects.empty')}
         </p>
       ) : null}
 
@@ -91,8 +95,8 @@ export function ProjectList(): React.JSX.Element {
       >
         <input
           className="min-w-0 flex-1 rounded-panel border border-line bg-surface-0 px-3 py-2 text-sm text-ink placeholder:text-ink-faint"
-          placeholder="New project"
-          aria-label="New project name"
+          placeholder={t('projects.newPlaceholder')}
+          aria-label={t('projects.newLabel')}
           value={name}
           onChange={(event) => {
             setName(event.target.value);
@@ -103,7 +107,7 @@ export function ProjectList(): React.JSX.Element {
           disabled={busy || name.trim() === ''}
           className="rounded-panel bg-accent px-3 py-2 text-sm font-medium text-accent-ink disabled:opacity-50"
         >
-          Create
+          {t('projects.create')}
         </button>
       </form>
     </section>
@@ -121,6 +125,7 @@ function Row({
   readonly onSelect: () => void;
   readonly onClose: () => void;
 }): React.JSX.Element {
+  const { t } = useI18n();
   return (
     <li className="flex items-center gap-3 py-2">
       <button
@@ -133,17 +138,18 @@ function Row({
           {project.name}
         </span>
         <span className="block truncate font-mono text-xs text-ink-faint">
-          {project.path ?? 'never saved'}
-          {project.dirty ? ' · unsaved' : ''} · {project.clip_count} clips
+          {project.path ?? t('projects.neverSaved')}
+          {project.dirty ? t('projects.unsavedSuffix') : ''}
+          {t('projects.clips', { count: project.clip_count })}
         </span>
       </button>
       <button
         type="button"
         onClick={onClose}
-        aria-label={`Close ${project.name}`}
+        aria-label={t('projects.closeNamed', { name: project.name })}
         className="text-xs text-ink-faint hover:text-danger"
       >
-        Close
+        {t('projects.close')}
       </button>
     </li>
   );

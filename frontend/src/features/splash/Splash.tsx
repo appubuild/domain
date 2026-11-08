@@ -10,29 +10,38 @@
  *  service itself would make every boot two requests instead of one.
  */
 
+import { useI18n } from '../../core/i18n/context';
 import type { ServiceState } from './useServiceInfo';
 
 export function Splash({ state }: { readonly state: ServiceState }): React.JSX.Element {
+  // Every string on this screen is a message key, including the product's own
+  // name. The rule is not "English is the default": English is one bundle, and a
+  // literal here is a string no translator can ever reach.
+  const { t } = useI18n();
+
   return (
     <main className="flex h-full items-center justify-center">
       <section className="w-[28rem] rounded-panel border border-line bg-surface-1 p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Nova Studio</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('app.name')}</h1>
 
         {state.kind === 'connecting' ? (
           <p className="mt-2 text-sm text-ink-dim" role="status">
-            Starting the editor…
+            {t('splash.starting')}
           </p>
         ) : null}
 
         {state.kind === 'ready' ? (
           <>
             <p className="mt-2 text-sm text-ink-dim" role="status">
-              Ready.
+              {t('splash.ready')}
             </p>
             <dl className="mt-6 space-y-1 text-sm">
-              <Row label="Service" value={state.info.version} />
-              <Row label="Project format" value={`v${state.info.project_format_version}`} />
-              <Row label="Data" value={state.info.data_dir} />
+              <Row label={t('splash.service')} value={state.info.version} />
+              <Row
+                label={t('splash.projectFormat')}
+                value={`v${state.info.project_format_version}`}
+              />
+              <Row label={t('splash.dataDir')} value={state.info.data_dir} />
             </dl>
           </>
         ) : null}
@@ -40,8 +49,8 @@ export function Splash({ state }: { readonly state: ServiceState }): React.JSX.E
         {state.kind === 'unreachable' ? (
           <p className="mt-2 text-sm text-danger" role="alert">
             {state.problem.code === 'transport/timeout'
-              ? 'The editor did not answer. It may still be starting.'
-              : `The editor is unreachable (${state.problem.code}).`}
+              ? t('splash.unreachableTimeout')
+              : t('splash.unreachable', { code: state.problem.code })}
           </p>
         ) : null}
       </section>

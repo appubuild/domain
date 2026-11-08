@@ -705,11 +705,18 @@ frontend/src
   (guides, safe areas, selection outlines, transform gizmos) at display refresh rate
   without a backend round-trip — so dragging a transform handle feels instant while the
   authoritative frame still comes from the compositor.
-* **Theming:** all colours/spacing/radii are CSS custom properties defined once in a
-  Tailwind v4 `@theme` block; a theme is a JSON document that overrides those properties.
+* **Theming:** all colours/spacing/radii/durations are CSS custom properties defined once
+  in a Tailwind v4 `@theme static` block; a theme is a **document that overrides those
+  properties** — 31 named tokens, validated on the way in, applied in full or not at all.
   No component hardcodes a colour — enforced by lint (`no-restricted-syntax`).
-* **i18n:** no literal user-facing strings in components; `t('key')` with ICU plurals,
-  bundles in `nova_studio/i18n/*.json`, hot-reloadable, plugin-contributable.
+* **i18n:** no literal user-facing strings in components; `t('key')`, with the key type
+  derived from the reference bundle so a typo does not compile. Plural categories come
+  from `Intl.PluralRules` rather than from a table we maintain. Bundles are imported, not
+  fetched, so the first paint is never in the wrong language.
+
+**Built in stage 6 (slice 1):** `core/theme/` and `core/i18n/` — the token contract, two
+shipped themes as data, and bundles for `en` and `bn`. `ui/`, the dock tree and the window
+chrome follow in the rest of stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
 
 ---
 

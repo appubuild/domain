@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { createApiClient } from './core/api/client';
 import { ApiContext } from './core/api/context';
+import { I18nProvider } from './core/i18n/I18nProvider';
+import { preferredLocale } from './core/i18n/locale';
 import { readRuntimeConfig } from './core/shell/config';
+import { ThemeProvider } from './core/theme/ThemeProvider';
 import './styles/theme.css';
 
 /** The composition root of the window.
@@ -27,8 +30,16 @@ if (!container) throw new Error('index.html has no #root to mount into');
 
 createRoot(container).render(
   <StrictMode>
-    <ApiContext.Provider value={client}>
-      <App />
-    </ApiContext.Provider>
+    {/* Outside the API context and outside the app, because neither is about
+        the other: the theme and the language are properties of the *window*, and
+        a panel that needed a service to know what colour it is would be a panel
+        that cannot be rendered in a test. */}
+    <ThemeProvider>
+      <I18nProvider locale={preferredLocale()}>
+        <ApiContext.Provider value={client}>
+          <App />
+        </ApiContext.Provider>
+      </I18nProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

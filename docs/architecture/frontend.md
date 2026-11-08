@@ -158,6 +158,9 @@ frontend/
     │   ├── shell/config.ts    how this window was started (§10.8)
     │   ├── events/            the WS bridge: protocol.ts, bridge.ts, url.ts,
     │   │                      useEventStream.ts (§10.9.1)
+    │   ├── theme/             the token contract, themes as data, applying them
+    │   │                      (§10.10.2)
+    │   ├── i18n/              bundles, the translator, the provider (§10.10.3)
     │   ├── timecode/          (stage 7) frame math shared with backend semantics
     │   └── utils/
     ├── stores/                one slice per domain, each a vanilla zustand store
@@ -521,32 +524,117 @@ main.tsx                 config → client → ApiContext → <App/>
       features/**        panels, each with its own view-model
 ```
 
-## 10.10 Theming and the design system
+## 10.10 The design system
 
-`src/styles/theme.css` is the **only** place a colour may exist. Every value is a CSS
-custom property inside a Tailwind v4 `@theme` block, which is what makes a theme a
-document that overrides properties rather than a second stylesheet:
+Built in stage 6, slice 1. Three layers, and the order between them is the design:
+**tokens** that no component names, **themes** that are data, and **messages** that
+are data. A component may not contain a colour, and it may not contain a sentence.
 
-| Token group | Tokens |
+### 10.10.1 Tokens
+
+`src/styles/theme.css` is the **only** place a colour, a radius, a duration or a depth
+may exist. Every value is a CSS custom property inside a Tailwind v4
+`@theme static` block — `static` because Tailwind only emits the variables a generated
+utility happens to use, and these are a *contract*: `themeDuration()` reads
+`--duration-base` by hand and a theme document may override any of them whether or not
+this build generated a class for it.
+
+| Group | Tokens | What each one is for |
+| --- | --- | --- |
+| Surfaces | `--color-surface-0` … `-3` | 0 is the floor; each step is one layer raised off it |
+| Lines | `--color-line` | borders, dividers, the edge of a control |
+| Ink | `--color-ink`, `-dim`, `-faint` | a label, a value, metadata |
+| Accent | `--color-accent`, `--color-accent-ink` | the one saturated thing; `-ink` is what is legible on it |
+| Feedback | `--color-danger`, `-success`, `-warning`, `-info` | a render that failed is not a render that is still running |
+| Overlay | `--color-scrim`, `--color-focus` | the modal's backdrop, and the focus ring |
+| Type | `--font-ui`, `--font-mono` | interface, and everything a user must compare character by character |
+| Shape | `--radius-panel`, `--radius-control` | the outside of a container, the outside of something clickable |
+| Depth | `--shadow-panel`, `--shadow-overlay` | resting, and lifted |
+| Motion | `--duration-fast` 120ms, `-base` 180ms, `-slow` 260ms, `--ease-out`, `--ease-in-out` | hover, state change, a panel arriving |
+| Stacking | `--z-panel` 10, `-overlay` 100, `-modal` 200, `-toast` 300 | four layers; a component needing a fifth is stacking contexts by accident |
+
+The block is `@theme static` **and** the reference theme, and `core/theme/tokens.test.ts`
+parses the file and fails if either side moves alone. The lint rule that forbids hex
+literals in `src/` is what keeps the rest true: without it, the first deadline turns
+`oklch(0.72 0.16 250)` into `#4c8dff` in a component and theming quietly dies.
+
+Two rules the stylesheet sets rather than each component:
+
+* **Focus is `:focus-visible` and only that.** A keyboard user and a mouse user are
+  asking different questions, and a ring on every click is a UI that looks broken.
+* **`prefers-reduced-motion` zeroes every duration.** It is a request for *no*
+  animation, not faster animation, so JS reads it too — `useReducedMotion()` — before
+  choosing a duration, and `themeDuration()` reads the token it is expected to use.
+
+### 10.10.2 A theme is data
+
+```
+styles/theme.css          the @theme static block — the reference theme, in CSS
+core/theme/tokens.ts      the contract: the 31 names a theme may set, validateTheme()
+core/theme/themes.ts      NOVA_DARK (the reference, as data), NOVA_LIGHT
+core/theme/apply.ts       applyTheme/clearTheme/readAppliedTokens — one element, total
+core/theme/context.ts     ThemeContext, useTheme(), ThemeStorage (the port)
+core/theme/ThemeProvider  the only component that writes
+core/theme/useReducedMotion.ts
+```
+
+| Decision | Why |
 | --- | --- |
-| Surfaces | `--color-surface-0` … `--color-surface-3` |
-| Lines | `--color-line` |
-| Ink | `--color-ink`, `--color-ink-dim`, `--color-ink-faint` |
-| Accent | `--color-accent`, `--color-accent-ink` |
-| Feedback | `--color-danger`, `--color-success` |
-| Type | `--font-ui`, `--font-mono` |
-| Shape | `--radius-panel` |
+| A theme is a **document that overrides properties**, not a stylesheet | A plugin ships data; a second stylesheet is a build step |
+| Only the 31 names in `tokens.ts` may be set | A document that may set anything is a stylesheet with extra steps |
+| `validateTheme()` returns `Result<Theme, ThemeProblem[]>` and reports **every** problem | A theme arrives from outside — a plugin, a file, a settings row. "These two tokens are misspelled" is an answer, not a stack trace |
+| Applying is **total**: every token the theme omits is removed first | A theme that half-applies is the bug where a panel is unreadable in the theme you just chose |
+| `applyTheme(element, …)` takes an element | A preview swatch applies a theme to a `div`; the window applies it to `<html>` |
+| The choice lives behind `ThemeStorage` | It is install state, so it belongs in the service's `settings` table (stage 6, slice 6). Today it is `localStorage`, and the provider cannot tell |
+| Applied in a **layout** effect | A passive effect runs after the paint, which is exactly the flash this prevents |
+| An unknown stored id falls back to the default rather than clearing the preference | A build that no longer ships a theme should not cost the user the one they picked |
 
-The window is dark-first (`<html class="dark">`) because the product is an editor. The
-lint rule that forbids hex literals in `src/` is what keeps this true: without it, the
-first deadline turns `oklch(0.72 0.16 250)` into `#4c8dff` in a component and theming
-quietly dies. Future themes (including plugin-contributed ones) are JSON documents that
-override these properties — no code path, no rebuild.
+`NOVA_LIGHT` overrides sixteen colours and two shadows and says nothing about radii,
+motion or type, because a light theme is not a different shape. It is also the worked
+example for a plugin author, which is why the reference theme exists as data in
+`themes.ts` and not only as CSS — and why a test reads the CSS and compares.
 
-**i18n rule (from §10):** no literal user-facing string in a component. Today the splash
-carries English literals and i18n arrives with the design system in stage 6; when it
-does, `NS-*` problem codes are the keys for error messages (§10.6), so a failure is
-localised by the same table the service's `remedy` field feeds.
+### 10.10.3 Messages are data
+
+No literal user-facing string in a component (`ARCHITECTURE.md` §10). `t('splash.starting')`
+and never `'Starting the editor…'`: English is a locale, not a default, and a string in a
+component is a string no translator can reach without a code change.
+
+```
+core/i18n/types.ts        MessageBundle, MessageNode, PluralForms, MessageKey<T>
+core/i18n/bundles.ts      BUILT_IN_BUNDLES, DEFAULT_LOCALE, AppMessageKey
+core/i18n/bundles/*.json  en, bn — documents, not code
+core/i18n/translate.ts    createTranslator(): dotted keys, {interpolation}, plurals
+core/i18n/plural.ts       the CLDR category, from Intl.PluralRules
+core/i18n/context.ts      I18nContext, useI18n()
+core/i18n/I18nProvider    the provider; sets <html lang> and <html dir>
+core/i18n/locale.ts       what the platform says, before anyone has chosen
+```
+
+| Decision | Why |
+| --- | --- |
+| The key type is **derived from the reference bundle** | `t('splash.staring')` fails to compile. A missing translation is caught by a test; a typo in a key is caught by the compiler |
+| A missing message returns the **key** and reports it through `onMissing` | `splash.starting` on screen is a one-line bug report; a blank is a mystery |
+| Plural categories come from `Intl.PluralRules`, not a table | English has two forms; Polish has three and a rule for 22. A translator who cannot express their language stops translating |
+| Bundles are **imported, not fetched** | A window that renders English then swaps is a window that flickered, and the first paint is the one a user judges by |
+| The reference bundle is the fallback for every other one | A button with no label is worse than a button in the wrong language |
+| The provider sets `lang` and `dir` on `<html>` and restores them on unmount | A screen reader picks its voice from `lang`; a test must not inherit the previous test's language |
+| Bundles are compared by a test, key for key, in both directions | A translator adding `projects.clipCount` to one file and `projects.clips` to the other has written two correct files that do not describe the same app |
+
+Bundles ship `en` and `bn`. The second one is not decorative: it is the only way the
+plural path, the fallback path and the `dir` path are exercised by something other than
+a test double.
+
+`NS-*` codes are **not** translated here. A problem document carries a human `remedy`
+from the service (`core/api/problem.ts`), and that sentence is the service's to
+translate; the window shows the code next to it.
+
+### 10.10.4 What is in `ui/`
+
+Not yet: `ui/` arrives with the components it exists to hold (stage 6, slice 2). The
+foundation it will be built on — tokens, themes, messages, motion — is already in
+`core/`, because `ui/` must depend on `core/` and never on a store, and the fastest way
+to make that true is for the things it depends on to exist first.
 
 ## 10.11 Testing strategy
 
@@ -560,7 +648,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (130 tests, 11 files, ≈ 6 s):
+Suites today (198 tests, 17 files, ≈ 9 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -572,13 +660,22 @@ Suites today (130 tests, 11 files, ≈ 6 s):
 | `core/events/bridge.test.ts` (27) | The sequence arithmetic against a socket double: a gap is held and requested, a replay fills the hole, an incomplete replay is admitted, a handler that throws does not kill the stream, silence reconnects, the retry backs off, and the health snapshot is stable between changes while every listener is told |
 | `stores/project.test.ts` (18) | The service's answer wins, a failed refresh keeps the list, refreshes coalesce, ten events are two requests, and a save asks for the summary instead of inventing one |
 | `app/providers.test.tsx` (5) | The wiring: a refresh on mount, the socket opening and going live, `project.*` asking again while another topic does not, an unrepairable gap refreshing, and the subscription coming back on unmount |
-| `features/splash/Splash.test.tsx` (5) | All three splash states, including that a timeout is not reported as a crash |
+| `features/splash/Splash.test.tsx` (6) | All three splash states, including that a timeout is not reported as a crash — and the same screen in Bangla, which is what proves the window is translated rather than merely translatable |
 | `features/splash/useServiceInfo.test.ts` (4) | The boot request: a connecting start, a ready service, a failure that names its code, and the abort signal handed to the client when the window gives up |
-| `features/projects/ProjectList.test.tsx` (9) | The panel against a scripted client double: rows, the empty state, a failed refresh that keeps the list, create, close, and the error a rejected create leaves behind |
+| `features/projects/ProjectList.test.tsx` (10) | The panel against a scripted client double: rows, the empty state, a failed refresh that keeps the list, create, close, the error a rejected create leaves behind, and one clip in Bangla |
+| `core/theme/tokens.test.ts` (14) | The contract: a document with an unknown token refused, every problem reported and not just the first, a name without its `--` prefix still meaning the token, and — the one that makes the duplication in `themes.ts` safe — the stylesheet parsed and compared to the reference theme name by name |
+| `core/theme/theme.test.tsx` (16) | Applying is total and reversible: a token the theme omits is *removed*, applying twice is applying once, clearing returns the element to the stylesheet, a stored id this build does not ship falls back, remembering is the storage's job, an unknown id is ignored, a preview paints its own element and not the window |
+| `core/i18n/translate.test.ts` (14) | A missing message returns the key and says so, a group is not a message, an unfilled placeholder is left visible rather than blanked, a form the bundle left out falls back to `other`, and Polish's three forms come from `Intl` rather than from a rule we wrote |
+| `core/i18n/bundles.test.ts` (6) | Every bundle has exactly the reference bundle's keys, no message is empty, the placeholders match the reference's, every count-sensitive message has an `other`, and the platform's categories are the ones a bundle may need |
+| `core/i18n/context.test.tsx` (11) | No provider throws rather than silently rendering English, `bn-BD` gets the Bangla bundle, an unknown locale falls back, `<html lang>` and `dir` are set and restored, and a key no bundle has is both shown and reported |
+| `core/i18n/locale.test.ts` (5) | The first tag the platform offers, the fallback when it offers nothing, and a tag that is not a tag skipped rather than looked up |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
 is why the tests route values through helpers: `const good = asResult(ok(42))` keeps the
 type checker from narrowing a literal two lines earlier and proving the branch for us.
+The same idea is what makes `t()` safe — `AppMessageKey` is derived from the reference
+bundle, so `core/i18n/context.test.tsx` asking for a key no bundle has can only do it
+with a deliberate cast, and the cast says so in a comment.
 
 Deliberately untested here, and where it belongs instead: pixel output (goldens in stage
 8), the WebSocket bridge (stage 5, against a real service), and canvas rendering (stage 7,
@@ -622,8 +719,12 @@ while CI, which has both, always runs the whole thing.
 | What | Stage |
 | --- | --- |
 | Commands, undo/redo and optimistic updates in `stores/` — the loop the timeline is edited through | 7 |
-| `ui/` — the design system, then the dock tree and window chrome | 6 |
-| `features/editor/` — preview panel, inspector, status bar | 6 |
+| **Done (stage 6, slice 1):** the design-system foundation — the token contract, themes as data, and messages as data. `core/theme/`, `core/i18n/`, and the two panels that existed already speaking through `t()` | 6 |
+| `ui/` — Button, Icon, Tooltip, Field, and the rest of the primitives the panels share | 6, slice 2 |
+| Overlays and feedback — Menu, Modal, Popover, Toast | 6, slice 3 |
+| Layout primitives — Splitter, Dock, VirtualList | 6, slice 4 |
+| The shell — window chrome, the dock tree, routing, the status bar, the command palette | 6, slice 5 |
+| `features/editor/` — preview panel, inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |
 | `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping | 7 |
 | WebGL overlay layer for preview-only gizmos | 7 |
 | `features/captions/` — the Caption Studio | 9 |
