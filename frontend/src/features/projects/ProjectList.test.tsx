@@ -216,3 +216,23 @@ describe('in another language', () => {
     expect(screen.getByText(/1 ক্লিপ/)).toBeTruthy();
   });
 });
+
+describe('built out of the design system', () => {
+  it('the panel is a panel: a heading a screen reader can move to', () => {
+    renderPanel({ list: { projects: [] } });
+    // `Panel` and not a `<section>` with a class: the dock tree is made of these,
+    // and six panels have to agree about what a title is.
+    expect(screen.getByRole('heading', { name: 'PROJECTS' }).tagName).toBe('H2');
+  });
+
+  it('the new-project field is labelled even though no label is drawn', async () => {
+    renderPanel({ list: { projects: [] } });
+    await waitFor(() => {
+      expect(screen.queryByText('No projects open.')).not.toBeNull();
+    });
+    // `labelHidden` clips the label, it does not remove it: the field is named
+    // for a screen reader without a second copy of the placeholder on screen.
+    const field = screen.getByLabelText('New project name');
+    expect(field.getAttribute('placeholder')).toBe('New project');
+  });
+});

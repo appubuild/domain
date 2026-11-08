@@ -168,8 +168,11 @@ frontend/
     │   ├── project.ts         the file menu, as state — the first slice
     │   ├── timeline/  media/  playback/  captions/  export/  ai/  settings/  ui/
     │                          (stages 6–11, one per feature that needs one)
-    ├── ui/                    (stage 6) design system: Button, Slider, Menu, Modal,
-    │                          Tooltip, VirtualList, Dock, Splitter, Icon, Toast
+    ├── ui/                    design system, one component per file (§10.10.4):
+    │                          cx, Icon, Spinner, Button, IconButton, Field,
+    │                          TextField, Tooltip, Panel, VisuallyHidden — then
+    │                          Menu, Modal, Popover, Toast, Splitter, Dock,
+    │                          VirtualList as the stage needs them
     ├── features/              one folder per screen or panel group
     │   ├── splash/            boot screen: is the editor there? (useServiceInfo, Splash)
     │   ├── projects/          the project list panel (useProjects, ProjectList)
@@ -631,10 +634,36 @@ translate; the window shows the code next to it.
 
 ### 10.10.4 What is in `ui/`
 
-Not yet: `ui/` arrives with the components it exists to hold (stage 6, slice 2). The
-foundation it will be built on — tokens, themes, messages, motion — is already in
-`core/`, because `ui/` must depend on `core/` and never on a store, and the fastest way
-to make that true is for the things it depends on to exist first.
+Built in stage 6, slice 2. `ui/` depends on `core/` (tokens, themes, messages, result)
+and on nothing else — never on a store, never on an API client, never on a feature. That
+is what makes a component renderable in a test with none of the app around it.
+
+| | What it is | What it decides for everybody else |
+| --- | --- | --- |
+| `cx.ts` | Class names joined, falsy values dropped | The caller's `className` comes last and CSS decides. There is no `tailwind-merge`, because a merge is a second copy of Tailwind's conflict table living in the bundle and going stale |
+| `icons.ts` + `Icon.tsx` | 24 icons as shape data, drawn at `currentColor` | An icon is decorative until it is given a name; then it is an image with that name |
+| `Spinner.tsx` | The one animation that may not stop | `data-motion="essential"` exempts it from `prefers-reduced-motion` — a still spinner is a hang, not restraint |
+| `Button.tsx` | Four variants, three sizes, two states | `loading` sets `aria-busy` **and** keeps the label: a button whose name changes mid-press is announced as a different button |
+| `IconButton.tsx` | A button with an icon and no text | `label` is **required**. The type system is what stops the most common accessibility failure in an editor's toolbar |
+| `Field.tsx` | Label + control + hint + error, wired | `for`/`id`, `aria-describedby` at both the hint and the error, `aria-invalid` so the state is not carried by colour alone |
+| `TextField.tsx` | `Field` on an `<input>` | The handler is handed a **string**, not an event; `required` is never set on the element, because the browser's validation bubble cannot be styled, translated or placed |
+| `Tooltip.tsx` | A description that appears on hover **and focus** | Delayed by 400 ms, dismissed instantly by Escape, and attached with `aria-describedby` only while it is open — a tooltip in the DOM from the first render is read out on every pass |
+| `Panel.tsx` | The surface every panel is made of | The title is a heading, the body scrolls and the header does not, and there is no `padding` prop — six panels side by side have to agree |
+| `VisuallyHidden.tsx` | Text for a screen reader only | The word a sighted user infers from position and a blind user cannot |
+
+Two rules hold across all of them. **A component never names a colour** — every value
+is a token, or `make frontend-lint` fails the build. And **a component never invents
+behaviour a platform already has**: `type="button"` by default (a button without it
+submits the form), native `disabled` rather than a guarded handler (removing the control
+from the tab order is the platform's answer, and a second subtler answer of our own would
+be a button that behaves unlike every other button on the user's machine).
+
+`features/projects/ProjectList.tsx` was rewritten on top of them in the same slice, which
+is the only honest test of a design system: the raw markup it replaced had four buttons
+with four different paddings, and none of them was named.
+
+Still to come in `ui/`: overlays and feedback (Menu, Modal, Popover, Toast) in slice 3,
+and the layout primitives (Splitter, Dock, VirtualList) in slice 4.
 
 ## 10.11 Testing strategy
 
@@ -648,7 +677,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (198 tests, 17 files, ≈ 9 s):
+Suites today (272 tests, 27 files, ≈ 14 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -662,7 +691,17 @@ Suites today (198 tests, 17 files, ≈ 9 s):
 | `app/providers.test.tsx` (5) | The wiring: a refresh on mount, the socket opening and going live, `project.*` asking again while another topic does not, an unrepairable gap refreshing, and the subscription coming back on unmount |
 | `features/splash/Splash.test.tsx` (6) | All three splash states, including that a timeout is not reported as a crash — and the same screen in Bangla, which is what proves the window is translated rather than merely translatable |
 | `features/splash/useServiceInfo.test.ts` (4) | The boot request: a connecting start, a ready service, a failure that names its code, and the abort signal handed to the client when the window gives up |
-| `features/projects/ProjectList.test.tsx` (10) | The panel against a scripted client double: rows, the empty state, a failed refresh that keeps the list, create, close, the error a rejected create leaves behind, and one clip in Bangla |
+| `features/projects/ProjectList.test.tsx` (12) | The panel against a scripted client double: rows, the empty state, a failed refresh that keeps the list, create, close, the error a rejected create leaves behind, one clip in Bangla, and that it is built from the design system — a heading that is a heading, a field that is labelled without drawing the label |
+| `ui/cx.test.ts` (6) | `false` dropped rather than printed, a nested conditional group walked, the caller's classes last |
+| `ui/icons.test.ts` (6) | Every icon has shapes, every number fits the 24 × 24 grid (an icon copied from a 32-grid set is clipped, and nothing else catches it), no negative sizes, kebab-case names |
+| `ui/Icon.test.tsx` (6) | Hidden until named, `currentColor`, sizes, and the whole set rendered without throwing — which is the sum of every malformed path |
+| `ui/Button.test.tsx` (12) | `type="button"` by default, a ref forwarded, a disabled button not called, a busy one `aria-busy` and unpressable **with its name intact**, and one announcement of the wait |
+| `ui/IconButton.test.tsx` (5) | Named by its label, the drawing hidden, still named while busy |
+| `ui/Field.test.tsx` (9) | The label tied to the control, two fields with two ids, `aria-describedby` at the error *first* then the hint, and an empty string treated as no error at all so a fresh form is not red |
+| `ui/TextField.test.tsx` (8) | One call per keystroke with the whole value, the event still offered, invalid by border **and** aria, `required` never reaching the element |
+| `ui/Tooltip.test.tsx` (9) | Not in the document until shown, `aria-describedby` only while open, appears on focus as well as hover, Escape dismisses it and it does not come back while the pointer is still there |
+| `ui/Panel.test.tsx` (7) | The title is a heading at the level asked for, the header is outside the scrolling body, actions live in the header |
+| `ui/Spinner.test.tsx` (4) | Decoration by default, exempted from reduced motion, a status when it stands alone |
 | `core/theme/tokens.test.ts` (14) | The contract: a document with an unknown token refused, every problem reported and not just the first, a name without its `--` prefix still meaning the token, and — the one that makes the duplication in `themes.ts` safe — the stylesheet parsed and compared to the reference theme name by name |
 | `core/theme/theme.test.tsx` (16) | Applying is total and reversible: a token the theme omits is *removed*, applying twice is applying once, clearing returns the element to the stylesheet, a stored id this build does not ship falls back, remembering is the storage's job, an unknown id is ignored, a preview paints its own element and not the window |
 | `core/i18n/translate.test.ts` (14) | A missing message returns the key and says so, a group is not a message, an unfilled placeholder is left visible rather than blanked, a form the bundle left out falls back to `other`, and Polish's three forms come from `Intl` rather than from a rule we wrote |
@@ -720,7 +759,8 @@ while CI, which has both, always runs the whole thing.
 | --- | --- |
 | Commands, undo/redo and optimistic updates in `stores/` — the loop the timeline is edited through | 7 |
 | **Done (stage 6, slice 1):** the design-system foundation — the token contract, themes as data, and messages as data. `core/theme/`, `core/i18n/`, and the two panels that existed already speaking through `t()` | 6 |
-| `ui/` — Button, Icon, Tooltip, Field, and the rest of the primitives the panels share | 6, slice 2 |
+| **Done (stage 6, slice 2):** `ui/` — `cx`, `Icon`, `Spinner`, `Button`, `IconButton`, `Field`, `TextField`, `Tooltip`, `Panel`, `VisuallyHidden`, and the project list rebuilt on them | 6 |
+| Overlays and feedback — Menu, Modal, Popover, Toast | 6, slice 3 |
 | Overlays and feedback — Menu, Modal, Popover, Toast | 6, slice 3 |
 | Layout primitives — Splitter, Dock, VirtualList | 6, slice 4 |
 | The shell — window chrome, the dock tree, routing, the status bar, the command palette | 6, slice 5 |

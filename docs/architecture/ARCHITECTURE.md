@@ -714,9 +714,11 @@ frontend/src
   from `Intl.PluralRules` rather than from a table we maintain. Bundles are imported, not
   fetched, so the first paint is never in the wrong language.
 
-**Built in stage 6 (slice 1):** `core/theme/` and `core/i18n/` — the token contract, two
-shipped themes as data, and bundles for `en` and `bn`. `ui/`, the dock tree and the window
-chrome follow in the rest of stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
+**Built in stage 6:** `core/theme/` and `core/i18n/` — the token contract, two shipped
+themes as data, and bundles for `en` and `bn`; then `ui/` — `Button`, `IconButton`,
+`Field`, `TextField`, `Tooltip`, `Panel`, `Spinner`, `Icon` and `cx` — with the project
+list rebuilt on them. The dock tree, the overlays and the window chrome follow in the rest
+of stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
 
 ---
 

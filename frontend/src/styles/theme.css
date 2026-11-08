@@ -123,4 +123,12 @@ body,
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /* One exception, and it is not a preference: a spinner that stops is a
+   * spinner that has stopped being an answer to "is it working?", which is the
+   * only question it is there to answer. `Spinner` carries the opt-in. */
+  [data-motion='essential'] {
+    animation-duration: 900ms !important;
+    animation-iteration-count: infinite !important;
+  }
 }
