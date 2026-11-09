@@ -716,9 +716,11 @@ frontend/src
 
 **Built in stage 6:** `core/theme/` and `core/i18n/` — the token contract, two shipped
 themes as data, and bundles for `en` and `bn`; then `ui/` — `Button`, `IconButton`,
-`Field`, `TextField`, `Tooltip`, `Panel`, `Spinner`, `Icon` and `cx` — with the project
-list rebuilt on them. The dock tree, the overlays and the window chrome follow in the rest
-of stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
+`Field`, `TextField`, `Tooltip`, `Panel`, `Spinner`, `Icon` and `cx`, with the project
+list rebuilt on them; then the overlays and feedback — `Portal`, `Modal`, `Menu`,
+`Popover` and the toast queue, all keyboard-first, all portalled out of whatever clipped
+them. The dock tree, the layout primitives and the window chrome follow in the rest of
+stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
 
 ---
 

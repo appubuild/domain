@@ -7,6 +7,7 @@ import { I18nProvider } from './core/i18n/I18nProvider';
 import { preferredLocale } from './core/i18n/locale';
 import { readRuntimeConfig } from './core/shell/config';
 import { ThemeProvider } from './core/theme/ThemeProvider';
+import { ToastProvider } from './ui/ToastProvider';
 import './styles/theme.css';
 
 /** The composition root of the window.
@@ -36,9 +37,14 @@ createRoot(container).render(
         that cannot be rendered in a test. */}
     <ThemeProvider>
       <I18nProvider locale={preferredLocale()}>
-        <ApiContext.Provider value={client}>
-          <App />
-        </ApiContext.Provider>
+        {/* Inside the theme and the language, because a toast is made of both,
+            and above the API: a message may be raised by something that has no
+            client — a keyboard shortcut, a window that failed to open. */}
+        <ToastProvider>
+          <ApiContext.Provider value={client}>
+            <App />
+          </ApiContext.Provider>
+        </ToastProvider>
       </I18nProvider>
     </ThemeProvider>
   </StrictMode>,

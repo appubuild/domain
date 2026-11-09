@@ -171,8 +171,9 @@ frontend/
     ├── ui/                    design system, one component per file (§10.10.4):
     │                          cx, Icon, Spinner, Button, IconButton, Field,
     │                          TextField, Tooltip, Panel, VisuallyHidden — then
-    │                          Menu, Modal, Popover, Toast, Splitter, Dock,
-    │                          VirtualList as the stage needs them
+    │                          Portal, useDismissable, Modal, Menu, Popover,
+    │                          toast, Toaster — then Splitter, Dock, VirtualList
+    │                          as the stage needs them
     ├── features/              one folder per screen or panel group
     │   ├── splash/            boot screen: is the editor there? (useServiceInfo, Splash)
     │   ├── projects/          the project list panel (useProjects, ProjectList)
@@ -634,7 +635,7 @@ translate; the window shows the code next to it.
 
 ### 10.10.4 What is in `ui/`
 
-Built in stage 6, slice 2. `ui/` depends on `core/` (tokens, themes, messages, result)
+Built in stage 6, slices 2 and 3. `ui/` depends on `core/` (tokens, themes, messages, result)
 and on nothing else — never on a store, never on an API client, never on a feature. That
 is what makes a component renderable in a test with none of the app around it.
 
@@ -650,6 +651,15 @@ is what makes a component renderable in a test with none of the app around it.
 | `Tooltip.tsx` | A description that appears on hover **and focus** | Delayed by 400 ms, dismissed instantly by Escape, and attached with `aria-describedby` only while it is open — a tooltip in the DOM from the first render is read out on every pass |
 | `Panel.tsx` | The surface every panel is made of | The title is a heading, the body scrolls and the header does not, and there is no `padding` prop — six panels side by side have to agree |
 | `VisuallyHidden.tsx` | Text for a screen reader only | The word a sighted user infers from position and a blind user cannot |
+| `Portal.tsx` | A child rendered at the end of `<body>` | An overlay that lives inside a scroller, a transformed panel or a `overflow: hidden` dock is an overlay that is clipped by it. One `div[data-nova-portal]` per portal, removed with it |
+| `useDismissable.ts` | Escape, and a press outside | Escape is caught in the **capture** phase and `stopPropagation()`d, so the innermost overlay answers and the one behind it does not also close. A press is `pointerdown` on the document with the trigger exempt — the trigger's own `click` is what closes it, and both firing is the bug where a menu opens and shuts |
+| `Modal.tsx` | A dialog that holds focus | `aria-modal`, focus moved in on open and **back to what opened it** on close, Tab wrapped at the edges only, and the scrim answering on `pointerdown` whose *target* is the scrim — a drag that merely ends there is not a dismissal, and losing an edit to one is unforgivable |
+| `Menu.tsx` | A menu of commands | One tab stop: `Tab` leaves it, arrows and Home/End walk it and wrap, type-ahead with an 800 ms window skips disabled items, and focus returns to the trigger. `aria-keyshortcuts` *documents* a shortcut; it never binds one |
+| `Popover.tsx` | A panel anchored to something | Positioned from a rect, flipped and clamped to the viewport, and **deliberately not focus-trapped** — a popover holds a form and a form has to be left by Tab |
+| `toast.ts` | The message queue, and no React | A plain store, so a callback whose component unmounted minutes ago — "export finished" — can still speak. Danger stays until dismissed; success 3 s, info 4 s, warning 6 s. Three visible, the rest waiting |
+| `Toaster.tsx` | Where the messages appear | One always-present `aria-live="polite"` region (a region added at the same moment as its content is silent), `role="alert"` for danger, and no second copy for screen readers — the Dismiss button is inside the live region, not beside an `aria-hidden` one |
+| `toast-context.ts` | The seam a component reaches through | `ToastContext` and `useToastQueue()`, in their own module for the same reason `core/api/context` is: a file that exports a component and something else breaks fast refresh |
+| `ToastProvider.tsx` | The queue for this tree, and the place it is shown | One component for both, because they are one decision — whoever owns the queue is the component that must be mounted for a message to be seen. A queue may be **injected**, which is how a test drives it |
 
 Two rules hold across all of them. **A component never names a colour** — every value
 is a token, or `make frontend-lint` fails the build. And **a component never invents
@@ -662,8 +672,13 @@ be a button that behaves unlike every other button on the user's machine).
 is the only honest test of a design system: the raw markup it replaced had four buttons
 with four different paddings, and none of them was named.
 
-Still to come in `ui/`: overlays and feedback (Menu, Modal, Popover, Toast) in slice 3,
-and the layout primitives (Splitter, Dock, VirtualList) in slice 4.
+The overlays share one rule worth naming: **what opened an overlay owns the decision to
+close it**, and the component only reports *why* — `onClose('escape')`,
+`onClose('outside')`. A `Modal` that set its own `open` would be a dialog the host could
+not refuse to close, which is exactly the thing a form with unsaved edits needs to be able
+to do.
+
+Still to come in `ui/`: the layout primitives (Splitter, Dock, VirtualList) in slice 4.
 
 ## 10.11 Testing strategy
 
@@ -677,7 +692,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (272 tests, 27 files, ≈ 14 s):
+Suites today (331 tests, 34 files, ≈ 18 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -708,6 +723,13 @@ Suites today (272 tests, 27 files, ≈ 14 s):
 | `core/i18n/bundles.test.ts` (6) | Every bundle has exactly the reference bundle's keys, no message is empty, the placeholders match the reference's, every count-sensitive message has an `other`, and the platform's categories are the ones a bundle may need |
 | `core/i18n/context.test.tsx` (11) | No provider throws rather than silently rendering English, `bn-BD` gets the Bangla bundle, an unknown locale falls back, `<html lang>` and `dir` are set and restored, and a key no bundle has is both shown and reported |
 | `core/i18n/locale.test.ts` (5) | The first tag the platform offers, the fallback when it offers nothing, and a tag that is not a tag skipped rather than looked up |
+| `ui/Portal.test.tsx` (3) | The child lands at the end of `<body>` and outside the element that clips it, and it is taken away again with the component |
+| `ui/useDismissable.test.tsx` (10) | Escape caught in the capture phase and not reaching the overlay behind; a press outside dismissed, a press inside not; the trigger exempt so opening and closing in one click cannot happen; focus trapped at the edges and nowhere else; focus given back on close |
+| `ui/Modal.test.tsx` (8) | A named dialog that takes focus, keeps Tab inside, answers Escape and a press on the scrim — but not a press that merely *ends* on it — gives focus back to its opener, and leaves nothing in the tree once closed |
+| `ui/Menu.test.tsx` (14) | Takes focus so the keys have somewhere to go, one tab stop, arrows that wrap and skip the disabled, type-ahead with a reset window, Enter running the command and saying it closed, and focus returning to the trigger |
+| `ui/Popover.test.tsx` (8) | Anchored to its trigger's rect and flipped when it would not fit, closed by Escape and by a press outside, and **not** trapping focus — Tab has to be able to leave a form |
+| `ui/ToastProvider.test.tsx` (3) | A queue made for the tree, a queue injected into it — so a test can drive it from outside React — and a component with no provider throwing rather than raising a message into nowhere |
+| `ui/Toaster.test.tsx` (16) | A message arriving is announced; `role="alert"` for danger and `role="status"` otherwise; an error stays until dismissed while the rest expire on their own; three visible and the rest waiting; and the queue itself — dismiss, clear, replace — tested without React, because a store that can only be driven from a component is a store that cannot speak after unmount |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
 is why the tests route values through helpers: `const good = asResult(ok(42))` keeps the
@@ -760,8 +782,7 @@ while CI, which has both, always runs the whole thing.
 | Commands, undo/redo and optimistic updates in `stores/` — the loop the timeline is edited through | 7 |
 | **Done (stage 6, slice 1):** the design-system foundation — the token contract, themes as data, and messages as data. `core/theme/`, `core/i18n/`, and the two panels that existed already speaking through `t()` | 6 |
 | **Done (stage 6, slice 2):** `ui/` — `cx`, `Icon`, `Spinner`, `Button`, `IconButton`, `Field`, `TextField`, `Tooltip`, `Panel`, `VisuallyHidden`, and the project list rebuilt on them | 6 |
-| Overlays and feedback — Menu, Modal, Popover, Toast | 6, slice 3 |
-| Overlays and feedback — Menu, Modal, Popover, Toast | 6, slice 3 |
+| **Done (stage 6, slice 3):** overlays and feedback — `Portal`, `Modal`, `Menu`, `Popover`, the toast queue and the `Toaster`, wired into the window through `ToastProvider` | 6 |
 | Layout primitives — Splitter, Dock, VirtualList | 6, slice 4 |
 | The shell — window chrome, the dock tree, routing, the status bar, the command palette | 6, slice 5 |
 | `features/editor/` — preview panel, inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |

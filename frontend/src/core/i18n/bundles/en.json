@@ -30,6 +30,11 @@
         "one": " · {count} clip",
         "other": " · {count} clips"
       }
+    },
+    "ui": {
+      "toast": {
+        "dismiss": "Dismiss"
+      }
     }
   }
 }
