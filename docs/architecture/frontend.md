@@ -172,8 +172,8 @@ frontend/
     │                          cx, Icon, Spinner, Button, IconButton, Field,
     │                          TextField, Tooltip, Panel, VisuallyHidden — then
     │                          Portal, useDismissable, Modal, Menu, Popover,
-    │                          toast, Toaster — then Splitter, Dock, VirtualList
-    │                          as the stage needs them
+    │                          toast, Toaster, toast-context, ToastProvider,
+    │                          Splitter, dock, Dock, VirtualList
     ├── features/              one folder per screen or panel group
     │   ├── splash/            boot screen: is the editor there? (useServiceInfo, Splash)
     │   ├── projects/          the project list panel (useProjects, ProjectList)
@@ -635,7 +635,7 @@ translate; the window shows the code next to it.
 
 ### 10.10.4 What is in `ui/`
 
-Built in stage 6, slices 2 and 3. `ui/` depends on `core/` (tokens, themes, messages, result)
+Built in stage 6, slices 2 to 4. `ui/` depends on `core/` (tokens, themes, messages, result)
 and on nothing else — never on a store, never on an API client, never on a feature. That
 is what makes a component renderable in a test with none of the app around it.
 
@@ -660,6 +660,10 @@ is what makes a component renderable in a test with none of the app around it.
 | `Toaster.tsx` | Where the messages appear | One always-present `aria-live="polite"` region (a region added at the same moment as its content is silent), `role="alert"` for danger, and no second copy for screen readers — the Dismiss button is inside the live region, not beside an `aria-hidden` one |
 | `toast-context.ts` | The seam a component reaches through | `ToastContext` and `useToastQueue()`, in their own module for the same reason `core/api/context` is: a file that exports a component and something else breaks fast refresh |
 | `ToastProvider.tsx` | The queue for this tree, and the place it is shown | One component for both, because they are one decision — whoever owns the queue is the component that must be mounted for a message to be seen. A queue may be **injected**, which is how a test drives it |
+| `Splitter.tsx` | The handle between two panes | The value is a **fraction, never a pixel count**: a layout saved in pixels does not survive a resize, a second monitor or a change of display scaling. The container is measured once, when the drag starts, and not per frame. Keyboard-operable, with a double-click to put it back |
+| `dock.ts` | The window's layout as data | A tree of `leaf`/`split` whose shares are **fractions adding up to 1**, and pure functions over it: `boundaryAt`, `resizeAt`, `updateAt`, `splitLeaf`, `closeLeaf`, `parseDockNode`. Data and not components, for the reason a theme is: a document can be validated, migrated and compared in a test, while a component tree can only be rendered |
+| `Dock.tsx` | The geometry that draws that tree | It knows nothing about what a pane *is* — the window renders them by id — and a drag reports a **new tree**, not a size, so the shell can refuse it, undo it or save it. Only the two panes a handle divides move, and every handle is named after them |
+| `VirtualList.tsx` | Ten thousand rows, twenty of them drawn | An offset table built once and binary-searched per scroll; absolutely positioned rows inside a spacer as tall as the whole list, so the scrollbar tells the truth. `role="list"` with `aria-posinset`/`aria-setsize`, because a virtualised list is the one place the DOM tells a screen reader a deliberate lie |
 
 Two rules hold across all of them. **A component never names a colour** — every value
 is a token, or `make frontend-lint` fails the build. And **a component never invents
@@ -678,7 +682,14 @@ close it**, and the component only reports *why* — `onClose('escape')`,
 not refuse to close, which is exactly the thing a form with unsaved edits needs to be able
 to do.
 
-Still to come in `ui/`: the layout primitives (Splitter, Dock, VirtualList) in slice 4.
+The layout primitives share the mirror of that rule: **whoever owns the layout owns the
+value**. Neither `Splitter` nor `Dock` keeps state of its own — a handle that remembered
+where it was would be a handle the shell could not restore from a saved document, and a
+dock that changed its tree in place would be a dock whose drags could not be undone.
+
+What is in `ui/` is now everything a panel is built out of. What is not in it is anything
+that knows about projects, media or timelines: that is `features/`, and it begins with the
+shell in slice 5.
 
 ## 10.11 Testing strategy
 
@@ -688,11 +699,11 @@ build.
 | Decision | Why |
 | --- | --- |
 | `environment: 'node'` by default | The services under test are pure. A component test opts into jsdom with a one-line docblock, so jsdom is never the default cost. |
-| `setupFiles: ['./src/test/setup.ts']` | Automatic cleanup only registers under Vitest globals, which are off; without it a second component test in a file sees the first one's DOM. |
+| `setupFiles: ['./src/test/setup.ts']` | Automatic cleanup only registers under Vitest globals, which are off; without it a second component test in a file sees the first one's DOM. | The same file stands a `PointerEvent` up out of `MouseEvent`, because jsdom implements no pointer events and a fired one otherwise arrives with no coordinates and no button. |
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (331 tests, 34 files, ≈ 18 s):
+Suites today (395 tests, 38 files, ≈ 21 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -728,6 +739,10 @@ Suites today (331 tests, 34 files, ≈ 18 s):
 | `ui/Modal.test.tsx` (8) | A named dialog that takes focus, keeps Tab inside, answers Escape and a press on the scrim — but not a press that merely *ends* on it — gives focus back to its opener, and leaves nothing in the tree once closed |
 | `ui/Menu.test.tsx` (14) | Takes focus so the keys have somewhere to go, one tab stop, arrows that wrap and skip the disabled, type-ahead with a reset window, Enter running the command and saying it closed, and focus returning to the trigger |
 | `ui/Popover.test.tsx` (8) | Anchored to its trigger's rect and flipped when it would not fit, closed by Escape and by a press outside, and **not** trapping focus — Tab has to be able to leave a form |
+| `ui/dock.test.ts` (21) | The tree algebra: shares that add up to one even when the document disagrees, a boundary that keeps a range for a pair too small for two minimums, a drag that moves the pair and nobody else, an update down a path that leaves the rest of the tree identical, a close that collapses a group of one and returns `null` for the last pane, and a round trip through `JSON` — plus every shape of junk a stored layout could be, all refused rather than half-drawn |
+| `ui/Splitter.test.tsx` (17) | A named separator with an orientation and a position **clamped for display**, a drag that reports the same fraction on a wide window and a narrow one, one that measures the axis it was laid out on, bounds that hold when the pointer overshoots, a drag that ends when the button comes up **or the pointer is lost**, a right-click that does not start one, silence when the container measures zero, and the keyboard doing all of it |
+| `ui/Dock.test.tsx` (11) | A pane per leaf with nothing assumed about what a pane is, one handle per pair, each handle named after the two panes it divides (or the two ids), a drag that reports a tree in which only the pair moved, a second drag starting where the first ended, a floor no drag can put a pane below, and a key press deep in the tree that changes only its own split |
+| `ui/VirtualList.test.tsx` (15) | Three rows in the DOM for a list of a thousand, a spacer as tall as all of them, a window that follows the scroll to row 500 and says so, overscan as a count rather than a guess, rows at their own offsets with variable heights, nothing drawn for an empty list, a window rebuilt when the count changes, `aria-posinset`/`aria-setsize` that stay true 500 rows down, and `scrollToIndex` for each alignment and past either end |
 | `ui/ToastProvider.test.tsx` (3) | A queue made for the tree, a queue injected into it — so a test can drive it from outside React — and a component with no provider throwing rather than raising a message into nowhere |
 | `ui/Toaster.test.tsx` (16) | A message arriving is announced; `role="alert"` for danger and `role="status"` otherwise; an error stays until dismissed while the rest expire on their own; three visible and the rest waiting; and the queue itself — dismiss, clear, replace — tested without React, because a store that can only be driven from a component is a store that cannot speak after unmount |
 
@@ -783,7 +798,8 @@ while CI, which has both, always runs the whole thing.
 | **Done (stage 6, slice 1):** the design-system foundation — the token contract, themes as data, and messages as data. `core/theme/`, `core/i18n/`, and the two panels that existed already speaking through `t()` | 6 |
 | **Done (stage 6, slice 2):** `ui/` — `cx`, `Icon`, `Spinner`, `Button`, `IconButton`, `Field`, `TextField`, `Tooltip`, `Panel`, `VisuallyHidden`, and the project list rebuilt on them | 6 |
 | **Done (stage 6, slice 3):** overlays and feedback — `Portal`, `Modal`, `Menu`, `Popover`, the toast queue and the `Toaster`, wired into the window through `ToastProvider` | 6 |
-| Layout primitives — Splitter, Dock, VirtualList | 6, slice 4 |
+| **Done (stage 6, slice 4):** the layout primitives — `Splitter`, the `dock.ts` tree algebra, `Dock` and `VirtualList` | 6 |
+| The shell — window chrome, the dock tree wired to real panels, routing, the status bar, the command palette | 6, slice 5 |
 | The shell — window chrome, the dock tree, routing, the status bar, the command palette | 6, slice 5 |
 | `features/editor/` — preview panel, inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |
 | `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping | 7 |

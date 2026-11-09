@@ -719,8 +719,10 @@ themes as data, and bundles for `en` and `bn`; then `ui/` — `Button`, `IconBut
 `Field`, `TextField`, `Tooltip`, `Panel`, `Spinner`, `Icon` and `cx`, with the project
 list rebuilt on them; then the overlays and feedback — `Portal`, `Modal`, `Menu`,
 `Popover` and the toast queue, all keyboard-first, all portalled out of whatever clipped
-them. The dock tree, the layout primitives and the window chrome follow in the rest of
-stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
+them; then the layout primitives — `Splitter`, `Dock` and `VirtualList`, with the window's
+geometry held as a tree of fractions that can be validated, saved and undone rather than
+as a component tree. The shell that decides which panels fill that tree, and the window
+chrome around it, follow in the rest of stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
 
 ---
 
