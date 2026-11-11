@@ -47,6 +47,8 @@ function rowsIn(container = document.body): number[] {
   );
 }
 
+let options: HTMLElement[] = [];
+
 function scrollTo(scroller: HTMLElement, top: number): void {
   // Assigning `scrollTop` and firing `scroll` is what a browser does in the
   // other order, and the list reads the element rather than the event — so a
@@ -158,6 +160,21 @@ describe('what a screen reader is told', () => {
     expect(screen.queryByRole('listitem')).toBeNull();
     // The rows themselves are still there, still positioned.
     expect(rowsIn(scroller)).toEqual([0, 1]);
+  });
+});
+
+describe('a list being chosen from', () => {
+  it('says which row is selected, on the row and not inside it', () => {
+    const { scroller } = renderList({ role: 'listbox', selectedIndex: 1 });
+    options = screen.getAllByRole('option');
+    expect(options[0]?.getAttribute('aria-selected')).toBe('false');
+    expect(options[1]?.getAttribute('aria-selected')).toBe('true');
+    expect(rowsIn(scroller)).toEqual([0, 1]);
+  });
+
+  it('says nothing about selection in a list that is not one', () => {
+    renderList({ selectedIndex: 1 });
+    expect(screen.getAllByRole('listitem')[0]?.getAttribute('aria-selected')).toBeNull();
   });
 });
 

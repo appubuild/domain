@@ -138,7 +138,7 @@ route does.
 
 ```
 frontend/
-├── index.html                 entry document (dark class, #root)
+├── index.html                 entry document (data-theme, #root)
 ├── vite.config.ts             build + dev proxy + vitest configuration
 ├── tsconfig.json              strict flag set of §10.2
 ├── eslint.config.js           lint, including the three architectural rules of §10.5
@@ -147,7 +147,13 @@ frontend/
     ├── main.tsx               process entry: config → client → context → <App/>
     ├── App.tsx                the window's shell: service state → splash or workspace
     ├── app/
-    │   └── providers.tsx      the workspace's composition root (§10.9.3)
+    │   ├── providers.tsx      the workspace's composition root (§10.9.3)
+    │   ├── routes.ts          what an address means — data, and pure (§10.9.4)
+    │   ├── router.tsx         the one listener on the address (§10.9.4)
+    │   ├── router-context.ts  what a component asks the router for (§10.9.4)
+    │   ├── commands.ts        commands, the shortcut grammar, the ranking (§10.9.4)
+    │   ├── CommandProvider.tsx  the one registry in the window (§10.9.4)
+    │   └── useCommands.ts     reading, registering and binding them (§10.9.4)
     ├── core/                  mechanisms, no product knowledge
     │   ├── api/
     │   │   ├── contract.ts    GENERATED — never edit
@@ -177,10 +183,16 @@ frontend/
     ├── features/              one folder per screen or panel group
     │   ├── splash/            boot screen: is the editor there? (useServiceInfo, Splash)
     │   ├── projects/          the project list panel (useProjects, ProjectList)
-    │   ├── home/  project-manager/        (stage 6)
-    │   ├── editor/            toolbar, left-sidebar, preview, inspector,
-    │   │                      timeline (ruler, tracks, clips, keyframes, markers),
-    │   │                      status-bar                                (stage 6–7)
+    │   ├── home/              the home screen: what this session has open
+    │   ├── shell/             the window: TitleBar, StatusBar, CommandPalette,
+    │   │                      Shell, and the two file dialogs (§10.9.4)
+    │   ├── media/             the media bin (useMedia, MediaBin, duration)
+    │   ├── editor/            the editor workspace and its panes: the dock, the
+    │   │                      preview and the inspector (slice 6), the timeline
+    │   │                      (stage 7)
+    │   ├── captions/          Caption Studio                             (stage 9)
+    │   ├── ai-studio/  plugins/  templates/  fonts/  export/  settings/  (stage 10+)
+    │   └── shortcuts/  about/
     │   ├── captions/          Caption Studio                             (stage 9)
     │   ├── ai-studio/  plugins/  templates/  fonts/  export/  settings/  (stage 10+)
     │   └── shortcuts/  about/
@@ -528,6 +540,48 @@ main.tsx                 config → client → ApiContext → <App/>
       features/**        panels, each with its own view-model
 ```
 
+### 10.9.4 The shell: routing, commands and panes
+
+Three things make a window rather than a page, and all three live in `app/` or
+`features/shell/` because they are the window's business and no panel's.
+
+**Routing is a hash and a pure function** (`routes.ts`, `router.tsx`,
+`router-context.ts`). There is no server to rewrite a URL for us — the packaged
+app is a file on disk — so the address is `#/editor/<project-id>`, and
+`parseRoute` decides what one means. An address that means nothing is the home
+screen rather than an error: a bookmark, a hand-edited hash and a project id
+from a session that ended are all the same thing to a user, and none of them is
+worth a dialog. What the shell does *not* do is bounce you out of
+`#/editor/a` while it is still asking the service what is open — the fallback
+waits for the store to have answered once, because a window that forgets where
+you were every time you open it is a window nobody deep-links into.
+
+**Commands are one list with several doors** (`commands.ts`, `useCommands.ts`,
+`CommandProvider.tsx`). A command is a name, a shortcut and a `run`; the palette,
+the keyboard and (later) the menus are all doors into the same list, so "Save"
+cannot disagree with itself about when saving is allowed. A panel registers what
+it can do and takes it away when it unmounts, which is why a window with no
+project open does not offer to save one. The shortcut grammar is data — `Ctrl+S`
+is a string, so a plugin manifest or a settings row can hold one — and `Ctrl`
+means control *or* command, because a Mac user pressing `Cmd+S` is not pressing a
+different shortcut. Matching is ranked rather than searched
+(`filterCommands`), because what a user typed is a prefix of a word nine times
+out of ten and a substring search cannot tell "Save" from "Save as…".
+
+**The panes are docked, and the dock is data** (`ui/dock.ts`, `ui/Dock.tsx`,
+`features/editor/Workspace.tsx`). One pane exists today — the media bin — and
+that is the honest answer rather than a compromise: a workspace with a preview
+pane that draws nothing and a timeline pane that says "coming soon" would be
+three panes of which two are furniture. Each new pane is a line in the registry
+and a `leaf` in the tree, and the preview, the inspector and the timeline arrive
+with the stages that build them.
+
+The command palette (`features/shell/CommandPalette.tsx`) is where the three
+meet: a `Modal` for focus, a `VirtualList` for a list that grows with the
+plugins, and `filterCommands` for the order. Its ARIA shape is a combobox with
+`aria-activedescendant`, which is the only way a virtualised list can have an
+active row at all — the row the user is on may not be the row that is drawn.
+
 ## 10.10 The design system
 
 Built in stage 6, slice 1. Three layers, and the order between them is the design:
@@ -703,7 +757,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (395 tests, 38 files, ≈ 21 s):
+Suites today (484 tests, 48 files, ≈ 26 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -743,6 +797,16 @@ Suites today (395 tests, 38 files, ≈ 21 s):
 | `ui/Splitter.test.tsx` (17) | A named separator with an orientation and a position **clamped for display**, a drag that reports the same fraction on a wide window and a narrow one, one that measures the axis it was laid out on, bounds that hold when the pointer overshoots, a drag that ends when the button comes up **or the pointer is lost**, a right-click that does not start one, silence when the container measures zero, and the keyboard doing all of it |
 | `ui/Dock.test.tsx` (11) | A pane per leaf with nothing assumed about what a pane is, one handle per pair, each handle named after the two panes it divides (or the two ids), a drag that reports a tree in which only the pair moved, a second drag starting where the first ended, a floor no drag can put a pane below, and a key press deep in the tree that changes only its own split |
 | `ui/VirtualList.test.tsx` (15) | Three rows in the DOM for a list of a thousand, a spacer as tall as all of them, a window that follows the scroll to row 500 and says so, overscan as a count rather than a guess, rows at their own offsets with variable heights, nothing drawn for an empty list, a window rebuilt when the count changes, `aria-posinset`/`aria-setsize` that stay true 500 rows down, and `scrollToIndex` for each alignment and past either end |
+| `app/routes.test.tsx` (8) | Every shape of address, recognised or not, decodes to a route; a round trip through `routeHref`; a starting route obeying the address bar rather than the other way round; a click writing the address; and an address the window did not write — a back button — moving the screen |
+| `app/commands.test.ts` (18) | The shortcut grammar: every name a platform uses for control and command, `Ctrl+S+P` refused, and the two rules that make a global key safe — the command key counts as control, and a bare key belongs to whoever is typing. Then the ranking: a prefix beats a word start beats a subsequence, a hint counts as much as a name, every word must be found, ties keep registration order |
+| `app/CommandProvider.test.tsx` (10) | Commands appearing in registration order, a panel's commands leaving with the panel, a same-id registration replacing rather than duplicating, a test holding the registry it asserts against — and the key bindings: modified keys run, a plain letter in a text field does not, a disabled command cannot be run, and a key held down does not run sixty times a second |
+| `ui/useAnchoredMenu.test.tsx` (4) | The trigger is really held (so the press that opens is not a press outside), the anchor is the trigger's bottom-left corner measured when it opens, and Escape gives focus back to the button |
+| `features/shell/TitleBar.test.tsx` (5) | The project's name, a dot for unsaved work that leaves the name legible, the themes this build ships offered by name, and the palette opened from the bar |
+| `features/shell/StatusBar.test.tsx` (7) | Each state of the stream said in a live region, the dropped-event count told rather than hidden behind a green dot, and the two things a status bar is for: which project this is, and what a crash would cost |
+| `features/shell/CommandPalette.test.tsx` (9) | A named dialog with a combobox and options; disabled commands left out rather than greyed; narrowing as the user types with the best match first; a command found by a word in its hint; `Enter` closing **before** it runs; arrows that wrap; a row clicked; and a palette that starts empty next time |
+| `features/shell/Shell.test.tsx` (11) | The whole window against a client double: `Ctrl+N` and the home screen's button opening the same dialog, a create going to the editor by address and saying so, a failed create reported and going nowhere, an address naming a project the session has not got falling back to home only once the store has answered, `Ctrl+S` saving and reporting, and a failure staying put |
+| `features/home/HomeScreen.test.tsx` (3) | The screen asking the shell for the dialogs instead of keeping its own, and opening a project being an address rather than a flag |
+| `features/media/MediaBin.test.tsx` (9) | Rows from the service, a file that no longer resolves marked as such and counted, empty and failed states kept apart — a failed refresh is not an empty bin — and the three answers an import gives: how many came in, already there, or could not |
 | `ui/ToastProvider.test.tsx` (3) | A queue made for the tree, a queue injected into it — so a test can drive it from outside React — and a component with no provider throwing rather than raising a message into nowhere |
 | `ui/Toaster.test.tsx` (16) | A message arriving is announced; `role="alert"` for danger and `role="status"` otherwise; an error stays until dismissed while the rest expire on their own; three visible and the rest waiting; and the queue itself — dismiss, clear, replace — tested without React, because a store that can only be driven from a component is a store that cannot speak after unmount |
 
@@ -799,7 +863,8 @@ while CI, which has both, always runs the whole thing.
 | **Done (stage 6, slice 2):** `ui/` — `cx`, `Icon`, `Spinner`, `Button`, `IconButton`, `Field`, `TextField`, `Tooltip`, `Panel`, `VisuallyHidden`, and the project list rebuilt on them | 6 |
 | **Done (stage 6, slice 3):** overlays and feedback — `Portal`, `Modal`, `Menu`, `Popover`, the toast queue and the `Toaster`, wired into the window through `ToastProvider` | 6 |
 | **Done (stage 6, slice 4):** the layout primitives — `Splitter`, the `dock.ts` tree algebra, `Dock` and `VirtualList` | 6 |
-| The shell — window chrome, the dock tree wired to real panels, routing, the status bar, the command palette | 6, slice 5 |
+| **Done (stage 6, slice 5):** the shell — hash routing, the command registry and palette, the title bar, the status bar, the home screen, and the editor's dock holding the media bin | 6 |
+| `features/editor/` — the preview panel, the inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |
 | The shell — window chrome, the dock tree, routing, the status bar, the command palette | 6, slice 5 |
 | `features/editor/` — preview panel, inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |
 | `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping | 7 |

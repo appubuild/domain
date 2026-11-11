@@ -721,8 +721,12 @@ list rebuilt on them; then the overlays and feedback — `Portal`, `Modal`, `Men
 `Popover` and the toast queue, all keyboard-first, all portalled out of whatever clipped
 them; then the layout primitives — `Splitter`, `Dock` and `VirtualList`, with the window's
 geometry held as a tree of fractions that can be validated, saved and undone rather than
-as a component tree. The shell that decides which panels fill that tree, and the window
-chrome around it, follow in the rest of stage 6. Detail: [`frontend.md`](frontend.md) §10.10.
+as a component tree; then the shell — hash routing whose address means something, one
+command list that a shortcut, a palette and a menu all reach through, a title bar and a
+status bar that answer "which project is this" and "what would a crash cost", and the
+editor's dock holding the panes that exist. The preview, the inspector, the timeline and
+the settings panel fill that dock in the rest of stage 6 and in stage 7.
+Detail: [`frontend.md`](frontend.md) §10.9.4 and §10.10.
 
 ---
 

@@ -57,9 +57,21 @@ export interface VirtualListProps {
   /** Required. An unnamed `list` is announced as "list", which is every other
    *  list on the screen. */
   readonly label: string;
-  /** `none` for a collection whose rows carry their own role — a toolbar, a
-   *  strip of thumbnails, a row of tabs. The offset table still applies. */
-  readonly role?: 'list' | 'none';
+  /** `listbox` for a collection the user chooses from — a command palette, a
+   *  font picker — whose rows are `option`s. `none` for a collection whose rows
+   *  carry their own role: a toolbar, a strip of thumbnails, a row of tabs. The
+   *  offset table applies whatever the role is. */
+  readonly role?: 'list' | 'listbox' | 'none';
+  /** Ids for the rows, when something outside has to point at one — a combobox
+   *  announcing its active option through `aria-activedescendant`. */
+  readonly itemId?: ((index: number) => string | undefined) | undefined;
+  /** The id of the list itself, which is the thing a combobox points at with
+   *  `aria-controls`. */
+  readonly id?: string | undefined;
+  /** Which row is selected, for a `listbox` the user is choosing from. Put on
+   *  the row rather than on what is inside it, because the row is the `option`
+   *  — and an `option` that does not say it is selected is not one. */
+  readonly selectedIndex?: number | undefined;
   readonly className?: ClassValue;
   readonly ref?: Ref<VirtualListHandle>;
 }
@@ -101,6 +113,9 @@ export function VirtualList({
   overscan = 2,
   label,
   role = 'list',
+  itemId,
+  id,
+  selectedIndex,
   className,
   ref,
 }: VirtualListProps): React.JSX.Element {
@@ -171,7 +186,7 @@ export function VirtualList({
   const rows: number[] = [];
   for (let index = first; index <= last; index += 1) rows.push(index);
 
-  const asList = role === 'list';
+  const childRole = role === 'list' ? 'listitem' : role === 'listbox' ? 'option' : undefined;
 
   return (
     <div
@@ -185,7 +200,8 @@ export function VirtualList({
         // list's own children: a generic container between a `list` and its
         // `listitem`s is a relationship some browsers drop.
         style={{ position: 'relative', height: total }}
-        {...(asList ? { role: 'list', 'aria-label': label } : {})}
+        {...(id === undefined ? {} : { id })}
+        {...(role === 'none' ? {} : { role, 'aria-label': label })}
       >
         {rows.map((index) => (
           <div
@@ -198,8 +214,12 @@ export function VirtualList({
               height: sizeAt(offsets, index),
             }}
             data-index={index}
-            {...(asList
-              ? { role: 'listitem', 'aria-posinset': index + 1, 'aria-setsize': count }
+            {...(itemId === undefined ? {} : { id: itemId(index) })}
+            {...(childRole === undefined
+              ? {}
+              : { role: childRole, 'aria-posinset': index + 1, 'aria-setsize': count })}
+            {...(childRole === 'option' && selectedIndex !== undefined
+              ? { 'aria-selected': index === selectedIndex }
               : {})}
           >
             {children(index)}

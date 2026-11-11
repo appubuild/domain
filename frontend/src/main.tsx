@@ -6,6 +6,7 @@ import { ApiContext } from './core/api/context';
 import { I18nProvider } from './core/i18n/I18nProvider';
 import { preferredLocale } from './core/i18n/locale';
 import { readRuntimeConfig } from './core/shell/config';
+import { CommandsProvider } from './app/CommandProvider';
 import { ThemeProvider } from './core/theme/ThemeProvider';
 import { ToastProvider } from './ui/ToastProvider';
 import './styles/theme.css';
@@ -41,9 +42,14 @@ createRoot(container).render(
             and above the API: a message may be raised by something that has no
             client — a keyboard shortcut, a window that failed to open. */}
         <ToastProvider>
-          <ApiContext.Provider value={client}>
-            <App />
-          </ApiContext.Provider>
+          {/* Commands above the API: a command is a thing the window can be
+              told to do, and the window can be told to do one before there is
+              a service to ask. */}
+          <CommandsProvider>
+            <ApiContext.Provider value={client}>
+              <App />
+            </ApiContext.Provider>
+          </CommandsProvider>
         </ToastProvider>
       </I18nProvider>
     </ThemeProvider>

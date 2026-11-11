@@ -12,7 +12,8 @@
  */
 
 import { Splash } from './features/splash/Splash';
-import { ProjectList } from './features/projects/ProjectList';
+import { Shell } from './features/shell/Shell';
+import { RouterProvider } from './app/router';
 import { useServiceInfo } from './features/splash/useServiceInfo';
 import { useApi } from './core/api/context';
 import { WorkspaceProviders } from './app/providers';
@@ -27,7 +28,12 @@ export function App(): React.JSX.Element {
 
   return (
     <WorkspaceProviders client={client}>
-      <ProjectList />
+      {/* The router is inside the providers and not outside them: the address
+          names a project, and deciding whether that project is open is a thing
+          only a tree that can see the store can do. */}
+      <RouterProvider>
+        <Shell version={service.info.version} />
+      </RouterProvider>
     </WorkspaceProviders>
   );
 }

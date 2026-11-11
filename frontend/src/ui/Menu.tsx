@@ -55,6 +55,10 @@ export interface MenuProps {
   readonly onClose: (reason: 'escape' | 'outside' | 'select') => void;
   /** Accessible name for the list. "Project actions", not "menu". */
   readonly label: string;
+  /** Which edge of the anchor the menu hangs from: the left one under a
+   *  left-hand trigger, the right one under a trigger near the edge of the
+   *  window — a menu that opens off-screen is a menu that did not open. */
+  readonly align?: 'start' | 'end';
   readonly className?: ClassValue;
 }
 
@@ -68,11 +72,17 @@ export function Menu({
   trigger,
   onClose,
   label,
+  align = 'start',
   className,
 }: MenuProps): React.JSX.Element | null {
   // State rather than a ref, for the reason in `Modal`: the menu is portalled,
   // and a ref read during the first commit finds nothing.
   const [list, setList] = useState<HTMLDivElement | null>(null);
+  // Measured, because right-aligning means subtracting the menu's own width and
+  // there is no other way to know it. Zero until the menu has been drawn once,
+  // which in a real browser is one frame and in jsdom is forever — so `end`
+  // degrades to `start` rather than to a menu in the wrong place.
+  const [width, setWidth] = useState(0);
   const [active, setActive] = useState(-1);
   const typed = useRef<{ text: string; at: number }>({ text: '', at: 0 });
 
@@ -103,6 +113,23 @@ export function Menu({
     if (open) setActive(-1);
   }, [open]);
 
+  // Focus goes back to whatever had it when the menu opened. Declared *before*
+  // the effect that moves focus into the menu, because that is the order they
+  // run in and the element to remember is the one that had focus first.
+  //
+  // This is the half everybody forgets, and the half a keyboard user notices:
+  // a menu that closes and leaves focus at the top of the document has moved
+  // them somewhere they did not ask to go.
+  useEffect(() => {
+    if (!open) return undefined;
+    const previous = document.activeElement;
+    return () => {
+      // Only if it is still in the document: a trigger that unmounted with the
+      // thing it opened has nowhere to be focused.
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
+    };
+  }, [open]);
+
   // Focus the menu itself when it opens. Without this the keys go to the
   // document: a menu is a keyboard component, and a menu that opens without
   // taking focus is one where ArrowDown does nothing until you click it. The
@@ -131,6 +158,12 @@ export function Menu({
     // `list` too: the menu is portalled, so the element does not exist yet on
     // the commit that opens it.
   }, [active, enabled, list, open]);
+
+  useEffect(() => {
+    if (list === null) return;
+    const measured = list.offsetWidth;
+    setWidth((was) => (was === measured ? was : measured));
+  }, [items, list]);
 
   if (!open || anchor === null) return null;
 
@@ -196,7 +229,7 @@ export function Menu({
         // Anchored by the caller, flipped by nobody: a menu that opens towards
         // the edge of the screen is the caller's problem to solve by measuring
         // its own trigger, which it has to do anyway.
-        style={{ left: anchor.x, top: anchor.y }}
+        style={{ left: align === 'end' ? anchor.x - width : anchor.x, top: anchor.y }}
         className={cx(
           'fixed z-[var(--z-overlay)] min-w-48 py-1',
           'rounded-panel border border-line bg-surface-2 shadow-overlay',

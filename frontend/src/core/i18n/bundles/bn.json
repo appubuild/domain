@@ -29,11 +29,115 @@
       "clips": {
         "one": " · {count} ক্লিপ",
         "other": " · {count} ক্লিপ"
-      }
+      },
+      "open": "খুলুন",
+      "openNamed": "{name} খুলুন",
+      "save": "সংরক্ষণ"
     },
     "ui": {
       "toast": {
         "dismiss": "সরিয়ে দিন"
+      }
+    },
+    "shell": {
+      "titleBar": {
+        "theme": "থিম",
+        "commands": "কমান্ড",
+        "noProject": "কোনো প্রজেক্ট খোলা নেই"
+      },
+      "status": {
+        "idle": "সংযোগ নেই",
+        "connecting": "সংযোগ হচ্ছে…",
+        "live": "চলছে",
+        "reconnecting": "আবার সংযোগ হচ্ছে…",
+        "unsaved": "সংরক্ষিত নয়",
+        "unsavedSuffix": " · সংরক্ষিত নয়",
+        "pending": {
+          "one": " · {count} পরিবর্তন অপেক্ষমাণ",
+          "other": " · {count} পরিবর্তন অপেক্ষমাণ"
+        },
+        "dropped": {
+          "one": "{count} ইভেন্ট পড়েনি",
+          "other": "{count} ইভেন্ট পড়েনি"
+        }
+      },
+      "palette": {
+        "title": "কমান্ড প্যালেট",
+        "description": "এই উইন্ডো যা করতে পারে, সব খুঁজুন।",
+        "label": "কমান্ড খুঁজুন",
+        "placeholder": "কমান্ড লিখুন…",
+        "empty": "কোনো কমান্ড মিলল না।"
+      },
+      "commands": {
+        "palette": "কমান্ড প্যালেট",
+        "paletteHint": "যেকোনো কমান্ড খুঁজে চালান",
+        "home": "প্রজেক্ট তালিকায় যান",
+        "homeHint": "খোলা প্রজেক্টের তালিকায় ফিরুন",
+        "newProject": "নতুন প্রজেক্ট…",
+        "openProject": "প্রজেক্ট খুলুন…",
+        "refresh": "প্রজেক্ট রিফ্রেশ",
+        "refreshHint": "সার্ভিসকে জিজ্ঞেস করুন কী কী খোলা আছে",
+        "save": "প্রজেক্ট সংরক্ষণ",
+        "closeProject": "প্রজেক্ট বন্ধ করুন",
+        "nextTheme": "পরের থিম",
+        "nextThemeHint": "এই বিল্ডের থিমগুলো ঘুরিয়ে দেখুন"
+      },
+      "dialog": {
+        "cancel": "বাতিল",
+        "new": {
+          "title": "নতুন প্রজেক্ট",
+          "description": "প্রথম সংরক্ষণের সময় ফাইলের জায়গা ঠিক হবে।",
+          "nameLabel": "প্রজেক্টের নাম",
+          "namePlaceholder": "নামহীন প্রজেক্ট",
+          "create": "তৈরি করুন"
+        },
+        "open": {
+          "title": "প্রজেক্ট খুলুন",
+          "description": "এই কম্পিউটারে থাকা .nova ফাইলের পথ।",
+          "pathLabel": "ফাইলের পথ",
+          "pathPlaceholder": "C:\\Users\\…\\project.nova",
+          "open": "খুলুন"
+        }
+      },
+      "toast": {
+        "created": "{name} তৈরি হলো।",
+        "opened": "{name} খোলা হলো।",
+        "openedWithWarnings": {
+          "one": "{count} সতর্কতাসহ খোলা হলো।",
+          "other": "{count} সতর্কতাসহ খোলা হলো।"
+        },
+        "saved": "{name} সংরক্ষিত হলো।",
+        "closed": "{name} বন্ধ হলো।",
+        "refreshed": "রিফ্রেশ হলো।",
+        "failed": "এটি হয়নি ({code})।"
+      }
+    },
+    "home": {
+      "heading": "প্রজেক্টসমূহ",
+      "subtitle": "এই সেশনে যা যা খোলা আছে।",
+      "newProject": "নতুন প্রজেক্ট",
+      "openProject": "খুলুন…"
+    },
+    "media": {
+      "heading": "মিডিয়া",
+      "refresh": "রিফ্রেশ",
+      "import": "ইমপোর্ট",
+      "pathLabel": "ফাইলের পথ",
+      "pathPlaceholder": "C:\\…\\clip.mp4",
+      "loading": "বিন লোড হচ্ছে…",
+      "empty": "এখনো কিছু ইমপোর্ট করা হয়নি।",
+      "missing": "পাওয়া যাচ্ছে না",
+      "missingCount": {
+        "one": "{count} ফাইল আর খুঁজে পাওয়া যাচ্ছে না।",
+        "other": "{count} ফাইল আর খুঁজে পাওয়া যাচ্ছে না।"
+      },
+      "toast": {
+        "imported": {
+          "one": "{count} ফাইল ইমপোর্ট হলো।",
+          "other": "{count} ফাইল ইমপোর্ট হলো।"
+        },
+        "importFailed": "{path} ইমপোর্ট করা যায়নি।",
+        "duplicate": "{name} আগেই এই প্রজেক্টে আছে।"
       }
     }
   }

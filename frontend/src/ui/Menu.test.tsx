@@ -9,6 +9,7 @@
  */
 
 import { render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -173,5 +174,93 @@ describe('a separator', () => {
     renderMenu();
     expect(screen.getAllByRole('separator').length).toBe(1);
     expect(screen.getAllByRole('menuitem').length).toBe(4);
+  });
+});
+
+describe('giving focus back', () => {
+  /** A menu that really opens and closes, with the button that opened it —
+   *  because the promise is about what happens to *that* element. */
+  function Toggle(): React.JSX.Element {
+    const [open, setOpen] = useState(false);
+    const [trigger, setTrigger] = useState<HTMLButtonElement | null>(null);
+    return (
+      <>
+        <button
+          type="button"
+          ref={setTrigger}
+          onClick={() => {
+            setOpen((was) => !was);
+          }}
+        >
+          actions
+        </button>
+        <Menu
+          open={open}
+          anchor={open ? { x: 0, y: 0 } : null}
+          trigger={trigger}
+          label="Project actions"
+          items={ITEMS}
+          onClose={(reason) => {
+            if (reason === 'select') setOpen(false);
+            else setOpen(false);
+          }}
+        />
+      </>
+    );
+  }
+
+  it('returns focus to the trigger when Escape closes it', async () => {
+    const user = userEvent.setup();
+    render(<Toggle />);
+
+    await user.click(screen.getByRole('button', { name: 'actions' }));
+    expect(document.activeElement).toBe(screen.getByRole('menu'));
+
+    await user.keyboard('{Escape}');
+
+    // Not the top of the document: a menu that closed and left focus nowhere has
+    // moved the user somewhere they did not ask to go.
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'actions' }));
+  });
+
+  it('returns focus to the trigger after a command runs', async () => {
+    const user = userEvent.setup();
+    render(<Toggle />);
+
+    await user.click(screen.getByRole('button', { name: 'actions' }));
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'actions' }));
+  });
+});
+
+describe('a menu near the edge of the window', () => {
+  it('hangs from whichever edge it was told to', () => {
+    render(
+      <Menu
+        open
+        anchor={{ x: 400, y: 20 }}
+        label="Project actions"
+        items={ITEMS}
+        onClose={() => undefined}
+      />,
+    );
+    expect(screen.getByRole('menu').style.left).toBe('400px');
+
+    render(
+      <Menu
+        open
+        align="end"
+        anchor={{ x: 400, y: 20 }}
+        label="Edge menu"
+        items={ITEMS}
+        onClose={() => undefined}
+      />,
+    );
+    // `end` subtracts the menu's own width, which is the only way a trigger at
+    // the right-hand edge can keep its menu on screen. jsdom measures zero, so
+    // what is being asserted is that the number is the anchor's, not the
+    // arithmetic — the arithmetic cannot be seen without a layout engine.
+    expect(screen.getByRole('menu', { name: 'Edge menu' }).style.left).toBe('400px');
   });
 });

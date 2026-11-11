@@ -29,11 +29,115 @@
       "clips": {
         "one": " · {count} clip",
         "other": " · {count} clips"
-      }
+      },
+      "open": "Open",
+      "openNamed": "Open {name}",
+      "save": "Save"
     },
     "ui": {
       "toast": {
         "dismiss": "Dismiss"
+      }
+    },
+    "shell": {
+      "titleBar": {
+        "theme": "Theme",
+        "commands": "Commands",
+        "noProject": "No project open"
+      },
+      "status": {
+        "idle": "Not connected",
+        "connecting": "Connecting…",
+        "live": "Live",
+        "reconnecting": "Reconnecting…",
+        "unsaved": "Unsaved changes",
+        "unsavedSuffix": " · unsaved",
+        "pending": {
+          "one": " · {count} edit pending",
+          "other": " · {count} edits pending"
+        },
+        "dropped": {
+          "one": "{count} event dropped",
+          "other": "{count} events dropped"
+        }
+      },
+      "palette": {
+        "title": "Command palette",
+        "description": "Find anything the window can do.",
+        "label": "Search commands",
+        "placeholder": "Type a command…",
+        "empty": "No command matches."
+      },
+      "commands": {
+        "palette": "Command palette",
+        "paletteHint": "Find and run any command",
+        "home": "Go to projects",
+        "homeHint": "Back to the list of open projects",
+        "newProject": "New project…",
+        "openProject": "Open project…",
+        "refresh": "Refresh projects",
+        "refreshHint": "Ask the service what is open",
+        "save": "Save project",
+        "closeProject": "Close project",
+        "nextTheme": "Next theme",
+        "nextThemeHint": "Cycle the themes this build ships"
+      },
+      "dialog": {
+        "cancel": "Cancel",
+        "new": {
+          "title": "New project",
+          "description": "The file's home is chosen when you first save.",
+          "nameLabel": "Project name",
+          "namePlaceholder": "Untitled project",
+          "create": "Create"
+        },
+        "open": {
+          "title": "Open project",
+          "description": "The path to a .nova file on this machine.",
+          "pathLabel": "File path",
+          "pathPlaceholder": "C:\\Users\\…\\project.nova",
+          "open": "Open"
+        }
+      },
+      "toast": {
+        "created": "Created {name}.",
+        "opened": "Opened {name}.",
+        "openedWithWarnings": {
+          "one": "Opened with {count} warning.",
+          "other": "Opened with {count} warnings."
+        },
+        "saved": "Saved {name}.",
+        "closed": "Closed {name}.",
+        "refreshed": "Refreshed.",
+        "failed": "That did not work ({code})."
+      }
+    },
+    "home": {
+      "heading": "Projects",
+      "subtitle": "What this session has open.",
+      "newProject": "New project",
+      "openProject": "Open…"
+    },
+    "media": {
+      "heading": "Media",
+      "refresh": "Refresh",
+      "import": "Import",
+      "pathLabel": "File path",
+      "pathPlaceholder": "C:\\…\\clip.mp4",
+      "loading": "Loading the bin…",
+      "empty": "Nothing imported yet.",
+      "missing": "missing",
+      "missingCount": {
+        "one": "{count} file no longer resolves.",
+        "other": "{count} files no longer resolve."
+      },
+      "toast": {
+        "imported": {
+          "one": "Imported {count} file.",
+          "other": "Imported {count} files."
+        },
+        "importFailed": "Could not import {path}.",
+        "duplicate": "{name} is already in the project."
       }
     }
   }

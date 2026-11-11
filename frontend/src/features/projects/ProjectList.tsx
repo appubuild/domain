@@ -25,7 +25,14 @@ import { Panel } from '../../ui/Panel';
 import { TextField } from '../../ui/TextField';
 import { useProjects } from './useProjects';
 
-export function ProjectList(): React.JSX.Element {
+export interface ProjectListProps {
+  /** What opening a project means. The panel does not know — navigation is the
+   *  window's business, and a panel that imported a router could not be
+   *  rendered on its own. Omitted, there is no Open button. */
+  readonly onOpen?: ((projectId: string) => void) | undefined;
+}
+
+export function ProjectList({ onOpen }: ProjectListProps = {}): React.JSX.Element {
   const { t } = useI18n();
   const view = useProjects();
   const [name, setName] = useState('');
@@ -89,6 +96,14 @@ export function ProjectList(): React.JSX.Element {
             onClose={() => {
               void view.close(project.project_id);
             }}
+            {...(onOpen === undefined
+              ? {}
+              : {
+                  onOpen: () => {
+                    view.select(project.project_id);
+                    onOpen(project.project_id);
+                  },
+                })}
           />
         ))}
       </ul>
@@ -130,11 +145,13 @@ function Row({
   current,
   onSelect,
   onClose,
+  onOpen,
 }: {
   readonly project: ProjectSummary;
   readonly current: boolean;
   readonly onSelect: () => void;
   readonly onClose: () => void;
+  readonly onOpen?: (() => void) | undefined;
 }): React.JSX.Element {
   const { t } = useI18n();
   return (
@@ -154,6 +171,16 @@ function Row({
           {t('projects.clips', { count: project.clip_count })}
         </span>
       </button>
+      {onOpen === undefined ? null : (
+        <Button
+          variant="soft"
+          size="sm"
+          onClick={onOpen}
+          aria-label={t('projects.openNamed', { name: project.name })}
+        >
+          {t('projects.open')}
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="sm"
