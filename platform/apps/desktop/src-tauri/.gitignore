@@ -1,0 +1,7 @@
+# Rust build output
+/target
+/gen
+
+# Tauri generated schema + local secrets
+*.pem
+.env

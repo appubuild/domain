@@ -1,0 +1,30 @@
+{
+  "name": "aura-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AURA \u2014 Personal AI Agent Platform (Windows-first, local-first)",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,app -c cyan,magenta \"npm:dev:server\" \"npm:dev:app\"",
+    "dev:server": "npm run dev -w @aura/server",
+    "dev:app": "npm run dev -w @aura/app",
+    "build": "npm run build -w @aura/core && npm run build -w @aura/app && npm run build -w @aura/server",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "test": "npm run test -w @aura/core && npm run test -w @aura/server && npm run test -w @aura/app",
+    "test:app": "npm run test -w @aura/app",
+    "start": "node apps/server/dist/main.js",
+    "desktop:dev": "npm run tauri -w @aura/desktop dev",
+    "desktop:build": "npm run tauri -w @aura/desktop build",
+    "verify": "npm run typecheck && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
