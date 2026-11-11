@@ -41,7 +41,21 @@ from nova_studio.api.errors import error_responses, install_error_handlers
 from nova_studio.api.exports import ExportJobFactory
 from nova_studio.api.job_events import install as install_job_events
 from nova_studio.api.media_jobs import MediaJobFactory
-from nova_studio.api.routers import events, export, jobs, media, projects, render, system, timeline
+
+# `settings` is aliased because `create_app` takes a `settings: ApiSettings`
+# argument, and a module that shadows one of its own parameters is a bug
+# waiting for the line that uses the wrong one.
+from nova_studio.api.routers import (
+    events,
+    export,
+    jobs,
+    media,
+    projects,
+    render,
+    settings as settings_router,
+    system,
+    timeline,
+)
 from nova_studio.api.schemas.system import HealthResponse
 from nova_studio.api.state import SessionState, new_session_state
 from nova_studio.api.workspace import ProjectWorkspace
@@ -190,6 +204,7 @@ def create_app(
     app.include_router(events.router, dependencies=authenticated)
     app.include_router(projects.router, dependencies=authenticated)
     app.include_router(timeline.router, dependencies=authenticated)
+    app.include_router(settings_router.router, dependencies=authenticated)
     app.include_router(media.router, dependencies=authenticated)
     # Last of the project routers, and deliberately so: its frame endpoint is
     # the only one that answers with a body that is not JSON, and a client that

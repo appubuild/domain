@@ -12,6 +12,7 @@ decides *how the bytes are stored*; this decides *what the user experiences*.
 services/projects/
 ├── __init__.py   this file: the feature's contract
 ├── session.py    ProjectSession — open, save, checkpoint, audit
+├── settings.py   SettingsStore, SetSettingsCommand, SettingsEditor
 ├── autosave.py   AutosaveState — when a checkpoint is owed, what history to keep
 └── recovery.py   plan_recovery — what to offer after a crash
 ```
@@ -38,8 +39,21 @@ No mutable project state lives in this feature: the project is the caller's.
 | `ProjectSession.audit(project)` | "what should the user fix" |
 | `AutosaveState.recorded(...)` / `.due(...)` / `.checkpointed(...)` | "is it time" |
 | `plan_recovery(window, checkpoint_sequence)` | "what do we offer after a crash" |
+| `SettingsEditor.execute(SetSettingsCommand)` | "render to this target instead" |
+| `SettingsEditor.undo()` / `.redo()` | "take that back" — on the project's own stack |
 
-**Events.** None yet, and deliberately: opening and saving already return values
+**Settings, and why they are an edit.** `settings.py` holds the one command
+that changes what the project *renders to* — frame size, sample rate, channel
+count, proxy preference and working colour space. It is a command rather than a
+`PATCH` on the project for the same reason everything else is: it has to be
+undoable, journalled and validated in one place, and a setting changed after a
+crash but before a save must survive the crash. It runs on `UndoScope.GLOBAL`
+with its own editor and its own stack, so undoing a settings change does not
+disturb the cut the user made ten minutes ago (ADR-0008 rule 4).
+
+**Events.** None published by this feature directly; the settings editor borrows
+the session's bus so `command.executed` reaches the same listeners as a timeline
+edit. The rest is deliberately silent: opening and saving already return values
 to a caller that knows the outcome. When the plugin service gains a lifecycle,
 `services/projects` will subscribe to `plugin.effect.*` to re-audit open
 projects, and to `media.relinked` to clear a missing-asset warning.
@@ -109,6 +123,12 @@ from nova_studio.services.projects.session import (
     ProjectAudit,
     ProjectSession,
 )
+from nova_studio.services.projects.settings import (
+    SetSettingsCommand,
+    SettingsEditor,
+    SettingsStore,
+    settings_store,
+)
 
 __all__ = [
     "DEFAULT_AUTOSAVE",
@@ -126,8 +146,12 @@ __all__ = [
     "ProjectSession",
     "RecoveryOffer",
     "RecoveryPlan",
+    "SetSettingsCommand",
+    "SettingsEditor",
+    "SettingsStore",
     "entries_after_checkpoint",
     "migrated",
     "migrations_between",
     "plan_recovery",
+    "settings_store",
 ]

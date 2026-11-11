@@ -6,7 +6,10 @@
 This file is section 10 of the system architecture, kept separate because the section
 outgrew the 64 KiB single-file budget (`scripts/check_repo_hygiene.py`) and will keep
 growing through the UI, timeline and caption stages. Section numbers are unchanged, so a
-reference to "ARCHITECTURE §10.7" resolves here.
+reference to "ARCHITECTURE §10.7" resolves here. It has since outgrown that budget itself
+and is allowlisted in the hygiene script, as `media-and-rendering.md` and `services.md`
+are: the limit exists to keep binaries and generated artefacts out of git, and a chapter of
+prose that diffs line by line is neither. It gets split if it passes 128 KiB.
 
 **Status of this stage.** The window, its transport and its error model are built and
 tested. The dock, the stores, the timeline canvas and the design system are specified
@@ -176,14 +179,16 @@ frontend/
     │   ├── media.ts           the bin, and which row is selected (§10.9.5)
     │   ├── timeline.ts        the edit as it stands — read half (§10.9.5)
     │   ├── playback.ts        the playhead, the transport, the zoom (§10.9.5)
-    │   └── captions/  export/  ai/  settings/  ui/
-    │                          (stages 7–11, one per feature that needs one)
+    │   ├── settings.ts        what the project renders to, and the patches
+    │   │                      that change it (§10.9.6)
+    │   └── captions/  export/  ai/  (stages 7–11, one per feature that needs one)
     ├── ui/                    design system, one component per file (§10.10.4):
     │                          cx, Icon, Spinner, Button, IconButton, Field,
-    │                          TextField, Tooltip, Panel, VisuallyHidden — then
-    │                          Portal, useDismissable, Modal, Menu, Popover,
-    │                          toast, Toaster, toast-context, ToastProvider,
-    │                          Splitter, dock, Dock, VirtualList
+    │                          TextField, Select, Switch, Tooltip, Panel,
+    │                          VisuallyHidden — then Portal, useDismissable,
+    │                          Modal, Menu, Popover, toast, Toaster,
+    │                          toast-context, ToastProvider, Splitter, dock,
+    │                          Dock, VirtualList, useAnchoredMenu, useElementSize
     ├── features/              one folder per screen or panel group
     │   ├── splash/            boot screen: is the editor there? (useServiceInfo, Splash)
     │   ├── projects/          the project list panel (useProjects, ProjectList)
@@ -195,14 +200,13 @@ frontend/
     │   │                      usePreviewFrame, usePlaybackClock, useTransport,
     │   │                      TimecodeField, TransportBar, PreviewPane
     │   ├── inspector/         what the service says about what is selected
+    │   ├── settings/          what the project renders to (§10.9.6): frames,
+    │   │                      useProjectSettings, SettingsPanel
     │   ├── editor/            the editor workspace and its panes: the dock, the
-    │   │                      preview and the inspector (slice 6), the timeline
-    │   │                      (stage 7)
+    │   │                      preview, the inspector and the settings
+    │   │                      (slice 6–7), the timeline (stage 7)
     │   ├── captions/          Caption Studio                             (stage 9)
-    │   ├── ai-studio/  plugins/  templates/  fonts/  export/  settings/  (stage 10+)
-    │   └── shortcuts/  about/
-    │   ├── captions/          Caption Studio                             (stage 9)
-    │   ├── ai-studio/  plugins/  templates/  fonts/  export/  settings/  (stage 10+)
+    │   ├── ai-studio/  plugins/  templates/  fonts/  export/            (stage 10+)
     │   └── shortcuts/  about/
     ├── styles/theme.css       the Tailwind v4 @theme block (§10.10)
     └── test/setup.ts          Testing Library cleanup (§10.11)
@@ -654,6 +658,49 @@ are registered by the workspace rather than the shell, because they mean
 something only while a project is being edited — a global `Space` on the home
 screen would scroll the page instead.
 
+### 10.9.6 The settings: what the project renders to (slice 7)
+
+Slice 7's backend half made a settings change an *edit* — a command, journalled
+and undoable, on its own undo stack (`UndoScope.PROJECT`). The frontend half is
+the panel that lets a user make one, and it is built around the three ways a
+settings panel goes wrong:
+
+**It does not post on every keystroke.** The frame width and height are held as a
+*draft* and committed on blur or `Enter`, and only when the value actually
+changed. A panel that posted per keystroke would journal `1`, `19`, `192`,
+`1920` — four undo entries for one decision, and a Ctrl+Z that takes four
+presses to undo something the user thinks of as one thing. The draft is
+re-synced whenever the service answers with a different number, because after an
+undo the field has to show what the settings *are*, not what was last typed.
+
+**It does not decide what is allowed.** Three channels is refused by the
+service, not greyed out here; the refusal comes back as an `ApiProblem` and is
+printed in the service's own words. A panel that knew would be a second place
+the rule lives, and the second place is the one that is wrong after the export
+presets change.
+
+**It says what a frame change means before the user makes it.** A layer 100 px
+from the centre of the frame stays 100 px from the centre of a different frame —
+the preview is this frame drawn smaller, and nothing moves. That sentence is
+written under the heading rather than left to be discovered. An odd dimension is
+called out rather than refused: it is legal today and it fails at export for
+4:2:0, which is a thing to say before the render and not a thing to block behind
+the user's back.
+
+**`stores/settings.ts`** is the fourth slice and the first that writes. It keeps
+nothing a request has not come back with: no optimistic frame size, no local
+copy to reconcile. `can_undo` and `can_redo` are read off every answer, so the
+panel's Ctrl+Z and the service's Ctrl+Z are the same Ctrl+Z — a store that
+counted its own depth would disagree with the service after the first dropped
+event. A failed read keeps what it had, because a hiccup is not evidence that
+the settings changed.
+
+**One patch, not a replacement.** `SettingsPatch` names only the fields the
+caller has an opinion about, which is what lets two panels hold two settings
+open at once without either of them knowing the other's values. The request
+carries `type: 'set-settings'`, the wire name that is also the name the journal
+records — one vocabulary, so there is no second table of names to drift.
+
 ## 10.10 The design system
 
 Built in stage 6, slice 1. Three layers, and the order between them is the design:
@@ -774,6 +821,8 @@ is what makes a component renderable in a test with none of the app around it.
 | `IconButton.tsx` | A button with an icon and no text | `label` is **required**. The type system is what stops the most common accessibility failure in an editor's toolbar |
 | `Field.tsx` | Label + control + hint + error, wired | `for`/`id`, `aria-describedby` at both the hint and the error, `aria-invalid` so the state is not carried by colour alone |
 | `TextField.tsx` | `Field` on an `<input>` | The handler is handed a **string**, not an event; `required` is never set on the element, because the browser's validation bubble cannot be styled, translated or placed |
+| `Select.tsx` | `Field` on a native `<select>` | Native on purpose: a listbox of one's own is two hundred lines of focus management, type-ahead, roving `aria-activedescendant` and outside-dismiss — and getting any of it subtly wrong is invisible to the developer and total for the user. A value with no matching option means **nothing chosen**, not the first entry, which is the difference between a panel that saves a setting the user never made and one that does not |
+| `Switch.tsx` | One setting that is on or off | A `<input type="checkbox">` with a track drawn beside it, not a `<button role="switch">`: the role is the one a screen reader reads as a *state* rather than a label that changed, and it is the one whose Space-to-toggle contract a hand-rolled button most often forgets. The input stays in the DOM — `appearance-none`, never `display: none` |
 | `Tooltip.tsx` | A description that appears on hover **and focus** | Delayed by 400 ms, dismissed instantly by Escape, and attached with `aria-describedby` only while it is open — a tooltip in the DOM from the first render is read out on every pass |
 | `Panel.tsx` | The surface every panel is made of | The title is a heading, the body scrolls and the header does not, and there is no `padding` prop — six panels side by side have to agree |
 | `VisuallyHidden.tsx` | Text for a screen reader only | The word a sighted user infers from position and a blind user cannot |
@@ -829,7 +878,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (612 tests, 61 files, ≈ 48 s):
+Suites today (684 tests, 66 files, ≈ 43 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -894,6 +943,11 @@ Suites today (612 tests, 61 files, ≈ 48 s):
 | `ui/useElementSize.test.tsx` (4) | Measured again when the element changes — a ref read once would keep yesterday's number for the life of the window — the observer disconnected on unmount, and one measurement in an environment that has no observer at all |
 | `features/inspector/Inspector.test.tsx` (9) | The service's own words about a file: name, path, both lengths, every stream, a file that moved, a file not yet probed, a warning written for the user — and a selection from another project's bin not described |
 | `ui/Toaster.test.tsx` (16) | A message arriving is announced; `role="alert"` for danger and `role="status"` otherwise; an error stays until dismissed while the rest expire on their own; three visible and the rest waiting; and the queue itself — dismiss, clear, replace — tested without React, because a store that can only be driven from a component is a store that cannot speak after unmount |
+| `ui/Select.test.tsx` (13) | The value the caller gets is a string, one option per choice in order, an unavailable option shown but unchoosable — and the one decision that is this component's: a value no option offers means **nothing chosen**, not the first entry. The honest limitation is pinned too, so a caller knows to pass a placeholder when "unset" is a state the user can be in |
+| `ui/Switch.test.tsx` (8) | It is a real checkbox, so Space toggles it; the label is the control's name, so clicking the row toggles it; and the track drawn beside it is never announced — one control in the tree, not two |
+| `stores/settings.test.ts` (18) | A patch sending only the field it named, the command name travelling with it because the journal records that name, a refusal keeping the settings it had, the undo **depth** coming from the answer rather than being counted here, an empty stack reported as `false` and not as a failure, and a failed read keeping what it had |
+| `features/settings/frames.test.ts` (12) | The arithmetic: 3840×2160 and 1280×720 are the same shape, a frame of the user's own is not a preset, `1000:563` is shown as a decimal rather than rounded to a shape it is not, and a frame of nothing is answered rather than divided by |
+| `features/settings/SettingsPanel.test.tsx` (21) | What the panel does with a keyboard: three keystrokes in the width field are three letters of draft and **no request**, blur commits one, a value that came back the same posts nothing, and a value that is not a frame is put back. Then the service's voice: its sentence about what it did, its refusal printed rather than decided here. Then the draft and the answer — after an undo the field shows what the settings are, not what was typed |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
 is why the tests route values through helpers: `const good = asResult(ok(42))` keeps the
@@ -910,7 +964,7 @@ with a headless canvas harness).
 
 | Rule | Why |
 | --- | --- |
-| The bundle is budgeted, not measured afterwards | Today: 248 kB raw / 77 kB gzip for a boot screen, a client, a socket and one panel. A route-level split comes with routing (stage 6). |
+| The bundle is budgeted, not measured afterwards | Today: 341 kB raw / 105 kB gzip (plus 26 kB / 6 kB of CSS) for a boot screen, a client, a socket, four docked panes and the i18n bundles. A route-level split comes with routing (stage 6); the number a release watches is the gzip one, because that is what crosses the wire. |
 | No per-frame React state | Timeline and preview panels write to canvas (§10.12), not to `useState`; a 60 fps React render is 60 reconciliations of a tree that did not change. |
 | Redraws batched in `requestAnimationFrame`, dirty-region driven | Thousands of clips; only the damaged region repaints. |
 | Virtualise by visible range | A two-hour timeline has ~200 000 frames; rendering the ones off-screen is the whole bug. |
@@ -950,11 +1004,12 @@ while CI, which has both, always runs the whole thing.
 | **Done (stage 6, slice 4):** the layout primitives — `Splitter`, the `dock.ts` tree algebra, `Dock` and `VirtualList` | 6 |
 | **Done (stage 6, slice 5):** the shell — hash routing, the command registry and palette, the title bar, the status bar, the home screen, and the editor's dock holding the media bin | 6 |
 | **Done (stage 6, slice 6):** the editor's panes — `core/timecode/` (rates as fractions, SMPTE with drop-frame, parsing that is the exact inverse of formatting), the media, timeline and playback slices, the **preview** (one frame from the service with the geometry in its headers, a transport, a timecode field), and the **inspector** (what the service says about the selected file) | 6 |
-| `features/settings/` — the settings panel, **and the backend it needs first**: project settings are an edit like any other, so they want a `set-project-settings` command, a journalled entry and a crash-recovery replay before a panel can write them | 6, slice 7 |
-| `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping | 7 |
+| **Done (slice 7, backend):** a settings change is an edit — `SetSettingsCommand` on its own `UndoScope.PROJECT` stack, journalled and crash-replayable, with `GET`/`PATCH`/`undo`/`redo` under `/api/v1/projects/{id}/settings` (`api.md` §9, `services/projects/settings.py`) | 7 |
+| **Done (slice 7, frontend):** `stores/settings.ts` (the fourth slice, and the first that writes), `features/settings/` — `frames.ts`, `useProjectSettings`, `SettingsPanel` — plus two `ui/` primitives the panel needed and every later panel will: `Select` and `Switch` | 7 |
+| `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping, and the editing half of `stores/timeline.ts` | 7 |
 | WebGL overlay layer for preview-only gizmos | 7 |
 | `features/captions/` — the Caption Studio | 9 |
-| `features/ai-studio/`, `plugins/`, `export/`, `settings/` | 10–12 |
+| `features/ai-studio/`, `plugins/`, `export/` | 10–12 |
 
 ---
 

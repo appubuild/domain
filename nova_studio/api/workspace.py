@@ -75,6 +75,8 @@ from nova_studio.services.projects import (
     ProjectAudit,
     ProjectSession,
     RecoveryPlan,
+    SettingsEditor,
+    SettingsStore,
     plan_recovery,
 )
 from nova_studio.services.render import PreviewRenderer
@@ -285,6 +287,30 @@ class TimelineEdit:
     outcome: CommandOutcome
 
 
+@dataclass(frozen=True, slots=True)
+class SettingsSession:
+    """One project's render target: the settings, and the door they change through.
+
+    Its own type rather than a reuse of `TimelineSession`, because the two are
+    edited through different doors with different stacks, and a session that
+    could be either would be a session whose `editor` field means two things.
+    """
+
+    project: OpenProject
+    editor: SettingsEditor
+
+
+@dataclass(frozen=True, slots=True)
+class SettingsEdit:
+    """The outcome of one settings change — applied, undone or redone."""
+
+    project: OpenProject
+    editor: SettingsEditor
+    command: Command | None
+    name: str
+    outcome: CommandOutcome
+
+
 @dataclass(slots=True)
 class _Entry:
     """The mutable half: what the workspace keeps, always under its lock."""
@@ -301,6 +327,10 @@ class _Entry:
     #: The door this project's timeline is edited through, made on first use and
     #: kept for the life of the entry: the undo stack is part of the session.
     editor: TimelineEditor | None = None
+    #: The project's settings, edited through a second door with a second undo
+    #: stack — see `services/projects/settings.py` for why the two must not
+    #: share one.
+    settings_editor: SettingsEditor | None = None
     #: Wire name by command id, so an undo can say which command it reverted.
     #: Bounded, because a long session executes more commands than a menu needs.
     command_names: dict[str, str] = field(default_factory=dict)
@@ -925,6 +955,132 @@ class ProjectWorkspace:
             )
         )
 
+    def settings(self, project_id: str) -> Result[SettingsSession]:
+        """The project's render target, and the door it is changed through.
+
+        Same reasoning as :meth:`timeline`: the editor holds the undo stack, so
+        it is made on first use and kept for as long as the project is open.
+        """
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            return ok(
+                SettingsSession(project=entry.as_value(), editor=self._settings_editor_for(entry))
+            )
+
+    def apply_settings(
+        self,
+        project_id: str,
+        command: Command,
+        *,
+        name: str = "set-settings",
+        payload: Mapping[str, object] | None = None,
+    ) -> Result[SettingsEdit]:
+        """Change the project's render target, then make it durable.
+
+        The four steps are :meth:`apply`'s, because the reasons are the same:
+        run the command, put the project onto the new settings, journal the
+        change fsynced, publish last. A settings change that skipped the third
+        would be a change a crash would forget — and a settings change is the
+        one edit a user is least likely to notice they have lost, because
+        nothing on the timeline looks different.
+
+        The preview is invalidated unconditionally here, unlike `apply`: every
+        decoded picture was composited at the old frame size, and an outcome
+        that forgot to say so would leave the user looking at yesterday's frame.
+        """
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            editor = self._settings_editor_for(entry)
+            executed = editor.execute(command)
+            if executed.is_err():
+                return err(executed.unwrap_err())
+            outcome = executed.unwrap()
+            now_ms = self._clock.now_ms()
+            previous_project = entry.project
+            previous_autosave = entry.autosave
+            previous_dirty = entry.dirty
+            entry.project = previous_project.with_settings(editor.store.current())
+            # A no-op change is still an edit the user made, but it did not make
+            # the file different — and a project marked dirty with nothing to
+            # save is a project that begs to be saved.
+            entry.dirty = previous_dirty or outcome.marks_dirty
+            entry.autosave = entry.autosave.recorded(at_ms=now_ms)
+            failure = self._append(entry, name, now_ms, payload or {})
+            if failure is not None:
+                reverted = editor.undo()
+                entry.project = previous_project
+                entry.autosave = previous_autosave
+                entry.dirty = previous_dirty
+                if reverted.is_err():
+                    return err(reverted.unwrap_err())
+                return err(failure)
+            self._remember(entry, command.command_id, name)
+            value = entry.as_value()
+        self.invalidate_preview(project_id)
+        self._publish("edited", project_id, name=name, pending=value.pending_commands)
+        return ok(
+            SettingsEdit(project=value, editor=editor, command=command, name=name, outcome=outcome)
+        )
+
+    def undo_settings(self, project_id: str) -> Result[SettingsEdit]:
+        """Undo the last settings change, and journal that it was undone."""
+        return self._revert_settings(project_id, entry_name=UNDO_ENTRY, undo=True)
+
+    def redo_settings(self, project_id: str) -> Result[SettingsEdit]:
+        """Redo the last undone settings change, journalled the same way."""
+        return self._revert_settings(project_id, entry_name=REDO_ENTRY, undo=False)
+
+    def _revert_settings(
+        self, project_id: str, *, entry_name: str, undo: bool
+    ) -> Result[SettingsEdit]:
+        with self._entry_for(project_id) as entry:
+            if entry is None:
+                return err(not_open(project_id))
+            editor = self._settings_editor_for(entry)
+            reverted = editor.undo() if undo else editor.redo()
+            if reverted.is_err():
+                return err(reverted.unwrap_err())
+            command = reverted.unwrap()
+            if command is None:
+                return ok(
+                    SettingsEdit(
+                        project=entry.as_value(),
+                        editor=editor,
+                        command=None,
+                        name="",
+                        outcome=CommandOutcome.none(),
+                    )
+                )
+            name = self._name_of(entry, command)
+            now_ms = self._clock.now_ms()
+            previous_project = entry.project
+            previous_autosave = entry.autosave
+            previous_dirty = entry.dirty
+            entry.project = previous_project.with_settings(editor.store.current())
+            entry.dirty = True
+            entry.autosave = entry.autosave.recorded(at_ms=now_ms)
+            failure = self._append(
+                entry, entry_name, now_ms, {"command_id": command.command_id, "name": name}
+            )
+            if failure is not None:
+                restored = editor.redo() if undo else editor.undo()
+                entry.project = previous_project
+                entry.autosave = previous_autosave
+                entry.dirty = previous_dirty
+                if restored.is_err():
+                    return err(restored.unwrap_err())
+                return err(failure)
+            value = entry.as_value()
+        self.invalidate_preview(project_id)
+        self._publish("edited", project_id, name=entry_name, pending=value.pending_commands)
+        return ok(
+            SettingsEdit(
+                project=value, editor=editor, command=command, name=name, outcome=CommandOutcome()
+            )
+        )
+
     def audit(self, project_id: str) -> Result[ProjectAudit]:
         """What a user would want to know about the state of this project."""
         with self._entry_for(project_id) as entry:
@@ -1078,6 +1234,21 @@ class ProjectWorkspace:
         entry.command_names[command_id] = name
         while len(entry.command_names) > _NAMES_REMEMBERED:
             entry.command_names.pop(next(iter(entry.command_names)))
+
+    def _settings_editor_for(self, entry: _Entry) -> SettingsEditor:
+        """The settings editor for one entry, made on first use.
+
+        Seeded from `entry.project`, like the timeline editor, so "which
+        settings am I editing" has one answer however many times it is asked.
+        """
+        if entry.settings_editor is None:
+            entry.settings_editor = SettingsEditor(
+                store=SettingsStore(settings=entry.project.settings),
+                project_id=str(entry.project.project_id),
+                bus=self._bus,
+                clock=self._clock.monotonic,
+            )
+        return entry.settings_editor
 
     @staticmethod
     def _name_of(entry: _Entry, command: Command) -> str:

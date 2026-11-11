@@ -729,9 +729,24 @@ where a frame rate is a fraction and a timecode is SMPTE with drop-frame, the me
 timeline and playback slices, a **preview** that asks the service for one composited
 frame at the size its panel can fill (keeping the last picture while the next is decoded,
 and saying which assets a frame was drawn without), and an **inspector** that describes
-the selected file in the service's own words. The timeline (stage 7) and the settings
-panel fill the rest of the dock.
-Detail: [`frontend.md`](frontend.md) §10.9.4, §10.9.5 and §10.10.
+the selected file in the service's own words.
+
+**Built in stage 7 so far:** the settings panel, and the backend it needed first. A change
+to what a project renders to — its frame, its sample rate, its channel count, whether the
+preview may read a proxy, and the working colour space — is an **edit** like any other: a
+command (`SetSettingsCommand`) on its own `UndoScope.PROJECT` stack, journalled and
+crash-replayable, reached through `GET`/`PATCH`/`undo`/`redo` under
+`/api/v1/projects/{id}/settings`. The patch carries only the fields the caller named, and
+the journal records those fields rather than the settings object standing when they were
+named, so a replay re-applies a decision instead of restoring a snapshot that is already
+out of date. On the frontend, `stores/settings.ts` is the fourth slice and the first that
+writes — it keeps nothing a request has not come back with, and reads `can_undo` off every
+answer so the panel's Ctrl+Z and the service's Ctrl+Z are the same Ctrl+Z. The panel
+commits a typed number on blur rather than per keystroke, because a width typed one digit
+at a time would journal four undo entries for one decision. Two `ui/` primitives arrived
+with it: `Select` and `Switch`. The timeline fills the rest of the dock.
+Detail: [`frontend.md`](frontend.md) §10.9.4, §10.9.5, §10.9.6 and §10.10;
+[`api.md`](api.md) §9; [`services.md`](services.md) §4.
 
 ---
 

@@ -5,9 +5,9 @@
  *  1. the **API client** — bound once in `main.tsx`, because only that file
  *     knows how this window was delivered;
  *  2. the **event stream** — one socket for the window;
- *  3. the **stores** — the project slice, then the three that describe the
- *     project being edited: its media, its edit, and where the playhead is.
- *     Each is built around the client, never around a global;
+ *  3. the **stores** — the project slice, then the four that describe the
+ *     project being edited: its media, its edit, what it renders to, and where
+ *     the playhead is. Each is built around the client, never around a global;
  *  4. the **wiring between them** — `project.*` events go to the project store,
  *     `media.*` to the media store, `command.*` to the timeline store, and a gap
  *     the bus could not repair makes all of them ask again.
@@ -32,6 +32,7 @@ import { EventStreamContext, useEventStream } from '../core/events/useEventStrea
 import { createMediaStore, MediaStoreContext } from '../stores/media';
 import { createPlaybackStore, PlaybackStoreContext } from '../stores/playback';
 import { createProjectStore, ProjectStoreContext } from '../stores/project';
+import { createSettingsStore, SettingsStoreContext } from '../stores/settings';
 import { createTimelineStore, TimelineStoreContext } from '../stores/timeline';
 
 export interface WorkspaceProvidersProps {
@@ -57,6 +58,7 @@ export function WorkspaceProviders({
   const store = useMemo(() => createProjectStore(client), [client]);
   const media = useMemo(() => createMediaStore(client), [client]);
   const timeline = useMemo(() => createTimelineStore(client), [client]);
+  const settings = useMemo(() => createSettingsStore(client), [client]);
   const playback = useMemo(() => createPlaybackStore(), []);
 
   const { stream } = useEventStream({
@@ -69,6 +71,7 @@ export function WorkspaceProviders({
       void store.getState().refresh();
       void media.getState().refresh();
       void timeline.getState().refresh();
+      void settings.getState().refresh();
     },
   });
 
@@ -79,23 +82,30 @@ export function WorkspaceProviders({
     const offProject = stream.subscribe('project.*', store.getState().applyEvent);
     const offMedia = stream.subscribe('media.*', media.getState().applyEvent);
     const offAsset = stream.subscribe('asset.*', media.getState().applyEvent);
+    // `command.*` reaches two stores now, and that is the point of an event
+    // being a notification: the edit changing is one fact, and the timeline and
+    // the settings each ask for their own answer to it.
     const offCommand = stream.subscribe('command.*', timeline.getState().applyEvent);
+    const offSettings = stream.subscribe('command.*', settings.getState().applyEvent);
     return () => {
       offProject();
       offMedia();
       offAsset();
       offCommand();
+      offSettings();
     };
-  }, [media, store, stream, timeline]);
+  }, [media, settings, store, stream, timeline]);
 
   return (
     <EventStreamContext.Provider value={stream}>
       <ProjectStoreContext.Provider value={store}>
         <MediaStoreContext.Provider value={media}>
           <TimelineStoreContext.Provider value={timeline}>
-            <PlaybackStoreContext.Provider value={playback}>
-              {children}
-            </PlaybackStoreContext.Provider>
+            <SettingsStoreContext.Provider value={settings}>
+              <PlaybackStoreContext.Provider value={playback}>
+                {children}
+              </PlaybackStoreContext.Provider>
+            </SettingsStoreContext.Provider>
           </TimelineStoreContext.Provider>
         </MediaStoreContext.Provider>
       </ProjectStoreContext.Provider>

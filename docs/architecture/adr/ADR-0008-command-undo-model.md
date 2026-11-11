@@ -35,9 +35,12 @@ timeline per gesture) or fail the scope requirement.
    a time window (default 700 ms). A drag produces one undo entry. A slider produces one
    entry per user interaction. Text editing coalesces per word-boundary. Merge policy is
    declared by the command, not centrally.
-4. **Per-scope stacks.** `UndoScope` ∈ {`GLOBAL`, `TIMELINE`, `CAPTION`, `COLOUR`,
-   `INSPECTOR`}. Each scope has its own stack, and the UI shows one Undo action whose target
-   is the *focused scope*, with a global "Undo (Timeline)" fallback in the menu. This matches
+4. **Per-scope stacks.** `UndoScope` ∈ {`GLOBAL`, `TIMELINE`, `PROJECT`,
+   `CAPTION`, `COLOUR`, `INSPECTOR`}. `PROJECT` was added for the project's
+   settings: a change to what the project renders to is not a change to the edit,
+   and one stack cannot read both intentions. Each scope has its own stack, and
+   the UI shows one Undo action whose target is the *focused scope*, with a
+   global "Undo (Timeline)" fallback in the menu. This matches
    how editors actually work and prevents cross-context destruction.
 5. **Bounded stacks** per scope (default 200 entries, configurable) with heavy-command
    accounting; when the budget is exceeded the oldest heavy commands are dropped first.

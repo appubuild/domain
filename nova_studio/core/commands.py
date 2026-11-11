@@ -74,6 +74,10 @@ class UndoScope(StrEnum):
 
     GLOBAL = "global"
     TIMELINE = "timeline"
+    #: The project itself: its settings and its metadata, whose undo must not
+    #: disturb the edit. Changing the frame size and undoing a cut are two
+    #: different intentions, and one stack cannot read both.
+    PROJECT = "project"
     CAPTION = "caption"
     COLOUR = "colour"
     INSPECTOR = "inspector"

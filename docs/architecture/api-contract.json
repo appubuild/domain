@@ -726,6 +726,54 @@
         "title": "ExportSubmission",
         "type": "object"
       },
+      "FrameSizeSpec": {
+        "additionalProperties": false,
+        "description": "A frame size to set.\n\nOdd dimensions are accepted: they are legal today and only fail at export\nfor 4:2:0, which is a thing to warn a user about in the panel rather than\nrefuse behind their back.",
+        "properties": {
+          "height": {
+            "description": "Height in pixels.",
+            "maximum": 16384.0,
+            "minimum": 1.0,
+            "title": "Height",
+            "type": "integer"
+          },
+          "width": {
+            "description": "Width in pixels.",
+            "maximum": 16384.0,
+            "minimum": 1.0,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "FrameSizeSpec",
+        "type": "object"
+      },
+      "FrameSizeSummary": {
+        "additionalProperties": false,
+        "description": "The frame the compositor builds, in pixels.",
+        "properties": {
+          "height": {
+            "description": "Height in pixels.",
+            "title": "Height",
+            "type": "integer"
+          },
+          "width": {
+            "description": "Width in pixels.",
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "width",
+          "height"
+        ],
+        "title": "FrameSizeSummary",
+        "type": "object"
+      },
       "HealthResponse": {
         "additionalProperties": false,
         "description": "Whether the service is up, and nothing else.\n\nDeliberately tiny: it is polled in a loop while the process starts, and it\nis the one endpoint that answers without a session token, so it must not be\nable to disclose anything — or fail for any reason but \"not listening yet\".",
@@ -2188,6 +2236,397 @@
           "format_version"
         ],
         "title": "SaveProjectResponse",
+        "type": "object"
+      },
+      "SettingsCommandResponse": {
+        "additionalProperties": false,
+        "description": "What one settings change did, for a client that does not want to refetch.",
+        "properties": {
+          "affected": {
+            "description": "Namespaces the command touched.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected",
+            "type": "array"
+          },
+          "command_id": {
+            "description": "The command that ran, e.g. `project.set-settings`.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "dirty": {
+            "description": "Whether the project differs from what is on disk.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do."
+          },
+          "invalidate": {
+            "description": "Caches the command invalidated: `settings`, `preview`, `export`.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Invalidate",
+            "type": "array"
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "marks_dirty": {
+            "description": "Whether this change made the project unsaved.",
+            "title": "Marks Dirty",
+            "type": "boolean"
+          },
+          "name": {
+            "description": "Its wire name, which is also the name the journal recorded.",
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_commands": {
+            "description": "Commands recorded since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Which project these settings belong to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "rerender": {
+            "description": "Whether the preview must redraw.",
+            "title": "Rerender",
+            "type": "boolean"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SettingsSummary",
+            "description": "The settings as they stand."
+          },
+          "summary": {
+            "description": "What it did, as one sentence for a status bar.",
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "settings",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty",
+          "command_id",
+          "name",
+          "summary",
+          "affected",
+          "invalidate",
+          "rerender",
+          "marks_dirty"
+        ],
+        "title": "SettingsCommandResponse",
+        "type": "object"
+      },
+      "SettingsPatchRequest": {
+        "additionalProperties": false,
+        "description": "Change one or more settings. Every field is optional; omit one to leave it.\n\nPosted as a *patch* rather than a whole replacement: two panels can hold\ntwo different settings open at once, and neither of them knows the other's\ncurrent values.",
+        "properties": {
+          "channels": {
+            "anyOf": [
+              {
+                "maximum": 8.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Audio channel count.",
+            "title": "Channels"
+          },
+          "frame_size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FrameSizeSpec"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The frame the compositor builds."
+          },
+          "sample_rate": {
+            "anyOf": [
+              {
+                "maximum": 384000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Audio sample rate in Hz.",
+            "title": "Sample Rate"
+          },
+          "type": {
+            "const": "set-settings",
+            "default": "set-settings",
+            "description": "Discriminator: which command this is. It is also the name the journal records.",
+            "title": "Type",
+            "type": "string"
+          },
+          "use_proxies": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the preview may decode from a proxy.",
+            "title": "Use Proxies"
+          },
+          "working_colour_space": {
+            "anyOf": [
+              {
+                "maximum": 17.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Matrix coefficient for the compositor's working space: 1 = BT.709, 6 = SMPTE 170M, 9 = BT.2020 non-constant luminance.",
+            "title": "Working Colour Space"
+          }
+        },
+        "title": "SettingsPatchRequest",
+        "type": "object"
+      },
+      "SettingsRedoResponse": {
+        "additionalProperties": false,
+        "description": "What Ctrl+Shift+Z did to the settings; `redone: false` when there was none.",
+        "properties": {
+          "command_id": {
+            "description": "The command that was re-applied, or empty.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "dirty": {
+            "description": "Whether the project differs from what is on disk.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do."
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Its wire name, or empty.",
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_commands": {
+            "description": "Commands recorded since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Which project these settings belong to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "redone": {
+            "description": "Whether anything was redone.",
+            "title": "Redone",
+            "type": "boolean"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SettingsSummary",
+            "description": "The settings as they stand."
+          }
+        },
+        "required": [
+          "project_id",
+          "settings",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty",
+          "redone",
+          "command_id",
+          "name"
+        ],
+        "title": "SettingsRedoResponse",
+        "type": "object"
+      },
+      "SettingsResponse": {
+        "additionalProperties": false,
+        "description": "The settings as they stand, with the history that got them there.",
+        "properties": {
+          "dirty": {
+            "description": "Whether the project differs from what is on disk.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do."
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "pending_commands": {
+            "description": "Commands recorded since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Which project these settings belong to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SettingsSummary",
+            "description": "The settings as they stand."
+          }
+        },
+        "required": [
+          "project_id",
+          "settings",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty"
+        ],
+        "title": "SettingsResponse",
+        "type": "object"
+      },
+      "SettingsSummary": {
+        "additionalProperties": false,
+        "description": "What the whole project renders and mixes to, as the panel shows it.",
+        "properties": {
+          "aspect_ratio": {
+            "description": "Width over height: 1.777… for 16:9, 0.5625 for a vertical 9:16.",
+            "title": "Aspect Ratio",
+            "type": "number"
+          },
+          "channels": {
+            "description": "Audio channel count: 1, 2, 6 or 8.",
+            "title": "Channels",
+            "type": "integer"
+          },
+          "even_dimensions": {
+            "description": "Whether both dimensions are even. Every 4:2:0 encoder we ship requires it, so false means export will fail until it is fixed.",
+            "title": "Even Dimensions",
+            "type": "boolean"
+          },
+          "frame_size": {
+            "$ref": "#/components/schemas/FrameSizeSummary",
+            "description": "The frame the compositor builds; the preview is this at a smaller scale."
+          },
+          "sample_rate": {
+            "description": "Audio sample rate in Hz, e.g. 48000.",
+            "title": "Sample Rate",
+            "type": "integer"
+          },
+          "use_proxies": {
+            "description": "Whether the preview decodes from a proxy when one exists. Export ignores this: a render is a render.",
+            "title": "Use Proxies",
+            "type": "boolean"
+          },
+          "working_colour_space": {
+            "description": "The colour space the compositor works in before the output transform, as the matrix coefficient signalled in the container (1 = BT.709, 6 = SMPTE 170M, 9 = BT.2020 non-constant luminance).",
+            "title": "Working Colour Space",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "frame_size",
+          "aspect_ratio",
+          "even_dimensions",
+          "sample_rate",
+          "channels",
+          "use_proxies",
+          "working_colour_space"
+        ],
+        "title": "SettingsSummary",
+        "type": "object"
+      },
+      "SettingsUndoResponse": {
+        "additionalProperties": false,
+        "description": "What Ctrl+Z did to the settings; `undone: false` when the stack was empty.",
+        "properties": {
+          "command_id": {
+            "description": "The command that was reverted, or empty.",
+            "title": "Command Id",
+            "type": "string"
+          },
+          "dirty": {
+            "description": "Whether the project differs from what is on disk.",
+            "title": "Dirty",
+            "type": "boolean"
+          },
+          "history": {
+            "$ref": "#/components/schemas/HistorySummary",
+            "description": "The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do."
+          },
+          "journal_sequence": {
+            "description": "Newest journalled sequence.",
+            "title": "Journal Sequence",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Its wire name, or empty.",
+            "title": "Name",
+            "type": "string"
+          },
+          "pending_commands": {
+            "description": "Commands recorded since the last checkpoint.",
+            "title": "Pending Commands",
+            "type": "integer"
+          },
+          "project_id": {
+            "description": "Which project these settings belong to.",
+            "title": "Project Id",
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SettingsSummary",
+            "description": "The settings as they stand."
+          },
+          "undone": {
+            "description": "Whether anything was undone.",
+            "title": "Undone",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "project_id",
+          "settings",
+          "history",
+          "journal_sequence",
+          "pending_commands",
+          "dirty",
+          "undone",
+          "command_id",
+          "name"
+        ],
+        "title": "SettingsUndoResponse",
         "type": "object"
       },
       "SlipClipRequest": {
@@ -5752,6 +6191,446 @@
         "summary": "Save a project somewhere else",
         "tags": [
           "projects"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/settings": {
+      "get": {
+        "description": "What the project renders and mixes to, with the history that got it there.\n\nThe answer carries `aspect_ratio` and `even_dimensions` alongside the frame\nsize, because both are things a user needs to know *before* they commit: an\nodd dimension is a 4:2:0 export that fails later, and an aspect ratio\ndecides whether every title in the project still fits.",
+        "operationId": "get_settings_api_v1_projects__project_id__settings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "The project's render target",
+        "tags": [
+          "settings"
+        ]
+      },
+      "patch": {
+        "description": "Change the render target, and journal the change, or say precisely why not.\n\nA patch, not a replacement: every field is optional and one left out is one\nthe caller has no opinion about, which is what lets two panels hold two\nsettings open without either of them knowing the other's values.\n\nA refused change costs the user nothing — not even their redo future: the\ncommand is only recorded once it has succeeded. A journalling failure rolls\nthe change back and says so, because a change we cannot replay is a change\nwe must not pretend to have kept.",
+        "operationId": "patch_settings_api_v1_projects__project_id__settings_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsPatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsCommandResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Change one or more settings",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/settings/redo": {
+      "post": {
+        "description": "Redo one settings change, in the same shape as the undo that undid it.",
+        "operationId": "redo_settings_api_v1_projects__project_id__settings_redo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsRedoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Redo the last undone settings change",
+        "tags": [
+          "settings"
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}/settings/undo": {
+      "post": {
+        "description": "Undo one settings change, and journal the undo.\n\nAn empty stack answers `undone: false` with a 200: pressing Ctrl+Z when\nnothing has been changed is not a mistake, and a 404 there would be a lie\nabout what happened.",
+        "operationId": "undo_settings_api_v1_projects__project_id__settings_undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsUndoResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No session token, or the wrong one."
+          },
+          "403": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "A Host or Origin that is not this session's loopback address."
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "No such endpoint."
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request was refused; the body says why, and whether to retry."
+          },
+          "416": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The requested range is no longer retained; refetch the state."
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "The request did not match the endpoint's schema."
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemResponse"
+                }
+              }
+            },
+            "description": "An unexpected error; the body names the exception."
+          }
+        },
+        "security": [
+          {
+            "Session token": []
+          }
+        ],
+        "summary": "Undo the last settings change",
+        "tags": [
+          "settings"
         ]
       }
     },

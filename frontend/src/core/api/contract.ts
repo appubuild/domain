@@ -288,6 +288,28 @@ export interface ExportSubmission {
 }
 
 /**
+ * A frame size to set.
+ *
+ * Odd dimensions are accepted: they are legal today and only fail at export
+ * for 4:2:0, which is a thing to warn a user about in the panel rather than
+ * refuse behind their back.
+ */
+export interface FrameSizeSpec {
+  /** Height in pixels. */
+  height: number;
+  /** Width in pixels. */
+  width: number;
+}
+
+/** The frame the compositor builds, in pixels. */
+export interface FrameSizeSummary {
+  /** Height in pixels. */
+  height: number;
+  /** Width in pixels. */
+  width: number;
+}
+
+/**
  * Whether the service is up, and nothing else.
  *
  * Deliberately tiny: it is polled in a loop while the process starts, and it
@@ -851,6 +873,136 @@ export interface SaveProjectResponse {
   saved_at_ms: number;
 }
 
+/** What one settings change did, for a client that does not want to refetch. */
+export interface SettingsCommandResponse {
+  /** Namespaces the command touched. */
+  affected: string[];
+  /** The command that ran, e.g. `project.set-settings`. */
+  command_id: string;
+  /** Whether the project differs from what is on disk. */
+  dirty: boolean;
+  /** The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do. */
+  history: HistorySummary;
+  /** Caches the command invalidated: `settings`, `preview`, `export`. */
+  invalidate: string[];
+  /** Newest journalled sequence. */
+  journal_sequence: number;
+  /** Whether this change made the project unsaved. */
+  marks_dirty: boolean;
+  /** Its wire name, which is also the name the journal recorded. */
+  name: string;
+  /** Commands recorded since the last checkpoint. */
+  pending_commands: number;
+  /** Which project these settings belong to. */
+  project_id: string;
+  /** Whether the preview must redraw. */
+  rerender: boolean;
+  /** The settings as they stand. */
+  settings: SettingsSummary;
+  /** What it did, as one sentence for a status bar. */
+  summary: string;
+}
+
+/**
+ * Change one or more settings. Every field is optional; omit one to leave it.
+ *
+ * Posted as a *patch* rather than a whole replacement: two panels can hold
+ * two different settings open at once, and neither of them knows the other's
+ * current values.
+ */
+export interface SettingsPatchRequest {
+  /** Audio channel count. */
+  channels?: number | null;
+  /** The frame the compositor builds. */
+  frame_size?: FrameSizeSpec | null;
+  /** Audio sample rate in Hz. */
+  sample_rate?: number | null;
+  /** Discriminator: which command this is. It is also the name the journal records. */
+  type?: "set-settings";
+  /** Whether the preview may decode from a proxy. */
+  use_proxies?: boolean | null;
+  /** Matrix coefficient for the compositor's working space: 1 = BT.709, 6 = SMPTE 170M, 9 = BT.2020 non-constant luminance. */
+  working_colour_space?: number | null;
+}
+
+/** What Ctrl+Shift+Z did to the settings; `redone: false` when there was none. */
+export interface SettingsRedoResponse {
+  /** The command that was re-applied, or empty. */
+  command_id: string;
+  /** Whether the project differs from what is on disk. */
+  dirty: boolean;
+  /** The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do. */
+  history: HistorySummary;
+  /** Newest journalled sequence. */
+  journal_sequence: number;
+  /** Its wire name, or empty. */
+  name: string;
+  /** Commands recorded since the last checkpoint. */
+  pending_commands: number;
+  /** Which project these settings belong to. */
+  project_id: string;
+  /** Whether anything was redone. */
+  redone: boolean;
+  /** The settings as they stand. */
+  settings: SettingsSummary;
+}
+
+/** The settings as they stand, with the history that got them there. */
+export interface SettingsResponse {
+  /** Whether the project differs from what is on disk. */
+  dirty: boolean;
+  /** The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do. */
+  history: HistorySummary;
+  /** Newest journalled sequence. */
+  journal_sequence: number;
+  /** Commands recorded since the last checkpoint. */
+  pending_commands: number;
+  /** Which project these settings belong to. */
+  project_id: string;
+  /** The settings as they stand. */
+  settings: SettingsSummary;
+}
+
+/** What the whole project renders and mixes to, as the panel shows it. */
+export interface SettingsSummary {
+  /** Width over height: 1.777… for 16:9, 0.5625 for a vertical 9:16. */
+  aspect_ratio: number;
+  /** Audio channel count: 1, 2, 6 or 8. */
+  channels: number;
+  /** Whether both dimensions are even. Every 4:2:0 encoder we ship requires it, so false means export will fail until it is fixed. */
+  even_dimensions: boolean;
+  /** The frame the compositor builds; the preview is this at a smaller scale. */
+  frame_size: FrameSizeSummary;
+  /** Audio sample rate in Hz, e.g. 48000. */
+  sample_rate: number;
+  /** Whether the preview decodes from a proxy when one exists. Export ignores this: a render is a render. */
+  use_proxies: boolean;
+  /** The colour space the compositor works in before the output transform, as the matrix coefficient signalled in the container (1 = BT.709, 6 = SMPTE 170M, 9 = BT.2020 non-constant luminance). */
+  working_colour_space: number;
+}
+
+/** What Ctrl+Z did to the settings; `undone: false` when the stack was empty. */
+export interface SettingsUndoResponse {
+  /** The command that was reverted, or empty. */
+  command_id: string;
+  /** Whether the project differs from what is on disk. */
+  dirty: boolean;
+  /** The settings stack: what Ctrl+Z and Ctrl+Shift+Z would do. */
+  history: HistorySummary;
+  /** Newest journalled sequence. */
+  journal_sequence: number;
+  /** Its wire name, or empty. */
+  name: string;
+  /** Commands recorded since the last checkpoint. */
+  pending_commands: number;
+  /** Which project these settings belong to. */
+  project_id: string;
+  /** The settings as they stand. */
+  settings: SettingsSummary;
+  /** Whether anything was undone. */
+  undone: boolean;
+}
+
 /** Slide the source window inside a clip, moving neither end in time. */
 export interface SlipClipRequest {
   /** The clip to slip. */
@@ -1098,6 +1250,8 @@ export interface Schemas {
   readonly EnsureMediaResponse: EnsureMediaResponse;
   readonly EventEnvelopeWire: EventEnvelopeWire;
   readonly ExportSubmission: ExportSubmission;
+  readonly FrameSizeSpec: FrameSizeSpec;
+  readonly FrameSizeSummary: FrameSizeSummary;
   readonly HealthResponse: HealthResponse;
   readonly HistorySummary: HistorySummary;
   readonly ImportFailure: ImportFailure;
@@ -1132,6 +1286,12 @@ export interface Schemas {
   readonly RippleDeleteRequest: RippleDeleteRequest;
   readonly SaveAsRequest: SaveAsRequest;
   readonly SaveProjectResponse: SaveProjectResponse;
+  readonly SettingsCommandResponse: SettingsCommandResponse;
+  readonly SettingsPatchRequest: SettingsPatchRequest;
+  readonly SettingsRedoResponse: SettingsRedoResponse;
+  readonly SettingsResponse: SettingsResponse;
+  readonly SettingsSummary: SettingsSummary;
+  readonly SettingsUndoResponse: SettingsUndoResponse;
   readonly SlipClipRequest: SlipClipRequest;
   readonly SplitClipRequest: SplitClipRequest;
   readonly StartExportRequest: StartExportRequest;
@@ -1308,6 +1468,17 @@ export const OPERATIONS = {
     success: 200,
     responseFormat: "json",
   },
+  getSettings: {
+    method: "get",
+    path: "/api/v1/projects/{project_id}/settings",
+    summary: "The project's render target",
+    pathParams: ["project_id"],
+    queryParams: [],
+    requestBody: null,
+    response: "SettingsResponse",
+    success: 200,
+    responseFormat: "json",
+  },
   getTimeline: {
     method: "get",
     path: "/api/v1/projects/{project_id}/timeline",
@@ -1385,6 +1556,17 @@ export const OPERATIONS = {
     success: 200,
     responseFormat: "json",
   },
+  patchSettings: {
+    method: "patch",
+    path: "/api/v1/projects/{project_id}/settings",
+    summary: "Change one or more settings",
+    pathParams: ["project_id"],
+    queryParams: [],
+    requestBody: "SettingsPatchRequest",
+    response: "SettingsCommandResponse",
+    success: 200,
+    responseFormat: "json",
+  },
   previewFrame: {
     method: "get",
     path: "/api/v1/projects/{project_id}/preview/frame",
@@ -1451,6 +1633,17 @@ export const OPERATIONS = {
     success: 200,
     responseFormat: "json",
   },
+  redoSettings: {
+    method: "post",
+    path: "/api/v1/projects/{project_id}/settings/redo",
+    summary: "Redo the last undone settings change",
+    pathParams: ["project_id"],
+    queryParams: [],
+    requestBody: null,
+    response: "SettingsRedoResponse",
+    success: 200,
+    responseFormat: "json",
+  },
   saveProject: {
     method: "post",
     path: "/api/v1/projects/{project_id}/save",
@@ -1514,6 +1707,17 @@ export const OPERATIONS = {
     queryParams: [],
     requestBody: null,
     response: "UndoResponse",
+    success: 200,
+    responseFormat: "json",
+  },
+  undoSettings: {
+    method: "post",
+    path: "/api/v1/projects/{project_id}/settings/undo",
+    summary: "Undo the last settings change",
+    pathParams: ["project_id"],
+    queryParams: [],
+    requestBody: null,
+    response: "SettingsUndoResponse",
     success: 200,
     responseFormat: "json",
   },

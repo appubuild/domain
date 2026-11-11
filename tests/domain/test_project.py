@@ -327,6 +327,48 @@ class TestProjectSettings:
             ProjectSettings.from_wire(dict(ProjectSettings().to_wire(), bit_depth=10))
 
 
+class TestProjectWithSettings:
+    """The one-field replace behind the settings command.
+
+    Deliberately *not* a second `with_timeline`: a settings change has no owners
+    to prune, so the pass over every binding that `with_timeline` makes would be
+    work done to answer a question the edit did not ask.
+    """
+
+    def test_the_settings_change(self) -> None:
+        project = _project().with_settings(ProjectSettings(channels=6))
+        assert project.settings.channels == 6
+
+    def test_the_edit_is_left_alone(self) -> None:
+        project = _project()
+        changed = project.with_settings(ProjectSettings(channels=6))
+        assert changed.timeline == project.timeline
+
+    def test_the_original_is_left_alone(self) -> None:
+        project = _project()
+        project.with_settings(ProjectSettings(channels=6))
+        assert project.settings.channels == DEFAULT_CHANNELS
+
+    def test_a_binding_on_a_surviving_clip_survives(self) -> None:
+        """The difference that matters: `with_timeline` prunes by owner, and a
+        settings change has not removed an owner."""
+        project = _project().with_effects(EffectTarget.CLIP, "c1", _chain())
+        changed = project.with_settings(ProjectSettings(channels=6))
+        assert len(changed.effects) == 1
+
+    def test_a_settings_change_survives_a_timeline_change(self) -> None:
+        """Two replaces, two concerns: neither field is the other's business."""
+        project = _project().with_settings(ProjectSettings(channels=6))
+        changed = project.with_timeline(_timeline(_track("v1", _clip("c1", "a1"))))
+        assert changed.settings.channels == 6
+
+    def test_the_frame_the_compositor_builds_is_the_settings_not_a_field(self) -> None:
+        project = _project().with_settings(
+            ProjectSettings(frame_size=FrameSize(width=3840, height=2160))
+        )
+        assert project.settings.frame_size == FrameSize(width=3840, height=2160)
+
+
 class TestEffectBinding:
     def test_a_clip_binding_names_its_clip(self) -> None:
         assert EffectBinding(target=EffectTarget.CLIP, owner_id="c1").owner_id == "c1"

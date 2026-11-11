@@ -147,6 +147,19 @@ ALLOWLIST: Final[dict[str, str]] = {
         "the L3 service catalogue: one entry per service, prose, and read by "
         "reference rather than start to finish"
     ),
+    "docs/architecture/frontend.md": (
+        "§10 of the architecture, split out of ARCHITECTURE.md for exactly this "
+        "reason and since outgrown again; prose that diffs line by line, and "
+        "still well under the 128 KiB point at which the policy above splits a "
+        "section rather than allowlisting it"
+    ),
+    "docs/architecture/api.md": (
+        "the API architecture: one numbered section per ring, each read by "
+        "reference and cross-linked from the others, so splitting it means "
+        "renumbering references in four documents rather than improving "
+        "anything. It gets split when it passes 128 KiB, the threshold above "
+        "which the policy prefers a second file to a longer allowlist"
+    ),
     # A lockfile is generated and committed on purpose: an install that resolves
     # `^19.1.0` differently on Tuesday than it did on Monday is an install that
     # breaks on Tuesday with no code change anywhere. It is text, it diffs, and

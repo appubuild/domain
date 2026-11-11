@@ -68,6 +68,7 @@ api/
 │   ├── system.py    health, identity, capabilities
 │   ├── projects.py  the project DTOs: summary, open, save, checkpoint, audit
 │   ├── timeline.py  the edit, its history, and the seven commands (§9)
+│   ├── settings.py  the render target: the summary, and the patch (§9)
 │   ├── media.py     the bin: asset rows, and the import report (§10)
 │   ├── export.py    the export dialog: the request, and the job it got (§11)
 │   ├── jobs.py      a job row: progress inside it, not beside it (§11)
@@ -75,6 +76,7 @@ api/
 ├── mappers/      entity ↔ DTO translation, one module per resource
 │   ├── projects.py  Project ↔ ProjectSummary, ProjectAudit → sentences
 │   ├── timeline.py  Timeline → summary, wire command → domain command
+│   ├── settings.py  ProjectSettings → summary, wire patch → domain command (§9)
 │   ├── media.py     MediaAsset → row, IngestReport → import answer
 │   ├── export.py    "MP4, high quality" → an OutputSpec the domain can build
 │   └── jobs.py      JobRecord → the row the panel draws
@@ -83,6 +85,7 @@ api/
 │   ├── events.py    /api/v1/events, and the /api/v1/ws endpoint
 │   ├── projects.py  /api/v1/projects/* (§8)
 │   ├── timeline.py  /api/v1/projects/{id}/{timeline,commands,undo,redo} (§9)
+│   ├── settings.py  /api/v1/projects/{id}/settings{,/undo,/redo} (§9)
 │   ├── media.py     /api/v1/projects/{id}/media{,/import,/ensure} (§10)
 │   ├── render.py    /api/v1/projects/{id}/preview/{frame,warm,cache} (§7.14)
 │   ├── export.py    POST /api/v1/projects/{id}/exports (§11)
@@ -498,6 +501,51 @@ waiting.
   the ones sharing a `gesture` into a single undo step, so one drag is one Ctrl+Z.
 * **Handlers are `def`**, so a long command runs in the thread pool and does not
   stall the socket carrying render progress.
+
+### The settings, which are an edit too
+
+What the project *renders to* — its frame, its sample rate, its channel count,
+whether the preview may read a proxy, and the colour space the grades are applied
+in — is five fields on `ProjectSettings`, and every one of them is something a
+user sets once and then lives with. That is exactly why changing one has to be an
+edit and not a `PATCH` that reaches into the project:
+
+* **It is undoable.** A user who drops a 4K project to 1080p to see whether the
+  titles still read has to be able to come back.
+* **It is journalled.** A crash between the change and the next save must not
+  lose it — and a settings change is the edit a user is *least* likely to notice
+  they have lost, because nothing on the timeline looks different afterwards.
+* **It is validated in one place.** `ProjectSettings` refuses a sample rate of
+  zero by raising; a router that built one from a request body would be turning
+  an invariant into a 500.
+
+| Method and path | Returns | Notes |
+|---|---|---|
+| `GET /api/v1/projects/{id}/settings` | `SettingsResponse` | The settings, plus `aspect_ratio` and `even_dimensions` — two facts derived here rather than stored, both of which a user needs *before* committing to a frame. |
+| `PATCH /api/v1/projects/{id}/settings` | `SettingsCommandResponse` | A patch, not a replacement: a field left out is one the caller has no opinion about. |
+| `POST /api/v1/projects/{id}/settings/undo` | `SettingsUndoResponse` | `undone: false` on an empty stack, a 200 and not a mistake. |
+| `POST /api/v1/projects/{id}/settings/redo` | `SettingsRedoResponse` | The same shape as the undo that undid it. |
+
+**Its own stack.** `SetSettingsCommand` runs on `UndoScope.PROJECT`, added to
+`core/commands.py` for it. ADR-0008 rule 4 says a caption or colour command
+belongs to its own editor with its own undo stack, and settings are the same
+shape: undoing "render to 1080p" must not be the same Ctrl+Z as undoing the cut
+the user made ten minutes ago. `GLOBAL` stays what it always was — the fallback
+for a command that genuinely has no home — rather than becoming a drawer
+everything is tidied into.
+
+**A patch, not a snapshot.** The journal records the fields the caller named —
+`{"channels": 6}` — and not the settings object that happened to be standing when
+they named it. A replay re-applies a *decision* against whatever the settings are
+when it runs; recording the result instead would overwrite whatever is there now,
+which is the one failure a recovery system must not have.
+
+| Code | Status | Meaning |
+|---|---|---|
+| `NS-COMMAND-4104` | 409 | A setting the domain refuses: a sample rate of zero, three channels, a colour space this build does not know. A refusal the panel prints, in the service's words. |
+| (FastAPI) | 422 | The request is not one this contract names — a negative sample rate, a field we do not know. Distinguished from the 409 above because a 422 is a bug the client must fix and a 409 is a sentence it must print. |
+| `NS-PROJECT-4040` | 404 | The project is not open in this session. |
+| `NS-PROJECT-4005` | 500 | The journal could not be written; the change was rolled back. |
 
 ---
 

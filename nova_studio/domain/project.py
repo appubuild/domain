@@ -780,6 +780,22 @@ class Project:
             ),
         )
 
+    def with_settings(self, settings: ProjectSettings) -> Project:
+        """The project rendering to a new target, and nothing else.
+
+        Deliberately a one-field replace, unlike :meth:`with_timeline`: a settings
+        change has no owners to prune, because an effect, a transform and a grade
+        are attached to a *clip* and not to the frame the clip is composited
+        into. Rebuilding the bindings here would be a pass over every binding on
+        a project to decide something the edit did not put in question.
+
+        Changing the frame size does not move a layer: a layer positioned 100 px
+        from the centre stays 100 px from the centre of a different frame, which
+        is the one thing a user has to know before they change it — and why the
+        panel says so rather than quietly doing it.
+        """
+        return replace(self, settings=settings)
+
     # -- effects and looks --------------------------------------------------
 
     def effect_chain_for(self, target: EffectTarget, owner_id: str = "") -> EffectChain:

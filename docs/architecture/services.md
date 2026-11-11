@@ -48,7 +48,7 @@ derived index rebuilt from `timeline/document.json`, and its schema belongs to
 ```
 services/
 ├── shared/       cross-feature helpers (the sanctioned exception to rule 2)
-├── projects/     open, save, autosave, crash recovery
+├── projects/     open, save, autosave, crash recovery, project settings
 ├── media/        ingest, probing, thumbnails, proxy generation, the media cache,
 │                 and the two jobs that make the derived copies
 ├── timeline/     edit operations as commands, undo scopes, ripple logic
@@ -198,6 +198,17 @@ plan_recovery(window, checkpoint_sequence) → RecoveryPlan   recovery.py
 ├── checkpoint_sequence · pending_commands · torn_tail
 ├── offers   REPLAY_JOURNAL · RESTORE_CHECKPOINT · DISCARD  (best first)
 └── detail   one sentence for the dialog
+
+SettingsEditor                        settings.py
+├── store    SettingsStore            one frozen ProjectSettings, held
+├── history  CommandHistory           on UndoScope.PROJECT, never TIMELINE
+├── execute(SetSettingsCommand) → Result[CommandOutcome]
+└── undo() / redo()            → Result[Command | None]
+
+SetSettingsCommand (a patch, not a replacement)
+├── frame_size · sample_rate · channels · use_proxies · working_colour_space
+├── before : ProjectSettings | None   the undo delta, one frozen value
+└── payload() → dict                  what the journal records
 ```
 
 **State management.** `ProjectSession` holds the archive, the clock and the
@@ -218,11 +229,32 @@ the recovery flow.
 | `audit(project)` | "what should the user fix" |
 | `recorded` / `due` / `checkpointed` | "is it time" |
 | `plan_recovery(...)` | "what do we offer after a crash" |
+| `SettingsEditor.execute(SetSettingsCommand)` | "render to this target instead" |
+| `SettingsEditor.undo()` / `.redo()` | "take that back" — on the project's own stack |
 
-**Events.** None yet, and deliberately: opening and saving already return values
-to a caller that knows the outcome. When the plugin service gains a lifecycle,
-`services/projects` will subscribe to `plugin.effect.*` to re-audit open
-projects and to `media.relinked` to clear a missing-asset warning.
+**Settings, and why they are an edit.** `settings.py` holds the one command that
+changes what the project *renders to*: its frame, its sample rate, its channel
+count, whether the preview may read a proxy, and the colour space the grades are
+applied in. It is a command rather than a `PATCH` on the project for the same
+reason every other change is one — it has to be undoable, journalled and
+validated in one place, and it is the edit a user is least likely to notice they
+have lost, because nothing on the timeline looks different afterwards.
+
+Two decisions inside it are worth naming. It runs on **`UndoScope.PROJECT`** with
+its own editor and its own stack, so undoing a settings change does not disturb
+the cut made ten minutes ago (ADR-0008 rule 4). And it is a **patch**: only the
+fields the caller name change, because two panels can hold two settings open at
+once and neither knows the other's values. The journal records the fields that
+were named — `{"channels": 6}` — and not the settings object standing when they
+were, so a replay re-applies a decision rather than restoring a snapshot that is
+already out of date.
+
+**Events.** None published by this feature directly; the settings editor borrows
+the session's bus, so `command.executed` reaches the same listeners as a
+timeline edit. The rest is deliberately silent: opening and saving already
+return values to a caller that knows the outcome. When the plugin service gains
+a lifecycle, `services/projects` will subscribe to `plugin.effect.*` to re-audit
+open projects and to `media.relinked` to clear a missing-asset warning.
 
 **Error handling.** `Result[T]` throughout, `NS-PROJECT-4xxx`:
 
@@ -256,6 +288,10 @@ every 200 commands rather than every one (ADR-0015 §6).
   two minutes", the burst case, the idle case, pruning and the backwards clock.
 * `tests/services/test_projects_recovery.py` — pins the offers, the
   checkpoint-exclusive cut and the torn tail.
+* `tests/services/test_projects_settings.py` — the settings door: a patch
+  leaving what it did not name, an undo restoring the whole value and not one
+  field, a refused value costing nothing (not even the redo future), a no-op
+  dirtying nothing, and the payload the journal records.
 
 **Future expansion.**
 

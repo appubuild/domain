@@ -1,11 +1,12 @@
 /** The editor: the panes that exist today, docked.
  *
- *  Three panes, and each one is there because something is behind it: the
+ *  Four panes, and each one is there because something is behind it: the
  *  **preview** draws the frame the service composites, the **media bin** lists
- *  what has been imported, and the **inspector** describes whichever row is
- *  selected. Panes arrive as they are built — the timeline with stage 7,
- *  captions with stage 9 — and each one is a line in the registry below and a
- *  `leaf` in the tree. The dock does the rest.
+ *  what has been imported, the **inspector** describes whichever row is
+ *  selected, and the **settings** name what the project renders to. Panes
+ *  arrive as they are built — the timeline with stage 7, captions with stage 9
+ *  — and each one is a line in the registry below and a `leaf` in the tree. The
+ *  dock does the rest.
  *
  *  What this component owns:
  *
@@ -30,6 +31,7 @@ import type { Command } from '../../app/commands';
 import { useRegisterCommands } from '../../app/useCommands';
 import { useMediaStoreApi } from '../../stores/media';
 import { usePlaybackStoreApi } from '../../stores/playback';
+import { useSettingsStoreApi } from '../../stores/settings';
 import { useTimebase, useTimelineStoreApi } from '../../stores/timeline';
 import { Dock } from '../../ui/Dock';
 import { type DockNode, leaf, split } from '../../ui/dock';
@@ -37,28 +39,33 @@ import { Inspector } from '../inspector/Inspector';
 import { MediaBin } from '../media/MediaBin';
 import { PreviewPane } from '../preview/PreviewPane';
 import { useTransport } from '../preview/useTransport';
+import { SettingsPanel } from '../settings/SettingsPanel';
 
 export interface WorkspaceProps {
   readonly projectId: string;
 }
 
 /** Which panes exist, and what they are called. The dock only knows ids. */
-type PaneId = 'preview' | 'media' | 'inspector';
+type PaneId = 'preview' | 'media' | 'inspector' | 'settings';
 
 export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
   const { t } = useI18n();
   const media = useMediaStoreApi();
   const timeline = useTimelineStoreApi();
   const playback = usePlaybackStoreApi();
+  const settings = useSettingsStoreApi();
   const timebase = useTimebase();
 
   const [layout, setLayout] = useState<DockNode>(() =>
-    // Preview wide, the two lists stacked on the right: the picture is the thing
-    // an editor looks at, and a bin and an inspector are things it looks things
-    // up in.
+    // Preview wide, the three property surfaces stacked on the right: the
+    // picture is the thing an editor looks at, and a bin, an inspector and a
+    // settings panel are things it looks things up in.
     split(
       'row',
-      [leaf('preview'), split('column', [leaf('media'), leaf('inspector')])],
+      [
+        leaf('preview'),
+        split('column', [leaf('media'), leaf('inspector'), leaf('settings')], [0.4, 0.3, 0.3]),
+      ],
       [0.7, 0.3],
     ),
   );
@@ -68,6 +75,7 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
       preview: t('preview.heading'),
       media: t('media.heading'),
       inspector: t('inspector.heading'),
+      settings: t('settings.heading'),
     }),
     [t],
   );
@@ -77,7 +85,8 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
   useEffect(() => {
     void media.getState().load(projectId);
     void timeline.getState().load(projectId);
-  }, [media, projectId, timeline]);
+    void settings.getState().load(projectId);
+  }, [media, projectId, settings, timeline]);
 
   // Leaving the editor stops the transport: a playhead that kept moving in a
   // project nobody is looking at would keep asking the service for frames.
@@ -167,6 +176,8 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
             return <MediaBin projectId={projectId} />;
           case 'inspector':
             return <Inspector projectId={projectId} />;
+          case 'settings':
+            return <SettingsPanel projectId={projectId} />;
           default:
             // Thrown rather than rendered as an empty panel: the ids are ours,
             // so an unknown one is a bug, and a bug that draws a blank pane is
