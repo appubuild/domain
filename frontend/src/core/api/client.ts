@@ -49,6 +49,29 @@ export type BodyOf<Id extends OperationId> = Spec<Id>['requestBody'] extends key
   ? Schemas[Spec<Id>['requestBody']]
   : undefined;
 
+/** The operations whose answer is bytes rather than a document.
+ *
+ *  A picture, a waveform, a thumbnail: the routes that answer in `image/*`,
+ *  `audio/*` or `application/octet-stream`. Narrowed from the contract rather
+ *  than listed here, so a new binary route is one the type system knows about
+ *  the moment `make contract` runs. */
+export type BlobOperationId = {
+  [Id in OperationId]: Spec<Id>['responseFormat'] extends 'blob' ? Id : never;
+}[OperationId];
+
+/** A response that is bytes, kept whole.
+ *
+ *  The headers travel with the body because for these routes the headers *are*
+ *  part of the answer: a preview frame's geometry — scale, offset, size, and
+ *  which assets could not be decoded — is sent beside the picture, in headers,
+ *  rather than inside it. A client that handed back only the `Blob` would be
+ *  throwing away the half of the response that is not an image. */
+export interface ApiBlob {
+  readonly blob: Blob;
+  readonly headers: Headers;
+  readonly status: number;
+}
+
 /** What a successful call resolves to.
  *
  *  A route with no response schema has no body to parse: `204` resolves to
@@ -91,6 +114,14 @@ export interface ApiClient {
     id: Id,
     request?: ApiRequest<Id>,
   ): Promise<Result<ResponseOf<Id>, ApiProblem>>;
+  /** Call an operation whose answer is bytes, and keep the headers that came
+   *  with them. Only the contract's binary routes are accepted: asking for a
+   *  JSON route this way is a type error, because a document parsed as a blob
+   *  is a document nobody can read. */
+  runBlob<Id extends BlobOperationId>(
+    id: Id,
+    request?: ApiRequest<Id>,
+  ): Promise<Result<ApiBlob, ApiProblem>>;
   /** The URL one request would ask for — for logs, and for the one or two
    *  places a plain link really is the right shape. */
   url<Id extends OperationId>(id: Id, request?: ApiRequest<Id>): string;
@@ -143,10 +174,12 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     return ok(`${baseUrl}${path}${query ? `?${query}` : ''}`);
   }
 
-  async function run<Id extends OperationId>(
+  /** One request, sent. Shared by `run` and `runBlob`, because the difference
+   *  between them is what happens to the answer, not how it is asked for. */
+  async function send<Id extends OperationId>(
     id: Id,
-    request: ApiRequest<Id> = {},
-  ): Promise<Result<ResponseOf<Id>, ApiProblem>> {
+    request: ApiRequest<Id>,
+  ): Promise<Result<Response, ApiProblem>> {
     const spec = OPERATIONS[id] as Spec<Id>;
     const built = buildUrl(spec, request);
     if (!built.ok) return err(built.error);
@@ -161,13 +194,14 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
 
     const deadline = combine(request.signal, request.timeoutMs ?? defaultTimeout);
     try {
-      const response = await fetchImpl(built.value, {
-        method: spec.method.toUpperCase(),
-        headers,
-        ...(hasBody ? { body: JSON.stringify(request.body) } : {}),
-        ...(deadline.signal ? { signal: deadline.signal } : {}),
-      });
-      return await read<Id>(spec, response);
+      return ok(
+        await fetchImpl(built.value, {
+          method: spec.method.toUpperCase(),
+          headers,
+          ...(hasBody ? { body: JSON.stringify(request.body) } : {}),
+          ...(deadline.signal ? { signal: deadline.signal } : {}),
+        }),
+      );
     } catch (failure) {
       return err(classify(failure, request.signal?.aborted === true, deadline.timedOut()));
     } finally {
@@ -175,8 +209,37 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     }
   }
 
+  async function run<Id extends OperationId>(
+    id: Id,
+    request: ApiRequest<Id> = {},
+  ): Promise<Result<ResponseOf<Id>, ApiProblem>> {
+    const sent = await send(id, request);
+    if (!sent.ok) return err(sent.error);
+    return read<Id>(OPERATIONS[id], sent.value);
+  }
+
+  async function runBlob<Id extends BlobOperationId>(
+    id: Id,
+    request: ApiRequest<Id> = {},
+  ): Promise<Result<ApiBlob, ApiProblem>> {
+    const sent = await send(id, request);
+    if (!sent.ok) return err(sent.error);
+    const response = sent.value;
+    if (!response.ok) {
+      return err(
+        fromProblemResponse(
+          response.status,
+          await jsonBody<ProblemResponse>(response),
+          `${response.status} ${response.statusText}`,
+        ),
+      );
+    }
+    return ok({ blob: await response.blob(), headers: response.headers, status: response.status });
+  }
+
   return {
     run,
+    runBlob,
     url<Id extends OperationId>(id: Id, request: ApiRequest<Id> = {}): string {
       const built = buildUrl(OPERATIONS[id] as Spec<Id>, request);
       return built.ok ? built.value : '';

@@ -50,3 +50,36 @@ if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined')
 afterEach(() => {
   cleanup();
 });
+
+// **`URL.createObjectURL`.** jsdom implements none of the object-URL API, and a
+// preview panel is a panel that shows a picture the service sent as bytes:
+// without this there is no URL to put in an `<img>`. The shim is the smallest
+// thing that is honest about the contract — a URL that identifies a blob, and a
+// `revoke` that forgets it — rather than a bare string, because a test that
+// could not tell a leaked object URL from a revoked one could not pin the leak.
+if (typeof window !== 'undefined' && typeof URL.createObjectURL !== 'function') {
+  const urls = new Map<string, Blob>();
+  let counter = 0;
+
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    writable: true,
+    value: (blob: Blob): string => {
+      const url = `blob:nova/${(counter += 1)}`;
+      urls.set(url, blob);
+      return url;
+    },
+  });
+
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    writable: true,
+    value: (url: string): void => {
+      urls.delete(url);
+    },
+  });
+
+  /** How many object URLs are alive. A panel that leaks one per frame is a
+   *  panel that will be dead in an hour, and this is how a test says so. */
+  (globalThis as { __objectUrls?: () => number }).__objectUrls = () => urls.size;
+}

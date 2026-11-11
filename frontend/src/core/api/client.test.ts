@@ -270,6 +270,34 @@ describe('reading bytes that are not documents', () => {
     expect(headersOf(calls[0]).get('accept')).toBe('image/*');
   });
 
+  it('keeps the headers that came with the picture, because half the answer is in them', async () => {
+    const { client } = clientWith(
+      () =>
+        new Response(new Blob(['jpeg']), {
+          status: 200,
+          headers: {
+            'content-type': 'image/jpeg',
+            'X-Nova-Preview-Scale': '0.500000',
+            'X-Nova-Preview-Size': '960x540',
+          },
+        }),
+    );
+
+    const result = await client.runBlob('previewFrame', { params: { project_id: 'p1' } });
+
+    const answered = value(result);
+    expect(answered.blob).toBeInstanceOf(Blob);
+    expect(answered.headers.get('x-nova-preview-scale')).toBe('0.500000');
+  });
+
+  it('reports a failure on a picture the same way it reports one on a document', async () => {
+    const { client } = clientWith(() => problem(404, 'NS-PROJECT-4040'));
+
+    const result = await client.runBlob('previewFrame', { params: { project_id: 'gone' } });
+
+    expect(failure(result).code).toBe('NS-PROJECT-4040');
+  });
+
   it('answers a 204 with nothing, and says so in the type', async () => {
     const { client } = clientWith(() => new Response(null, { status: 204 }));
 

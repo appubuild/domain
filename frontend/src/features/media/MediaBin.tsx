@@ -14,6 +14,7 @@
 import { useState } from 'react';
 
 import { useI18n } from '../../core/i18n/context';
+import { cx } from '../../ui/cx';
 import { useToastQueue } from '../../ui/toast-context';
 import { Button } from '../../ui/Button';
 import { Panel } from '../../ui/Panel';
@@ -138,8 +139,24 @@ export function MediaBin({ projectId }: MediaBinProps): React.JSX.Element {
             {(index) => {
               const asset = view.assets[index];
               if (asset === undefined) return null;
+              const selected = asset.asset_id === view.selectedId;
               return (
-                <div className="flex h-full items-center gap-3 px-1">
+                // A button, so the row is reachable and activatable without the
+                // list owning a roving tabindex: the bin is virtualised, so the
+                // only rows in the tab order are the ones on screen. `aria-pressed`
+                // is what says which one the inspector is describing.
+                <button
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => {
+                    view.select(selected ? null : asset.asset_id);
+                  }}
+                  className={cx(
+                    'flex h-full w-full items-center gap-3 rounded-control px-2 text-left',
+                    'transition-colors duration-[var(--duration-fast)] ease-out',
+                    selected ? 'bg-surface-2' : 'hover:bg-surface-2/60',
+                  )}
+                >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-ink">{asset.name}</span>
                     <span className="block truncate font-mono text-xs text-ink-faint">
@@ -155,7 +172,7 @@ export function MediaBin({ projectId }: MediaBinProps): React.JSX.Element {
                     {formatDuration(asset.duration_seconds)}
                   </span>
                   <span className="shrink-0 text-xs uppercase text-ink-faint">{asset.kind}</span>
-                </div>
+                </button>
               );
             }}
           </VirtualList>

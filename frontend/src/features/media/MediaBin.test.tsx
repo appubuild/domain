@@ -18,6 +18,7 @@ import type { ImportResponse, MediaAssetSummary } from '../../core/api/contract'
 import type { ApiProblem } from '../../core/api/problem';
 import { I18nProvider } from '../../core/i18n/I18nProvider';
 import { err, ok } from '../../core/result';
+import { createMediaStore, MediaStoreContext } from '../../stores/media';
 import { ToastProvider } from '../../ui/ToastProvider';
 import { formatDuration } from './duration';
 import { MediaBin } from './MediaBin';
@@ -80,11 +81,16 @@ function client(script: Script, calls: string[] = []): ApiClient {
 }
 
 function renderBin(script: Script, calls: string[] = []): void {
+  const api = client(script, calls);
   render(
     <I18nProvider>
       <ToastProvider>
-        <ApiContext.Provider value={client(script, calls)}>
-          <MediaBin projectId="p1" />
+        <ApiContext.Provider value={api}>
+          {/* The bin reads a store now, because the inspector reads the same
+              list: two panes, one fetch, and no second copy to keep in step. */}
+          <MediaStoreContext.Provider value={createMediaStore(api)}>
+            <MediaBin projectId="p1" />
+          </MediaStoreContext.Provider>
         </ApiContext.Provider>
       </ToastProvider>
     </I18nProvider>,
@@ -139,6 +145,31 @@ describe('a bin with things in it', () => {
     renderBin({ assets: [asset('1')], listError: problem('NS-TEST-0011') });
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.getByText('NS-TEST-0011')).toBeTruthy();
+  });
+});
+
+describe('selecting a row', () => {
+  it('says which row the inspector is describing', async () => {
+    const user = userEvent.setup();
+    renderBin({ assets: [asset('1'), asset('2')] });
+
+    const row = await screen.findByRole('button', { name: /clip 2.mp4/ });
+    expect(row.getAttribute('aria-pressed')).toBe('false');
+
+    await user.click(row);
+
+    expect(row.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('deselects the row that is pressed again', async () => {
+    const user = userEvent.setup();
+    renderBin({ assets: [asset('1')] });
+
+    const row = await screen.findByRole('button', { name: /clip 1.mp4/ });
+    await user.click(row);
+    await user.click(row);
+
+    expect(row.getAttribute('aria-pressed')).toBe('false');
   });
 });
 

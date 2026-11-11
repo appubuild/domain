@@ -167,13 +167,17 @@ frontend/
     │   ├── theme/             the token contract, themes as data, applying them
     │   │                      (§10.10.2)
     │   ├── i18n/              bundles, the translator, the provider (§10.10.3)
-    │   ├── timecode/          (stage 7) frame math shared with backend semantics
+    │   ├── timecode/          frame math, shared with `core/temporal.py` (§10.9.5):
+    │   │                      timebase.ts, timecode.ts
     │   └── utils/
     ├── stores/                one slice per domain, each a vanilla zustand store
     │   │                      behind a context (§10.9.2)
     │   ├── project.ts         the file menu, as state — the first slice
-    │   ├── timeline/  media/  playback/  captions/  export/  ai/  settings/  ui/
-    │                          (stages 6–11, one per feature that needs one)
+    │   ├── media.ts           the bin, and which row is selected (§10.9.5)
+    │   ├── timeline.ts        the edit as it stands — read half (§10.9.5)
+    │   ├── playback.ts        the playhead, the transport, the zoom (§10.9.5)
+    │   └── captions/  export/  ai/  settings/  ui/
+    │                          (stages 7–11, one per feature that needs one)
     ├── ui/                    design system, one component per file (§10.10.4):
     │                          cx, Icon, Spinner, Button, IconButton, Field,
     │                          TextField, Tooltip, Panel, VisuallyHidden — then
@@ -187,6 +191,10 @@ frontend/
     │   ├── shell/             the window: TitleBar, StatusBar, CommandPalette,
     │   │                      Shell, and the two file dialogs (§10.9.4)
     │   ├── media/             the media bin (useMedia, MediaBin, duration)
+    │   ├── preview/           the picture the project makes (§10.9.5): geometry,
+    │   │                      usePreviewFrame, usePlaybackClock, useTransport,
+    │   │                      TimecodeField, TransportBar, PreviewPane
+    │   ├── inspector/         what the service says about what is selected
     │   ├── editor/            the editor workspace and its panes: the dock, the
     │   │                      preview and the inspector (slice 6), the timeline
     │   │                      (stage 7)
@@ -511,9 +519,13 @@ the only logic in the file:
    could not repair is the stream's discovery and the store's problem.
 3. **A refresh on mount, before any event arrives**, because a service that has
    been up for an hour has no event to tell us what it is already holding.
-4. **A `project.*` subscription**, whose unsubscribe the effect returns. Not `*`:
-   a store that refetched on every topic would refetch on every frame of a scrub.
-5. **Both objects handed down as contexts** — the store, and the stream.
+4. **One subscription per topic a store cares about**, each returning its
+   unsubscribe: `project.*` to the project store, `media.*` and `asset.*` to the
+   media store, `command.*` to the timeline store. Not `*`: a store that
+   refetched on every topic would refetch on every frame of a scrub.
+5. **Four stores and the stream, handed down as contexts.** A store is created
+   here and nowhere else, so a panel that wants one asks the tree for it — and a
+   test that wants one builds its own around a client double.
 
 `useEventStream` itself is small on purpose and defends one invariant: **the
 stream is created once, never rebuilt under a re-render**. The callbacks
@@ -533,10 +545,13 @@ main.tsx                 config → client → ApiContext → <App/>
   App.tsx                useServiceInfo → Splash | <WorkspaceProviders>
                                                  store ─┐
     app/providers.tsx    useEventStream ──── stream ────┤ one refresh on mount,
-                                                        │ project.* → refresh(),
-                                                        │ gap → onStale → refresh()
+                                                        │ topic → refresh() per
+                                                        │ store, gap → onStale
                          EventStreamContext ────────────┘
                          ProjectStoreContext
+                         MediaStoreContext
+                         TimelineStoreContext
+                         PlaybackStoreContext
       features/**        panels, each with its own view-model
 ```
 
@@ -581,6 +596,63 @@ meet: a `Modal` for focus, a `VirtualList` for a list that grows with the
 plugins, and `filterCommands` for the order. Its ARIA shape is a combobox with
 `aria-activedescendant`, which is the only way a virtualised list can have an
 active row at all — the row the user is on may not be the row that is drawn.
+
+### 10.9.5 The editor: frames, the picture, and what is selected
+
+Slice 6 made the workspace a place where an edit can be looked at. Four pieces,
+and one rule running through all of them: **a number the user can check is a
+number the service owns**.
+
+**`core/timecode/` — rates are fractions, frames are integers.** `Timebase` is
+`{ num, den }` because `29.97` is not a rate: it is a rounding of `30000/1001`,
+and an hour counted with it is three and a half seconds long. `framesToSeconds`
+multiplies by the denominator rather than dividing by a quotient;
+`secondsToFrames` floors, because the frame being *shown* at 0.99 s is frame 29
+and not frame 30. `formatTimecode` writes SMPTE 12M — `:` for non-drop, `;` for
+drop-frame, and the two NTSC rates that drop frames are named, not guessed from
+a rounded number. `parseTimecode` is the exact inverse: it returns `null` for any
+string no frame formats to, including `00:01:00;00` at 29.97, because a timecode
+the counter never shows is a typo and not a frame to snap to.
+
+**Three new slices, each with one job.** `stores/media.ts` holds the bin *and*
+which row is selected, because the bin and the inspector read the same list and
+two hooks would be two fetches and two copies. `stores/timeline.ts` holds the
+edit as read — its rate, its length, its history — and nothing else: editing is
+a command, and it arrives with stage 7. `stores/playback.ts` holds the playhead,
+`playing`, the rate and the zoom. The end of the timeline is deliberately **not**
+in the playback slice; clamping is `useTransport`'s job, because it is the one
+thing that has both the playhead and the length, and a store that imported the
+timeline slice to clamp a number would be two slices wearing one hat.
+
+**The preview.** `usePreviewFrame` asks for one frame as bytes and keeps the
+headers that came with it — the geometry is half the answer (`X-Nova-Preview-*`)
+and a client that handed back only the `Blob` would have thrown the other half
+away. It is a *stream* and not a resource, so every request carries a sequence
+number and **an answer older than the one on screen is thrown away**: scrubbing
+from frame 10 to 400 leaves the frame-10 answer in flight, and drawing it when it
+lands is a preview that jumps backwards. It measures the stage in device pixels
+(capped at 2× — a 3× ratio asks for eight times the pixels and shows none of
+them), asks for nothing before the pane has been measured, keeps the last picture
+when a frame fails, and revokes every object URL it made. The playhead is moved
+by `usePlaybackClock`, which measures **wall-clock time in frames**: a timer that
+ticked once per frame at `1000 / fps` is a frame late every second at 29.97. It
+does not promise real-time playback — the playhead keeps time and the picture
+follows as fast as the decoder can; the promise that frames land on the beat,
+with audio, is the render engine's (stage 8).
+
+**The inspector.** It describes what the service said about the selected file, in
+the service's words — the codec the file declared, the size the probe decided,
+whether the path still resolves — because a panel that reformatted those into
+something friendlier would be a second opinion about someone's file, and the
+second opinion is the one that is wrong after a relink. "Nothing selected" is a
+state it says out loud; a hole next to a bin full of files reads as a broken
+panel. One kind of thing is selectable today, an asset in the bin; a clip on the
+timeline arrives with stage 7.
+
+**The transport commands** (`Space`, `←`, `→`, `Home`, `End`, `Ctrl+=`, `Ctrl+-`)
+are registered by the workspace rather than the shell, because they mean
+something only while a project is being edited — a global `Space` on the home
+screen would scroll the page instead.
 
 ## 10.10 The design system
 
@@ -757,7 +829,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (484 tests, 48 files, ≈ 26 s):
+Suites today (612 tests, 61 files, ≈ 48 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -808,6 +880,19 @@ Suites today (484 tests, 48 files, ≈ 26 s):
 | `features/home/HomeScreen.test.tsx` (3) | The screen asking the shell for the dialogs instead of keeping its own, and opening a project being an address rather than a flag |
 | `features/media/MediaBin.test.tsx` (9) | Rows from the service, a file that no longer resolves marked as such and counted, empty and failed states kept apart — a failed refresh is not an empty bin — and the three answers an import gives: how many came in, already there, or could not |
 | `ui/ToastProvider.test.tsx` (3) | A queue made for the tree, a queue injected into it — so a test can drive it from outside React — and a component with no provider throwing rather than raising a message into nowhere |
+| `core/timecode/timebase.test.ts` (10) | A rate is a fraction: an hour of 29.97 is 107,892 frames and 3,599.9964 seconds, and multiplying by a rounded 29.97 is 3,603.6 — the drift drop-frame exists to prevent. Plus rates written as text refused rather than defaulted |
+| `core/timecode/timecode.test.ts` (21) | SMPTE written and read: the two skipped frame numbers at the top of every minute that is not a tenth, no skipping at a tenth, four skips at 59.94 and not two, 23.976 treated as non-drop, hours not wrapped at 24 — and the round trip `parseTimecode(formatTimecode(f)) === f` over two thousand frames at four rates, with `null` for the timecodes that do not exist |
+| `stores/media.test.ts` (9) | A shared list: a failed read keeping the bin, a project switch emptying it first, a slow answer for the project the window left never landing in the new one, an import asking again rather than inventing the summary, and a selection that has been imported away ceasing to be a selection |
+| `stores/timeline.test.ts` (7) | The rate held as `30000/1001` and not as 29.97, the history and the crash counters held with it, a failed read keeping the edit, an answer that arrives after the window moved on dropped, and a refresh asked mid-flight honoured with exactly one more request |
+| `stores/playback.test.ts` (10) | The playhead is always a whole frame and never below zero, a step that moves nothing writes nothing, and stop means back to the start |
+| `features/preview/geometry.test.ts` (7) | A frame whose headers were stripped by a proxy is drawn and not refused, the parts that are missing are defaulted, and a size it was not told is zero — which is not a size a frame has |
+| `features/preview/usePreviewFrame.test.tsx` (7) | Nothing asked before the panel is measured, an answer that arrives after a newer one was asked for thrown away, a failed frame keeping the last picture, and exactly one object URL alive — a panel that leaked one per frame would be dead in an hour |
+| `features/preview/usePlaybackClock.test.tsx` (9) | One second at 30 fps is frame 30 and not 29; at 30000/1001 ten seconds is 299; the clock counts from where playback started; it stops on the last frame, says so once, and stops asking |
+| `features/preview/useTransport.test.tsx` (10) | The last frame of a 300-frame project is 299, stepping onto it stops playback, stepping back at zero does not wrap, and an empty project has no last frame |
+| `features/preview/TimecodeField.test.tsx` (10) | Enter and blur commit, a keystroke does not, Escape abandons and puts back the frame on screen, and a timecode the counter never shows is refused with the user's text left intact |
+| `features/preview/PreviewPane.test.tsx` (11) | An empty project saying so rather than showing a black hole, the length and the rate beside the playhead, a frame drawn without a clip saying which ones, a frame that failed naming its code, and the transport stepping, playing and stopping at 00:00:09:29 |
+| `ui/useElementSize.test.tsx` (4) | Measured again when the element changes — a ref read once would keep yesterday's number for the life of the window — the observer disconnected on unmount, and one measurement in an environment that has no observer at all |
+| `features/inspector/Inspector.test.tsx` (9) | The service's own words about a file: name, path, both lengths, every stream, a file that moved, a file not yet probed, a warning written for the user — and a selection from another project's bin not described |
 | `ui/Toaster.test.tsx` (16) | A message arriving is announced; `role="alert"` for danger and `role="status"` otherwise; an error stays until dismissed while the rest expire on their own; three visible and the rest waiting; and the queue itself — dismiss, clear, replace — tested without React, because a store that can only be driven from a component is a store that cannot speak after unmount |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
@@ -864,9 +949,8 @@ while CI, which has both, always runs the whole thing.
 | **Done (stage 6, slice 3):** overlays and feedback — `Portal`, `Modal`, `Menu`, `Popover`, the toast queue and the `Toaster`, wired into the window through `ToastProvider` | 6 |
 | **Done (stage 6, slice 4):** the layout primitives — `Splitter`, the `dock.ts` tree algebra, `Dock` and `VirtualList` | 6 |
 | **Done (stage 6, slice 5):** the shell — hash routing, the command registry and palette, the title bar, the status bar, the home screen, and the editor's dock holding the media bin | 6 |
-| `features/editor/` — the preview panel, the inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |
-| The shell — window chrome, the dock tree, routing, the status bar, the command palette | 6, slice 5 |
-| `features/editor/` — preview panel, inspector, and the settings panel that writes through `SqliteSettingsStore` | 6, slice 6 |
+| **Done (stage 6, slice 6):** the editor's panes — `core/timecode/` (rates as fractions, SMPTE with drop-frame, parsing that is the exact inverse of formatting), the media, timeline and playback slices, the **preview** (one frame from the service with the geometry in its headers, a transport, a timecode field), and the **inspector** (what the service says about the selected file) | 6 |
+| `features/settings/` — the settings panel, **and the backend it needs first**: project settings are an edit like any other, so they want a `set-project-settings` command, a journalled entry and a crash-recovery replay before a panel can write them | 6, slice 7 |
 | `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping | 7 |
 | WebGL overlay layer for preview-only gizmos | 7 |
 | `features/captions/` — the Caption Studio | 9 |

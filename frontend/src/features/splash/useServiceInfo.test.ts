@@ -42,6 +42,7 @@ function clientThatWaits(seen: { signal: AbortSignal | undefined }): ApiClient {
       seen.signal = request?.signal;
       return new Promise<never>(() => {});
     },
+    runBlob: () => new Promise<never>(() => {}),
     url: () => '',
   };
 }

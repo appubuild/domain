@@ -139,6 +139,55 @@
         "importFailed": "Could not import {path}.",
         "duplicate": "{name} is already in the project."
       }
+    },
+    "preview": {
+      "heading": "Preview",
+      "empty": "Nothing to show yet — the timeline is empty.",
+      "waiting": "Asking the editor for this frame…",
+      "loading": "Drawing this frame",
+      "gaps": {
+        "one": "{count} asset could not be decoded; the frame was drawn without it.",
+        "other": "{count} assets could not be decoded; the frame was drawn without them."
+      },
+      "frameFailed": "This frame could not be drawn ({code}).",
+      "play": "Play",
+      "playHint": "Move the playhead at the project's frame rate",
+      "pause": "Pause",
+      "stepBack": "Previous frame",
+      "stepForward": "Next frame",
+      "toStart": "Go to start",
+      "toEnd": "Go to end",
+      "position": "Playhead",
+      "positionHint": "Timecode, as hours:minutes:seconds:frames",
+      "invalidTimecode": "That is not a timecode at this frame rate.",
+      "durationLabel": "Length",
+      "stageAt": "Preview at {timecode}",
+      "zoom": "Zoom",
+      "zoomFit": "Fit",
+      "zoomPercent": "{percent}%",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    },
+    "inspector": {
+      "heading": "Inspector",
+      "empty": "Select a file in the media bin to see what it is.",
+      "loading": "Reading the bin…",
+      "missing": "This file no longer resolves — relink it before rendering.",
+      "path": "File",
+      "duration": "Length",
+      "video": "Video",
+      "videoNumber": "Video {number}",
+      "audio": "Audio",
+      "audioNumber": "Audio {number}",
+      "codec": "Codec",
+      "size": "Size",
+      "rotated": "rotated {degrees}°",
+      "rate": "Frame rate",
+      "frames": "Frames",
+      "channels": "Channels",
+      "sampleRate": "Sample rate",
+      "kilohertz": "{kilohertz} kHz",
+      "notProbed": "This file has not been probed yet, so nothing is known about its streams."
     }
   }
 }

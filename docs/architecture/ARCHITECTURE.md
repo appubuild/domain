@@ -724,9 +724,14 @@ geometry held as a tree of fractions that can be validated, saved and undone rat
 as a component tree; then the shell — hash routing whose address means something, one
 command list that a shortcut, a palette and a menu all reach through, a title bar and a
 status bar that answer "which project is this" and "what would a crash cost", and the
-editor's dock holding the panes that exist. The preview, the inspector, the timeline and
-the settings panel fill that dock in the rest of stage 6 and in stage 7.
-Detail: [`frontend.md`](frontend.md) §10.9.4 and §10.10.
+editor's dock holding the panes that exist; then the panes themselves — `core/timecode/`,
+where a frame rate is a fraction and a timecode is SMPTE with drop-frame, the media,
+timeline and playback slices, a **preview** that asks the service for one composited
+frame at the size its panel can fill (keeping the last picture while the next is decoded,
+and saying which assets a frame was drawn without), and an **inspector** that describes
+the selected file in the service's own words. The timeline (stage 7) and the settings
+panel fill the rest of the dock.
+Detail: [`frontend.md`](frontend.md) §10.9.4, §10.9.5 and §10.10.
 
 ---
 
