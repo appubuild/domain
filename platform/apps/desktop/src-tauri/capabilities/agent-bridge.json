@@ -1,0 +1,20 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "agent-bridge",
+  "description": "Computer-control bridge. Every invocation is permission-checked in Rust and written to the audit log. Only the single allow-listed read-only system-info command is exposed to the webview; all other automation runs through our own IPC commands.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "aura-system-info",
+          "cmd": "powershell",
+          "args": ["-NoProfile", "-NonInteractive", "-Command", "Get-ComputerInfo | Select-Object CsName,OsName,OsVersion | ConvertTo-Json"],
+          "sidecar": false
+        }
+      ]
+    }
+  ]
+}

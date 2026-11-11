@@ -1,0 +1,9 @@
+node_modules
+dist
+.data
+coverage
+*.tsbuildinfo
+apps/desktop/src-tauri/target
+apps/desktop/src-tauri/gen
+playwright-report
+test-results
