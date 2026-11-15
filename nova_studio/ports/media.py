@@ -230,10 +230,17 @@ class AudioSampleSource(Protocol):
     def samples(self, start: int = 0, count: int | None = None) -> Iterator[AudioBuffer]:
         """Yield blocks of samples from ``start``.
 
-        ``count`` is a maximum number of *samples* to yield across all blocks,
-        not a block count; a block is never split to land exactly on it.  The
-        first block may start slightly before ``start`` when the decoder must
-        begin at a packet boundary — the caller trims, it does not assume.
+        The first sample yielded is **exactly** ``start``, and the total is
+        **at most** ``count``. Both ends are the adapter's job, not the
+        caller's: a decoder has to begin a read at a packet boundary, and a
+        caller that was handed the samples before ``start`` would have no way
+        to know where the block it was given begins — it could not mix it,
+        measure it, or place a waveform peak on it. So the pre-roll is
+        discarded here, and the last block is trimmed to land on ``count``.
+
+        ``count`` is a number of *samples*, not of blocks; a block may be
+        split to land exactly on it, because a caller that asked for 3000
+        samples wants 3000 samples and not 3072 of them.
         """
         ...
 

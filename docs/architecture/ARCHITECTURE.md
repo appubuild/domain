@@ -447,7 +447,7 @@ the same thing in the 960×540 preview and the 3840×2160 export (ADR-0012).
 | 7.1 | Toolchain discovery | `infra/media` |
 | 7.2 | Frame pipeline | `ports/render.py` |
 | 7.3 | GPU strategy | `infra/render` |
-| 7.4 | Audio | `infra/media` |
+| 7.4 | Audio | `domain/audio.py`, `services/render/audio.py`, `ports/media.py` |
 | 7.5 | The media record and the media port | `domain/media.py`, `ports/media.py` |
 | 7.6 | Colour truth | `domain/media.py` |
 | 7.7 | The render port and the export vocabulary | `ports/render.py`, `domain/export.py` |

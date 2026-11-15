@@ -455,11 +455,34 @@ class TestAudioSamples:
         rest = sum(block.frame_count for block in source.samples(start=4096))
         assert rest == everything - 4096
 
-    def test_a_count_is_a_maximum_and_never_splits_a_block(self, media: Any) -> None:
+    def test_a_count_is_exact_and_the_last_block_is_trimmed_to_it(self, media: Any) -> None:
+        """A caller that asked for 3000 samples gets 3000 samples.
+
+        It used to get 3072 and a comment telling it to trim, which is not a
+        thing it could do: a block that begins before the sample asked for is a
+        block whose position nobody knows, so it could not be mixed, measured
+        or drawn. Trimming is the adapter's job, and this is the pin.
+        """
         blocks = list(media.audio().samples(count=3000))
         total = sum(block.frame_count for block in blocks)
-        assert total >= 3000
-        assert total - 3000 < blocks[-1].frame_count
+        assert total == 3000
+        # The last block is the one that was cut, so it is shorter than a whole
+        # packet — which is the only way to tell a split from an oversight.
+        assert blocks[-1].frame_count < 1024
+
+    def test_a_read_that_starts_inside_the_stream_starts_exactly_there(self, media: Any) -> None:
+        """The first sample out is the sample asked for, packet bounds or not.
+
+        4096 is a whole packet; 4097 is one sample into the next, which is
+        where a decoder that began at the packet boundary would otherwise hand
+        back 1023 samples of somebody else's audio.
+        """
+        source = media.audio()
+        whole = np.concatenate([block.samples for block in source.samples(start=4096, count=2048)])
+        offset = np.concatenate([block.samples for block in source.samples(start=4097, count=2047)])
+        assert whole.shape[0] == 2048
+        assert offset.shape[0] == 2047
+        assert np.array_equal(whole[1:], offset)
 
     def test_asking_for_nothing_yields_nothing(self, media: Any) -> None:
         assert list(media.audio().samples(count=0)) == []

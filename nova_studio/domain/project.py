@@ -64,6 +64,7 @@ from nova_studio.domain._wire import (
     wire_str as _wire_str,
     wire_strings as _wire_strings,
 )
+from nova_studio.domain.audio import ClipAudio
 from nova_studio.domain.captions import CaptionDocument, validate_caption_document
 from nova_studio.domain.effects import BlendMode, EffectChain, EffectTarget, Mask, Transform
 from nova_studio.domain.grade import ColourGrade
@@ -78,6 +79,7 @@ __all__ = [
     "DEFAULT_SAMPLE_RATE",
     "PROJECT_DOCUMENT_FIELDS",
     "SUPPORTED_CHANNEL_COUNTS",
+    "AudioBinding",
     "BlendBinding",
     "CaptionDocumentRef",
     "EffectBinding",
@@ -116,6 +118,7 @@ _TRANSFORM_BINDING_FIELDS: Final[set[str]] = {"clip_id", "transform"}
 _MASK_BINDING_FIELDS: Final[set[str]] = {"clip_id", "masks"}
 _BLEND_BINDING_FIELDS: Final[set[str]] = {"target", "owner_id", "mode"}
 _GRADE_BINDING_FIELDS: Final[set[str]] = {"target", "owner_id", "grade"}
+_AUDIO_BINDING_FIELDS: Final[set[str]] = {"clip_id", "audio"}
 _CAPTION_REF_FIELDS: Final[set[str]] = {"document_id", "document"}
 _PROJECT_FIELDS: Final[set[str]] = {
     "project_id",
@@ -130,6 +133,7 @@ _PROJECT_FIELDS: Final[set[str]] = {
     "masks",
     "blends",
     "grades",
+    "audio",
 }
 #: ``project.json`` is the same document with the timeline and the caption
 #: documents lifted out into their own entries (ADR-0015).
@@ -496,6 +500,41 @@ class GradeBinding:
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
+class AudioBinding:
+    """What one clip sounds like.
+
+    A binding rather than a field on :class:`~nova_studio.domain.timeline.Clip`
+    for the same reason every other decoration is one: deleting a clip must
+    take its fades with it in one pruning pass, and a clip the user has never
+    touched has to carry nothing at all. Most clips in most projects have no
+    audio settings, and that is the case worth protecting.
+    """
+
+    clip_id: str
+    audio: ClipAudio = field(default_factory=ClipAudio)
+
+    def __post_init__(self) -> None:
+        if not self.clip_id:
+            raise NovaInvariantError("an audio binding must name its clip")
+
+    @property
+    def is_neutral(self) -> bool:
+        """Whether the binding changes nothing, and so need not be stored."""
+        return self.audio.is_neutral
+
+    def to_wire(self) -> dict[str, object]:
+        return {"clip_id": self.clip_id, "audio": self.audio.to_wire()}
+
+    @classmethod
+    def from_wire(cls, data: Mapping[str, object]) -> AudioBinding:
+        _reject_unknown_fields(data, _AUDIO_BINDING_FIELDS)
+        return cls(
+            clip_id=_wire_str(data, "clip_id"),
+            audio=ClipAudio.from_wire(_mapping(data, "audio")),
+        )
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
 class CaptionDocumentRef:
     """One caption document, and the name it is filed under in the container.
 
@@ -562,6 +601,10 @@ class Project:
     #: because a grade has no order and no mix: it is one set of corrections
     #: applied after the picture is assembled (§7.11).
     grades: tuple[GradeBinding, ...] = ()
+    #: What each clip sounds like: gain, pan and the two fades. Keyed the same
+    #: way, and separate from the others because audio has no order, no blend
+    #: and no keyframes to interpolate — it is four numbers a user sets once.
+    audio: tuple[AudioBinding, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.project_id:
@@ -584,6 +627,7 @@ class Project:
             "grade binding",
             [f"{binding.target}:{binding.owner_id}" for binding in self.grades],
         )
+        _refuse_duplicates("audio binding", [binding.clip_id for binding in self.audio])
 
     # -- identity and shape -------------------------------------------------
 
@@ -778,6 +822,7 @@ class Project:
                 for binding in self.grades
                 if _owner_exists(timeline, binding.target, binding.owner_id)
             ),
+            audio=tuple(binding for binding in self.audio if timeline.clip(binding.clip_id)),
         )
 
     def with_settings(self, settings: ProjectSettings) -> Project:
@@ -952,6 +997,48 @@ class Project:
             raise NovaInvariantError(f"there is no {target} grade on '{owner_id}' to remove")
         return replace(self, grades=kept)
 
+    # -- audio --------------------------------------------------------------
+
+    def audio_for(self, clip_id: str) -> ClipAudio:
+        """What one clip sounds like; neutral when it has no binding.
+
+        Neutral rather than ``None``, so a mixer can multiply by
+        :attr:`ClipAudio.gain` without asking whether anything was set — the
+        same shape as :meth:`transform_for` and :meth:`grade_for`, and for the
+        same reason: a caller that has to handle ``None`` has a branch that
+        will be forgotten.
+        """
+        for binding in self.audio:
+            if binding.clip_id == clip_id:
+                return binding.audio
+        return ClipAudio()
+
+    def with_audio(self, clip_id: str, audio: ClipAudio) -> Project:
+        """Set what one clip sounds like.
+
+        A neutral setting removes the binding, so a clip the user has never
+        touched carries nothing at all — which is what keeps a two-hundred-clip
+        project's document small enough to diff.
+
+        :raises NovaInvariantError: if the clip does not exist.
+        """
+        if self.timeline.clip(clip_id) is None:
+            raise NovaInvariantError(f"there is no clip '{clip_id}' in this project")
+        kept = tuple(binding for binding in self.audio if binding.clip_id != clip_id)
+        if audio.is_neutral:
+            return replace(self, audio=kept)
+        return replace(self, audio=(*kept, AudioBinding(clip_id=clip_id, audio=audio)))
+
+    def without_audio(self, clip_id: str) -> Project:
+        """Detach the audio settings from one clip.
+
+        :raises NovaInvariantError: if there is no such binding.
+        """
+        kept = tuple(binding for binding in self.audio if binding.clip_id != clip_id)
+        if len(kept) == len(self.audio):
+            raise NovaInvariantError(f"there is no audio setting on '{clip_id}' to remove")
+        return replace(self, audio=kept)
+
     # -- captions -----------------------------------------------------------
 
     def caption(self, document_id: str) -> CaptionDocument | None:
@@ -1008,6 +1095,7 @@ class Project:
             "masks": [binding.to_wire() for binding in self.masks],
             "blends": [binding.to_wire() for binding in self.blends],
             "grades": [binding.to_wire() for binding in self.grades],
+            "audio": [binding.to_wire() for binding in self.audio],
         }
 
     @classmethod
@@ -1032,6 +1120,7 @@ class Project:
             masks=tuple(MaskBinding.from_wire(entry) for entry in _wire_mappings(data, "masks")),
             blends=tuple(BlendBinding.from_wire(entry) for entry in _wire_mappings(data, "blends")),
             grades=tuple(GradeBinding.from_wire(entry) for entry in _wire_mappings(data, "grades")),
+            audio=tuple(AudioBinding.from_wire(entry) for entry in _wire_mappings(data, "audio")),
         )
 
     def to_documents(self) -> ProjectDocuments:

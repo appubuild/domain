@@ -59,8 +59,13 @@ from nova_studio.ports.media import MediaErrorCode
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
-    from nova_studio.domain.media import FrameBuffer, VideoStreamInfo
-    from nova_studio.ports.media import DecodedMedia, MediaDecoder, VideoFrameSource
+    from nova_studio.domain.media import FrameBuffer, MediaInfo, VideoStreamInfo
+    from nova_studio.ports.media import (
+        AudioSampleSource,
+        DecodedMedia,
+        MediaDecoder,
+        VideoFrameSource,
+    )
     from nova_studio.services.render import DecodeRequest
 
 __all__ = [
@@ -123,13 +128,24 @@ class _Stream:
     abandons the read and starts again, which is the honest price of a jump.
     """
 
-    __slots__ = ("_handle", "_media", "_next_index", "_read", "path", "stream")
+    __slots__ = (
+        "_audio",
+        "_handle",
+        "_media",
+        "_next_index",
+        "_read",
+        "path",
+        "stream",
+    )
 
-    def __init__(self, media: DecodedMedia, handle: VideoFrameSource, path: str) -> None:
+    def __init__(self, media: DecodedMedia, handle: VideoFrameSource | None, path: str) -> None:
         self._media = media
         self._handle = handle
+        self._audio: AudioSampleSource | None = None
         self.path = path
-        self.stream: VideoStreamInfo = handle.info()
+        # ``None`` for an audio-only file, which is an ordinary thing for a
+        # soundtrack to be and not a reason to refuse to open it.
+        self.stream: VideoStreamInfo | None = handle.info() if handle is not None else None
         self._read: Iterator[FrameBuffer] | None = None
         self._next_index: int | None = None
 
@@ -138,7 +154,9 @@ class _Stream:
         return 0 if self._read is not None and index == self._next_index else 1
 
     def picture_at(self, index: int) -> FrameBuffer | None:
-        """The picture at ``index``, or ``None`` when the stream has none."""
+        """The picture at ``index``, or ``None`` when the file has no picture."""
+        if self._handle is None:
+            return None
         if self._read is None or index != self._next_index:
             self._abandon()
             self._read = self._handle.frames(index, None)
@@ -152,14 +170,32 @@ class _Stream:
         return picture
 
     def last_error(self) -> NovaError | None:
-        return self._handle.last_error()
+        return self._handle.last_error() if self._handle is not None else None
 
     def keyframes(self) -> Sequence[int]:
-        return self._handle.keyframe_indices()
+        return self._handle.keyframe_indices() if self._handle is not None else ()
+
+    def audio(self) -> AudioSampleSource | None:
+        """The file's soundtrack, opened on first ask and held until close.
+
+        One handle, two streams: a file already open for its pictures must not
+        be opened a second time for its sound, and a pooled handle is closed
+        once by the pool.
+        """
+        if self._audio is None:
+            self._audio = self._media.audio()
+        return self._audio
+
+    def info(self) -> MediaInfo:
+        """What the file said about itself, as opened."""
+        return self._media.info()
 
     def close(self) -> None:
         self._abandon()
-        self._handle.close()
+        if self._handle is not None:
+            self._handle.close()
+        if self._audio is not None:
+            self._audio.close()
         self._media.close()
 
     def _abandon(self) -> None:
@@ -297,6 +333,33 @@ class FrameSourcePool:
             return ()
         return tuple(stream.keyframes())
 
+    def audio(self, asset_id: str, source: str) -> AudioSampleSource | None:
+        """The soundtrack of one asset, or ``None`` when it has none.
+
+        The same pooled handle the pictures come from, because a file already
+        open must not be opened again for its sound. ``None`` covers both "this
+        file has no audio" and "this copy is not there", and the caller can
+        tell them apart with :meth:`info` — which is also where a helpful
+        message comes from.
+        """
+        stream = self._stream_for(asset_id, source)
+        if stream is None:
+            return None
+        return stream.audio()
+
+    def info(self, asset_id: str, source: str) -> MediaInfo | None:
+        """What one file said about itself as opened, or ``None`` when it is
+        not there.
+
+        The probe summary in the project is what was true last time anyone
+        looked; this is what is true now, and a mixer needs the second one
+        because only a live file knows how fast its samples actually run.
+        """
+        stream = self._stream_for(asset_id, source)
+        if stream is None:
+            return None
+        return stream.info()
+
     @property
     def stats(self) -> PoolStats:
         """What the pool has done so far."""
@@ -413,13 +476,16 @@ class FrameSourcePool:
             return None
         media = opened.unwrap()
         handle = media.video()
-        if handle is None:
+        # Asked of the probe rather than by opening a stream: a video file
+        # should not pay for an audio decoder it may never be asked for, and
+        # `DecodedMedia.close` is what releases one if it is opened.
+        if handle is None and not media.info().has_audio:
             media.close()
             self._missing.add(handle_key)
             self._record(
                 NovaError(
                     MediaErrorCode.UNSUPPORTED,
-                    "this media file has no video stream",
+                    "this media file has no video or audio stream",
                     details={"asset_id": asset_id, "source": source},
                 ),
                 asset_id=asset_id,

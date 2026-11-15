@@ -25,8 +25,10 @@ services/render/
 ├── kernels.py    the arithmetic behind the effect catalogue, and its registry
 ├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
 ├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
+│                 (and the same file's soundtrack: audio() · info())
 ├── loop.py       render_frames · render_preview_frame — one loop, any sink
-└── export.py     ExportVideoJob — that loop, as a cancellable job
+├── audio.py      plan_audio · mix_audio — the sample graph, block by block
+└── export.py     ExportVideoJob — the video loop and the audio one, as a job
 ```
 
 `composite.py` and `kernels.py` are split the way a specification and an
@@ -73,6 +75,19 @@ per asset.
 | `FrameSourcePool.prefetch(requests)` | the same, warmed ahead of being asked |
 | `render_frames(project, frames, *, pool, ops, sink, ...)` | a range, into a sink |
 | `render_preview_frame(project, frame, *, pool, ops, ...)` | one frame, in hand |
+| `plan_audio(project, start, end, *, sources)` | "what is this stretch of sound made of" |
+| `AudioPlan.segments_for(start, end)` | the same, clipped to one block |
+| `mix_audio(plan, *, sources, resampler, info)` | one block at a time, as a generator |
+| `mix_all(plan, *, sources, resampler, info)` | the whole range at once — previews and tests |
+| `FrameSourcePool.audio(asset_id, source)` | the soundtrack of a file already open |
+| `FrameSourcePool.info(asset_id, source)` | what that file says about itself *now* |
+
+The last two are why the pool, and not the mixer, is the thing that opens a file.
+A mixer given a path would open a second handle on a container the pool already
+has; a mixer given a source is a mixer that can be tested with a synthesiser.
+`pool.info` matters for the same reason: the probe summary in a project is what
+was true last time anybody looked, and only a live file knows for certain how
+fast its samples run.
 
 **Dependency injection.** The compositor takes its collaborators as arguments
 rather than importing them: `ops` (`ports/imaging.ImageOps`) is required,
@@ -159,6 +174,17 @@ run a whole export by calling it directly.
 
 **Database schema.** None — see the note in `docs/architecture/services.md` §1.
 
+**The soundtrack.** `audio.py` is the other half of the §7.2 promise, and it
+is built on the same three rules: **plan, then mix** (`plan_audio` is pure, so
+it is built once and read by every block); **blocks, never a whole buffer** (a
+two-hour export at 48 kHz stereo is two gigabytes of float32); and **every
+sample anchored to its frame**, recomputed with `frames_to_samples` rather than
+accumulated, because a half-sample of drift per block is lip sync, not rounding.
+Nothing in the mix raises: a missing file, a file with no audio and a read that
+errors are reported in `MixBlock.missing`, `MixBlock.error` and
+`AudioMixStats`, and the block is still yielded, filled with silence — a block
+omitted is a block's worth of samples every later sound arrives early by.
+
 **Future expansion.**
 
 * **Cost estimation.** Whether a frame fits a real-time budget needs the effect
@@ -170,8 +196,10 @@ run a whole export by calling it directly.
 * **A GPU imaging adapter**, which implements the same six methods of
   `ports/imaging.py` and is bound at composition time — no renderer changes
   (ADR-0012 §2).
-* **Audio**, which resolves the same timeline into a sample graph rather than a
-  layer stack (§7.4).
+* **The master chain** for the soundtrack: EQ → compressor → limiter → LUFS
+  normalise, and per-clip EQ and dynamics, deliberately deferred to it (§7.4.4).
+* **Preview playback** for the soundtrack: a rolling window through a device
+  sink, which is the one port `ports/media.py` does not yet name.
 """
 
 from __future__ import annotations

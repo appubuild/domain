@@ -39,7 +39,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from nova_studio.infra.imaging import OpenCVImageOps
-from nova_studio.infra.media import PyAVDecoder
+from nova_studio.infra.media import PyAVDecoder, PyAVResampler
 from nova_studio.infra.render import PyAVRenderer
 from nova_studio.services.render import EXPORT_CACHE_BYTES, ExportVideoJob
 
@@ -48,11 +48,17 @@ if TYPE_CHECKING:
 
     from nova_studio.domain.project import Project
     from nova_studio.ports.imaging import ImageOps
-    from nova_studio.ports.media import MediaDecoder
+    from nova_studio.ports.media import AudioResampler, MediaDecoder
     from nova_studio.ports.render import Renderer
     from nova_studio.services.render import ExportRequest
 
-__all__ = ["ExportJobFactory", "new_decoder", "new_ops", "new_renderer"]
+__all__ = [
+    "ExportJobFactory",
+    "new_decoder",
+    "new_ops",
+    "new_renderer",
+    "new_resampler",
+]
 
 
 def new_renderer() -> Renderer:
@@ -74,6 +80,16 @@ def new_decoder() -> MediaDecoder:
     return PyAVDecoder()
 
 
+def new_resampler() -> AudioResampler:
+    """Convert a soundtrack to the output's rate and channels.
+
+    Built inside the worker like everything else, and held by the job for the
+    whole mix: a resampler's delay is part of its output, so one created per
+    block would put a seam at every block boundary.
+    """
+    return PyAVResampler()
+
+
 @dataclass(frozen=True, slots=True)
 class ExportJobFactory:
     """Builds the body of one export job.
@@ -86,12 +102,14 @@ class ExportJobFactory:
         renderer: How to open the output file. Called inside the job.
         ops: The pixel primitives the compositor uses.
         decoder: How to open a source file.
+        resampler: How a soundtrack reaches the output's rate and channels.
         cache_bytes: How much decoded picture the worker's pool may hold.
     """
 
     renderer: Callable[[], Renderer] = field(default_factory=lambda: new_renderer)
     ops: Callable[[], ImageOps] = field(default_factory=lambda: new_ops)
     decoder: Callable[[], MediaDecoder] = field(default_factory=lambda: new_decoder)
+    resampler: Callable[[], AudioResampler] = field(default_factory=lambda: new_resampler)
     cache_bytes: int = EXPORT_CACHE_BYTES
 
     def job_for(self, project: Project, request: ExportRequest) -> ExportVideoJob:
@@ -102,6 +120,12 @@ class ExportJobFactory:
         the job. A resolver closing over the *workspace* would not travel at
         all: it is a live object holding a lock and a bus, and the worker would
         get a copy of neither.
+
+        The resampler is *not* left at its default, because the default is no
+        resampler at all, and the job reads that as "this export has no
+        soundtrack" and writes silence. An export that came out quiet for a
+        reason that lives in a factory's signature is the kind of bug that
+        costs an afternoon.
         """
         return ExportVideoJob(
             project=project,
@@ -109,5 +133,6 @@ class ExportJobFactory:
             renderer_factory=self.renderer,
             ops_factory=self.ops,
             decoder_factory=self.decoder,
+            resampler_factory=self.resampler,
             cache_bytes=self.cache_bytes,
         )

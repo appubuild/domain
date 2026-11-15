@@ -63,6 +63,7 @@ from nova_studio.core.result import Result, err, ok
 from nova_studio.domain.export import OutputSpec, RenderStats
 from nova_studio.ports.jobs import JobErrorCode
 from nova_studio.ports.render import RenderErrorCode
+from nova_studio.services.render.audio import mix_audio, plan_audio
 from nova_studio.services.render.loop import render_frames
 from nova_studio.services.render.pool import FrameSourcePool, SourceResolver
 from nova_studio.services.render.preview import resolve_asset
@@ -74,8 +75,8 @@ if TYPE_CHECKING:
     from nova_studio.domain.project import Project
     from nova_studio.ports.clock import Clock
     from nova_studio.ports.jobs import JobContext
-    from nova_studio.ports.media import MediaDecoder
-    from nova_studio.ports.render import FrameSink, Renderer
+    from nova_studio.ports.media import AudioResampler, MediaDecoder
+    from nova_studio.ports.render import FrameSink, Renderer, RenderTarget
     from nova_studio.services.render.loop import RenderOutcome
 
 __all__ = [
@@ -119,11 +120,25 @@ EXPORT_CHECKPOINT_EVERY: int = 120
 #: container gets written, so an export gets the ADR's export allowance.
 EXPORT_GRACE_PERIOD_MS: int = 30_000
 
+#: How many timeline frames one mixed block of soundtrack covers. Two seconds
+#: at 30 fps: fewer seeks than a one-second block, and still under a megabyte.
+AUDIO_BLOCK_FRAMES: int = 60
+
+#: How much of the progress bar the pictures own. Encoding is the expensive
+#: half, so the soundtrack gets the tail rather than a half of its own — but it
+#: gets *some*, because an export that sat at 100 % while it mixed two hours of
+#: audio would look exactly like the hang the bar exists to distinguish.
+VIDEO_SHARE: float = 0.85
+
 #: A factory the worker calls to build its own infra, rather than receiving a
 #: built object it cannot pickle.
 RendererFactory: TypeAlias = "Callable[[], Renderer]"
 OpsFactory: TypeAlias = "Callable[[], Any]"
 DecoderFactory: TypeAlias = "Callable[[], MediaDecoder]"
+#: How a soundtrack is converted between rates. There is no default: an export
+#: that cannot resample cannot write sound, and a silent default is the one
+#: failure a user would never trace back to a missing factory.
+ResamplerFactory: TypeAlias = "Callable[[], AudioResampler]"
 ClockFactory: TypeAlias = "Callable[[], Clock]"
 ResolveFactory: TypeAlias = "Callable[[Project], SourceResolver]"
 
@@ -138,6 +153,7 @@ class ExportStage:
 
     PREPARING: str = "preparing"
     ENCODING: str = "encoding"
+    AUDIO: str = "audio"
     MUXING: str = "muxing"
     DONE: str = "done"
 
@@ -317,12 +333,18 @@ class _ProgressSink:
         total: int,
         clock: Clock,
         start_ms: int,
+        share: float = 1.0,
     ) -> None:
         self._inner = inner
         self._context = context
         self._total = total
         self._clock = clock
         self._start_ms = start_ms
+        #: How much of the bar this stream owns. An export with a soundtrack
+        #: spends its first 85 % on pictures and the rest on the mix, and a bar
+        #: that reached 100 % while two hours of audio were still to come would
+        #: be indistinguishable from the hang it exists to rule out.
+        self.share = share
         self.written = 0
 
     def write(self, frame: FrameBuffer) -> Result[None]:
@@ -333,7 +355,7 @@ class _ProgressSink:
         elapsed_ms = self._clock.now_ms() - self._start_ms
         self._context.report(
             JobProgress(
-                fraction=self.written / self._total,
+                fraction=self.share * (self.written / self._total),
                 stage=ExportStage.ENCODING,
                 eta_seconds=_eta(elapsed_ms, self.written, self._total),
                 detail=f"frame {self.written} of {self._total}",
@@ -387,7 +409,15 @@ class ExportVideoJob:
         clock_factory: For elapsed time and ETA. Defaults to the system clock.
         resolve_factory: ``project -> (asset_id, source) -> path``. Defaults to
             the original for everything; the media layer supplies proxies.
+        resampler_factory: How a soundtrack is converted to the output rate.
+            Called once, in the worker, and held for the whole mix.
         cache_bytes: How much decoded picture the pool may hold.
+
+    **Sound is mixed after the pictures, into the same container.** Not
+    because a container demands it — a muxer interleaves — but because the
+    pictures are the half that can be cancelled expensively, and a mix that
+    ran first would have been mixing into a file whose video half was about
+    to be thrown away.
 
     **Cancellation** is polled, never fatal: the loop stops between frames, the
     target is aborted, and the job ends as ``Err(NS-JOB-5005)`` — which the UI
@@ -406,6 +436,7 @@ class ExportVideoJob:
     decoder_factory: DecoderFactory
     clock_factory: ClockFactory | None = None
     resolve_factory: ResolveFactory | None = None
+    resampler_factory: ResamplerFactory | None = None
     cache_bytes: int = EXPORT_CACHE_BYTES
 
     def __call__(self, context: JobContext) -> Result[JobOutcome]:
@@ -414,6 +445,7 @@ class ExportVideoJob:
         frames = self.request.frames_for(self.project)
         total = len(frames)
         started_ms = clock.now_ms()
+        stopped = False
 
         context.report(
             JobProgress(
@@ -442,6 +474,7 @@ class ExportVideoJob:
                 total=total,
                 clock=clock,
                 start_ms=started_ms,
+                share=VIDEO_SHARE,
             )
             outcome: RenderOutcome = render_frames(
                 self.project,
@@ -452,7 +485,20 @@ class ExportVideoJob:
                 cancel=context.is_cancelled,
             )
 
-        if outcome.cancelled:
+            missing = outcome.missing
+            if not outcome.cancelled and outcome.error is None:
+                # Between the last picture and the commit point: the container
+                # is still open, which is the only state in which its audio
+                # stream can be filled.
+                mixed = self._mix_soundtrack(context, pool, target, frames, total)
+                missing = missing + mixed
+                # A stop arriving during the mix is a stop: the file would
+                # otherwise be committed with its pictures complete and its
+                # soundtrack cut off mid-sentence, which is a silent way to
+                # publish a half-finished export.
+                stopped = context.is_cancelled()
+
+        if outcome.cancelled or stopped:
             # The loop stopped between frames and aborted the stream; aborting
             # the target is what removes the file it was writing to.
             target.abort()
@@ -460,9 +506,9 @@ class ExportVideoJob:
         if outcome.error is not None:
             target.abort()
             return err(outcome.error)
-        if self.request.fail_on_missing and outcome.missing:
+        if self.request.fail_on_missing and missing:
             target.abort()
-            return err(_offline(outcome.missing))
+            return err(_offline(missing))
 
         # The container's commit point. `render_frames` finished the *stream*,
         # which flushed the encoder; this writes the index and the trailer and
@@ -489,17 +535,86 @@ class ExportVideoJob:
             JobProgress(
                 fraction=1.0,
                 stage=ExportStage.DONE,
-                detail=export_summary(stats, missing=outcome.missing),
-                payload={"missing": list(outcome.missing)},
+                detail=export_summary(stats, missing=missing),
+                payload={"missing": list(missing)},
             )
         )
         return ok(
             JobOutcome(
                 value=stats,
                 artefacts=(self.request.path,),
-                detail=export_summary(stats, missing=outcome.missing),
+                detail=export_summary(stats, missing=missing),
             )
         )
+
+    def _mix_soundtrack(
+        self,
+        context: JobContext,
+        pool: FrameSourcePool,
+        target: RenderTarget,
+        frames: range,
+        total: int,
+    ) -> tuple[str, ...]:
+        """Mix the project's sound into the container's audio stream.
+
+        Returns the assets that had no sound to give — offline, silent, or
+        damaged — rather than failing: a project with one unplugged drive
+        still has a soundtrack everywhere else, and that is the same rule the
+        pictures follow (ADR-0015 rule 3). What it *does* fail on is a write
+        the container refused, because a mix that cannot be written is an
+        export that cannot be finished.
+
+        Every block is written even when it mixes to silence, because a block
+        omitted is a block's worth of samples every later sound arrives early
+        by — a two-hour export that is a beat ahead after the first gap is
+        worse than one that is honestly quiet for a moment.
+        """
+        sink = target.audio()
+        if sink is None or self.resampler_factory is None:
+            # No audio stream in the output, or no way to reach its rate.
+            # Neither is an error: an export of a picture sequence is a real
+            # thing people ask for, and silence is what they expect.
+            return ()
+        resampler = self.resampler_factory()
+        missing: dict[str, None] = {}
+        # No `close`: a resampler is handed back a buffer and returns a buffer,
+        # and the adapter is free to be a fresh one per call (libswresample's
+        # delay is not a pure function of its input, which is the whole reason
+        # the port is a function and not an object with a lifetime). Nothing
+        # here owns one across blocks, so nothing here has to release one.
+        for block in mix_audio(
+            plan_audio(self.project, frames.start, frames.stop),
+            sources=pool.audio,
+            resampler=resampler,
+            info=pool.info,
+            block_frames=AUDIO_BLOCK_FRAMES,
+            cancel=context.is_cancelled,
+        ):
+            for asset_id in block.missing:
+                missing[asset_id] = None
+            written = sink.write(block.buffer)
+            if written.is_err():
+                # Reported, not raised: the caller aborts the target, and
+                # a raise here would skip that and leave a partial file.
+                context.report(
+                    JobProgress(
+                        fraction=VIDEO_SHARE,
+                        stage=ExportStage.AUDIO,
+                        detail=str(written.unwrap_err().message),
+                        payload={"asset_ids": list(block.missing)},
+                    )
+                )
+                return tuple(missing)
+            context.report(
+                JobProgress(
+                    fraction=VIDEO_SHARE
+                    + (1.0 - VIDEO_SHARE) * (min(block.end_frame, total) / total),
+                    stage=ExportStage.AUDIO,
+                    detail=f"mixed {block.end_frame} of {total} frames",
+                    payload={"frame": block.end_frame, "frames": total},
+                )
+            )
+        return tuple(missing)
 
 
 def _destination(path: str) -> str:

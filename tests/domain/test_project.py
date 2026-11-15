@@ -995,6 +995,7 @@ class TestProjectWire:
                 "masks",
                 "blends",
                 "grades",
+                "audio",
             }
         )
 

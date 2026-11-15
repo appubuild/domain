@@ -282,6 +282,75 @@ class TestFailure:
         assert _grey(pictures[_request("a1", 3).key]) == 3
 
 
+class TestSound:
+    """The same handle, two streams.
+
+    A file that is open for its pictures must not be opened again for its
+    sound: a second open is a second demuxer, a second index and a second set
+    of seeks on a file the pool already has.
+    """
+
+    def test_a_file_with_no_soundtrack_has_none_to_give(self) -> None:
+        decoder = FakeDecoder({"a1.mp4": FakeClip()})
+        with _pool(decoder, "a1") as pool:
+            assert pool.audio("a1", "original") is None
+            assert pool.info("a1", "original") is not None
+            assert pool.info("a1", "original").has_audio is False
+
+    def test_a_soundtrack_comes_from_the_file_already_open(self) -> None:
+        decoder = FakeDecoder({"a1.mp4": FakeClip(sample_rate=48_000)})
+        with _pool(decoder, "a1") as pool:
+            pool.pictures([_request(frame=0)])
+            source = pool.audio("a1", "original")
+        assert source is not None
+        assert decoder.opens == 1
+
+    def test_asking_twice_hands_back_the_same_read(self) -> None:
+        """A second handle on one container is a second seek cursor."""
+        decoder = FakeDecoder({"a1.mp4": FakeClip(sample_rate=48_000)})
+        with _pool(decoder, "a1") as pool:
+            assert pool.audio("a1", "original") is pool.audio("a1", "original")
+
+    def test_the_info_is_what_the_file_says_now_not_what_it_said(self) -> None:
+        """A probe summary in the project is a memory; this is the file."""
+        decoder = FakeDecoder({"a1.mp4": FakeClip(sample_rate=44_100, channels=1)})
+        with _pool(decoder, "a1") as pool:
+            info = pool.info("a1", "original")
+        assert info is not None
+        assert info.primary_audio() is not None
+        assert info.primary_audio().sample_rate == 44_100
+        assert info.primary_audio().channels == 1
+
+    def test_a_file_with_sound_but_no_picture_is_opened_rather_than_refused(
+        self,
+    ) -> None:
+        """A music bed is a clip. Refusing it because it has no pixels would
+        be refusing half of what an editor puts on a timeline."""
+        decoder = FakeDecoder({"a1.mp4": FakeClip(video_streams=0, sample_rate=48_000)})
+        with _pool(decoder, "a1") as pool:
+            assert pool.pictures([_request(frame=0)]) == {}
+            assert pool.audio("a1", "original") is not None
+        assert not pool.errors()
+
+    def test_a_file_with_neither_is_still_unsupported(self) -> None:
+        decoder = FakeDecoder({"a1.mp4": FakeClip(video_streams=0)})
+        with _pool(decoder, "a1") as pool:
+            assert pool.audio("a1", "original") is None
+        assert pool.errors()[0].code == MediaErrorCode.UNSUPPORTED
+
+    def test_an_asset_that_is_not_there_has_no_soundtrack_either(self) -> None:
+        decoder = FakeDecoder({"a1.mp4": FakeClip(sample_rate=48_000)})
+        with _pool(decoder, "a1") as pool:
+            assert pool.audio("absent", "original") is None
+
+    def test_closing_the_pool_closed_the_soundtrack(self) -> None:
+        decoder = FakeDecoder({"a1.mp4": FakeClip(sample_rate=48_000)})
+        with _pool(decoder, "a1") as pool:
+            audio = pool.audio("a1", "original")
+        assert audio is not None
+        assert audio.is_closed
+
+
 class TestWarming:
     def test_prefetch_answers_nothing_and_decodes_anyway(self) -> None:
         decoder = FakeDecoder({"a1.mp4": FakeClip(frame_count=30)})

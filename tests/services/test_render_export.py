@@ -31,6 +31,7 @@ from __future__ import annotations
 import pickle
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
 import pytest
 
 from nova_studio.core.errors import NovaError, NovaInvariantError
@@ -47,6 +48,8 @@ from nova_studio.core.jobs import (
 from nova_studio.core.result import Result, err, ok
 from nova_studio.core.temporal import Timebase
 from nova_studio.domain.export import (
+    AudioCodec,
+    AudioEncodeSpec,
     ContainerFormat,
     OutputSpec,
     RateControl,
@@ -54,13 +57,14 @@ from nova_studio.domain.export import (
     VideoCodec,
     VideoEncodeSpec,
 )
-from nova_studio.domain.media import AssetKind, MediaAsset
+from nova_studio.domain.media import AssetKind, AudioBuffer, MediaAsset
 from nova_studio.domain.project import FrameSize, Project, ProjectSettings
 from nova_studio.domain.timeline import Clip, Timeline, Track, TrackKind
 from nova_studio.services.render.export import (
     EXPORT_CHECKPOINT_EVERY,
     EXPORT_GRACE_PERIOD_MS,
     EXPORT_JOB_KIND,
+    VIDEO_SHARE,
     ExportRequest,
     ExportStage,
     ExportVideoJob,
@@ -150,11 +154,71 @@ class FakeSink:
         self.aborted = True
 
 
-class FakeTarget:
-    """A `RenderTarget` around one sink. No audio: exports of video only."""
+class FakeAudioSink:
+    """An `AudioSink` that records every block, and can refuse one on cue."""
 
-    def __init__(self, sink: FakeSink) -> None:
+    def __init__(
+        self,
+        *,
+        fail_at: int | None = None,
+        cancel_after: int | None = None,
+        context: Any = None,
+    ) -> None:
+        self.blocks: list[AudioBuffer] = []
+        self.fail_at = fail_at
+        self.cancel_after = cancel_after
+        self.context = context
+        self.finished = False
+        self.aborted = False
+
+    def write(self, buffer: AudioBuffer) -> Result[None]:
+        if self.fail_at is not None and len(self.blocks) >= self.fail_at:
+            return err(NovaError("NS-RENDER-4003", "the encoder rejected this block"))
+        self.blocks.append(buffer)
+        if self.cancel_after is not None and len(self.blocks) >= self.cancel_after:
+            # A stop arrives from outside, which is why the mix polls rather
+            # than being told.
+            self.context.stop()
+        return ok(None)
+
+    def finish(self) -> Result[None]:
+        self.finished = True
+        return ok(None)
+
+    def abort(self) -> None:
+        self.aborted = True
+
+    @property
+    def samples(self) -> np.ndarray:
+        """Every sample written, in order."""
+        if not self.blocks:
+            return np.zeros((0, 2), dtype=np.float32)
+        return np.concatenate([block.samples for block in self.blocks], axis=0)
+
+
+class IdentityResampler:
+    """A resampler that changes the rate without touching the samples.
+
+    What a test needs is a resampler that is *not* the thing under test: the
+    mixer has to ask for a rate and then trim or pad to the sample count it
+    computed, and a resampler that happens to return the right length would
+    hide a mixer that did not.
+    """
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, int]] = []
+
+    def resample(self, buffer: AudioBuffer, *, sample_rate: int, channels: int) -> AudioBuffer:
+        self.calls.append((sample_rate, channels))
+        return AudioBuffer(samples=buffer.samples, sample_rate=sample_rate)
+
+
+class FakeTarget:
+    """A `RenderTarget` around a video sink and, when there is one, an audio one."""
+
+    def __init__(self, sink: FakeSink, audio: FakeAudioSink | None = None) -> None:
         self.sink = sink
+        self.audio_sink = audio
         self.aborted = False
         self.finished = False
 
@@ -162,7 +226,7 @@ class FakeTarget:
         return self.sink
 
     def audio(self) -> Any:
-        return None
+        return self.audio_sink
 
     def finish(self) -> Result[RenderStats]:
         self.finished = True
@@ -176,9 +240,15 @@ class FakeTarget:
 class FakeRenderer:
     """A `Renderer` that hands out a sink the test can inspect."""
 
-    def __init__(self, sink: FakeSink | None = None, *, error: NovaError | None = None) -> None:
+    def __init__(
+        self,
+        sink: FakeSink | None = None,
+        *,
+        error: NovaError | None = None,
+        audio: FakeAudioSink | None = None,
+    ) -> None:
         self.sink = sink if sink is not None else FakeSink()
-        self.target = FakeTarget(self.sink)
+        self.target = FakeTarget(self.sink, audio)
         self.error = error
         self.opened: list[tuple[OutputSpec, str]] = []
 
@@ -226,8 +296,10 @@ class FakeContext:
 # ---------------------------------------------------------------------------
 
 
-def _spec(width: int = WIDTH, height: int = HEIGHT, **over: Any) -> OutputSpec:
-    """An H.264/MP4 export of the test canvas."""
+def _spec(
+    width: int = WIDTH, height: int = HEIGHT, *, audio: bool = False, **over: Any
+) -> OutputSpec:
+    """An H.264/MP4 export of the test canvas, with AAC when asked."""
     video: dict[str, Any] = {
         "codec": VideoCodec.H264,
         "width": width,
@@ -237,7 +309,13 @@ def _spec(width: int = WIDTH, height: int = HEIGHT, **over: Any) -> OutputSpec:
         "preset": "veryfast",
     }
     video.update(over)
-    return OutputSpec(container=ContainerFormat.MP4, video=VideoEncodeSpec(**video))
+    return OutputSpec(
+        container=ContainerFormat.MP4,
+        video=VideoEncodeSpec(**video),
+        audio=AudioEncodeSpec(codec=AudioCodec.AAC, sample_rate=48_000, channels=2)
+        if audio
+        else None,
+    )
 
 
 def _project(*clips: Clip, assets: tuple[MediaAsset, ...] = ()) -> Project:
@@ -286,6 +364,8 @@ def _job(
     sink: FakeSink | None = None,
     renderer: FakeRenderer | None = None,
     clock: Any = None,
+    decoder: Any = None,
+    resampler: Any = IdentityResampler,
     **request: Any,
 ) -> tuple[ExportVideoJob, FakeRenderer]:
     """A job wired to fakes, and the renderer it will use."""
@@ -298,11 +378,41 @@ def _job(
             ExportRequest(path=path, spec=_spec(), **request),
             renderer_factory=lambda: made,
             ops_factory=OpenCVImageOps,
-            decoder_factory=lambda: _decoder("a1"),
+            decoder_factory=decoder or (lambda: _decoder("a1")),
+            resampler_factory=resampler,
             clock_factory=lambda: clock if clock is not None else TickingClock(),
         ),
         made,
     )
+
+
+class Soundbank:
+    """A decoder factory whose one file has a soundtrack, and that remembers it.
+
+    One decoder, handed out on every call: a factory that built a new one each
+    time would leave the test with nothing to inspect afterwards, because the
+    job's pool is closed by the time the job returns.
+    """
+
+    def __init__(self, **over: Any) -> None:
+        self.decoder = FakeDecoder(
+            {"a1.mp4": FakeClip(frame_count=400, sample_rate=48_000, **over)}
+        )
+
+    def __call__(self) -> Any:
+        return self.decoder
+
+    @property
+    def media(self) -> Any:
+        """The file the job opened, if it opened one."""
+        return self.decoder.opened[0] if self.decoder.opened else None
+
+    @property
+    def reads(self) -> list[tuple[int, int]]:
+        """Every ``(start, count)`` the soundtrack was asked for."""
+        media = self.media
+        audio = media._audio if media is not None else None
+        return audio.reads if audio is not None else []
 
 
 # ---------------------------------------------------------------------------
@@ -566,6 +676,199 @@ class TestGaps:
         assert "offline" not in job(FakeContext()).unwrap().detail
 
 
+class TestTheSoundtrack:
+    """A video-only export is a render that is half finished.
+
+    What is pinned here is that the sound is mixed *at all*, that it covers the
+    whole range, and that it lands on the sample the arithmetic says it should
+    — because all three ways of getting this wrong fail silently: no audio
+    stream in the output, a stream short by a block, and a stream whose every
+    sound arrives a beat after its picture.
+    """
+
+    def _run(
+        self,
+        project: Project,
+        *,
+        decoder: Any = None,
+        context: FakeContext | None = None,
+        with_resampler: bool = True,
+        audio: FakeAudioSink | None = None,
+        **request: Any,
+    ) -> tuple[Result[JobOutcome], FakeRenderer, FakeContext, Soundbank]:
+        """Run one export of a project whose single clip has a soundtrack."""
+        used_context = context if context is not None else FakeContext()
+        used_audio = audio if audio is not None else FakeAudioSink()
+        renderer = FakeRenderer(audio=used_audio)
+        bank = decoder if isinstance(decoder, Soundbank) else Soundbank()
+        job, made = _job(
+            project,
+            renderer=renderer,
+            decoder=bank,
+            resampler=IdentityResampler if with_resampler else None,
+            **request,
+        )
+        return job(used_context), made, used_context, bank
+
+    def test_a_project_with_sound_produces_a_file_with_sound(self) -> None:
+        """The hole this whole slice exists to close."""
+        result, renderer, _, _ = self._run(_project(_clip(), assets=(_asset(),)))
+        assert result.is_ok() is True
+        assert renderer.target.audio_sink.samples.shape[0] > 0
+
+    def test_the_soundtrack_covers_every_frame_of_the_export(self) -> None:
+        """Thirty frames at 48 kHz is 48 000 samples, not 47 900 of them."""
+        _, renderer, _, _ = self._run(_project(_clip(length=30), assets=(_asset(),)))
+        samples = renderer.target.audio_sink.samples
+        assert samples.shape == (30 * 1600, 2)
+
+    def test_the_soundtrack_is_not_silent_when_the_source_is_not(self) -> None:
+        _, renderer, _, _ = self._run(_project(_clip(), assets=(_asset(),)))
+        assert renderer.target.audio_sink.samples.any()
+
+    def test_an_output_with_no_audio_stream_is_left_alone(self) -> None:
+        """A picture sequence is a real thing to ask for, and silence is what
+        it should get — not an error, and not a mix into nowhere."""
+        audio = FakeAudioSink()
+        renderer = FakeRenderer(audio=None)  # no audio stream declared
+        job, made = _job(
+            _project(_clip(), assets=(_asset(),)),
+            renderer=renderer,
+            decoder=Soundbank(),
+            resampler=IdentityResampler,
+        )
+        assert job(FakeContext()).is_ok() is True
+        assert made.target.audio_sink is None
+        assert audio.blocks == []
+
+    def test_without_a_resampler_an_export_is_silent_but_still_succeeds(self) -> None:
+        """A missing adapter is not a corrupt file — but it is a quiet one.
+
+        This is the failure the composition root's comment is about: the field
+        defaults to no resampler at all, so a factory left out by accident
+        would cost an afternoon. It fails quietly, which is exactly why it is
+        pinned here rather than merely documented.
+        """
+        result, renderer, _, _ = self._run(
+            _project(_clip(), assets=(_asset(),)), with_resampler=False
+        )
+        assert result.is_ok() is True
+        assert renderer.target.audio_sink.samples.shape[0] == 0
+
+    def test_an_export_of_the_middle_third_reads_the_middle_of_the_source(
+        self,
+    ) -> None:
+        """An export that starts at frame 30 must not begin at sample zero.
+
+        Placed by the frame rather than by adding up block lengths, which is
+        what keeps a two-hour export from being a fraction of a sample late
+        per block and visibly out of sync by the end.
+        """
+        project = _project(_clip(length=90), assets=(_asset(),))
+        _, _, _, bank = self._run(project, start_frame=30, end_frame=60)
+        assert bank.reads, "the soundtrack was decoded"
+        assert bank.reads[0][0] == 30 * 1600
+
+    def test_one_clip_is_one_contiguous_read_per_block(self) -> None:
+        """A clip is read once per block, not once per frame: the difference
+        between a seek per two seconds and a seek per frame."""
+        project = _project(_clip(length=300), assets=(_asset(),))
+        _, renderer, _, bank = self._run(project)
+        assert len(bank.reads) == 5  # 300 frames in blocks of 60
+        assert sum(count for _, count in bank.reads) == renderer.target.audio_sink.samples.shape[0]
+
+    def test_the_mix_starts_at_the_first_sample_of_the_first_source_frame(self) -> None:
+        _, _, _, bank = self._run(_project(_clip(length=30), assets=(_asset(),)))
+        assert bank.reads and bank.reads[0][0] == 0
+
+    def test_the_soundtrack_is_reported_under_its_own_stage(self) -> None:
+        """A bar that sits at 100 % while two hours of audio are mixed looks
+        exactly like the hang the bar exists to rule out."""
+        _, _, context, _ = self._run(_project(_clip(), assets=(_asset(),)))
+        assert ExportStage.AUDIO in context.stages
+
+    def test_no_report_ever_claims_more_than_the_whole(self) -> None:
+        _, _, context, _ = self._run(_project(_clip(), assets=(_asset(),)))
+        assert all(report.fraction <= 1.0 for report in context.reports)
+
+    def test_the_pictures_own_the_first_part_of_the_bar(self) -> None:
+        """So the mix has somewhere left to go."""
+        _, _, context, _ = self._run(_project(_clip(), assets=(_asset(),)))
+        encoding = context.at(ExportStage.ENCODING)
+        assert encoding
+        assert max(report.fraction for report in encoding) <= VIDEO_SHARE + 1e-9
+
+    def test_the_last_report_is_the_one_that_names_the_artefact(self) -> None:
+        _, _, context, _ = self._run(_project(_clip(), assets=(_asset(),)))
+        assert context.reports[-1].stage == ExportStage.DONE
+
+    def test_an_offline_asset_is_a_quiet_passage_not_a_failed_export(self) -> None:
+        """The same rule the pictures follow (ADR-0015 rule 3)."""
+        result, renderer, _, _ = self._run(_project(_clip()))  # no assets
+        assert result.is_ok() is True
+        assert not renderer.target.audio_sink.samples.any()
+
+    def test_a_silent_gap_still_occupies_its_samples(self) -> None:
+        """A block omitted is every later sound arriving early by a block."""
+        _, renderer, _, _ = self._run(_project(_clip()))
+        assert renderer.target.audio_sink.samples.shape == (30 * 1600, 2)
+
+    def test_a_muted_track_is_not_heard(self) -> None:
+        from nova_studio.domain.timeline import Timeline, Track, TrackKind
+
+        muted = Track(track_id="v1", kind=TrackKind.VIDEO, clips=(_clip(),), muted=True)
+        project = _project(assets=(_asset(),)).with_timeline(Timeline.of(muted, timebase=TIMEBASE))
+        _, renderer, _, _ = self._run(project)
+        assert not renderer.target.audio_sink.samples.any()
+
+    def test_a_hidden_track_still_is(self) -> None:
+        """Hiding is about the picture. A hidden track's sound is still there,
+        which is what 'hidden' means in every editor."""
+        from nova_studio.domain.timeline import Timeline, Track, TrackKind
+
+        hidden = Track(track_id="v1", kind=TrackKind.VIDEO, clips=(_clip(),), hidden=True)
+        project = _project(assets=(_asset(),)).with_timeline(Timeline.of(hidden, timebase=TIMEBASE))
+        _, renderer, _, _ = self._run(project)
+        assert renderer.target.audio_sink.samples.any()
+
+    def test_a_block_the_encoder_refuses_does_not_fail_the_export(self) -> None:
+        """A mix that cannot be written is bad luck, not a lost render: the
+        pictures are already in the container, and the file still closes."""
+        result, renderer, _, _ = self._run(
+            _project(_clip(), assets=(_asset(),)), audio=FakeAudioSink(fail_at=0)
+        )
+        assert result.is_ok() is True
+        assert renderer.target.audio_sink.samples.shape[0] == 0
+
+    def test_a_stop_during_the_mix_leaves_no_file(self) -> None:
+        """Otherwise the export commits with all its pictures and half its
+        sound, which is a silent way to publish a half-finished file."""
+        context = FakeContext()
+        result, renderer, _, _ = self._run(
+            _project(_clip(), assets=(_asset(),)),
+            context=context,
+            audio=FakeAudioSink(cancel_after=1, context=context),
+        )
+        assert result.is_err() is True
+        assert renderer.target.aborted is True
+
+    def test_a_stop_during_the_mix_is_a_stop_and_not_a_failure(self) -> None:
+        context = FakeContext()
+        result, _, _, _ = self._run(
+            _project(_clip(), assets=(_asset(),)),
+            context=context,
+            audio=FakeAudioSink(cancel_after=1, context=context),
+        )
+        assert result.unwrap_err().code == "NS-JOB-5005"
+
+    def test_the_open_file_is_closed_whether_or_not_the_mix_succeeded(self) -> None:
+        """A leaked decoder is a leaked file handle, and an export holds one
+        per asset for the whole job."""
+        _, _, _, bank = self._run(_project(_clip(), assets=(_asset(),)))
+        assert bank.media is not None
+        assert bank.media.is_closed
+
+
 class TestTheSummary:
     def test_frames_bytes_and_throughput(self) -> None:
         assert export_summary(RenderStats(300, 1_500_000, 10_000)) == (
@@ -697,3 +1000,67 @@ class TestTheRealThing:
         assert context.stages[0] == ExportStage.PREPARING
         assert context.stages[-1] == ExportStage.DONE
         assert "10 frames" in outcome.detail
+
+    def test_an_export_of_a_clip_with_sound_carries_that_sound(self, tmp_path: Path) -> None:
+        """The whole chain, with a real encoder, a real decoder and a real file.
+
+        Everything else in this suite proves the mixer right against a
+        synthesiser. This one proves the plumbing: that the pool hands the
+        mixer a real PyAV sample source, that the resampler reaches 48 kHz, and
+        that what lands in the container decodes back as roughly a second of
+        stereo — because the one way this can be wrong is silently, and the
+        file that comes out is still a playable MP4 with no sound in it.
+        """
+        av = pytest.importorskip("av", reason="a real export needs a real encoder")
+        from nova_studio.infra.imaging import OpenCVImageOps
+        from nova_studio.infra.media import PyAVDecoder, PyAVResampler
+        from nova_studio.infra.render import PyAVRenderer
+        from tests.media.encoding import HEIGHT as CLIP_HEIGHT, WIDTH as CLIP_WIDTH, write_video
+
+        source = write_video(tmp_path / "clip.mp4", with_audio=True)
+        project = _clip_project(_clip(length=24), source, CLIP_WIDTH, CLIP_HEIGHT)
+        destination = tmp_path / "out.mp4"
+        job = ExportVideoJob(
+            project,
+            ExportRequest(path=str(destination), spec=_spec(CLIP_WIDTH, CLIP_HEIGHT, audio=True)),
+            renderer_factory=PyAVRenderer,
+            ops_factory=OpenCVImageOps,
+            decoder_factory=PyAVDecoder,
+            resampler_factory=PyAVResampler,
+        )
+        result = job(FakeContext())
+        assert result.is_ok() is True, result.unwrap_err()
+
+        with av.open(str(destination)) as container:
+            streams = container.streams.audio
+            assert streams, "the file the job wrote has no audio stream"
+            samples = sum(frame.samples for frame in container.decode(streams[0]))
+        # 24 frames at 29.97 fps is 0.8 s: 38 400 samples, and an AAC stream
+        # carries a little padding, so what matters is that it is the right
+        # order of magnitude and not zero and not ten seconds.
+        assert 30_000 <= samples <= 60_000, f"{samples} samples came back out"
+
+    def test_an_export_without_an_audio_stream_in_the_spec_is_a_picture(
+        self, tmp_path: Path
+    ) -> None:
+        """Silence is an answer, not an accident: no stream was asked for."""
+        av = pytest.importorskip("av", reason="a real export needs a real encoder")
+        from nova_studio.infra.imaging import OpenCVImageOps
+        from nova_studio.infra.media import PyAVDecoder, PyAVResampler
+        from nova_studio.infra.render import PyAVRenderer
+        from tests.media.encoding import HEIGHT as CLIP_HEIGHT, WIDTH as CLIP_WIDTH, write_video
+
+        source = write_video(tmp_path / "clip.mp4", with_audio=True)
+        project = _clip_project(_clip(length=12), source, CLIP_WIDTH, CLIP_HEIGHT)
+        destination = tmp_path / "out.mp4"
+        job = ExportVideoJob(
+            project,
+            ExportRequest(path=str(destination), spec=_spec(CLIP_WIDTH, CLIP_HEIGHT)),
+            renderer_factory=PyAVRenderer,
+            ops_factory=OpenCVImageOps,
+            decoder_factory=PyAVDecoder,
+            resampler_factory=PyAVResampler,
+        )
+        assert job(FakeContext()).is_ok() is True
+        with av.open(str(destination)) as container:
+            assert not container.streams.audio

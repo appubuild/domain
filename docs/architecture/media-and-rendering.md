@@ -104,6 +104,7 @@ Where each stage lives now:
 | Export sink | the same loop, an encoder sink | yes (`infra/render.py`, §7.7) |
 | `SpeedStage` | retiming, constant and ramped | not yet |
 | `OverlayStage` | text, captions, motion graphics | not yet (captions, stage 9) |
+| `AudioStage` | the sample graph: plan, mix, export | yes (§7.4) |
 
 Design invariants:
 
@@ -124,6 +125,10 @@ Design invariants:
   different from export" is structurally impossible.
 * **Colour stage runs last** so grading applies to the composited result (matching Resolve's
   node graph semantics) unless a per-clip grade is explicitly requested.
+* **Sound has its own pipeline and the same invariants.** It is resolved from the same
+  timeline, in blocks rather than frames, with the same purity and the same "one path for
+  preview and export" rule — and the same refusal to let a float accumulate, because a
+  half-sample of drift per block is lip sync, not rounding (§7.4).
 
 ### 7.3 GPU strategy
 
@@ -136,12 +141,131 @@ per-frame. Capability is detected once and cached in `settings`.
 
 ### 7.4 Audio
 
-Audio is **not** composited per video frame. The `AudioEngine` resolves the same timeline
-into an independent sample graph, mixes at the project audio rate in float32, applies
-per-clip gain/fade/EQ/compression, then a master chain (EQ → compressor → limiter →
-normalise target LUFS). Preview streams a rolling window; export writes a WAV stem that is
-muxed by the export pipeline. Beat/silence detection run as IDLE jobs and cache results in
-`audio_analysis`.
+Audio is **not** composited per video frame. It is its own pipeline, resolved from the same
+timeline into an independent sample graph, mixed at the project audio rate in float32, and
+written to whatever sink the caller supplies. What the pipeline is made of:
+
+```
+project ──► plan_audio(project, start, end) ──► AudioPlan          (L3, pure)
+                                                   │
+                                                   │  one plan, many blocks
+                                                   ▼
+                          mix_audio(plan, sources, resampler, info)
+                                                   │
+                        ┌──────────────────────────┼──────────────────────────┐
+                        ▼                          ▼                          ▼
+              sources(asset, source)      resampler.resample(…)      one MixBlock per
+              -> AudioSampleSource        (rate + channel change)    DEFAULT_BLOCK_FRAMES
+                        │                          │                          │
+                        └──────────────► sum ─► gain ─► pan ─► soft clip ──────┘
+                                                                      │
+                                       export: sink.write(block)  preview: a rolling window
+```
+
+**One code path for preview and export.** Audio is where the §7.2 promise is easiest to
+break, because the tempting designs differ: a preview could decode whole clips and hold
+them in memory, while an export has to stream. Two paths means a year of bugs that only
+happen in one of them, so there is one mixer, it is block-based, and a preview asks it for
+a short range while an export asks it for a long one.
+
+**Blocks, not a buffer.** `mix_audio` yields one block per `DEFAULT_BLOCK_FRAMES` (30)
+timeline frames. A two-hour export at 48 kHz stereo is two gigabytes of float32 — a mixer
+that built one array would be a mixer that could not export a film. The block doubles as
+the unit of cancellation and of progress reporting.
+
+**Every sample is anchored to the plan, never to the previous block.** A segment's offset
+is `frames_to_samples(frame, timebase, rate)` — exact rational arithmetic on the frame
+number, recomputed for every block. Accumulating a running "next sample" instead would
+drift by up to half a sample per block, and drift in audio is not a rounding error: it is
+lip sync, and it gets worse the longer the programme is.
+
+**A seek per block, deliberately.** Each block asks each clip for exactly the samples it
+covers: one seek per clip per second of programme. That sounds expensive until you notice
+the alternative is holding a whole clip's audio in memory to avoid it. An audio seek has no
+GOP to walk, so this is the trade that buys bounded memory for work the decoder would do
+anyway.
+
+#### 7.4.1 What a clip can say about its sound (`domain/audio.py`)
+
+L2, stdlib only, and deliberately free of NumPy: this module describes *what to ask for*,
+and the mixer is what turns it into numbers.
+
+`ClipAudio` is the per-clip record — `gain_db`, `pan`, `fade_in_frames`,
+`fade_out_frames`, `fade_shape` — and it is **0-neutral** in every field, so a clip the
+user has never touched is a clip the mixer can skip and a project document that diffs
+cleanly. It is bound to a clip *by id* in `Project.audio`, not stored on the clip, because
+`Clip` is the edit decision list and a sound setting is a decoration on it: the same rule
+that keeps grades, masks and transforms out of `timeline.py`.
+
+Fades are measured in **frames**, not seconds. A fade is an edit decision — "twelve frames
+before the cut" — and a project that moved between 24 and 30 fps must not have its fades
+change length.
+
+`FadeShape` offers `linear`, `equal-power`, `s-curve` and `exponential`. Every one of them
+is exactly 0 at one end and exactly 1 at the other, and every one rises monotonically,
+because a fade that dips in the middle is a fade that ducked. `equal-power` is the default:
+it is at −3 dB halfway, which is what "halfway through a fade" means to an ear, and two of
+them crossing sum to constant power. Decibels go through `20·log10`, so +6 dB is double the
+amplitude — the most common bug in audio code, and one only noticed when a mix is quiet.
+
+#### 7.4.2 The plan (`services/render/audio.py`, `plan_audio`)
+
+A pure function of a project and a range: no decoder anywhere in it, which is why a test
+can build one and compare it field by field. It produces `AudioSegment`s — each a
+**contiguous run of one clip**, described entirely in frames — carrying the source window,
+which copy to read, and the gain, pan and fades to apply.
+
+Two rules in it are worth naming, because both are the kind of thing a second
+implementation gets wrong:
+
+* **A muted track is silent; a hidden one is not.** Muting is about sound, so it is decided
+  here. Hiding is about the picture, so it is not: a hidden track's clips are still heard,
+  which is what "hidden" means in every editor and the reason the two are separate flags on
+  `Track`.
+* **A file with no audio stream is dropped here, not at decode time.** The probe summary in
+  the project already knows. Asking a decoder for a stream a file does not have would turn
+  a fact about the file into a per-block failure. A clip whose asset has never been probed
+  is *kept*: an unprobed asset is one we know nothing about, and silence would be a guess.
+
+A segment's source window is stored **ascending even when the clip plays backwards**, with
+`reversed` saying which way to read it. A decoder is asked for a range, not a direction,
+and carrying a direction inside a frame number is how a reverse clip gets read from the
+wrong end. The window's *length* is `frames × |speed|`, not the distance between the source
+frames its ends happen to show — at 2× one timeline frame eats two source frames, and the
+endpoints-only version is one short every time.
+
+#### 7.4.3 The mix (`services/render/audio.py`, `mix_audio`)
+
+A generator of `MixBlock`, each carrying its buffer, the frames it covers, and the
+`AudioMixStats` for it. Per block, per segment: read → resample to the project rate →
+envelope → gain → pan → summed into the block. Then one soft clip over the whole block,
+above a −3 dB knee, so a mix that never gets there is bit-identical to one that was never
+limited.
+
+Nothing in this loop fails. A missing file, a file with no audio, and a read that errors
+are all *reported* — in `MixBlock.missing`, in `MixBlock.error`, and totalled in
+`AudioMixStats` — and the block is still yielded, filled with silence. A block omitted is a
+block's worth of samples that every later sound arrives early by, so the silence is not
+politeness; it is what keeps the rest of the programme in sync.
+
+What is **not** here: which file to decode (the media layer decides, and hands the mixer a
+`SourceProvider`), how samples are resampled (`ports/media.py` → `AudioResampler`), and
+where the result goes (a sink the caller chose). Every collaborator is injected, so the
+whole engine is tested with a synthesiser and no FFmpeg.
+
+#### 7.4.4 In the export
+
+`ExportVideoJob` mixes between the last picture and the commit point — the container is
+still open, which is the only state in which its audio stream can be filled. It reports
+under its own `audio` stage, and video owns the first 85 % of the bar so the mix has
+somewhere to go; a bar parked at 100 % while two hours of audio were still being mixed is
+indistinguishable from the hang the bar exists to rule out.
+
+**Still to come in this section.** Per-clip EQ and dynamics (deferred to the master chain
+on purpose: a per-clip compressor is a per-clip decision a user cannot hear the effect of
+until the mix is playing), the master chain itself (EQ → compressor → limiter → LUFS
+normalise), preview playback through a device sink, and beat/silence detection as IDLE jobs
+caching into `audio_analysis`.
 
 ### 7.5 The media record and the media port
 
@@ -733,6 +857,10 @@ routers/export.py (to come) ──► JobExecutor.submit(spec, body)
         │                               ▼                                │
         │                    render_frames(…, cancel=context.is_cancelled)│
         │                               │                                │
+        │                               ▼                                │
+        │                  mix_audio(plan_audio(…), pool.audio, …)        │
+        │                     -> target.audio().write(block)              │
+        │                               │                                │
         └──────────────► target.finish() ◄───────────────────────────────┘
                          (the commit point: index, trailer, rename)
 ```
@@ -745,11 +873,14 @@ Decision | Why
 **Progress lives on the sink** | The loop's job is to render frames in order; wrapping the sink keeps it unchanged and puts the count exactly where the thing being counted happens — after a *successful* write, the only count a user cares about.
 **Two finishes** | `render_frames` finishes the *stream* (flush the encoder); `target.finish()` commits the *container* (index, trailer, promote the temporary file). Reporting the muxing stage at the flush would park the bar at 100 % while the trailer was still being written — the exact hang the stage exists to distinguish.
 **A gap does not fail the export** | An offline asset means a hole in the picture, ids in the progress payload and a count in the summary. Refusing to export a project with one unplugged drive is refusing nineteen clips that are fine. An export that must be complete sets `fail_on_missing`, and then the same situation is refused *before* the first frame.
+**The soundtrack is mixed after the pictures** | Not because a container demands it — a muxer interleaves — but because the pictures are the half that can be cancelled expensively, and a mix that ran first would have been mixing into a file whose video half was about to be thrown away. The same rule governs gaps: a missing file makes a quiet passage, and the block is still written, because a block omitted is every later sound arriving early by a block (§7.4.3). A stop that arrives *during* the mix still aborts the file — otherwise the export commits with all its pictures and half its sound.
+**A resampler is not optional and has no default** | `resampler_factory` defaults to `None`, and the job reads that as "this export has no soundtrack" and writes silence. That is a quiet failure, so the composition root always names `PyAVResampler` and the test suite pins what happens when it is left out (§7.4.4).
 
 Stage | What it means
 --- | ---
 `preparing` | Probing the encoder and opening the destination. Slow the first time, and worth saying out loud.
-`encoding` | One report per frame: `frame`, `frames`, and an ETA once there is a rate to extrapolate from — never from the first four frames.
+`encoding` | One report per frame: `frame`, `frames`, and an ETA once there is a rate to extrapolate from — never from the first four frames. Owns the first 85 % of the bar (`VIDEO_SHARE`).
+`audio` | One report per mixed block. Owns the remaining 15 %, so the bar is not parked at 100 % while two hours of sound are still being mixed.
 `muxing` | The container is being finalised.
 `done` | Terminal, always published, carrying the summary a user reads.
 
@@ -759,13 +890,21 @@ spent to avoid work that will not happen. Resume points are written every 120
 frames, and the export is declared idempotent so a lost worker can be retried
 without asking the user.
 
-**Testing.** `tests/services/test_render_export.py` (44): staged progress and
+**Testing.** `tests/services/test_render_export.py` (66): staged progress and
 resume points, a cancellation that stops between frames and leaves no file, an
 encoder rejection at frame four that leaves no file, an unwritable destination
 refused before a frame is decoded, gaps tolerated and `fail_on_missing`
-refusing, and a pickling test that fails a body built with a closure. One test
-touches FFmpeg: a clip encoded by PyAV, exported through `PyAVRenderer`, opened
-again and counted.
+refusing, and a pickling test that fails a body built with a closure. Eighteen
+of them are the soundtrack: that a project with sound produces a file with
+sound, that the mix covers every frame of the range, that an export of the
+middle third reads the middle of the source rather than sample zero, that one
+clip is one contiguous read per block, that a muted track is not heard and a
+hidden one still is, that a stop during the mix still leaves no file, and that
+an output with no audio stream — or no resampler wired — is left alone rather
+than failed. Three tests touch FFmpeg: a clip encoded by PyAV, exported through
+`PyAVRenderer`, opened again and counted — and, of those, one opens the file
+back and decodes its audio stream, which is the only way to catch the silent
+failure of an MP4 that is perfectly playable and has no sound in it.
 
 ### 7.16 The job executor and the job history (`infra/jobs.py`, `infra/persistence/jobs.py`)
 

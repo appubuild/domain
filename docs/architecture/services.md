@@ -770,8 +770,10 @@ services/render/
 ├── kernels.py    the arithmetic behind the effect catalogue, and its registry
 ├── composite.py  composite_frame · apply_grade — the plan, turned into pixels
 ├── pool.py       FrameSourcePool — decode requests, served with bounded seeks
+│                 (and the same file's soundtrack: audio() · info())
 ├── loop.py       render_frames · render_preview_frame — one loop, any sink
-└── export.py     ExportVideoJob — that loop, as a cancellable job
+├── audio.py      plan_audio · mix_audio — the sample graph, block by block (§7.4)
+└── export.py     ExportVideoJob — the video loop and the audio one, as a job
 ```
 
 **The full contract** — per-module responsibilities, the class diagram, the
@@ -790,10 +792,14 @@ export is one `render_frames(project, frames, pool=…, ops=…, sink=…)`. Pre
 and export differ *only* in the sink, which is the whole of the promise.
 
 **State management.** Everything on the planning side is a frozen value: a
-`FramePlan` can be cached, handed to a worker or compared in a test, and
-`plan_frames` is a generator. The two stateful pieces are explicitly owned and
-explicitly bounded — `FrameSourcePool` holds a few open decoders and a
-byte-budgeted picture cache, and both are released by `close()`.
+`FramePlan` and an `AudioPlan` can be cached, handed to a worker or compared in
+a test, and both `plan_frames` and `mix_audio` are generators. The two stateful
+pieces are explicitly owned and explicitly bounded — `FrameSourcePool` holds a
+few open decoders and a byte-budgeted picture cache, and both are released by
+`close()`. The pool is also the one place a soundtrack is opened: `pool.audio(...)`
+hands back the file that is *already* open for its pictures, because a second
+open would be a second demuxer and a second set of seeks on a file the pool
+already has.
 
 **API surface.** `PreviewRenderer` is what the preview panel talks to, and the
 workspace owns exactly one per open project (`api/workspace.py`): it holds the
@@ -817,7 +823,14 @@ missing asset is a gap and not a failure, warming ten frames costs one seek —
 counts* — a pool is a performance component, and thirty frames of one clip
 costing thirty seeks is the bug it exists to prevent — and `test_render_loop.py`
 the promise itself: the same compositor, one code path, preview frame and export
-frame byte-identical. `tests/api/test_render_api.py` drives both through real
+frame byte-identical. `tests/services/test_render_audio.py` (46) pins the other
+half: that the plan skips a muted track but not a hidden one, that two tracks sum
+rather than replace, that a doubled speed reads twice the source, that a
+30000/1001 project mixes in blocks without drifting by a single sample, and that
+a missing file is a quiet block rather than a raised error.
+`tests/domain/test_audio.py` (28) pins the arithmetic underneath it — +6 dB is
+double the amplitude, every fade starts at silence and ends at unity, and a
+document written by a newer build is refused rather than silently trimmed. `tests/api/test_render_api.py` drives both through real
 HTTP against a clip encoded in a temporary directory: the frame arrives as JPEG
 with `no-store`, and warming ten frames over the wire still costs one seek.
 `tests/infra/test_imaging.py` checks the OpenCV adapter against a second,

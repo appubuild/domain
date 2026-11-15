@@ -143,6 +143,7 @@ split itself is unit-tested (`PROJECT_DOCUMENT_FIELDS`).
     {"asset_id":"01J8ZZ9K3M4N5P6Q7R8S9T0V2X","content_hash":null,
      "kind":"video","link_state":"linked","path":"D:/Media/clip_001.mp4","probe":null}
   ],
+  "audio": [],
   "blends": [],
   "grades": [],
   "effects": [],
@@ -165,6 +166,13 @@ split itself is unit-tested (`PROJECT_DOCUMENT_FIELDS`).
   the compositor builds, in composition pixels from the centre.
   `working_colour_space` is an integer SMPEG/ffmpeg colour-space code written as
   a number, never a name, so a rename upstream cannot invalidate a file.
+* **`audio`** is the fifth binding, and the only one that is about sound:
+  what a clip's soundtrack should be turned into — `gain_db`, `pan`,
+  `fade_in_frames`, `fade_out_frames`, `fade_shape` — keyed by clip id. Fades
+  are measured in **frames**, not seconds, because a fade is an edit decision
+  and a project that moves between 24 and 30 fps must not have them change
+  length. Every field is 0-neutral, so a clip the user has never touched is
+  absent from the file rather than written as a row of zeroes (§7.4.1).
 * **`effects` / `transforms` / `masks` / `blends` / `grades`** are the
   *bindings*: what decorates what, keyed by the id of the clip or track it
   decorates. A grade is stored here rather than as an effect because it has no

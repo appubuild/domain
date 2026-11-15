@@ -808,12 +808,11 @@ class PyAVAudioSource:
     # -- reading ----------------------------------------------------------
 
     def samples(self, start: int = 0, count: int | None = None) -> Iterator[AudioBuffer]:
-        """Yield blocks of samples from `start`.
+        """Yield blocks of samples from `start`, beginning exactly there.
 
-        The first block may begin slightly before `start`, because a decoder has
-        to begin at a packet boundary; the port says so and the caller trims
-        rather than assuming. `count` is a maximum number of *samples*, not of
-        blocks, and a block is never split to land exactly on it.
+        `count` is a maximum number of *samples*, not of blocks, and a block is
+        split to land exactly on it — see the port for why both ends are the
+        adapter's job and not the caller's.
         """
         self._error = None
         if self._closed or count == 0:
@@ -824,15 +823,65 @@ class PyAVAudioSource:
             seeked = self._seek_to_sample(start)
             if not seeked and start > 0:
                 return
+        # How many samples of the first decoded frame to throw away. `None`
+        # until the first frame arrives, because the pre-roll is however far
+        # before `start` the packet boundary happened to be, and that is a
+        # number only the frame knows.
+        skip: int | None = None
         emitted = 0
         for frame in self._decode():
+            if skip is None:
+                skip = self._pre_roll(start, frame)
+                if skip:
+                    ahead = int(getattr(frame, "samples", 0) or 0)
+                    if ahead <= skip:
+                        skip -= ahead
+                        continue
             block = self._as_buffer(frame)
             if block.frame_count == 0:
                 continue
+            if skip:
+                if block.frame_count <= skip:
+                    skip -= block.frame_count
+                    continue
+                block = AudioBuffer(
+                    samples=np.ascontiguousarray(block.samples[skip:]),
+                    sample_rate=block.sample_rate,
+                )
+                skip = 0
+            if count is not None and emitted + block.frame_count > count:
+                keep = count - emitted
+                if keep > 0:
+                    yield AudioBuffer(
+                        samples=np.ascontiguousarray(block.samples[:keep]),
+                        sample_rate=block.sample_rate,
+                    )
+                return
             yield block
             emitted += block.frame_count
             if count is not None and emitted >= count:
                 return
+
+    def _pre_roll(self, start: int, frame: Any) -> int:
+        """How many samples of `frame` come before `start`.
+
+        Read from the frame's presentation timestamp, which is the only thing
+        that knows where a packet actually begins — a seek lands at or before
+        the sample asked for, and by how much is a property of the codec's
+        packet size. A stream with no timestamps loses the ability to be
+        placed, so it yields from where it landed rather than from nowhere:
+        zero is the honest answer a caller can detect by comparing lengths.
+        """
+        pts = getattr(frame, "pts", None)
+        if pts is None:
+            return 0
+        base = self._stream.time_base
+        try:
+            seconds = Fraction(int(pts) * base.numerator, base.denominator)
+            position = round(seconds * self._info.sample_rate)
+        except (TypeError, ValueError, ZeroDivisionError):
+            return 0
+        return max(0, start - position)
 
     # -- internals --------------------------------------------------------
 
