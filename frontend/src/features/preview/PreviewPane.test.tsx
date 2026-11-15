@@ -28,6 +28,7 @@ import { err, ok } from '../../core/result';
 import { createPlaybackStore, PlaybackStoreContext } from '../../stores/playback';
 import { createTimelineStore, TimelineStoreContext } from '../../stores/timeline';
 import { PreviewPane } from './PreviewPane';
+import { TransportProvider } from './TransportProvider';
 
 function edit(over: Partial<TimelineSummary> = {}): TimelineSummary {
   return {
@@ -125,7 +126,9 @@ function renderPane(script: Script = {}): { frameCalls: () => number } {
         <ApiContext.Provider value={api}>
           <TimelineStoreContext.Provider value={timeline}>
             <PlaybackStoreContext.Provider value={playback}>
-              {children}
+              {/* In the window the transport is the providers'; a pane tested
+                  alone has to bring its own, and it is one line. */}
+              <TransportProvider>{children}</TransportProvider>
             </PlaybackStoreContext.Provider>
           </TimelineStoreContext.Provider>
         </ApiContext.Provider>

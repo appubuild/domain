@@ -1,7 +1,7 @@
 # §10 — Frontend architecture
 
 **Part of:** [`ARCHITECTURE.md`](ARCHITECTURE.md) · **Owner:** Architecture Group
-**Last reviewed:** 2026-11-06
+**Last reviewed:** 2026-11-15
 
 This file is section 10 of the system architecture, kept separate because the section
 outgrew the 64 KiB single-file budget (`scripts/check_repo_hygiene.py`) and will keep
@@ -11,10 +11,9 @@ and is allowlisted in the hygiene script, as `media-and-rendering.md` and `servi
 are: the limit exists to keep binaries and generated artefacts out of git, and a chapter of
 prose that diffs line by line is neither. It gets split if it passes 128 KiB.
 
-**Status of this stage.** The window, its transport and its error model are built and
-tested. The dock, the stores, the timeline canvas and the design system are specified
-here and arrive in stages 6–7; folders that exist for them are listed in §10.4 with what
-belongs in them, so the tree grows into its shape instead of being reshaped later.
+**Status of this stage.** The window, its dock, its design system, its stores and its
+timeline are built and tested. What is specified here and not yet built is named in
+§10.14 with the stage it belongs to, so a reader can tell a gap from an omission.
 
 ---
 
@@ -124,6 +123,19 @@ What the generator emits, and the rules it follows:
   read `response.blob()` instead of parsing JSON. This is why the preview frame route
   declares its 200 response explicitly: FastAPI would otherwise describe it as
   `application/json`, and the generated client would try to `JSON.parse` a JPEG.
+* **Discriminated unions, and the one route that needs one.** `POST
+  /api/v1/projects/{id}/commands` takes
+  `Annotated[MoveClipRequest | … | ReplaceTrackClipsRequest, Field(discriminator="type")]`,
+  which FastAPI documents **inline** — a `oneOf` with a discriminator mapping — rather
+  than as a `$ref`. The generator only recognised `$ref` bodies, so the operation came
+  out as `requestBody: null`: a lie in the direction that hurts, because the route
+  *requires* a body and the only way through it would have been an `as any` at every
+  call site — no contract at all, on the one endpoint every edit in the application
+  goes through. It now names a body the document did not (`applyCommand` →
+  `ApplyCommandBody`) and renders it as an ordinary schema; a route with **no** body
+  still gets `null`, because the fix is not "every route takes a body". A TypeScript
+  `|` has no discriminator, and the discriminator is the one fact a caller needs, so it
+  is written into the generated JSDoc rather than dropped.
 
 Two gates keep the seam honest, and both run in `make check`:
 
@@ -701,6 +713,83 @@ open at once without either of them knowing the other's values. The request
 carries `type: 'set-settings'`, the wire name that is also the name the journal
 records — one vocabulary, so there is no second table of names to drift.
 
+### 10.9.7 The timeline: the edit, and the window's view of it
+
+**Detail:** [`timeline.md`](timeline.md) — the geometry, the seven commands, the
+gesture state machine, the API and the error model. What follows is the short
+form, and the one decision everything else hangs from: **a drag is a picture of
+an edit, not an edit.**
+
+Four kinds of state, and the boundaries between them are the design. **The
+edit** lives in the service and is read through `GET /timeline`. **The
+selection** lives in `stores/timeline.ts` beside it, because three panes act on
+it. **The viewport** — the zoom and the scroll — lives in the pane, and is
+deliberately *not* persisted: where a user has scrolled to is not part of
+somebody else's project. **The drag in progress** lives in the pane for one
+gesture and is never sent anywhere, which is why a clip the service refuses
+simply returns to where it was — that is the only place it ever was.
+
+**One coordinate system.** The track heads are drawn *over* the content rather
+than beside it, so a row is one number the lanes, the heads, the hit test and
+the drag all agree on. Everything is painted in content coordinates
+(`contentX(layout, frame)`) and the whole content is moved by one transform per
+axis; `frameToX` and `xToFrame` are the measuring half, for a pointer in the
+viewport. Mixing the two halves is the bug where a timeline looks right until
+you scroll it, which is why a test asserts the relation between them rather than
+either one alone.
+
+**One gesture, one undo.** A drag posts nothing until it is released, and then
+posts exactly one command carrying a `gesture` token minted when the press
+began. Two commands sharing a token inside the coalescing window merge, so
+undoing a drag returns to where the drag *began* and not to the last mouse-move.
+The token is random rather than sequential, because two windows editing one
+project must not mint the same one. Three pixels of tremble
+(`CLICK_SLOP_PX`) is a click and not an edit: a clip that moved a frame because
+a hand shook is the complaint editors get most.
+
+**Selection happens on the press, not the release** — a user who grabs a clip
+has already decided they are working on it, and a selection that arrived after
+they let go is too late for the Delete they press next. But a press on a clip
+that is *already* selected keeps the whole selection, because that press is the
+beginning of a drag of all of them.
+
+**Snapping is the window's job, and its threshold is in pixels.** Eight pixels
+is a snap a thumb can feel at any zoom; eight *frames* is a snap that drags
+clips across the screen when zoomed out and does nothing when zoomed in. What
+the window does **not** do is decide whether a landing is allowed — that is the
+service's, and a snapping module that refused an overlap would be a second place
+the rule lives. Snapping either end is what makes butting a clip against the one
+*after* it possible at all; a clip excluded from its own targets is what stops
+it snapping to itself and refusing to move by less than its own length.
+
+**A refusal is the service's own sentence**, shown in the status line where the
+user was looking, and the edit it refused is not in the history. A window that
+re-worded a refusal is a window that guessed why.
+
+**`stores/timeline.ts` became a writing slice.** It still keeps nothing a
+request has not come back with — there is no optimistic move and no local
+reconciliation — but it now posts commands, holds one `gesture` id per drag,
+counts `inFlight` rather than flagging it (two drags in flight are two, and the
+second one landing must not undim a timeline the first is still holding), and
+joins a read that is already in flight rather than racing it.
+
+**One clock.** `useTransport` starts a clock, and a clock is a *window*-level
+thing: there is one playhead, and when it moves it moves for the preview, the
+timeline and the palette at the same moment. Three components each calling the
+hook gave the window three clocks, which hides until a user presses play in one
+pane and the two that did not see it keep writing the frame they think is
+right. `TransportProvider` calls it once and every pane reads
+`useTransportContext()`; the hook throws without a provider rather than quietly
+making a second one.
+
+**Not canvas, and said out loud.** `ARCHITECTURE.md` §10 plans Canvas 2D for the ruler, the
+waveforms and the thumbnail strips. Stage 7 shipped the ruler and the lanes as
+DOM moved by one transform, because at the sizes a timeline is actually viewed
+at the compositor does the whole scroll and DOM keeps every clip a real
+focusable element with a real accessible name. Canvas stays the answer for the
+two things DOM genuinely cannot hold — a waveform and a thumbnail strip — and
+both arrive with the media caches they need (stage 8).
+
 ## 10.10 The design system
 
 Built in stage 6, slice 1. Three layers, and the order between them is the design:
@@ -878,7 +967,7 @@ build.
 | No jest-dom | `expect(el.textContent).toContain(...)` says the same thing with no extra dependency. |
 | Coverage excludes `contract.ts` | It is generated; covering it tests the generator, which is a Python test. |
 
-Suites today (684 tests, 66 files, ≈ 43 s):
+Suites today (862 tests, 71 files, ≈ 42 s):
 
 | Suite | Covers |
 | --- | --- |
@@ -932,7 +1021,7 @@ Suites today (684 tests, 66 files, ≈ 43 s):
 | `core/timecode/timebase.test.ts` (10) | A rate is a fraction: an hour of 29.97 is 107,892 frames and 3,599.9964 seconds, and multiplying by a rounded 29.97 is 3,603.6 — the drift drop-frame exists to prevent. Plus rates written as text refused rather than defaulted |
 | `core/timecode/timecode.test.ts` (21) | SMPTE written and read: the two skipped frame numbers at the top of every minute that is not a tenth, no skipping at a tenth, four skips at 59.94 and not two, 23.976 treated as non-drop, hours not wrapped at 24 — and the round trip `parseTimecode(formatTimecode(f)) === f` over two thousand frames at four rates, with `null` for the timecodes that do not exist |
 | `stores/media.test.ts` (9) | A shared list: a failed read keeping the bin, a project switch emptying it first, a slow answer for the project the window left never landing in the new one, an import asking again rather than inventing the summary, and a selection that has been imported away ceasing to be a selection |
-| `stores/timeline.test.ts` (7) | The rate held as `30000/1001` and not as 29.97, the history and the crash counters held with it, a failed read keeping the edit, an answer that arrives after the window moved on dropped, and a refresh asked mid-flight honoured with exactly one more request |
+| `stores/timeline.test.ts` (33) | The rate held as `30000/1001` and not as 29.97, the history and the crash counters held with it, a failed read keeping the edit, an answer that arrives after the window moved on dropped, and a refresh asked mid-flight honoured with exactly one more request — then the editing half: one command per gesture, the **history read off the answer before the edit has arrived**, a refusal that changes nothing, a selection that follows the edit it names, a command posted with no project open refused without a request at all, and `replace-track-clips` writing a whole track that did not exist |
 | `stores/playback.test.ts` (10) | The playhead is always a whole frame and never below zero, a step that moves nothing writes nothing, and stop means back to the start |
 | `features/preview/geometry.test.ts` (7) | A frame whose headers were stripped by a proxy is drawn and not refused, the parts that are missing are defaulted, and a size it was not told is zero — which is not a size a frame has |
 | `features/preview/usePreviewFrame.test.tsx` (7) | Nothing asked before the panel is measured, an answer that arrives after a newer one was asked for thrown away, a failed frame keeping the last picture, and exactly one object URL alive — a panel that leaked one per frame would be dead in an hour |
@@ -948,6 +1037,11 @@ Suites today (684 tests, 66 files, ≈ 43 s):
 | `stores/settings.test.ts` (18) | A patch sending only the field it named, the command name travelling with it because the journal records that name, a refusal keeping the settings it had, the undo **depth** coming from the answer rather than being counted here, an empty stack reported as `false` and not as a failure, and a failed read keeping what it had |
 | `features/settings/frames.test.ts` (12) | The arithmetic: 3840×2160 and 1280×720 are the same shape, a frame of the user's own is not a preset, `1000:563` is shown as a decimal rather than rounded to a shape it is not, and a frame of nothing is answered rather than divided by |
 | `features/settings/SettingsPanel.test.tsx` (21) | What the panel does with a keyboard: three keystrokes in the width field are three letters of draft and **no request**, blur commits one, a value that came back the same posts nothing, and a value that is not a frame is put back. Then the service's voice: its sentence about what it did, its refusal printed rather than decided here. Then the draft and the answer — after an undo the field shows what the settings are, not what was typed |
+| `features/editor/timeline/layout.test.ts` (48) | Frames ⇄ pixels: the rounding at a boundary, a grab width that still finds the middle of a short clip, the gap between rows answered with `null`, both ends of the zoom ladder, a fit that fits rather than nearly fitting, a scroll held still across a zoom, and — the one that catches a whole class of bug — that **painting and measuring are the same frame seen two ways** |
+| `features/editor/timeline/snapping.test.ts` (29) | That a clip never snaps to itself, that **either end** may snap, that a tie goes to the earlier frame, that the threshold is in pixels and not frames, that a trim is clamped to the last frame a clip can lose, and that the dragged clip's own edges are not targets |
+| `features/editor/timeline/ruler.test.ts` (23) | Ticks that follow the project's seconds rather than an arbitrary frame count, an interval quantised to a ladder so zooming by a pixel cannot change every label on screen, subdivision only where it divides into whole frames, and every tick aligned to frame zero |
+| `features/editor/timeline/TimelinePanel.test.tsx` (27) | The contract between a drag and an edit: **one command per drag, posted on release**, three pixels of tremble not being an edit, a drag drawn where the pointer is before the service has agreed, a refusal putting the clip back and printing the service's sentence, a drop on another track, a click that selects so the Delete after it has a subject, and a drag of a selection that keeps the whole selection |
+| `features/editor/timeline/TimelineScrollbar.test.tsx` (25) | A thumb that is the size of the view and not a constant, floored so a very long edit is still grabbable, a press on the track jumping and a press on the thumb not, a drag measured from where it **began**, neither end escapable by drag or by key, a move from another pointer ignored, and the ARIA `scrollbar` a keyboard user needs |
 
 Type-level strictness means a test can fail to compile rather than fail to assert, which
 is why the tests route values through helpers: `const good = asResult(ok(42))` keeps the
@@ -957,8 +1051,10 @@ bundle, so `core/i18n/context.test.tsx` asking for a key no bundle has can only 
 with a deliberate cast, and the cast says so in a comment.
 
 Deliberately untested here, and where it belongs instead: pixel output (goldens in stage
-8), the WebSocket bridge (stage 5, against a real service), and canvas rendering (stage 7,
-with a headless canvas harness).
+8), the WebSocket bridge (stage 5, against a real service), and canvas rendering — which
+is a smaller claim than it was, because the timeline's ruler and lanes are DOM rather than
+canvas (§10.9.7). A headless canvas harness arrives with the first thing that genuinely
+needs one, which is a waveform (stage 8).
 
 ## 10.12 Performance strategy
 
@@ -997,7 +1093,6 @@ while CI, which has both, always runs the whole thing.
 
 | What | Stage |
 | --- | --- |
-| Commands, undo/redo and optimistic updates in `stores/` — the loop the timeline is edited through | 7 |
 | **Done (stage 6, slice 1):** the design-system foundation — the token contract, themes as data, and messages as data. `core/theme/`, `core/i18n/`, and the two panels that existed already speaking through `t()` | 6 |
 | **Done (stage 6, slice 2):** `ui/` — `cx`, `Icon`, `Spinner`, `Button`, `IconButton`, `Field`, `TextField`, `Tooltip`, `Panel`, `VisuallyHidden`, and the project list rebuilt on them | 6 |
 | **Done (stage 6, slice 3):** overlays and feedback — `Portal`, `Modal`, `Menu`, `Popover`, the toast queue and the `Toaster`, wired into the window through `ToastProvider` | 6 |
@@ -1006,8 +1101,12 @@ while CI, which has both, always runs the whole thing.
 | **Done (stage 6, slice 6):** the editor's panes — `core/timecode/` (rates as fractions, SMPTE with drop-frame, parsing that is the exact inverse of formatting), the media, timeline and playback slices, the **preview** (one frame from the service with the geometry in its headers, a transport, a timecode field), and the **inspector** (what the service says about the selected file) | 6 |
 | **Done (slice 7, backend):** a settings change is an edit — `SetSettingsCommand` on its own `UndoScope.PROJECT` stack, journalled and crash-replayable, with `GET`/`PATCH`/`undo`/`redo` under `/api/v1/projects/{id}/settings` (`api.md` §9, `services/projects/settings.py`) | 7 |
 | **Done (slice 7, frontend):** `stores/settings.ts` (the fourth slice, and the first that writes), `features/settings/` — `frames.ts`, `useProjectSettings`, `SettingsPanel` — plus two `ui/` primitives the panel needed and every later panel will: `Select` and `Switch` | 7 |
-| `features/editor/timeline/` — Canvas 2D ruler, tracks, clips, snapping, and the editing half of `stores/timeline.ts` | 7 |
-| WebGL overlay layer for preview-only gizmos | 7 |
+| **Done (slice 8, the timeline):** `features/editor/timeline/` — `layout.ts`, `snapping.ts`, `ruler.ts`, `useTimelineViewport`, `useTimelineGestures`, `TimelinePanel`, `TimelineClip`, `TimelineRuler`, `TimelineScrollbar`; the editing half of `stores/timeline.ts`; `TransportProvider` and `transport-context.ts`, which give the window one clock; and `timeline.insert` / `split` / `lift` / `select all` / `undo` / `redo` in the command registry. Detail: [`timeline.md`](timeline.md) | 7 |
+| Clip thumbnails and waveforms inside a lane (the DOM lanes are ready; the caches are not) | 8 |
+| Marquee selection, and roving tabindex inside a lane so a clip can be selected from the keyboard | 8 |
+| Drag-and-drop from the media bin onto a lane (`timeline.insert` covers the capability meanwhile) | 8 |
+| Multi-track ripple, and transitions between clips — both are in the domain already | 8 |
+| WebGL overlay layer for preview-only gizmos | 8 |
 | `features/captions/` — the Caption Studio | 9 |
 | `features/ai-studio/`, `plugins/`, `export/` | 10–12 |
 
@@ -1018,6 +1117,7 @@ while CI, which has both, always runs the whole thing.
 | Document | What it holds |
 | --- | --- |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) §10 | The section this file expands: the folder tree, docking, timeline rendering, the preview transports, theming and the i18n rule |
+| [`timeline.md`](timeline.md) | The timeline in full: the geometry, the seven commands, the gesture state machine, the API, the error model and the open decisions (§10.9.7 is its short form) |
 | [`api.md`](api.md) | The service side of every request, `problem+json`, and the WS protocol |
 | [`api-contract.json`](api-contract.json) | The generated contract |
 | `scripts/codegen_contract.py` | The generator, and `tests/scripts/test_codegen_contract.py` its tests |

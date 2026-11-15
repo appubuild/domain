@@ -39,7 +39,7 @@ import { useElementSize } from '../../ui/useElementSize';
 import { TransportBar } from './TransportBar';
 import { gapCount } from './geometry';
 import { usePreviewFrame } from './usePreviewFrame';
-import { useTransport } from './useTransport';
+import { useTransportContext } from './transport-context';
 
 /** How many device pixels to ask for per CSS pixel, at most.
  *
@@ -62,7 +62,9 @@ export function PreviewPane({ projectId }: PreviewPaneProps): React.JSX.Element 
   // wrong number a user cannot see.
   const timebase = useTimebase();
   const durationFrames = useDurationFrames();
-  const transport = useTransport(timebase);
+  // The window's transport, not one of its own: a pane that started its own
+  // clock would be a second playhead (§10.9.7).
+  const transport = useTransportContext();
   const stage = useElementSize<HTMLDivElement>();
   const zoomMenu = useAnchoredMenu();
 

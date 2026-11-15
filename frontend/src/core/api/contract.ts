@@ -12,6 +12,9 @@
 /** The service version this contract was generated from. */
 export const CONTRACT_VERSION = "0.1.0";
 
+/** Discriminated by `type`: one of `LiftClipRequest`, `MoveClipRequest`, `ReplaceTrackClipsRequest`, `RippleDeleteRequest`, `SlipClipRequest`, `SplitClipRequest`, `TrimClipRequest`. */
+export type ApplyCommandBody = MoveClipRequest | TrimClipRequest | SlipClipRequest | SplitClipRequest | LiftClipRequest | RippleDeleteRequest | ReplaceTrackClipsRequest;
+
 /**
  * What a referenced file *is*, as decided by the probe — never by its suffix.
  *
@@ -1233,6 +1236,7 @@ export interface VideoSummary {
 /** Every schema in the contract, by name — how an operation's
  *  `requestBody` and `response` strings become types. */
 export interface Schemas {
+  readonly ApplyCommandBody: ApplyCommandBody;
   readonly AssetKind: AssetKind;
   readonly AssetRef: AssetRef;
   readonly AudioSummary: AudioSummary;
@@ -1331,7 +1335,7 @@ export const OPERATIONS = {
     summary: "Apply one edit",
     pathParams: ["project_id"],
     queryParams: [],
-    requestBody: null,
+    requestBody: "ApplyCommandBody",
     response: "CommandResponse",
     success: 200,
     responseFormat: "json",

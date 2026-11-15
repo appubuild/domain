@@ -254,8 +254,49 @@ def schema_of(content: dict[str, Any]) -> tuple[str | None, str]:
     return None, "json"
 
 
-def collect_operations(doc: dict[str, Any]) -> tuple[Operation, ...]:
-    """Every operation in the document, keyed and sorted for a stable file."""
+def inline_body_name(key: str) -> str:
+    """The name the file gives a request body that has none of its own.
+
+    `applyCommand` → `ApplyCommandBody`. Prefixed rather than suffixed so the
+    schema sits next to the operation it belongs to when a reader sorts by name,
+    and suffixed `Body` rather than `Request` because a schema called
+    `ApplyCommandRequest` reads like one of the command unions the route takes
+    rather than the union *of* them.
+    """
+    return key[:1].upper() + key[1:] + "Body"
+
+
+def body_description(schema: dict[str, Any]) -> str:
+    """What to write above a synthesised body type.
+
+    A discriminated union loses its discriminator when it becomes a TypeScript
+    `|`, and the discriminator is the one fact a caller needs: it is what makes
+    the union *discriminated* — `switch (body.type)` only narrows because every
+    member carries its own literal. So it is written down instead of dropped.
+    """
+    discriminator = schema.get("discriminator") or {}
+    property_name = discriminator.get("propertyName")
+    if not isinstance(property_name, str):
+        return ""
+    mapping = discriminator.get("mapping") or {}
+    if isinstance(mapping, dict) and mapping:
+        names = ", ".join(f"`{ref_name(str(ref))}`" for ref in sorted(mapping.values()))
+        return f"Discriminated by `{property_name}`: one of {names}."
+    return f"Discriminated by `{property_name}`."
+
+
+def collect_operations(
+    doc: dict[str, Any],
+    *,
+    bodies: dict[str, dict[str, Any]] | None = None,
+) -> tuple[Operation, ...]:
+    """Every operation in the document, keyed and sorted for a stable file.
+
+    `bodies`, when given, is filled with the request-body schemas that have no
+    name of their own, keyed by the name `render` will give them. They are
+    collected here rather than in a second pass over the document because the
+    name depends on the operation key, and the key is decided here.
+    """
     taken: set[str] = set()
     found: list[Operation] = []
     for path, methods in sorted((doc.get("paths") or {}).items()):
@@ -281,6 +322,16 @@ def collect_operations(doc: dict[str, Any]) -> tuple[Operation, ...]:
                 schema = content["application/json"].get("schema") or {}
                 if "$ref" in schema:
                     request_body = ref_name(str(schema["$ref"]))
+                elif schema:
+                    # An inline body: a command union, or an object the route
+                    # did not name. It used to be dropped, which meant a route
+                    # that *required* a body was typed as taking none — and the
+                    # frontend could not call it without lying to the compiler.
+                    # It gets a name here, and `render` emits it as a schema
+                    # beside the ones the document did name.
+                    request_body = inline_body_name(key)
+                    if bodies is not None:
+                        bodies[request_body] = schema
 
             responses = body.get("responses") or {}
             success = min(
@@ -315,6 +366,20 @@ def render(doc: dict[str, Any]) -> str:
     source = Path(str(doc.get("__source__") or "docs/architecture/api-contract.json")).as_posix()
     version = str((doc.get("info") or {}).get("version") or "0.0.0")
     schemas: dict[str, Any] = (doc.get("components") or {}).get("schemas") or {}
+
+    # A route whose body is inline — a discriminated command union, say — has no
+    # name in the document, so `collect_operations` invents one and hands the
+    # schema over here. They are rendered as ordinary schemas: from the
+    # frontend's point of view there is no difference between a body the
+    # document named and one the operation's own name gave it.
+    inline: dict[str, dict[str, Any]] = {}
+    operations = collect_operations(doc, bodies=inline)
+    for name, schema in inline.items():
+        description = body_description(schema)
+        schemas = {
+            **schemas,
+            name: {**schema, "description": description} if description else schema,
+        }
 
     lines: list[str] = [
         "/**",
@@ -377,7 +442,7 @@ def render(doc: dict[str, Any]) -> str:
     lines.append("/** Every endpoint the service offers, keyed by the handler that")
     lines.append(' *  serves it. `client.run("ensureMedia", …)` is typed from this. */')
     lines.append("export const OPERATIONS = {")
-    for operation in collect_operations(doc):
+    for operation in operations:
         lines.append(f"  {_quote_key(operation.key)}: {{")
         lines.append(f'    method: "{operation.method}",')
         lines.append(f'    path: "{operation.path}",')

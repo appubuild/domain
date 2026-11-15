@@ -221,6 +221,43 @@
       "nothingToUndo": "ফেরানোর মতো কোনো সেটিংস বদল নেই।",
       "refused": "এই বদল করা হয়নি: {detail}",
       "retry": "আবার চেষ্টা করো"
+    },
+    "timeline": {
+      "heading": "\u09a4\u09be\u0987\u09ae\u09b2\u09be\u0987\u09a8",
+      "empty": "\u098f\u09a1\u09bf\u099f \u0996\u09be\u09b2\u09bf \u2014 \u098f\u0995\u099f\u09bf \u0995\u09cd\u09b2\u09bf\u09aa \u0987\u09ae\u09aa\u09cb\u09b0\u09cd\u099f \u0995\u09b0\u09b2\u09c7 \u09b8\u09c7 \u098f\u0996\u09be\u09a8\u09c7 \u09a6\u09c7\u0996\u09be \u09a6\u09be\u09ac\u09c7\u0964",
+      "loading": "\u098f\u09a1\u09bf\u099f \u09aa\u09a1\u09bc\u09be \u09b9\u099a\u09cd\u099b\u09c7\u2026",
+      "snap": "\u09b8\u09cd\u09a8\u09cd\u09af\u09be\u09aa",
+      "snapHint": "\u099f\u09be\u09a8\u09be \u0995\u09cd\u09b2\u09bf\u09aa\u099f\u09bf \u09aa\u09be\u09b6\u09c7\u09b0 \u0995\u09cd\u09b2\u09bf\u09aa\u09c7\u09b0 \u09aa\u09cd\u09b0\u09be\u09a8\u09cd\u09a4, \u09aa\u09cd\u09b2\u09c7\u09b9\u09c7\u09a1 \u0993 \u098f\u09a1\u09bf\u099f\u09c7\u09b0 \u09b6\u09c1\u09b0\u09c1\u09a4\u09c7 \u0986\u099f\u0995\u09c7 \u09af\u09be\u09ac\u09c7",
+      "follow": "\u0985\u09a8\u09c1\u09b8\u09b0\u09a3",
+      "followHint": "\u098f\u09a1\u09bf\u099f \u099a\u09b2\u09be\u09b0 \u09b8\u09ae\u09af\u09bc \u09aa\u09cd\u09b2\u09c7\u09b9\u09c7\u09a1\u0995\u09c7 \u09aa\u09b0\u09cd\u09a6\u09be\u09b0 \u09b0\u09be\u0996\u09be \u09b9\u09ac\u09c7",
+      "zoomIn": "\u099c\u09be\u09ae \u0987\u09a8",
+      "zoomOut": "\u099c\u09be\u09ae \u0986\u0989\u099f",
+      "zoomFit": "\u09aa\u09c1\u09b0\u09cb \u098f\u09a1\u09bf\u099f \u09ab\u09bf\u099f \u0995\u09b0\u09be\u0993",
+      "scroll": "\u098f\u09a1\u09bf\u099f \u09b8\u09cd\u0995\u09cd\u09b0\u09b2 \u0995\u09b0\u09be\u0993",
+      "playhead": "\u09aa\u09cd\u09b2\u09c7\u09b9\u09c7\u09a1",
+      "clipLabel": "{name}, {start} \u09a5\u09c7\u0995\u09c7 {end}",
+      "clipCount": {
+        "one": "{count} \u0995\u09cd\u09b2\u09bf\u09aa",
+        "other": "{count} \u0995\u09cd\u09b2\u09bf\u09aa"
+      },
+      "locked": "\u09b2\u0995 \u0995\u09b0\u09be",
+      "refused": "\u098f\u0987 \u098f\u09a1\u09bf\u099f \u0995\u09b0\u09be \u09af\u09be\u09df\u09a8\u09bf: {detail}",
+      "editing": "\u098f\u09a1\u09bf\u099f \u0995\u09b0\u09be \u09b9\u099a\u09cd\u099b\u09c7\u2026",
+      "selected": {
+        "one": "{count} \u0995\u09cd\u09b2\u09bf\u09aa \u09a8\u09bf\u09b0\u09cd\u09ac\u09be\u099a\u09bf\u09a4",
+        "other": "{count} \u0995\u09cd\u09b2\u09bf\u09aa \u09a8\u09bf\u09b0\u09cd\u09ac\u09be\u099a\u09bf\u09a4"
+      },
+      "commandSplit": "প্লেহেডের জায়গায় ক্লিপ কাটো",
+      "commandSplitHint": "প্লেহেড যে ক্লিপের ভেতরে আছে সেটি দুই ভাগ করে",
+      "commandLift": "নির্বাচিত ক্লিপ তুলে দাও",
+      "commandLiftHint": "ক্লিপ সরিয়ে ফাঁকা জায়গা রেখে যাবে",
+      "commandSelectAll": "সব ক্লিপ নির্বাচন করো",
+      "commandUndo": "শেষ এডিট ফিরিয়ে দাও",
+      "commandUndoHint": "এডিট, আনডু ও রিডু সবই জার্নালে লেখা হয়",
+      "commandRedo": "শেষ আনডু করা এডিট ফিরিয়ে আনো",
+      "commandRedoHint": "শেষ আনডু যা সরিয়েছিল তা আবার বসিয়ে দেবে",
+      "commandInsert": "নির্বাচিত অ্যাসেট এডিটের শেষে যোগ করো",
+      "commandInsertHint": "এটি তার ধরনের প্রথম ট্র্যাকে বসবে; ট্র্যাক না থাকলে তৈরি হবে"
     }
   }
 }

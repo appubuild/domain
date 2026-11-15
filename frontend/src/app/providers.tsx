@@ -34,6 +34,7 @@ import { createPlaybackStore, PlaybackStoreContext } from '../stores/playback';
 import { createProjectStore, ProjectStoreContext } from '../stores/project';
 import { createSettingsStore, SettingsStoreContext } from '../stores/settings';
 import { createTimelineStore, TimelineStoreContext } from '../stores/timeline';
+import { TransportProvider } from '../features/preview/TransportProvider';
 
 export interface WorkspaceProvidersProps {
   readonly client: ApiClient;
@@ -103,7 +104,9 @@ export function WorkspaceProviders({
           <TimelineStoreContext.Provider value={timeline}>
             <SettingsStoreContext.Provider value={settings}>
               <PlaybackStoreContext.Provider value={playback}>
-                {children}
+                {/* The clock starts here, and nowhere else: one transport per
+                    window (§10.9.7). */}
+                <TransportProvider>{children}</TransportProvider>
               </PlaybackStoreContext.Provider>
             </SettingsStoreContext.Provider>
           </TimelineStoreContext.Provider>

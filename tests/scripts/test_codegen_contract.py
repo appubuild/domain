@@ -165,6 +165,45 @@ def test_the_operations_table_describes_the_route_it_calls(document: dict[str, A
     assert ensure.success == 202
 
 
+def test_a_body_that_has_no_name_of_its_own_gets_one(document: dict[str, Any]) -> None:
+    """The command union is inline, because Pydantic discriminates it.
+
+    It used to be dropped: `applyCommand` was generated with `requestBody: null`,
+    which is a lie in the direction that hurts — the route *requires* a body, so
+    a typed call could not be written at all, and the workaround would have been
+    an `as any` at every call site, i.e. no contract at all.
+    """
+    operations = {
+        operation.key: operation for operation in codegen_contract.collect_operations(document)
+    }
+    assert operations["applyCommand"].request_body == "ApplyCommandBody"
+
+    rendered = codegen_contract.render(document)
+    assert "export type ApplyCommandBody =" in rendered
+    # Every member of the union, or a caller could not post half the commands.
+    for member in ("MoveClipRequest", "TrimClipRequest", "SplitClipRequest", "LiftClipRequest"):
+        assert member in rendered.split("export type ApplyCommandBody =")[1].splitlines()[0]
+
+
+def test_the_discriminator_survives_the_translation_to_a_union(document: dict[str, Any]) -> None:
+    """A TypeScript `|` has no discriminator, so the fact is written down.
+
+    It is the one thing a caller needs to know: `switch (body.type)` narrows
+    only because every member carries its own literal.
+    """
+    rendered = codegen_contract.render(document)
+    assert "Discriminated by `type`" in rendered
+
+
+def test_a_route_without_a_body_still_has_none(document: dict[str, Any]) -> None:
+    """The fix is not "every route takes a body": an empty inline schema stays
+    `null`, or `run("getTimeline", {})` would demand a payload it cannot give."""
+    operations = {
+        operation.key: operation for operation in codegen_contract.collect_operations(document)
+    }
+    assert operations["getTimeline"].request_body is None
+
+
 def test_a_route_that_answers_a_picture_is_not_a_document(document: dict[str, Any]) -> None:
     """FastAPI documents an extra `application/json` entry for the same status;
     preferring it would tell the generated client to parse a JPEG."""

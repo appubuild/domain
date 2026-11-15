@@ -497,8 +497,12 @@ waiting.
 * **Commands carry what changed.** `affected`, `invalidate` and `rerender` let the
   frontend redraw two clips instead of refetching the timeline, which is what
   makes a drag feel like a drag.
-* **Gestures coalesce.** A drag sends a command per frame; `merge_key` collapses
-  the ones sharing a `gesture` into a single undo step, so one drag is one Ctrl+Z.
+* **Gestures coalesce.** A drag *may* send a command per pointer-move, and
+  `merge_key` collapses the ones sharing a `gesture` into a single undo step, so one
+  drag is one Ctrl+Z however chatty the client was. The window built in stage 7 takes
+  this further and posts **one command on release**, so a gesture costs one round trip
+  rather than sixty — and coalescing still works, because two windows editing one
+  project can each post once for what the service must treat as one gesture.
 * **Handlers are `def`**, so a long command runs in the thread pool and does not
   stall the socket carrying render progress.
 
@@ -1047,3 +1051,4 @@ The frontend (stage 4) consumes this layer under rules that fall out of the abov
 * [`adr/ADR-0005-local-http-ws-transport.md`](adr/ADR-0005-local-http-ws-transport.md) — the transport decision and its alternatives.
 * [`services.md`](services.md) — what the routers will call.
 * [`api-contract.json`](api-contract.json) — the generated contract the frontend compiles against.
+* [`timeline.md`](timeline.md) — which gesture posts which command, and what the window does with the answer.

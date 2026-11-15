@@ -532,8 +532,9 @@ of pinned entries reports a shortfall instead of pretending it fit.
 
 ## 6. Feature: `services/timeline/`
 
-**Purpose.** Own the six structural edits — move, trim, slip, split, lift,
-ripple delete — the geometry behind them, and the one door they go through.
+**Purpose.** Own the seven structural edits — move, trim, slip, split, lift,
+ripple delete, and the one that writes a whole track — the geometry behind them,
+and the one door they go through.
 `domain/timeline.py` decides *what a timeline is*; this decides *what the user
 may do to one, and how it is undone*. Nothing here renders and nothing here
 saves: an edit ends with a new `Timeline` in the store and an entry on the undo
@@ -545,7 +546,11 @@ cut and a delete each construct a command and hand it to
 `TimelineEditor.execute(command)`; what comes back is a `CommandOutcome` naming
 the affected ids and the caches to invalidate. The Edit menu reads `can_undo` /
 `undo_label` / `can_redo`; the history panel reads `recent()`. A drag sends a
-`gesture` token so a hundred mouse-moves become one undo entry.
+`gesture` token so a hundred mouse-moves become one undo entry, and the token is
+random rather than sequential so two windows cannot mint the same one. The
+window's half of this contract — which gesture posts which command, what a drag
+draws before the service has agreed, and how a refusal is shown — is
+[`timeline.md`](timeline.md).
 
 **Class diagram.**
 

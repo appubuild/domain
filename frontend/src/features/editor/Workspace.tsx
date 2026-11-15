@@ -22,31 +22,39 @@
  *    registered here and not in the shell because they mean something only while
  *    a project is being edited, and a global `Space` on the home screen would
  *    scroll instead.
+ *  * **The edit commands.** `S` splits at the playhead, `Delete` lifts what is
+ *    selected, `Ctrl+Z` undoes. They are here for the same reason, and for one
+ *    more: an edit is a command posted through the timeline slice, and a pane
+ *    that registered its own would be a second place the keys were bound — the
+ *    palette would show one, the keyboard would run the other.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { useI18n } from '../../core/i18n/context';
 import type { Command } from '../../app/commands';
+import { type I18n, useI18n } from '../../core/i18n/context';
 import { useRegisterCommands } from '../../app/useCommands';
-import { useMediaStoreApi } from '../../stores/media';
-import { usePlaybackStoreApi } from '../../stores/playback';
+import type { ClipSpec, ClipSummary, MediaAssetSummary, TrackKind } from '../../core/api/contract';
+import { secondsToFrames, type Timebase } from '../../core/timecode/timebase';
+import { useMediaStoreApi, type MediaStore } from '../../stores/media';
+import { usePlaybackStoreApi, type PlaybackStore } from '../../stores/playback';
 import { useSettingsStoreApi } from '../../stores/settings';
-import { useTimebase, useTimelineStoreApi } from '../../stores/timeline';
+import { useTimelineStoreApi, type TimelineState, type TimelineStore } from '../../stores/timeline';
 import { Dock } from '../../ui/Dock';
 import { type DockNode, leaf, split } from '../../ui/dock';
 import { Inspector } from '../inspector/Inspector';
 import { MediaBin } from '../media/MediaBin';
 import { PreviewPane } from '../preview/PreviewPane';
-import { useTransport } from '../preview/useTransport';
+import { useTransportContext } from '../preview/transport-context';
 import { SettingsPanel } from '../settings/SettingsPanel';
+import { TimelinePanel } from './timeline/TimelinePanel';
 
 export interface WorkspaceProps {
   readonly projectId: string;
 }
 
 /** Which panes exist, and what they are called. The dock only knows ids. */
-type PaneId = 'preview' | 'media' | 'inspector' | 'settings';
+type PaneId = 'preview' | 'timeline' | 'media' | 'inspector' | 'settings';
 
 export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
   const { t } = useI18n();
@@ -54,25 +62,28 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
   const timeline = useTimelineStoreApi();
   const playback = usePlaybackStoreApi();
   const settings = useSettingsStoreApi();
-  const timebase = useTimebase();
 
   const [layout, setLayout] = useState<DockNode>(() =>
-    // Preview wide, the three property surfaces stacked on the right: the
-    // picture is the thing an editor looks at, and a bin, an inspector and a
-    // settings panel are things it looks things up in.
+    // Preview above the timeline, the three property surfaces stacked on the
+    // right: the picture is what an editor watches, the timeline is what it
+    // works in, and a bin, an inspector and a settings panel are things it looks
+    // things up in. The timeline is under the picture rather than beside it
+    // because an edit is read left to right, and a timeline that was a third of
+    // the window wide would be a timeline you cannot see a cut in.
     split(
       'row',
       [
-        leaf('preview'),
+        split('column', [leaf('preview'), leaf('timeline')], [0.62, 0.38]),
         split('column', [leaf('media'), leaf('inspector'), leaf('settings')], [0.4, 0.3, 0.3]),
       ],
-      [0.7, 0.3],
+      [0.72, 0.28],
     ),
   );
 
   const labels = useMemo<Record<PaneId, string>>(
     () => ({
       preview: t('preview.heading'),
+      timeline: t('timeline.heading'),
       media: t('media.heading'),
       inspector: t('inspector.heading'),
       settings: t('settings.heading'),
@@ -97,7 +108,9 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
     [playback],
   );
 
-  const transport = useTransport(timebase);
+  // The window's transport — the one the provider started, and not a second
+  // clock of this screen's own.
+  const transport = useTransportContext();
 
   const commands = useMemo<readonly Command[]>(
     () => [
@@ -157,8 +170,9 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
           transport.setZoom(nextZoom(transport.zoom, -1));
         },
       },
+      ...editCommands({ t, timeline, playback, media }),
     ],
-    [t, transport],
+    [t, transport, timeline, playback, media],
   );
   useRegisterCommands(commands);
 
@@ -172,6 +186,8 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
         switch (id) {
           case 'preview':
             return <PreviewPane projectId={projectId} />;
+          case 'timeline':
+            return <TimelinePanel />;
           case 'media':
             return <MediaBin projectId={projectId} />;
           case 'inspector':
@@ -189,6 +205,180 @@ export function Workspace({ projectId }: WorkspaceProps): React.JSX.Element {
       }}
     />
   );
+}
+
+/** The edits a keyboard makes.
+ *
+ *  Splitting, lifting, undoing and selecting are here rather than in the
+ *  timeline pane for the same reason the transport's are: a key belongs to the
+ *  window, and a pane that bound its own would be a second place the keyboard
+ *  was wired — the palette would show one binding and the pane would run
+ *  another.
+ *
+ *  Each one reads the slice at the moment it is pressed, and posts a command.
+ *  Nothing here decides whether an edit is allowed: the service says, and the
+ *  timeline shows what it said.
+ */
+function editCommands({
+  t,
+  timeline,
+  playback,
+  media,
+}: {
+  readonly t: I18n['t'];
+  readonly timeline: TimelineStore;
+  readonly playback: PlaybackStore;
+  readonly media: MediaStore;
+}): readonly Command[] {
+  const state = (): TimelineState => timeline.getState();
+
+  /** The clip the playhead is inside of, preferring the ones that are selected.
+   *
+   *  `start < at < end` and not `start <= at <= end`: cutting on a clip's own
+   *  edge makes a second clip of zero frames, which is not a clip.
+   */
+  function underPlayhead(): ClipSummary | null {
+    const at = playback.getState().frame;
+    const tracks = state().timeline?.tracks ?? [];
+    const clips = tracks.flatMap((track) => track.clips);
+    const selected = state().selectedClipIds;
+    return (
+      clips.find(
+        (clip) => selected.has(clip.clip_id) && clip.start_frame < at && at < clip.end_frame,
+      ) ??
+      clips.find((clip) => clip.start_frame < at && at < clip.end_frame) ??
+      null
+    );
+  }
+
+  return [
+    {
+      id: 'timeline.insert',
+      title: t('timeline.commandInsert'),
+      hint: t('timeline.commandInsertHint'),
+      icon: 'plus',
+      run: () => {
+        const assetId = media.getState().selectedId;
+        if (assetId === null) return;
+        const asset = media.getState().assets.find((item) => item.asset_id === assetId);
+        if (asset === undefined) return;
+        appendAsset({ timeline, asset });
+      },
+    },
+    {
+      id: 'timeline.split',
+      title: t('timeline.commandSplit'),
+      hint: t('timeline.commandSplitHint'),
+      shortcut: 'S',
+      icon: 'scissors',
+      run: () => {
+        const clip = underPlayhead();
+        if (clip === null) return;
+        void state().split({ clipId: clip.clip_id, atFrame: playback.getState().frame });
+      },
+    },
+    {
+      id: 'timeline.lift',
+      title: t('timeline.commandLift'),
+      hint: t('timeline.commandLiftHint'),
+      shortcut: 'Delete',
+      icon: 'trash',
+      run: () => {
+        // Lifted one at a time and not as one command: there is no
+        // `lift-clips`, and inventing one so a keypress could be a single undo
+        // entry would be a command the journal has to know about forever.
+        for (const clipId of state().selectedClipIds) void state().lift(clipId);
+      },
+    },
+    {
+      id: 'timeline.selectAll',
+      title: t('timeline.commandSelectAll'),
+      shortcut: 'Ctrl+A',
+      run: () => {
+        const tracks = state().timeline?.tracks ?? [];
+        state().selectMany(tracks.flatMap((track) => track.clips.map((clip) => clip.clip_id)));
+      },
+    },
+    {
+      id: 'edit.undo',
+      title: t('timeline.commandUndo'),
+      hint: t('timeline.commandUndoHint'),
+      shortcut: 'Ctrl+Z',
+      icon: 'undo',
+      run: () => {
+        void state().undo();
+      },
+    },
+    {
+      id: 'edit.redo',
+      title: t('timeline.commandRedo'),
+      hint: t('timeline.commandRedoHint'),
+      shortcut: 'Ctrl+Shift+Z',
+      icon: 'redo',
+      run: () => {
+        void state().redo();
+      },
+    },
+  ];
+}
+
+/** Put an asset on the timeline: at the end of its first video track.
+ *
+ *  The command that does it is `replace-track-clips`, which is what the union
+ *  offers — there is no `insert-clip`, and there is a reason: the only way to
+ *  describe "this track now holds these clips" is to name them all, and an
+ *  insert that named only the new one would leave the service to guess what
+ *  happened to the rest. So the track is read, one clip is appended, and the
+ *  whole track is written back. One command, one undo.
+ *
+ *  The track is created when it is not there yet, which is why an empty
+ *  timeline can accept a clip without anyone having made a track first.
+ */
+function appendAsset({
+  timeline,
+  asset,
+}: {
+  readonly timeline: TimelineStore;
+  readonly asset: MediaAssetSummary;
+}): void {
+  const state = timeline.getState();
+  const tracks = state.timeline?.tracks ?? [];
+  const timebase: Timebase = state.timeline?.timebase ?? { num: 30, den: 1 };
+  const kind: TrackKind = asset.kind === 'audio' ? 'audio' : 'video';
+
+  const track = tracks.find((item) => item.kind === kind && !item.locked) ?? null;
+  const existing: ClipSpec[] = (track?.clips ?? []).map((clip) => ({
+    asset_id: clip.asset_id,
+    clip_id: clip.clip_id,
+    name: clip.name,
+    kind: clip.kind,
+    start_frame: clip.start_frame,
+    in_frame: clip.in_frame,
+    source_frames: clip.out_frame - clip.in_frame,
+    enabled: clip.enabled,
+  }));
+
+  // Appended, not placed: an asset arrives at the end of the edit, and where it
+  // goes after that is a drag — which is what the timeline is for.
+  const startFrame = (track?.clips ?? []).reduce((end, clip) => Math.max(end, clip.end_frame), 0);
+  const seconds = asset.duration_seconds;
+  const sourceFrames = seconds > 0 ? secondsToFrames(seconds, timebase) : 0;
+
+  void state.replaceTrackClips({
+    trackId: track?.track_id ?? (kind === 'audio' ? 'a1' : 'v1'),
+    kind,
+    create: true,
+    clips: [
+      ...existing,
+      {
+        asset_id: asset.asset_id,
+        name: asset.name,
+        kind: asset.kind === 'audio' ? 'audio' : 'video',
+        start_frame: startFrame,
+        ...(sourceFrames > 0 ? { source_frames: sourceFrames } : {}),
+      },
+    ],
+  });
 }
 
 const ZOOM_STEPS: readonly number[] = [0.25, 0.5, 1, 2, 4];

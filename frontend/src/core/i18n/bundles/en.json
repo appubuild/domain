@@ -221,6 +221,43 @@
       "nothingToUndo": "There is no settings change to undo.",
       "refused": "That change was not made: {detail}",
       "retry": "Try again"
+    },
+    "timeline": {
+      "heading": "Timeline",
+      "empty": "The edit is empty \u2014 import a clip and it will appear here.",
+      "loading": "Reading the edit\u2026",
+      "snap": "Snap",
+      "snapHint": "Pull a dragged clip to the edges of its neighbours, the playhead, and the start of the edit",
+      "follow": "Follow",
+      "followHint": "Keep the playhead on screen while the edit plays",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "zoomFit": "Fit the whole edit",
+      "scroll": "Scroll the edit",
+      "playhead": "Playhead",
+      "clipLabel": "{name}, {start} to {end}",
+      "clipCount": {
+        "one": "{count} clip",
+        "other": "{count} clips"
+      },
+      "locked": "Locked",
+      "refused": "That edit was refused: {detail}",
+      "editing": "Editing\u2026",
+      "selected": {
+        "one": "{count} clip selected",
+        "other": "{count} clips selected"
+      },
+      "commandSplit": "Split the clip at the playhead",
+      "commandSplitHint": "Cuts the clip the playhead is inside of in two",
+      "commandLift": "Lift the selected clips",
+      "commandLiftHint": "Takes them out and leaves the gap behind",
+      "commandSelectAll": "Select every clip",
+      "commandUndo": "Undo the last edit",
+      "commandUndoHint": "The edit, the undo and the redo are all journalled",
+      "commandRedo": "Redo the last undone edit",
+      "commandRedoHint": "Puts back what the last undo took out",
+      "commandInsert": "Add the selected asset to the end of the edit",
+      "commandInsertHint": "Puts it on the first track of its kind, making the track if there is none"
     }
   }
 }

@@ -695,10 +695,13 @@ frontend/src
 * **Docking:** a `DockManager` owns a tree of panels; every panel is resizable, collapsible,
   draggable between docks, and its layout is persisted per-project (`ui_layout` table).
   Layout is *data*, so themes/plugins/users can ship layouts.
-* **Timeline rendering:** DOM for the track headers and clip chrome; **Canvas 2D** for the
-  ruler, waveforms and thumbnail strips (thousands of elements — DOM would not survive).
-  Virtualised by visible time range; redraws are batched in `requestAnimationFrame` and
-  driven by a dirty-region model.
+* **Timeline rendering:** the track heads and the clip chrome are DOM; the whole content is
+  moved by **one transform per axis**, so a scroll costs the browser a composited layer
+  rather than a layout pass over every clip on screen. Lanes are virtualised by visible
+  time range. **Canvas 2D** remains the answer for the two things DOM genuinely cannot
+  hold — a waveform and a thumbnail strip — and both arrive with the caches that feed
+  them (stage 8); until then a canvas ruler would cost a focusable element per clip and
+  buy nothing a transform does not already do.
 * **Preview:** the backend composites; the frontend displays. Two transports:
   (a) HTTP MJPEG/WebP frame stream for compatibility, (b) shared-memory/binary WS frames in
   the desktop shell for zero-copy. A WebGL layer on top handles preview-only overlays
@@ -747,6 +750,28 @@ at a time would journal four undo entries for one decision. Two `ui/` primitives
 with it: `Select` and `Switch`. The timeline fills the rest of the dock.
 Detail: [`frontend.md`](frontend.md) §10.9.4, §10.9.5, §10.9.6 and §10.10;
 [`api.md`](api.md) §9; [`services.md`](services.md) §4.
+
+**Built in stage 7: the timeline.** [`timeline.md`](timeline.md) is the whole
+specification; the short form is that the pane is built on one sentence — **a drag is a
+picture of an edit, not an edit**. The edit lives in the service and is read through
+`GET /timeline`; the selection lives beside it in `stores/timeline.ts`; the zoom and the
+scroll live in the pane and are deliberately *not* persisted, because where a user has
+scrolled to is not part of somebody else's project; and the drag in progress lives in the
+pane for one gesture and is never sent anywhere, which is why a clip the service refuses
+returns to where it was — that is the only place it ever was. A drag posts **one command
+on release**, carrying a random `gesture` token so a hundred mouse-moves become one undo
+entry in two windows at once. Snapping is the window's job and its threshold is in
+*pixels*; whether a landing is allowed is the service's, and a snapping module that
+refused an overlap would be a second place the rule lives. Seven commands — move, trim,
+slip, split, lift, ripple delete and `replace-track-clips` — are the only way a timeline
+changes, and `replace-track-clips` is how a clip gets onto one at all: the only honest way
+to say "this track now holds these clips" is to name them all, and it is the command the
+caption engine will write a whole caption track with (stage 9). One clock: `useTransport`
+is called once by `TransportProvider` and read through `useTransportContext()` everywhere
+else, because three components calling the hook gave the window three clocks that fought
+over the playhead. 178 new frontend tests — 862 in total, across 71 files — and the backend suite at 4,883.
+Detail: [`timeline.md`](timeline.md); [`frontend.md`](frontend.md) §10.9.7;
+[`services.md`](services.md) §6; [`api.md`](api.md) §9.
 
 ---
 
@@ -830,6 +855,7 @@ CI runs these in order and stops at the first failure. `make check` runs all of 
 | `services.md` | L3: feature layout, `Result` discipline, the effect, project, media, timeline, render and caption catalogues |
 | `plugin-sdk.md` | How to write a plugin |
 | `frontend.md` | §10 of this document: the window's toolchain, the contract seam, the API client, the error model, state management, theming, testing and performance · **written** |
+| `timeline.md` | The timeline in full: the domain of an edit, the seven commands, the geometry and the snapping, the gesture state machine, the pane's four kinds of state, the API, the error model, performance and the open decisions · **written** |
 | `render-pipeline.md` | Frame pipeline detail |
 | `testing-strategy.md` | Test pyramid, fixtures, media generation |
 | `performance-budgets.md` | Measured budgets per subsystem |
