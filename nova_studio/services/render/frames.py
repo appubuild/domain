@@ -33,10 +33,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from fractions import Fraction
 from typing import TYPE_CHECKING
 
 from nova_studio.domain.effects import EffectTarget
-from nova_studio.domain.timeline import TrackKind, TransitionEdge, bake_transition
+from nova_studio.domain.timeline import (
+    FrameInterpolation,
+    TrackKind,
+    TransitionEdge,
+    bake_transition,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
@@ -129,6 +135,11 @@ class LayerPlan:
     transition: TransitionMix | None = None
     #: Which side of the transition this layer is, if any.
     transition_role: TransitionRole | None = None
+    #: Exact possibly-fractional source-frame index. Nearest sampling uses the
+    #: integer `source_frame`; frame blending uses the adjacent decoded frames.
+    source_position: Fraction = Fraction(0)
+    #: How to turn a fractional source position into output pixels.
+    frame_interpolation: FrameInterpolation = FrameInterpolation.NEAREST
 
     @property
     def clip_id(self) -> str:
@@ -156,7 +167,7 @@ class LayerPlan:
         return self.transition_role is TransitionRole.INCOMING
 
     def decode(self) -> DecodeRequest | None:
-        """What to read for this layer, or ``None`` for a generated one."""
+        """The legacy nearest-frame request, or ``None`` for a generated one."""
         if not self.needs_decode:
             return None
         return DecodeRequest(
@@ -165,6 +176,39 @@ class LayerPlan:
             source_frame=self.source_frame,
             source=self.source,
         )
+
+    def decode_requests(self) -> tuple[DecodeRequest, ...]:
+        """Every source picture this layer needs for temporal sampling.
+
+        Frame blending reads both neighbours of a fractional source position.
+        Integer positions still issue one request, so normal-speed playback
+        adds no decode or cache cost.
+        """
+        if not self.needs_decode:
+            return ()
+        frames: tuple[int, ...]
+        if self.frame_interpolation is FrameInterpolation.FRAME_BLEND:
+            lower = self.source_position.numerator // self.source_position.denominator
+            frames = (lower,) if self.source_position == lower else (lower, lower + 1)
+        else:
+            frames = (self.source_frame,)
+        return tuple(
+            DecodeRequest(
+                clip_id=self.clip.clip_id,
+                asset_id=self.clip.asset_id,
+                source_frame=source_frame,
+                source=self.source,
+            )
+            for source_frame in frames
+        )
+
+    @property
+    def blend_weight(self) -> Fraction:
+        """Weight of the upper source frame in a frame-blended sample."""
+        if self.frame_interpolation is not FrameInterpolation.FRAME_BLEND:
+            return Fraction(0)
+        lower = self.source_position.numerator // self.source_position.denominator
+        return self.source_position - lower
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -220,11 +264,11 @@ class FramePlan:
         seen: set[tuple[str, int, str]] = set()
         requests: list[DecodeRequest] = []
         for layer in self.layers:
-            request = layer.decode()
-            if request is None or request.key in seen:
-                continue
-            seen.add(request.key)
-            requests.append(request)
+            for request in layer.decode_requests():
+                if request.key in seen:
+                    continue
+                seen.add(request.key)
+                requests.append(request)
         return tuple(requests)
 
     @property
@@ -264,10 +308,18 @@ def plan_frame(
     position_of: dict[str, int] = {}
 
     def layer_for(clip: Clip, track: Track, *, source_frame: int | None = None) -> LayerPlan:
+        selected_frame = clip.source_frame_at(frame) if source_frame is None else source_frame
+        source_position = (
+            clip.source_position_at(frame)
+            if source_frame is None and clip.frame_interpolation is FrameInterpolation.FRAME_BLEND
+            else Fraction(selected_frame)
+        )
         return LayerPlan(
             clip=clip,
             track=track,
-            source_frame=(clip.source_frame_at(frame) if source_frame is None else source_frame),
+            source_frame=selected_frame,
+            source_position=source_position,
+            frame_interpolation=clip.frame_interpolation,
             source=chosen.get(clip.asset_id, default_source),
             transform=project.transform_for(clip.clip_id),
             effects=_chains(project, clip_id=clip.clip_id, track_id=track.track_id),

@@ -30,6 +30,7 @@ correctness-only test suite never finds.
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -41,7 +42,7 @@ from nova_studio.core.result import err, ok
 from nova_studio.core.temporal import Timebase
 from nova_studio.domain.export import RenderStats
 from nova_studio.domain.project import FrameSize, Project, ProjectSettings
-from nova_studio.domain.timeline import Clip, Timeline, Track, TrackKind
+from nova_studio.domain.timeline import Clip, FrameInterpolation, Timeline, Track, TrackKind
 from nova_studio.infra.imaging import OpenCVImageOps
 from nova_studio.services.render.loop import render_frames, render_preview_frame
 from nova_studio.services.render.pool import FrameSourcePool
@@ -167,6 +168,24 @@ class TestRenderingARange:
         decoder = FakeDecoder({"a1.mp4": FakeClip(frame_count=60)})
         with _pool(decoder, "a1") as pool:
             render_frames(_project(_clip()), range(30), pool=pool, ops=OPS, sink=FakeSink())
+        assert decoder.total_seeks == 1
+
+    def test_frame_blending_uses_both_decoded_frames_in_the_render_loop(self) -> None:
+        clip = Clip.of(
+            "c1",
+            "a1",
+            source_frames=10,
+            speed=Fraction(1, 2),
+            frame_interpolation=FrameInterpolation.FRAME_BLEND,
+        )
+        decoder = FakeDecoder({"a1.mp4": FakeClip(frame_count=10)})
+        sink = FakeSink()
+        with _pool(decoder, "a1") as pool:
+            outcome = render_frames(_project(clip), [1], pool=pool, ops=OPS, sink=sink)
+
+        assert outcome.ok
+        assert outcome.gap_frames == 0
+        assert _grey(sink.frames[0]) == 1
         assert decoder.total_seeks == 1
 
 

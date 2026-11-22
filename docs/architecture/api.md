@@ -430,6 +430,12 @@ The union is discriminated by `type`, and `type` is also the name the journal
 records — one vocabulary, so a replay rebuilds the command the frontend asked
 for rather than looking it up in a second table that could drift.
 
+`replace-track-clips` accepts `ClipSpec.speed` as an exact rational string
+(`"1/2"`, `"-3/2"`); a zero rate is refused before journalling. The read DTO
+keeps `speed` as a display number for existing clients and adds `speed_rational`
+for an exact round trip. `frame_interpolation` selects `nearest` or
+`frame-blend`; it defaults to `nearest` for old clients and old project files.
+
 ### Class diagram
 
 ```

@@ -160,8 +160,53 @@ class TestReadingTheTimeline:
             "in_frame": 0,
             "out_frame": 100,
             "speed": 1.0,
+            "speed_rational": "1/1",
+            "frame_interpolation": "nearest",
             "enabled": True,
         }
+
+    def test_a_slow_clip_can_request_temporal_frame_blending(
+        self, client: TestClient, auth: dict[str, str]
+    ) -> None:
+        project_id = create(client, auth)
+        (clip_id,) = seed(
+            client,
+            auth,
+            project_id,
+            {
+                "asset_id": "a1",
+                "kind": "video",
+                "name": "slow motion",
+                "start_frame": 0,
+                "in_frame": 0,
+                "source_frames": 20,
+                "speed": "2/4",
+                "frame_interpolation": "frame-blend",
+            },
+        )
+
+        clip = clip_at(client, auth, project_id, clip_id)
+
+        assert clip["speed"] == 0.5
+        assert clip["speed_rational"] == "1/2"
+        assert clip["duration_frames"] == 40
+        assert clip["frame_interpolation"] == "frame-blend"
+
+    def test_a_stopped_clip_rate_is_rejected_at_the_api_boundary(
+        self, client: TestClient, auth: dict[str, str]
+    ) -> None:
+        project_id = create(client, auth)
+        response = command(
+            client,
+            auth,
+            project_id,
+            type="replace-track-clips",
+            track_id="v1",
+            kind="video",
+            clips=[{"asset_id": "a1", "speed": "0/1"}],
+        )
+
+        assert response.status_code == 422
 
     def test_a_project_that_is_not_open_has_no_timeline(
         self, client: TestClient, auth: dict[str, str]

@@ -199,7 +199,7 @@ The session database, if any, is a derived index rebuilt from it on open.
     {"clips":[
        {"asset_id":"01J8ZZ9K3M4N5P6Q7R8S9T0V2X","clip_id":"c1","enabled":true,
         "in_frame":0,"kind":"video","name":"","out_frame":180,"speed":"1/1",
-        "start_frame":0}],
+        "frame_interpolation":"nearest","start_frame":0}],
      "hidden":false,"index":0,"kind":"video","locked":false,"muted":false,
      "name":"","track_id":"v1","transitions":[]}
   ]
@@ -212,6 +212,10 @@ The session database, if any, is a derived index rebuilt from it on open.
 * Positions are **integer frames**, never seconds and never floats (ADR-0006).
 * `speed` is a rational written as `"num/den"`; `1/1` is normal, `-1/1` is
   reversed.
+* `frame_interpolation` is `"nearest"` (the backwards-compatible default) or
+  `"frame-blend"` (decode both neighbors of a fractional source position and
+  blend them before effects). Older timeline documents without the field load
+  as `nearest`; an unrecognized value is rejected rather than guessed.
 * A clip whose `kind` is generated (`solid`, `text`, `adjustment`, `caption`)
   has an empty `asset_id`, and that is valid.
 

@@ -271,6 +271,11 @@
             "title": "Enabled",
             "type": "boolean"
           },
+          "frame_interpolation": {
+            "$ref": "#/components/schemas/FrameInterpolation",
+            "default": "nearest",
+            "description": "Temporal sampling for fractional source-frame positions."
+          },
           "in_frame": {
             "default": 0,
             "description": "First source frame shown.",
@@ -296,6 +301,13 @@
             "minimum": 1.0,
             "title": "Source Frames",
             "type": "integer"
+          },
+          "speed": {
+            "default": "1/1",
+            "description": "Exact rational playback rate, e.g. 1/2 or -3/2; negative values play backwards.",
+            "pattern": "^-?[0-9]+/[1-9][0-9]*$",
+            "title": "Speed",
+            "type": "string"
           },
           "start_frame": {
             "default": 0,
@@ -340,6 +352,10 @@
             "title": "End Frame",
             "type": "integer"
           },
+          "frame_interpolation": {
+            "$ref": "#/components/schemas/FrameInterpolation",
+            "description": "Temporal sampling for fractional source frames."
+          },
           "in_frame": {
             "description": "First source frame shown.",
             "title": "In Frame",
@@ -360,9 +376,14 @@
             "type": "integer"
           },
           "speed": {
-            "description": "Playback rate; 1.0 is normal, 0.5 is half.",
+            "description": "Playback rate for display; 1.0 is normal, 0.5 is half.",
             "title": "Speed",
             "type": "number"
+          },
+          "speed_rational": {
+            "description": "Exact playback rate, as a reduced num/den rational for editing.",
+            "title": "Speed Rational",
+            "type": "string"
           },
           "start_frame": {
             "description": "Where it starts on the timeline.",
@@ -381,6 +402,8 @@
           "in_frame",
           "out_frame",
           "speed",
+          "speed_rational",
+          "frame_interpolation",
           "enabled"
         ],
         "title": "ClipSummary",
@@ -725,6 +748,15 @@
         ],
         "title": "ExportSubmission",
         "type": "object"
+      },
+      "FrameInterpolation": {
+        "description": "How a fractional source-frame position becomes one output picture.\n\nFrame blending is a temporal resampling choice, distinct from the spatial\ninterpolation in :mod:`nova_studio.ports.imaging`. Optical-flow synthesis\nis intentionally a separate future mode: it must be an injected, testable\nstage rather than a silently selected OpenCV side effect.",
+        "enum": [
+          "nearest",
+          "frame-blend"
+        ],
+        "title": "FrameInterpolation",
+        "type": "string"
       },
       "FrameSizeSpec": {
         "additionalProperties": false,

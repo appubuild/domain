@@ -115,6 +115,8 @@ export interface ClipSpec {
   clip_id?: string;
   /** Whether it is part of the output. */
   enabled?: boolean;
+  /** Temporal sampling for fractional source-frame positions. */
+  frame_interpolation?: FrameInterpolation;
   /** First source frame shown. */
   in_frame?: number;
   /** What kind of clip it is. */
@@ -123,6 +125,8 @@ export interface ClipSpec {
   name?: string;
   /** How many source frames it shows. */
   source_frames?: number;
+  /** Exact rational playback rate, e.g. 1/2 or -3/2; negative values play backwards. */
+  speed?: string;
   /** Where it starts on the timeline. */
   start_frame?: number;
 }
@@ -145,6 +149,8 @@ export interface ClipSummary {
   enabled: boolean;
   /** Where it ends, exclusive. */
   end_frame: number;
+  /** Temporal sampling for fractional source frames. */
+  frame_interpolation: FrameInterpolation;
   /** First source frame shown. */
   in_frame: number;
   /** What kind of clip it is. */
@@ -153,8 +159,10 @@ export interface ClipSummary {
   name: string;
   /** Last source frame shown, exclusive. */
   out_frame: number;
-  /** Playback rate; 1.0 is normal, 0.5 is half. */
+  /** Playback rate for display; 1.0 is normal, 0.5 is half. */
   speed: number;
+  /** Exact playback rate, as a reduced num/den rational for editing. */
+  speed_rational: string;
   /** Where it starts on the timeline. */
   start_frame: number;
 }
@@ -289,6 +297,16 @@ export interface ExportSubmission {
   /** Where the job was when the answer was written. */
   status: string;
 }
+
+/**
+ * How a fractional source-frame position becomes one output picture.
+ *
+ * Frame blending is a temporal resampling choice, distinct from the spatial
+ * interpolation in :mod:`nova_studio.ports.imaging`. Optical-flow synthesis
+ * is intentionally a separate future mode: it must be an injected, testable
+ * stage rather than a silently selected OpenCV side effect.
+ */
+export type FrameInterpolation = "nearest" | "frame-blend";
 
 /**
  * A frame size to set.
@@ -1254,6 +1272,7 @@ export interface Schemas {
   readonly EnsureMediaResponse: EnsureMediaResponse;
   readonly EventEnvelopeWire: EventEnvelopeWire;
   readonly ExportSubmission: ExportSubmission;
+  readonly FrameInterpolation: FrameInterpolation;
   readonly FrameSizeSpec: FrameSizeSpec;
   readonly FrameSizeSummary: FrameSizeSummary;
   readonly HealthResponse: HealthResponse;

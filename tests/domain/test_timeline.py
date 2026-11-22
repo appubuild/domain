@@ -41,6 +41,7 @@ from nova_studio.domain.timeline import (
     Clip,
     ClipContribution,
     ClipKind,
+    FrameInterpolation,
     Marker,
     ResolvedFrame,
     Timeline,
@@ -196,6 +197,24 @@ class TestClip:
         clip = Clip.of("c", "a", in_frame=0, source_frames=100, speed=Rational(2))
         assert clip.source_frame_at(0) == 0
         assert clip.source_frame_at(10) == 20
+
+    def test_the_exact_source_position_retains_fractional_slow_motion(self) -> None:
+        clip = Clip.of("c", "a", source_frames=10, speed=Rational(1, 2))
+        assert clip.source_position_at(1) == Rational(1, 2)
+        assert clip.source_frame_at(1) == 0
+
+    def test_frame_interpolation_is_persisted(self) -> None:
+        clip = Clip.of(
+            "c",
+            "a",
+            source_frames=10,
+            speed=Rational(1, 2),
+            frame_interpolation=FrameInterpolation.FRAME_BLEND,
+        )
+        assert Clip.from_wire(_round_trip(clip.to_wire())) == clip
+        legacy = clip.to_wire()
+        legacy.pop("frame_interpolation")
+        assert Clip.from_wire(_round_trip(legacy)).frame_interpolation is FrameInterpolation.NEAREST
 
     def test_reverse_reads_the_source_from_the_end(self) -> None:
         clip = Clip.of("c", "a", in_frame=0, source_frames=100, speed=Rational(-1))

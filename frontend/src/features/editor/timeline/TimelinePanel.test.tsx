@@ -59,6 +59,8 @@ function clip(clipId: string, start: number, duration: number): ClipSummary {
     in_frame: 0,
     out_frame: duration,
     speed: 1,
+    speed_rational: '1/1',
+    frame_interpolation: 'nearest',
     enabled: true,
   };
 }

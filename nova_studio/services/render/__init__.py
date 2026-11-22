@@ -62,7 +62,8 @@ per asset.
 | --- | --- |
 | `plan_frame(project, frame, sources)` | "what is this frame made of" |
 | `plan_frames(project, frames, sources)` | the same, lazily, for a range |
-| `FramePlan.decodes()` | "which pictures do I need, deduplicated" |
+| `FramePlan.decodes()` | "which pictures do I need, deduplicated" — one for nearest, up to two for fractional frame blending |
+| `LayerPlan.decode_requests()` | the source-frame neighbors used by its temporal sampling mode |
 | `fit_scale(w, h, viewport)` | "how big can this be drawn" |
 | `preview_size(w, h, viewport, zoom)` | "what size do I composite at" |
 | `warm_frames(playhead, count, last_frame)` | "what should already be decoded" |
@@ -130,8 +131,10 @@ that knows what is worth keeping.
 **Performance.** `plan_frame` is O(layers at this frame) — one `resolve` plus a
 few tuple lookups — and pure, so a renderer can plan a frame while the previous
 one composites. `decodes()` deduplicates, so a split clip left in place costs
-one read and not two. Neutral grades and empty chains are dropped at plan time
-rather than tested per frame.
+one read and not two. Nearest sampling stays one read; frame blending adds one
+only when the exact source position is fractional, and an integer position
+still costs one. Neutral grades and empty chains are dropped at plan time rather
+than tested per frame.
 
 The composite is one `warpAffine` per layer and one float round trip per effect
 chain, and a neutral grade costs nothing at all. The number to watch is the
@@ -145,13 +148,18 @@ only way to catch it is to count.
 per-layer effect and grade ordering, that generated clips ask for no decode,
 that duplicate reads collapse, that an empty frame plans as empty, and that a
 transition plans both its pictures in the right order — including the centred
-dissolve's first half, which the domain alone does not surface.
+dissolve's first half, which the domain alone does not surface — and that frame
+blending asks for exactly the two neighbors of a fractional position, but only
+one at an integral position.
 `tests/services/test_render_preview.py` pins the geometry: contain-not-cover,
 the native cap, even dimensions, centred bars, and forward-only warm-up.
 `tests/services/test_render_composite.py` pins the pixels: geometry and the
 anchor, layer order, that half-transparent white over black is 128, that a dip
 and a dissolve differ only by `fill`, that every effect in the catalogue has a
 kernel and a missing one is skipped, and that one frame twice is byte-identical.
+Temporal slow-motion blending happens in source space,
+transparent pixels use premultiplied-alpha blending, and an unavailable
+neighbor falls back to the one that did decode while the render reports the gap.
 `tests/services/test_render_pool.py` counts seeks against a decoder that can be
 asked how many it made, and `tests/services/test_render_loop.py` drives the loop
 into a fake sink to pin where an empty frame, a gap, a cancellation and an

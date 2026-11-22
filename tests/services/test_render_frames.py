@@ -9,6 +9,8 @@ different from the export".
 
 from __future__ import annotations
 
+from fractions import Fraction
+
 import pytest
 
 from nova_studio.core.ident import EntityId
@@ -21,6 +23,7 @@ from nova_studio.domain.project import FrameSize, Project, ProjectSettings
 from nova_studio.domain.timeline import (
     Clip,
     ClipKind,
+    FrameInterpolation,
     Timeline,
     Track,
     TrackKind,
@@ -138,6 +141,61 @@ class TestLayers:
     def test_a_reversed_clip_reads_from_the_other_end(self) -> None:
         plan = plan_frame(_project(_track("v1", _clip("c1", source=100, speed=-1))), 0)
         assert plan.top.source_frame == 99
+
+    def test_frame_blending_plans_both_neighbors_of_a_fractional_position(self) -> None:
+        plan = plan_frame(
+            _project(
+                _track(
+                    "v1",
+                    _clip(
+                        "c1",
+                        source=10,
+                        speed=Fraction(1, 2),
+                        frame_interpolation=FrameInterpolation.FRAME_BLEND,
+                    ),
+                )
+            ),
+            1,
+        )
+        assert plan.top.source_position == Fraction(1, 2)
+        assert plan.top.blend_weight == Fraction(1, 2)
+        assert [request.source_frame for request in plan.decodes()] == [0, 1]
+
+    def test_integer_source_positions_still_plan_one_decode_when_blending_is_on(self) -> None:
+        plan = plan_frame(
+            _project(
+                _track(
+                    "v1",
+                    _clip(
+                        "c1",
+                        source=10,
+                        speed=Fraction(1, 2),
+                        frame_interpolation=FrameInterpolation.FRAME_BLEND,
+                    ),
+                )
+            ),
+            2,
+        )
+        assert [request.source_frame for request in plan.decodes()] == [1]
+
+    def test_reverse_slow_motion_blends_the_descending_source_neighbors(self) -> None:
+        plan = plan_frame(
+            _project(
+                _track(
+                    "v1",
+                    _clip(
+                        "c1",
+                        source=10,
+                        speed=Fraction(-1, 2),
+                        frame_interpolation=FrameInterpolation.FRAME_BLEND,
+                    ),
+                )
+            ),
+            1,
+        )
+        assert plan.top.source_position == Fraction(17, 2)
+        assert [request.source_frame for request in plan.decodes()] == [8, 9]
+        assert plan.top.blend_weight == Fraction(1, 2)
 
     def test_a_disabled_clip_contributes_nothing(self) -> None:
         clip = _clip("c1", enabled=False)

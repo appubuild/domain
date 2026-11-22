@@ -76,6 +76,7 @@ __all__ = [
     "Clip",
     "ClipContribution",
     "ClipKind",
+    "FrameInterpolation",
     "Marker",
     "ResolvedFrame",
     "Timeline",
@@ -142,6 +143,19 @@ class ClipKind(StrEnum):
     SOLID = "solid"
     #: No picture of its own; an effect carrier.
     ADJUSTMENT = "adjustment"
+
+
+class FrameInterpolation(StrEnum):
+    """How a fractional source-frame position becomes one output picture.
+
+    Frame blending is a temporal resampling choice, distinct from the spatial
+    interpolation in :mod:`nova_studio.ports.imaging`. Optical-flow synthesis
+    is intentionally a separate future mode: it must be an injected, testable
+    stage rather than a silently selected OpenCV side effect.
+    """
+
+    NEAREST = "nearest"
+    FRAME_BLEND = "frame-blend"
 
 
 class TransitionKind(StrEnum):
@@ -224,6 +238,9 @@ class Clip:
     #: reverse.  A float would make two clips of the same nominal speed drift
     #: apart over a long timeline (ADR-0006).
     speed: Rational = UNIT_SPEED
+    #: Temporal sampling for non-integral source positions. Nearest preserves
+    #: legacy behaviour; frame blending asks the decoder for both neighbours.
+    frame_interpolation: FrameInterpolation = FrameInterpolation.NEAREST
     #: A disabled clip contributes nothing, but stays put for the user to
     #: re-enable — the NLE equivalent of commenting out a line.
     enabled: bool = True
@@ -258,6 +275,7 @@ class Clip:
         source_frames: int = MIN_CLIP_FRAMES,
         kind: ClipKind = ClipKind.VIDEO,
         speed: Rational = UNIT_SPEED,
+        frame_interpolation: FrameInterpolation = FrameInterpolation.NEAREST,
         enabled: bool = True,
         name: str = "",
     ) -> Clip:
@@ -273,6 +291,7 @@ class Clip:
             in_frame=in_frame,
             out_frame=in_frame + source_frames,
             speed=speed,
+            frame_interpolation=frame_interpolation,
             enabled=enabled,
             name=name,
         )
@@ -311,12 +330,27 @@ class Clip:
         """Whether the clip is showing at ``frame``."""
         return self.start_frame <= frame < self.end_frame
 
+    def source_position_at(self, frame: int) -> Rational:
+        """The exact source-frame *index* at timeline ``frame``.
+
+        The result may lie between decoded frames. It is clamped to the clip's
+        usable sample indices, so a transition can hold the end frame without
+        asking the decoder for the exclusive ``out_frame`` boundary.
+        """
+        offset = frame - self.start_frame
+        if self.speed >= 0:
+            position = Rational(self.in_frame) + offset * abs(self.speed)
+        else:
+            position = Rational(self.out_frame - 1) - offset * abs(self.speed)
+        return min(max(position, Rational(self.in_frame)), Rational(self.out_frame - 1))
+
     def source_frame_at(self, frame: int) -> int:
-        """The source frame shown at timeline ``frame``, clamped to the clip.
+        """The nearest source frame shown at timeline ``frame``.
 
         Clamping rather than raising is deliberate: the compositor asks this
         during a transition, when it is legitimately holding the last frame of a
-        clip that has ended.
+        clip that has ended. Frame-blend sampling uses
+        :meth:`source_position_at` instead.
         """
         offset = frame - self.start_frame
         if self.speed >= 0:
@@ -364,6 +398,7 @@ class Clip:
             "in_frame": self.in_frame,
             "out_frame": self.out_frame,
             "speed": f"{self.speed.numerator}/{self.speed.denominator}",
+            "frame_interpolation": self.frame_interpolation.value,
             "enabled": self.enabled,
             "name": self.name,
         }
@@ -371,7 +406,12 @@ class Clip:
     @classmethod
     def from_wire(cls, data: Mapping[str, object]) -> Clip:
         """Rebuild from :meth:`to_wire`, rejecting unknown fields."""
-        _reject_unknown_fields(data, _CLIP_FIELDS)
+        # `frame_interpolation` was added after the first project-file version.
+        # Accept that exact legacy shape, but continue to reject every other
+        # missing or unknown field rather than silently dropping project data.
+        _reject_unknown_fields(
+            data, _CLIP_FIELDS if "frame_interpolation" in data else _LEGACY_CLIP_FIELDS
+        )
         return cls(
             clip_id=_wire_str(data, "clip_id"),
             asset_id=_wire_str(data, "asset_id"),
@@ -380,6 +420,11 @@ class Clip:
             in_frame=_wire_int(data, "in_frame"),
             out_frame=_wire_int(data, "out_frame"),
             speed=Rational(_wire_str(data, "speed")),
+            frame_interpolation=FrameInterpolation(
+                _wire_str(data, "frame_interpolation")
+                if "frame_interpolation" in data
+                else FrameInterpolation.NEAREST.value
+            ),
             enabled=bool(data["enabled"]),
             name=_wire_str(data, "name"),
         )
@@ -1260,7 +1305,7 @@ def _check_range(start_frame: int, end_frame: int) -> None:
 
 # -- wire helpers -------------------------------------------------------------
 
-_CLIP_FIELDS: Final[set[str]] = {
+_LEGACY_CLIP_FIELDS: Final[set[str]] = {
     "clip_id",
     "asset_id",
     "kind",
@@ -1270,6 +1315,10 @@ _CLIP_FIELDS: Final[set[str]] = {
     "speed",
     "enabled",
     "name",
+}
+_CLIP_FIELDS: Final[set[str]] = {
+    *_LEGACY_CLIP_FIELDS,
+    "frame_interpolation",
 }
 _TRANSITION_FIELDS: Final[set[str]] = {
     "transition_id",

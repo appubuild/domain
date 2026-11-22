@@ -54,7 +54,7 @@ Clip ─────────────────────────
                              └──────────┬───────────┘
                                         ▼
                              ┌──────────────────────┐
-                             │  SpeedStage          │  constant + ramped (curve)
+                             │  SpeedStage          │  constant retime + frame sampling
                              └──────────┬───────────┘
                                         ▼
                              ┌──────────────────────┐
@@ -102,7 +102,7 @@ Where each stage lives now:
 | `TransformStage` · `Compositor` · `TransitionStage` · `ColourStage` | `services/render/composite.py` | yes |
 | Preview sink | `services/render/preview.py` + `infra/preview.py` | yes (§7.14) |
 | Export sink | the same loop, an encoder sink | yes (`infra/render.py`, §7.7) |
-| `SpeedStage` | retiming, constant and ramped | not yet |
+| `SpeedStage` | constant-rate retiming; nearest or temporal frame blend | partial: ramp curves and optical flow remain |
 | `OverlayStage` | text, captions, motion graphics | not yet (captions, stage 9) |
 | `AudioStage` | the sample graph: plan, mix, export | yes (§7.4) |
 
@@ -504,6 +504,7 @@ plus `Transition` at a clip's edge and `Marker` on the ruler.
 Decision | Why
 --- | ---
 **Time is integer frames**, never seconds (ADR-0006) | A clip's duration is derived once from its source length and its exact rational `speed`, then stored as a whole number. Two clips at "half speed" cannot drift apart, because nothing is accumulated as a float.
+**Fractional source positions stay exact until sampling** | `Clip.source_position_at()` returns a rational frame index. Nearest sampling preserves the historic choice; `frame-blend` decodes both neighbors and mixes them before effects and transforms. Integral positions still cost one decode. Optical flow is not claimed: it needs its own injected motion-estimation port and quality tests.
 **Source time and timeline time are separate spaces** | `start_frame` is a timeline coordinate, `in_frame`/`out_frame` are source coordinates (`out` exclusive, as containers count), and `source_frame_at()` is the only thing that crosses between them. Trimming one end therefore cannot move the other.
 **Tracks are stored top-first, rendered bottom-first** | `tracks[0]` is the topmost track, because that is how an editor displays and names them; `resolve(frame)` returns contributions in painter's-algorithm order, so the last entry is drawn last. Storing in one order and painting in the other is the classic inverted-layer bug, so both are stated and both are tested.
 **An overlap is legal only under a transition** | Two clips sharing frames with no transition between them would be resolved arbitrarily by the renderer — a different picture tomorrow than today. `validate_timeline()` names the overlap and the project is not saved in that state.

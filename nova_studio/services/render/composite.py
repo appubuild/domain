@@ -207,9 +207,9 @@ def _layer_source(
     the layer is then skipped rather than drawn as a black rectangle over
     everything beneath it.
     """
-    request = layer.decode()
+    requests = layer.decode_requests()
     source: FrameBuffer | None
-    if request is None:
+    if not layer.needs_decode:
         # A generated clip: nothing to decode. Its picture, if it has one, comes
         # from a generator effect in its chain, which is why a black
         # composition-sized buffer goes in: `nova.solid` replaces it, and an
@@ -217,7 +217,19 @@ def _layer_source(
         width, height = plan.size
         source = FrameBuffer(pixels=np.zeros((height, width, 3), dtype=np.uint8))
     else:
-        source = pictures.get(request.key)
+        if not requests:
+            return None
+        if len(requests) == 1:
+            source = pictures.get(requests[0].key)
+        else:
+            first = pictures.get(requests[0].key)
+            second = pictures.get(requests[1].key)
+            if first is None:
+                source = second
+            elif second is None:
+                source = first
+            else:
+                source = _blend_temporal(first, second, float(layer.blend_weight))
     if source is None:
         return None
 
@@ -226,6 +238,45 @@ def _layer_source(
     for grade in layer.grades:
         source = apply_grade(grade.at(plan.frame), source, luts=luts)
     return source
+
+
+def _blend_temporal(first: FrameBuffer, second: FrameBuffer, weight: float) -> FrameBuffer:
+    """Blend adjacent decoded frames in their common source geometry.
+
+    The blend is performed before clip effects and transforms, so those stages
+    see one temporally sampled picture. RGBA is interpolated in premultiplied
+    form to avoid coloured fringes around transparent pixels. A source that
+    changes geometry, channel layout or colour tags between adjacent frames is
+    not safely blendable; in that unusual case the nearest input is used.
+    """
+    weight = min(max(weight, 0.0), 1.0)
+    if weight <= 0.0:
+        return first
+    if weight >= 1.0:
+        return second
+    if first.pixels.shape != second.pixels.shape or first.colour != second.colour:
+        return first if weight < 0.5 else second
+
+    a = first.pixels.astype(np.float32) / 255.0
+    b = second.pixels.astype(np.float32) / 255.0
+    if first.channels == 4:
+        alpha_a = a[..., 3:4]
+        alpha_b = b[..., 3:4]
+        alpha = alpha_a + (alpha_b - alpha_a) * weight
+        premultiplied = (
+            a[..., :3] * alpha_a + (b[..., :3] * alpha_b - a[..., :3] * alpha_a) * weight
+        )
+        rgb = np.divide(
+            premultiplied,
+            alpha,
+            out=np.zeros_like(premultiplied),
+            where=alpha > 1e-8,
+        )
+        blended = np.concatenate((rgb, alpha), axis=2)
+    else:
+        blended = a + (b - a) * weight
+    pixels = np.floor(np.clip(blended, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8)
+    return FrameBuffer(pixels=np.ascontiguousarray(pixels), colour=first.colour)
 
 
 def _place(source: FrameBuffer, layer: LayerPlan, size: tuple[int, int], ops: ImageOps) -> Any:

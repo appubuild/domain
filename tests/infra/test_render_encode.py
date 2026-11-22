@@ -24,6 +24,7 @@ break:
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -310,10 +311,29 @@ class TestOpening:
 
 
 def _read_video(path: Path) -> tuple[list[Any], Any]:
-    """Decode a file this test wrote, the way a player would."""
+    """Decode a file and snapshot stream metadata before closing its container.
+
+    PyAV stream properties are only valid while their owning container is open.
+    Returning a live stream used to make this test depend on attributes PyAV
+    happened to cache; a metadata snapshot keeps the assertions deterministic.
+    """
     with av.open(str(path)) as container:
         stream = container.streams.video[0]
-        return list(container.decode(video=0)), stream
+        context = stream.codec_context
+        summary = SimpleNamespace(
+            average_rate=stream.average_rate,
+            codec_context=SimpleNamespace(
+                name=context.name,
+                width=context.width,
+                height=context.height,
+                pix_fmt=context.pix_fmt,
+                colorspace=context.colorspace,
+                color_range=context.color_range,
+                color_primaries=context.color_primaries,
+                color_trc=context.color_trc,
+            ),
+        )
+        return list(container.decode(video=0)), summary
 
 
 class TestVideoSink:

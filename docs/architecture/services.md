@@ -818,12 +818,17 @@ as events the window subscribed to, not as answers to requests it polls.
 
 **Testing.** `tests/services/test_render_frames.py` pins the recipe,
 `test_render_preview.py` the geometry and the renderer — never upscaled, a
-missing asset is a gap and not a failure, warming ten frames costs one seek —
-`test_render_composite.py` the pixels at 64x48, `test_render_pool.py` the *seek
+missing asset is a gap and not a failure, warming ten frames costs one seek,
+and fractional frame-blend sampling asks for both source neighbors but only
+one decode at an integer position — `test_render_composite.py` the pixels at
+64x48, `test_render_pool.py` the *seek
 counts* — a pool is a performance component, and thirty frames of one clip
 costing thirty seeks is the bug it exists to prevent — and `test_render_loop.py`
 the promise itself: the same compositor, one code path, preview frame and export
-frame byte-identical. `tests/services/test_render_audio.py` (46) pins the other
+frame byte-identical, and that frame-blend playback reads both adjacent frames
+through the pool with one sequential seek. `test_render_composite.py` also pins temporal blending,
+premultiplied alpha and the missing-neighbor fallback. `test_render_audio.py`
+(46) pins the other
 half: that the plan skips a muted track but not a hidden one, that two tracks sum
 rather than replace, that a doubled speed reads twice the source, that a
 30000/1001 project mixes in blocks without drifting by a single sample, and that

@@ -24,11 +24,12 @@ second table of names that could drift.
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from nova_studio.domain.timeline import ClipKind, TrackKind
+from nova_studio.domain.timeline import ClipKind, FrameInterpolation, TrackKind
 from nova_studio.services.timeline import TrimEdge
 
 __all__ = [
@@ -89,7 +90,13 @@ class ClipSummary(_Strict):
     duration_frames: int = Field(description="How long it plays.")
     in_frame: int = Field(description="First source frame shown.")
     out_frame: int = Field(description="Last source frame shown, exclusive.")
-    speed: float = Field(description="Playback rate; 1.0 is normal, 0.5 is half.")
+    speed: float = Field(description="Playback rate for display; 1.0 is normal, 0.5 is half.")
+    speed_rational: str = Field(
+        description="Exact playback rate, as a reduced num/den rational for editing."
+    )
+    frame_interpolation: FrameInterpolation = Field(
+        description="Temporal sampling for fractional source frames."
+    )
     enabled: bool = Field(description="Whether it is part of the output.")
 
 
@@ -242,7 +249,27 @@ class ClipSpec(_Strict):
     start_frame: int = Field(default=0, ge=0, description="Where it starts on the timeline.")
     in_frame: int = Field(default=0, ge=0, description="First source frame shown.")
     source_frames: int = Field(default=1, ge=1, description="How many source frames it shows.")
+    speed: str = Field(
+        default="1/1",
+        pattern=r"^-?[0-9]+/[1-9][0-9]*$",
+        description=(
+            "Exact rational playback rate, e.g. 1/2 or -3/2; negative values play backwards."
+        ),
+    )
+    frame_interpolation: FrameInterpolation = Field(
+        default=FrameInterpolation.NEAREST,
+        description="Temporal sampling for fractional source-frame positions.",
+    )
     enabled: bool = Field(default=True, description="Whether it is part of the output.")
+
+    @field_validator("speed")
+    @classmethod
+    def _speed_must_not_stop(cls, value: str) -> str:
+        """Reject zero and canonicalise the rational before journalling it."""
+        speed = Fraction(value)
+        if speed == 0:
+            raise ValueError("speed must not be zero")
+        return f"{speed.numerator}/{speed.denominator}"
 
 
 class ReplaceTrackClipsRequest(_Strict):

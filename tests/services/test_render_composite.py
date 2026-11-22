@@ -28,6 +28,7 @@ quietly break:
 from __future__ import annotations
 
 from dataclasses import replace
+from fractions import Fraction
 from typing import Any
 
 import numpy as np
@@ -43,6 +44,7 @@ from nova_studio.domain.project import FrameSize, Project, ProjectSettings
 from nova_studio.domain.timeline import (
     Clip,
     ClipKind,
+    FrameInterpolation,
     Timeline,
     Track,
     TrackKind,
@@ -51,7 +53,7 @@ from nova_studio.domain.timeline import (
 )
 from nova_studio.infra.imaging import OpenCVImageOps
 from nova_studio.services.effects import builtin_registry
-from nova_studio.services.render import plan_frame
+from nova_studio.services.render import composite as composite_module, plan_frame
 from nova_studio.services.render.composite import apply_grade, composite_frame
 from nova_studio.services.render.kernels import (
     KernelRegistry,
@@ -143,6 +145,45 @@ class TestGeometry:
         assert out.pixels.shape == (HEIGHT, WIDTH, 3)
         assert out.pixels.dtype == np.uint8
         assert int(out.pixels.mean()) == 200
+
+    def test_frame_blending_mixes_adjacent_source_frames_before_compositing(self) -> None:
+        clip = _clip(
+            "c1",
+            source=10,
+            speed=Fraction(1, 2),
+            frame_interpolation=FrameInterpolation.FRAME_BLEND,
+        )
+        plan = plan_frame(_project(_track("v1", clip)), 1)
+        requests = plan.decodes()
+        pictures = {requests[0].key: _field(0), requests[1].key: _field(255)}
+
+        out = composite_frame(plan, pictures, ops=OPS)
+
+        assert np.all(out.pixels == 128)
+
+    def test_a_missing_blend_neighbor_falls_back_to_the_available_picture(self) -> None:
+        clip = _clip(
+            "c1",
+            source=10,
+            speed=Fraction(1, 2),
+            frame_interpolation=FrameInterpolation.FRAME_BLEND,
+        )
+        plan = plan_frame(_project(_track("v1", clip)), 1)
+        request = plan.decodes()[0]
+        out = composite_frame(plan, {request.key: _field(37)}, ops=OPS)
+
+        assert np.all(out.pixels == 37)
+
+    def test_frame_blending_rgba_premultiplies_before_interpolating(self) -> None:
+        opaque_red = FrameBuffer(
+            pixels=np.full((HEIGHT, WIDTH, 4), [255, 0, 0, 255], dtype=np.uint8)
+        )
+        transparent_blue = FrameBuffer(
+            pixels=np.full((HEIGHT, WIDTH, 4), [0, 0, 255, 0], dtype=np.uint8)
+        )
+        blended = composite_module._blend_temporal(opaque_red, transparent_blue, 0.5)
+
+        assert blended.pixels[0, 0].tolist() == [255, 0, 0, 128]
 
     def test_a_smaller_picture_is_centred(self) -> None:
         plan, _ = _single()

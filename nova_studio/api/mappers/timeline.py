@@ -20,6 +20,7 @@ lives.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from fractions import Fraction
 from typing import TYPE_CHECKING, Any
 
 from nova_studio.api.schemas.timeline import (
@@ -113,6 +114,8 @@ def clip_summary(clip: Clip) -> ClipSummary:
         in_frame=clip.in_frame,
         out_frame=clip.out_frame,
         speed=float(clip.speed),
+        speed_rational=f"{clip.speed.numerator}/{clip.speed.denominator}",
+        frame_interpolation=clip.frame_interpolation,
         enabled=clip.enabled,
     )
 
@@ -271,6 +274,8 @@ def _clips(specs: Sequence[ClipSpec]) -> tuple[Clip, ...]:
             in_frame=spec.in_frame,
             source_frames=spec.source_frames,
             kind=spec.kind,
+            speed=Fraction(spec.speed),
+            frame_interpolation=spec.frame_interpolation,
             enabled=spec.enabled,
             name=spec.name,
         )
