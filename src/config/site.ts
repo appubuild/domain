@@ -98,6 +98,19 @@ export const SITE: SiteConfig = {
 }
 
 /** Partial site configuration coming from the API's settings endpoint. */
+/** Column headings printed above the footer link lists (admin editable). */
+export const FOOTER_TITLES = {
+  company: 'Company',
+  services: 'Services',
+  legal: 'Legal',
+}
+
+/** A header or footer link, editable from the admin panel. */
+export interface SiteLink {
+  label: string
+  to: string
+}
+
 export interface SiteConfigPatch {
   name?: string
   shortName?: string
@@ -109,6 +122,12 @@ export interface SiteConfigPatch {
   modelStatement?: string
   contact?: Partial<SiteConfig['contact']>
   social?: Partial<SiteConfig['social']>
+  navigation?: {
+    nav?: SiteLink[]
+    company?: SiteLink[]
+    legal?: SiteLink[]
+  }
+  footerTitles?: Partial<typeof FOOTER_TITLES>
 }
 
 /**
@@ -149,6 +168,33 @@ export const hydrateSite = (patch: SiteConfigPatch): void => {
       ;(SITE.social as unknown as Record<string, unknown>)[key] = value
     })
   }
+
+  hydrateNavigation(patch.navigation)
+
+  if (patch.footerTitles) {
+    Object.entries(patch.footerTitles).forEach(([key, value]) => {
+      if (typeof value !== 'string' || value.length === 0) return
+      ;(FOOTER_TITLES as unknown as Record<string, string>)[key] = value
+    })
+  }
+}
+
+/**
+ * Replaces the header/footer link lists in place.
+ *
+ * The arrays are mutated rather than reassigned because the components capture
+ * the binding at import time. An empty list is meaningful — an owner who removes
+ * every footer link gets a footer without links — so only `undefined` is skipped.
+ */
+export const hydrateNavigation = (navigation?: SiteConfigPatch['navigation']): void => {
+  const replace = (target: SiteLink[], next?: SiteLink[]) => {
+    if (!next) return
+    target.splice(0, target.length, ...next.filter((link) => link.label && link.to))
+  }
+
+  replace(NAV_LINKS, navigation?.nav)
+  replace(FOOTER_COMPANY_LINKS, navigation?.company)
+  replace(FOOTER_LEGAL_LINKS, navigation?.legal)
 }
 
 /** True when an authorized, dialable phone number has been configured. */
@@ -159,27 +205,27 @@ export const telHref = (): string | null => (hasPhone() ? `tel:${SITE.contact.ph
 
 export const CONTACT_EMAIL_HREF = `mailto:${SITE.contact.email}`
 
-export const NAV_LINKS = [
+export const NAV_LINKS: SiteLink[] = [
   { label: 'Home', to: '/' },
   { label: 'Services', to: '/services' },
   { label: 'How It Works', to: '/how-it-works' },
   { label: 'Blog', to: '/blog' },
   { label: 'About Us', to: '/about' },
   { label: 'Contact', to: '/contact' },
-] as const
+]
 
-export const FOOTER_LEGAL_LINKS = [
+export const FOOTER_LEGAL_LINKS: SiteLink[] = [
   { label: 'Privacy Policy', to: '/privacy-policy' },
   { label: 'Terms & Conditions', to: '/terms-and-conditions' },
   { label: 'Disclaimer', to: '/disclaimer' },
   { label: 'Do Not Sell or Share My Personal Information', to: '/do-not-sell-or-share' },
   { label: 'Accessibility Statement', to: '/accessibility' },
-] as const
+]
 
-export const FOOTER_COMPANY_LINKS = [
+export const FOOTER_COMPANY_LINKS: SiteLink[] = [
   { label: 'About Us', to: '/about' },
   { label: 'How It Works', to: '/how-it-works' },
   { label: 'Service Area', to: '/service-area' },
   { label: 'All Services', to: '/services' },
   { label: 'Contact', to: '/contact' },
-] as const
+]

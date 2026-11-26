@@ -138,6 +138,21 @@ on the panel estimates traffic, calls or revenue.
 
 ---
 
+## 4a. Content the owner controls
+
+| Admin screen | What it changes on the live site |
+| --- | --- |
+| Services | Service page copy, hero image (uploaded to `/uploads`), icon, category, niche, SEO title/description, and its one phone line |
+| Numbers | The number, its label and which service owns it |
+| Niches | Directory groupings shown in services menus |
+| Blog | Posts and categories |
+| Settings | Business details, contact routes, social links, **header menu + footer links and column titles**, operational switches |
+| SEO | Global title template, description, keywords, robots, canonical base, OG image, verification |
+
+Every one of those is stored in MySQL and served by the API — no redeploy, no
+code change. Run `2026-11-navigation-settings.sql` once on an existing install
+so the menu/footer rows exist.
+
 ## 5. Connected mode
 
 When `VITE_API_BASE_URL` is set:

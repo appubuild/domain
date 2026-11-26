@@ -174,6 +174,12 @@ export interface LeadRecord {
 /*  Settings                                                                  */
 /* -------------------------------------------------------------------------- */
 
+/** One header or footer link as edited in the admin panel. */
+export interface SiteLinkRecord {
+  label: string
+  to: string
+}
+
 export interface SiteSettings {
   siteName: string
   legalName: string
@@ -185,6 +191,13 @@ export interface SiteSettings {
   timezone: string
   currency: string
   socials: { facebook: string; x: string; youtube: string }
+  /** Header menu, footer company links and footer legal links — admin owned. */
+  navLinks: SiteLinkRecord[]
+  footerCompanyLinks: SiteLinkRecord[]
+  footerLegalLinks: SiteLinkRecord[]
+  footerCompanyTitle: string
+  footerServicesTitle: string
+  footerLegalTitle: string
   callTrackingEnabled: boolean
   leadNotifications: boolean
   maintenanceMode: boolean

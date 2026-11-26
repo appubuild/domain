@@ -24,6 +24,7 @@ import type {
   PageRecord,
   SeoSettings,
   ServiceRecord,
+  SiteLinkRecord,
   SiteSettings,
   TrackingNumber,
 } from '@/admin/types/admin'
@@ -371,6 +372,17 @@ const flattenSettings = (payload: ApiSettingGroup): Record<string, unknown> => {
   return flat
 }
 
+const linksFromSetting = (value: unknown): SiteLinkRecord[] => {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((entry) => {
+    if (!entry || typeof entry !== 'object') return []
+    const row = entry as Record<string, unknown>
+    const label = typeof row.label === 'string' ? row.label : ''
+    const to = typeof row.to === 'string' ? row.to : typeof row.path === 'string' ? row.path : ''
+    return label && to ? [{ label, to }] : []
+  })
+}
+
 const siteFromSettings = (flat: Record<string, unknown>, updatedAt: string): SiteSettings => {
   const text = (key: string): string => (typeof flat[key] === 'string' ? (flat[key] as string) : '')
   const flag = (key: string): boolean => flat[key] === true || flat[key] === '1'
@@ -390,6 +402,12 @@ const siteFromSettings = (flat: Record<string, unknown>, updatedAt: string): Sit
       x: text('social_x'),
       youtube: text('social_youtube'),
     },
+    navLinks: linksFromSetting(flat.nav_links),
+    footerCompanyLinks: linksFromSetting(flat.footer_company_links),
+    footerLegalLinks: linksFromSetting(flat.footer_legal_links),
+    footerCompanyTitle: text('footer_company_title') || 'Company',
+    footerServicesTitle: text('footer_services_title') || 'Services',
+    footerLegalTitle: text('footer_legal_title') || 'Legal',
     callTrackingEnabled: flag('call_tracking_enabled'),
     leadNotifications: flag('lead_notifications'),
     maintenanceMode: flag('maintenance_mode'),
@@ -420,6 +438,12 @@ const siteToSettings = (patch: Partial<SiteSettings>): Record<string, unknown> =
     put('social_x', patch.socials.x)
     put('social_youtube', patch.socials.youtube)
   }
+  if (patch.navLinks) put('nav_links', patch.navLinks)
+  if (patch.footerCompanyLinks) put('footer_company_links', patch.footerCompanyLinks)
+  if (patch.footerLegalLinks) put('footer_legal_links', patch.footerLegalLinks)
+  put('footer_company_title', patch.footerCompanyTitle)
+  put('footer_services_title', patch.footerServicesTitle)
+  put('footer_legal_title', patch.footerLegalTitle)
   put('call_tracking_enabled', patch.callTrackingEnabled)
   put('lead_notifications', patch.leadNotifications)
   put('maintenance_mode', patch.maintenanceMode)

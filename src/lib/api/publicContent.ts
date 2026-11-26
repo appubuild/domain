@@ -255,6 +255,21 @@ export const mapSettingsToSitePatch = (settings: Record<string, unknown>) => {
     ? (settings.address_lines as unknown[]).filter((line): line is string => typeof line === 'string')
     : undefined
 
+  // Link lists arrive as [{label, to}] (or [{label, path}] if hand-written).
+  const links = (key: string): { label: string; to: string }[] | undefined => {
+    const value = settings[key]
+    if (!Array.isArray(value)) return undefined
+    return (value as unknown[])
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') return null
+        const row = entry as Record<string, unknown>
+        const label = typeof row.label === 'string' ? row.label.trim() : ''
+        const to = typeof row.to === 'string' ? row.to : typeof row.path === 'string' ? row.path : ''
+        return label && to ? { label, to } : null
+      })
+      .filter((entry): entry is { label: string; to: string } => entry !== null)
+  }
+
   return {
     name: text('site_name'),
     shortName: text('site_short_name'),
@@ -278,6 +293,16 @@ export const mapSettingsToSitePatch = (settings: Record<string, unknown>) => {
       linkedin: text('social_linkedin') ?? '',
       x: text('social_x') ?? '',
       youtube: text('social_youtube') ?? '',
+    },
+    navigation: {
+      nav: links('nav_links'),
+      company: links('footer_company_links'),
+      legal: links('footer_legal_links'),
+    },
+    footerTitles: {
+      company: text('footer_company_title'),
+      services: text('footer_services_title'),
+      legal: text('footer_legal_title'),
     },
   }
 }

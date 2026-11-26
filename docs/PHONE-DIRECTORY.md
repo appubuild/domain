@@ -1,5 +1,21 @@
 # Service Phone Directory — Operations Guide
 
+> **November 2026 — one number per service.**
+> `services.phone_number_id` is now the single source of truth: one service owns
+> exactly one published line, a line belongs to at most one service, and the
+> old group/priority/"Call Alternate" model is no longer rendered anywhere.
+> Service lines and their services are edited in Admin → Numbers (pick the
+> service) or Admin → Services (pick the number) — either side sets the same
+> relation. The `/v1/services/{slug}` payload returns
+> `number: { number, label, tel }` (or `null`).
+>
+> Production upgrade: run `api/database/migrations/2026-11-single-number-per-service.sql`
+> once, then `api/database/migrations/2026-11-navigation-settings.sql`.
+> The group tables are kept for reference but nothing reads them.
+>
+> Sections below that describe "two lines per service" are kept as history of
+> the old model; the file now describes a starting point, not the current one.
+
 All service phone numbers on the website come from **one file**:
 `src/data/serviceNumbers.ts`. No component contains a hard-coded number.
 

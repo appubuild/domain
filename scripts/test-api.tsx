@@ -27,7 +27,7 @@ import { resolveServiceCall } from '@/lib/phoneDirectory'
 import { SERVICES, hydrateServices, getService } from '@/config/services'
 import { hydrateServicePhoneNumbers } from '@/data/serviceNumbers'
 import { hydrateServiceNumberMap } from '@/data/serviceNumberMapping'
-import { hydrateSite, SITE } from '@/config/site'
+import { FOOTER_COMPANY_LINKS, FOOTER_LEGAL_LINKS, FOOTER_TITLES, NAV_LINKS, hydrateNavigation, hydrateSite, SITE } from '@/config/site'
 import { HOME_FAQS, hydrateFaqs } from '@/config/faqs'
 
 let passed = 0
@@ -180,6 +180,34 @@ const settingsPatch = mapSettingsToSitePatch({
 check('settings mapping copies site name', settingsPatch.name === 'Safe Home Network')
 check('settings mapping copies contact details', settingsPatch.contact.email === 'hello@example.com')
 check('settings mapping keeps address lines', settingsPatch.contact.addressLines?.length === 1)
+
+const navPatch = mapSettingsToSitePatch({
+  nav_links: [
+    { label: 'Home', to: '/' },
+    { label: 'Trades', to: '/services' },
+  ],
+  footer_company_links: [{ label: 'About', to: '/about' }],
+  footer_legal_links: [{ label: 'Privacy', to: '/privacy-policy' }],
+  footer_company_title: 'Company links',
+  footer_legal_title: 'Policies',
+})
+check('settings mapping reads the header menu', navPatch.navigation?.nav?.length === 2)
+check(
+  'settings mapping accepts {label, path} rows',
+  mapSettingsToSitePatch({ nav_links: [{ label: 'Blog', path: '/blog' }] }).navigation?.nav?.[0]?.to === '/blog',
+)
+check(
+  'settings mapping drops incomplete rows',
+  (mapSettingsToSitePatch({ nav_links: [{ label: '', to: '/x' }, { label: 'Ok', to: '/y' }] }).navigation?.nav ?? [])
+    .length === 1,
+)
+
+hydrateSite(navPatch)
+check('site hydration replaces the header menu', NAV_LINKS.length === 2 && NAV_LINKS[1].label === 'Trades')
+check('site hydration replaces the footer lists', FOOTER_COMPANY_LINKS.length === 1 && FOOTER_LEGAL_LINKS[0].to === '/privacy-policy')
+check('site hydration renames the footer column titles', FOOTER_TITLES.company === 'Company links' && FOOTER_TITLES.legal === 'Policies')
+hydrateNavigation({ nav: [], company: [], legal: [] })
+check('an empty link list clears the menu', NAV_LINKS.length === 0)
 
 /* -------------------------------------------------------------------------- */
 /*  Snippet allow-list (defence in depth)                                     */

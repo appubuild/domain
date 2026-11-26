@@ -20,7 +20,7 @@ const navItemClasses = (isActive: boolean) =>
 /*  Desktop services dropdown                                                 */
 /* -------------------------------------------------------------------------- */
 
-const ServicesMenu = ({ onNavigate }: { onNavigate: () => void }) => {
+const ServicesMenu = ({ onNavigate, label }: { onNavigate: () => void; label: string }) => {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -61,7 +61,7 @@ const ServicesMenu = ({ onNavigate }: { onNavigate: () => void }) => {
     >
       <div className="flex items-center">
         <NavLink to="/services" className={({ isActive }) => `${navItemClasses(isActive)} pr-1`} end>
-          Services
+          {label}
         </NavLink>
         <button
           ref={buttonRef}
@@ -200,7 +200,7 @@ const MobileDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
         <nav aria-label="Mobile" className="flex-1 overflow-y-auto px-4 py-4">
           <ul className="space-y-1">
             {NAV_LINKS.map((link) =>
-              link.label === 'Services' ? (
+              link.to === '/services' ? (
                 <li key={link.to}>
                   <div className="flex items-center">
                     <NavLink
@@ -214,7 +214,7 @@ const MobileDrawer = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                         }`
                       }
                     >
-                      Services
+                      {link.label}
                     </NavLink>
                     <button
                       type="button"
@@ -356,8 +356,8 @@ export const Header = () => {
 
           <nav aria-label="Main" className="hidden items-center gap-1 lg:flex">
             {NAV_LINKS.map((link) =>
-              link.label === 'Services' ? (
-                <ServicesMenu key={link.to} onNavigate={() => setMobileOpen(false)} />
+              link.to === '/services' ? (
+                <ServicesMenu key={link.to} label={link.label} onNavigate={() => setMobileOpen(false)} />
               ) : (
                 <NavLink
                   key={link.to}

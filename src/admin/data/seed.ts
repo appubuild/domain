@@ -10,7 +10,7 @@
  * Resetting the demo data restores exactly this snapshot.
  */
 import { SERVICES } from '@/config/services'
-import { SITE } from '@/config/site'
+import { FOOTER_COMPANY_LINKS, FOOTER_LEGAL_LINKS, FOOTER_TITLES, NAV_LINKS, SITE } from '@/config/site'
 import { SERVICE_PHONE_NUMBERS } from '@/data/serviceNumbers'
 import { SERVICE_NUMBER_MAP } from '@/data/serviceNumberMapping'
 import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
@@ -309,6 +309,13 @@ const SETTINGS: SiteSettings = {
   timezone: 'America/New_York',
   currency: 'USD',
   socials: { facebook: '', x: '', youtube: '' },
+  // Header/footer links are admin-owned; the seed mirrors the current site.
+  navLinks: NAV_LINKS.map((link) => ({ ...link })),
+  footerCompanyLinks: FOOTER_COMPANY_LINKS.map((link) => ({ ...link })),
+  footerLegalLinks: FOOTER_LEGAL_LINKS.map((link) => ({ ...link })),
+  footerCompanyTitle: FOOTER_TITLES.company,
+  footerServicesTitle: FOOTER_TITLES.services,
+  footerLegalTitle: FOOTER_TITLES.legal,
   callTrackingEnabled: true,
   leadNotifications: true,
   maintenanceMode: false,

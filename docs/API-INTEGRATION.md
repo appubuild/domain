@@ -88,6 +88,26 @@ read.
 
 ---
 
+### Server-first rendering (ContentGate)
+
+With `VITE_API_BASE_URL` set, the public site renders **only** what the API
+returns. `src/components/ContentGate.tsx` holds the page while
+`ensureApiContent()` loads every dataset (services, categories, numbers,
+settings, FAQs, SEO), then mounts the router. Consequences:
+
+- A service, number, niche, blog post or category created in the admin panel is
+  on the live site on the next page load — there is no bundled copy to fall back
+  to and nothing stale to flash.
+- If the API cannot be reached the visitor sees a short "content is temporarily
+  unavailable" panel with a **Try again** button instead of old demo copy.
+- The demo build (no `VITE_API_BASE_URL`) skips the gate and keeps using the
+  bundled content, so static hosting still works.
+
+Navigation and footer are settings, not code: `nav_links`,
+`footer_company_links`, `footer_legal_links` and the three
+`footer_*_title` rows are edited in Admin → Settings → *Menu & footer links*,
+and `hydrateSite()` applies them to the arrays the header and footer render.
+
 ## 3. What stays bundled
 
 | Area | Reason |

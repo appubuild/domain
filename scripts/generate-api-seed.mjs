@@ -44,7 +44,7 @@ const loadFrontendData = async () => {
   writeFileSync(
     entry,
     `import { SERVICES, SERVICE_CATEGORIES } from '@/config/services'
-import { SITE } from '@/config/site'
+import { FOOTER_COMPANY_LINKS, FOOTER_LEGAL_LINKS, FOOTER_TITLES, NAV_LINKS, SITE } from '@/config/site'
 import { SERVICE_PHONE_NUMBERS } from '@/data/serviceNumbers'
 import { SERVICE_NUMBER_MAP, CALL_DIRECTORY_CATEGORIES } from '@/data/serviceNumberMapping'
 import { HOME_FAQS, HOW_IT_WORKS_FAQS } from '@/config/faqs'
@@ -54,6 +54,7 @@ const seed = buildSeedWorkspace()
 
 globalThis.__SHN_DATA__ = {
   site: SITE,
+  navigation: { nav: NAV_LINKS, company: FOOTER_COMPANY_LINKS, legal: FOOTER_LEGAL_LINKS, titles: FOOTER_TITLES },
   categories: SERVICE_CATEGORIES,
   services: SERVICES,
   groups: SERVICE_PHONE_NUMBERS,
@@ -275,6 +276,12 @@ const buildSeed = (data) => {
     ['social_linkedin', 'social', data.site.social.linkedin, 'string', 1],
     ['social_x', 'social', data.site.social.x, 'string', 1],
     ['social_youtube', 'social', data.site.social.youtube, 'string', 1],
+    ['nav_links', 'navigation', JSON.stringify(data.navigation.nav.map(({ label, to }) => ({ label, to }))), 'json', 1],
+    ['footer_company_links', 'navigation', JSON.stringify(data.navigation.company.map(({ label, to }) => ({ label, to }))), 'json', 1],
+    ['footer_legal_links', 'navigation', JSON.stringify(data.navigation.legal.map(({ label, to }) => ({ label, to }))), 'json', 1],
+    ['footer_company_title', 'navigation', data.navigation.titles.company, 'string', 1],
+    ['footer_services_title', 'navigation', data.navigation.titles.services, 'string', 1],
+    ['footer_legal_title', 'navigation', data.navigation.titles.legal, 'string', 1],
     ['analytics_id', 'integrations', '', 'string', 0],
     ['google_verification', 'integrations', '', 'string', 0],
     ['header_scripts', 'integrations', '', 'script', 0],
