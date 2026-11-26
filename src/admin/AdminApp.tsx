@@ -49,6 +49,13 @@ const AdminDocumentEffects = () => {
   useEffect(() => {
     // The console must never be indexed, and it should not inherit the public
     // page title while it is open.
+    // Lock document-level scrolling while the console is mounted: the shell is
+    // h-dvh with its own scroll container, so any document scroll leaves a large
+    // blank area under the page content on long screens like Analytics.
+    const root = document.documentElement
+    root.classList.add('admin-shell')
+    document.body.classList.add('admin-shell')
+
     const previousTitle = document.title
     document.title = 'Admin Console · Safe Home Network'
     const meta = document.createElement('meta')
@@ -59,6 +66,8 @@ const AdminDocumentEffects = () => {
     return () => {
       document.title = previousTitle
       meta.remove()
+      root.classList.remove('admin-shell')
+      document.body.classList.remove('admin-shell')
     }
   }, [])
   return null

@@ -176,6 +176,23 @@ const buildSeed = (data) => {
   })
   push('')
 
+  /* ---------------------------------------- one phone number per service -- */
+  /* The live site used to inherit a whole group of lines. Each service now owns
+     exactly one number: the lowest-priority line of its first group. Only the
+     first service of a group claims it, because a number may belong to a single
+     service (UNIQUE KEY uniq_services_phone). */
+  push('-- One line per service (services.phone_number_id)')
+  data.services.forEach((service) => {
+    const groupId = data.mapping[service.slug]?.groupIds?.[0]
+    if (!groupId) return
+    const owner = data.services.find((candidate) => data.mapping[candidate.slug]?.groupIds?.[0] === groupId)
+    if (owner?.slug !== service.slug) return
+    push(
+      `UPDATE \`services\` SET \`phone_number_id\` = (SELECT \`id\` FROM \`phone_numbers\` WHERE \`group_id\` = ${q(groupId)} AND \`deleted_at\` IS NULL ORDER BY \`priority\` ASC, \`id\` ASC LIMIT 1) WHERE \`slug\` = ${q(service.slug)};`,
+    )
+  })
+  push('')
+
   /* ---------------------------------------------------------------- pages -- */
   push('-- Pages')
   data.pages.forEach((page) => {

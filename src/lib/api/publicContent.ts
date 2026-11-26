@@ -33,13 +33,10 @@ export interface ApiPhoneNumber {
   tel: string
 }
 
-export interface ApiPhoneGroup {
-  id: string
-  name: string
-  label: string | null
-  blurb: string | null
-  icon: string | null
-  numbers: ApiPhoneNumber[]
+export interface ApiServiceNumber {
+  number: string
+  label: string
+  tel: string
 }
 
 export interface ApiServiceDetail {
@@ -65,7 +62,7 @@ export interface ApiServiceDetail {
   meta_title: string | null
   meta_description: string | null
   updated_at: string
-  phone_groups: ApiPhoneGroup[]
+  number: ApiServiceNumber | null
 }
 
 export interface ApiGroupIndexEntry {
@@ -201,54 +198,42 @@ export const mapDirectory = (services: ApiServiceDetail[]): LiveDirectory => {
   const serviceIds: Record<string, number> = {}
 
   services.forEach((service) => {
-    const groupIds: string[] = []
     serviceIds[service.slug] = service.id
 
-    service.phone_groups.forEach((group) => {
-      groupIds.push(group.id)
-
-      const numbers: ServicePhoneNumber[] = group.numbers.map((number) => {
-        const digits = number.number.replace(/\D/g, '')
-        numberIndex[digits] = {
-          id: number.id,
-          externalId: number.external_id,
-          serviceSlug: service.slug,
-          groupId: group.id,
-        }
-        const campaign: NumberCampaign = { nationwide: true }
-        return {
-          id: number.external_id,
-          number: number.number,
-          priority: number.priority,
-          status: 'active',
-          campaign,
-        }
-      })
-
-      const existing = groupsById.get(group.id)
-      if (existing) {
-        existing.numbers = [...existing.numbers, ...numbers.filter((n) => !existing.numbers.some((e) => e.id === n.id))]
-      } else {
-        groupsById.set(group.id, { id: group.id, name: group.label ?? group.name, numbers })
-      }
-
-      if (!directory.some((entry) => entry.groupId === group.id)) {
-        directory.push({
-          groupId: group.id,
-          label: group.label ?? group.name,
-          blurb: group.blurb ?? '',
-          icon: group.icon ?? 'wrench',
-          serviceSlug: service.slug,
-        })
-      }
-    })
-
-    const primaryGroup = service.phone_groups[0]
-    const labelBase = primaryGroup?.label ?? primaryGroup?.name ?? service.name
-    mapping[service.slug] = {
-      groupIds,
-      label: /services$/i.test(labelBase) ? labelBase : `${labelBase} services`,
+    // One line per service. The group is keyed by the service slug so the
+    // existing resolver keeps working, but it can only ever hold one number.
+    const line = service.number
+    if (!line) {
+      mapping[service.slug] = { groupIds: [], label: `${service.name} services` }
+      return
     }
+
+    const digits = line.number.replace(/\D/g, '')
+    numberIndex[digits] = {
+      id: service.id,
+      externalId: `line-${digits}`,
+      serviceSlug: service.slug,
+      groupId: service.slug,
+    }
+
+    const campaign: NumberCampaign = { nationwide: true }
+    const number: ServicePhoneNumber = {
+      id: `line-${digits}`,
+      number: line.number,
+      priority: 1,
+      status: 'active',
+      campaign,
+    }
+
+    groupsById.set(service.slug, { id: service.slug, name: service.name, numbers: [number] })
+    mapping[service.slug] = { groupIds: [service.slug], label: `${service.name} services` }
+    directory.push({
+      groupId: service.slug,
+      label: service.name,
+      blurb: line.label || service.short_description || '',
+      icon: service.icon || 'wrench',
+      serviceSlug: service.slug,
+    })
   })
 
   return {

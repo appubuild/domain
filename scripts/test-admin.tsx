@@ -113,7 +113,7 @@ const run = async (): Promise<void> => {
   const ADMIN_ROUTES: [string, string][] = [
     ['/admin/analytics', 'Simulated analytics'],
     ['/admin/services', 'Create and manage the service categories'],
-    ['/admin/numbers', 'Every line that can appear on the website'],
+    ['/admin/numbers', 'One line per service'],
     ['/admin/niches', 'Group related services into verticals'],
     ['/admin/pages', 'drafts, published and scheduled'],
     ['/admin/blog', 'published ·'],
@@ -144,11 +144,9 @@ const run = async (): Promise<void> => {
   check('seed contains every published number', seed.numbers.length === SERVICE_PHONE_NUMBERS.reduce((total, group) => total + group.numbers.length, 0))
   check('seed slugs match the live services', SERVICES.every((service) => seed.services.some((row) => row.slug === service.slug)))
   check(
-    'each service points at its live phone group',
-    SERVICES.every((service) => {
-      const record = seed.services.find((row) => row.slug === service.slug)
-      return record?.groupId === (SERVICE_NUMBER_MAP[service.slug]?.groupIds[0] ?? null)
-    }),
+    'at most one service owns a given number',
+    new Set(seed.services.map((row) => row.phoneNumberId).filter(Boolean)).size ===
+      seed.services.filter((row) => row.phoneNumberId).length,
   )
   check('every seeded number exists in the live directory', seed.numbers.every((row) => SERVICE_PHONE_NUMBERS.some((group) => group.numbers.some((phone) => phone.id === row.id && phone.number === row.number))))
   check('every number has a unique id', new Set(seed.numbers.map((row) => row.id)).size === seed.numbers.length)
@@ -293,17 +291,21 @@ const run = async (): Promise<void> => {
 
   const health = directoryHealth(reset.services, reset.numbers)
   check('directory health counts every number', health.numbers === reset.numbers.length)
-  check('directory health finds the six services without lines', health.servicesWithoutNumbers === 6, String(health.servicesWithoutNumbers))
+  check(
+    'directory health counts services without a line',
+    health.servicesWithoutNumbers === reset.services.filter((row) => !row.phoneNumberId).length,
+    String(health.servicesWithoutNumbers),
+  )
   check('directory health reports 10 groups', health.groups === 10, String(health.groups))
   check('groupName resolves live groups', groupName('roofing') === 'Roofing')
   check('groupName handles a missing group', groupName(null) === 'No call group')
   check('roleLabel maps priority 1 to Primary', roleLabel(1) === 'Primary' && roleLabel(2) === 'Alternate')
 
-  const roofingService = reset.services.find((row) => row.slug === 'roofing')
-  const roofingNumbers = numbersForService(reset.numbers, roofingService)
-  check('numbersForService returns only the service group', roofingNumbers.every((row) => row.groupId === 'roofing'))
-  check('numbersForService sorts by priority', roofingNumbers[0]?.priority === 1)
-  const waterDamage = reset.services.find((row) => row.slug === 'water-damage')
+  const linkedService = reset.services.find((row) => row.phoneNumberId)
+  const linkedNumbers = numbersForService(reset.numbers, linkedService)
+  check('numbersForService returns the service own line', linkedNumbers.length === 1 && linkedNumbers[0].id === linkedService?.phoneNumberId)
+  check('a service never shows another service line', numbersForService(reset.numbers, linkedService).every((row) => row.serviceId === linkedService?.id || row.serviceId === null))
+  const waterDamage = reset.services.find((row) => row.slug === 'warranty-support' || !row.phoneNumberId)
   check('services without a group expose no numbers', numbersForService(reset.numbers, waterDamage).length === 0)
 
   /* ---------------------------------------------------------------------- */

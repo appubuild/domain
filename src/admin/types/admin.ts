@@ -40,8 +40,11 @@ export interface ServiceRecord {
   id: string
   slug: string
   name: string
-  /** Phone-directory group this service draws its numbers from. */
+  /** Legacy directory group (no longer edited; kept so old payloads still parse). */
   groupId: string | null
+  /** The one phone number this service shows, if any. */
+  phoneNumberId: string | null
+  phoneNumber: string | null
   nicheId: string | null
   category: string
   icon: string
@@ -51,6 +54,17 @@ export interface ServiceRecord {
   shortDescription: string
   metaTitle: string
   metaDescription: string
+  /** Hero + long-form content, edited on the service form (all optional). */
+  image?: string
+  heroHeadline?: string
+  heroSubheadline?: string
+  intro?: string[]
+  commonNeeds?: Array<{ title: string; description: string }>
+  options?: Array<{ title: string; description: string }>
+  processNote?: string
+  faqs?: Array<{ question: string; answer: string }>
+  related?: string[]
+  searchTerms?: string[]
   updatedAt: string
 }
 
@@ -58,8 +72,11 @@ export type PhoneStatus = 'active' | 'pending-verification' | 'inactive'
 
 export interface TrackingNumber {
   id: string
-  /** Directory group the number belongs to (matches src/data/serviceNumbers.ts). */
-  groupId: string
+  /** Legacy directory group; null for every number created in the new flow. */
+  groupId: string | null
+  /** The single service this number is published on, if any. */
+  serviceId: string | null
+  serviceName: string | null
   number: string
   /** Human description shown in the admin table. */
   label: string

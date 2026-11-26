@@ -11,8 +11,8 @@
  */
 import { SERVICES } from '@/config/services'
 import { SITE } from '@/config/site'
-import { SERVICE_NUMBER_MAP } from '@/data/serviceNumberMapping'
 import { SERVICE_PHONE_NUMBERS } from '@/data/serviceNumbers'
+import { SERVICE_NUMBER_MAP } from '@/data/serviceNumberMapping'
 import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
 import type {
   ActivityEntry,
@@ -110,12 +110,35 @@ const NICHE_BY_CATEGORY: Record<string, string> = {
 /*  Services (mirrors the live website directory)                             */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The demo workspace follows the same rule as the API: one line per service and
+ * a line belongs to a single service. The first service of a group claims the
+ * group's primary number; any other service starts without one.
+ */
+const groupOwners = (() => {
+  const owners = new Map<string, string>()
+  SERVICES.forEach((service) => {
+    const groupId = SERVICE_NUMBER_MAP[service.slug]?.groupIds[0]
+    if (groupId && !owners.has(groupId)) owners.set(groupId, service.slug)
+  })
+  return owners
+})()
+
+const lineForService = (slug: string): { id: string; number: string } | null => {
+  const groupId = SERVICE_NUMBER_MAP[slug]?.groupIds[0]
+  if (!groupId || groupOwners.get(groupId) !== slug) return null
+  const phone = SERVICE_PHONE_NUMBERS.find((group) => group.id === groupId)?.numbers.find((row) => row.priority === 1)
+  return phone ? { id: phone.id, number: phone.number } : null
+}
+
 const buildServices = (): ServiceRecord[] =>
   SERVICES.map((service, index) => ({
     id: `svc_${service.slug.replace(/-/g, '_')}`,
     slug: service.slug,
     name: service.name,
     groupId: SERVICE_NUMBER_MAP[service.slug]?.groupIds[0] ?? null,
+    phoneNumberId: lineForService(service.slug)?.id ?? null,
+    phoneNumber: lineForService(service.slug)?.number ?? null,
     nicheId: NICHE_BY_CATEGORY[service.category] ?? null,
     category: service.category,
     icon: service.icon,
@@ -137,8 +160,20 @@ const buildNumbers = (): TrackingNumber[] =>
     group.numbers.map((phone) => ({
       id: phone.id,
       groupId: group.id,
+      serviceId:
+        phone.priority === 1
+          ? (() => {
+              const slug = groupOwners.get(group.id)
+              const service = SERVICES.find((entry) => entry.slug === slug)
+              return service ? `svc_${service.slug.replace(/-/g, '_')}` : null
+            })()
+          : null,
+      serviceName:
+        phone.priority === 1
+          ? (SERVICES.find((entry) => entry.slug === groupOwners.get(group.id))?.name ?? null)
+          : null,
       number: phone.number,
-      label: `${group.name} — ${phone.priority === 1 ? 'primary' : 'alternate'} line`,
+      label: `${group.name} line`,
       priority: phone.priority,
       status: phone.status,
       network: phone.campaign?.network ?? 'Owner-confirmed direct line',

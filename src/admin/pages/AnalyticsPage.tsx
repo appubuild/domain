@@ -62,7 +62,7 @@ export const AnalyticsPage = () => {
   const [range, setRange] = useState(30)
   const [metric, setMetric] = useState<MetricKey>('visitors')
 
-  const { live, version, error: liveError } = useLiveAnalytics()
+  const { live, loading, version, error: liveError } = useLiveAnalytics()
 
   const analytics = useMemo(() => buildAnalytics(90), [version])
   const daily = useMemo(() => rangeFor(range), [range, version])
@@ -213,7 +213,7 @@ export const AnalyticsPage = () => {
       <PageHeader
         title="Analytics & reports"
         description="Traffic, call and revenue reporting with date filters and exportable detail."
-        meta={live ? undefined : <SimulatedBadge />}
+        meta={live || loading ? undefined : <SimulatedBadge />}
         actions={
           <>
             <Segmented options={RANGE_OPTIONS} value={range} onChange={setRange} ariaLabel="Report range" size="sm" />
@@ -224,7 +224,7 @@ export const AnalyticsPage = () => {
         }
       />
 
-      {live ? null : <SimulatedNotice />}
+      {live || loading ? null : <SimulatedNotice />}
       {live ? (
         <p className="mt-3 rounded-xl border border-line bg-soft px-3.5 py-2.5 text-2xs leading-relaxed text-muted">
           “Calls” on this report counts Call Now button taps recorded by the site. Connected calls and revenue are

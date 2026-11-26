@@ -34,6 +34,16 @@
     scroll-padding-top: 6rem;
   }
 
+  /* The admin console owns its own scroll container (see AdminLayout). Locking
+     the document here removes the phantom page scroll that left a blank area
+     under long screens such as Analytics & reports. */
+  html.admin-shell,
+  body.admin-shell {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-page font-sans text-ink antialiased;
     text-rendering: optimizeLegibility;

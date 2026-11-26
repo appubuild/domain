@@ -16,7 +16,6 @@ import { hydrateSite } from '@/config/site'
 import { hydrateFaqs } from '@/config/faqs'
 import { API_ENABLED } from './client'
 import {
-  fetchGroupIndex,
   fetchIntegrations,
   fetchPublicFaqs,
   fetchPublicSeo,
@@ -56,6 +55,15 @@ const setState = (patch: Partial<ContentState>): void => {
 
 export const getContentState = (): ContentState => state
 
+/**
+ * Drops the cached promise so the next ensureApiContent() re-reads the API.
+ * Used by the "Try again" button when the first load failed.
+ */
+export const reloadContent = (): Promise<ContentState> => {
+  inFlight = null
+  return ensureApiContent()
+}
+
 export const subscribeContent = (listener: (next: ContentState) => void): (() => void) => {
   listeners.add(listener)
   return () => listeners.delete(listener)
@@ -83,10 +91,9 @@ export const ensureApiContent = (): Promise<ContentState> => {
   setState({ source: 'loading', error: null })
 
   inFlight = (async (): Promise<ContentState> => {
-    const [serviceResult, groupResult, settingsResult, faqResult, integrationResult, seoResult] =
+    const [serviceResult, settingsResult, faqResult, integrationResult, seoResult] =
       await Promise.allSettled([
         fetchServiceDirectory(),
-        fetchGroupIndex(),
         fetchPublicSettings(),
         fetchPublicFaqs(),
         fetchIntegrations(),
@@ -104,30 +111,11 @@ export const ensureApiContent = (): Promise<ContentState> => {
       directory = mapDirectory(serviceResult.value.services)
       hydrateServicePhoneNumbers(directory.groups)
       hydrateServiceNumberMap(directory.mapping)
+      // The call-sheet picker lists exactly the services that have a line.
+      hydrateCallDirectory(directory.directory)
       hydratedAnything = true
     } else if (serviceResult.status === 'rejected') {
       errors.push(`services: ${(serviceResult.reason as Error)?.message ?? 'failed'}`)
-    }
-
-    // The picker lists every group, including ones with no published number.
-    if (groupResult.status === 'fulfilled' && directory && groupResult.value.length > 0) {
-      const groups = groupResult.value
-      hydrateCallDirectory(
-        groups
-          .filter((group) => group.has_active_numbers)
-          .map((group) => {
-            const mapped = directory?.directory.find((entry) => entry.groupId === group.id)
-            return {
-              groupId: group.id,
-              label: group.label ?? group.name,
-              blurb: group.blurb ?? mapped?.blurb ?? '',
-              icon: group.icon ?? mapped?.icon ?? 'wrench',
-              serviceSlug: mapped?.serviceSlug,
-            }
-          }),
-      )
-    } else if (groupResult.status === 'rejected') {
-      errors.push(`phone groups: ${(groupResult.reason as Error)?.message ?? 'failed'}`)
     }
 
     if (settingsResult.status === 'fulfilled') {

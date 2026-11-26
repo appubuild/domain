@@ -96,11 +96,13 @@ final class PhoneNumberModel extends BaseModel
         $total = (int) $count->fetchColumn();
 
         $offset = ($page - 1) * $perPage;
-        $sql = 'SELECT p.*, g.name AS group_name
+        $sql = 'SELECT p.*, g.name AS group_name,
+                       s.id AS service_id, s.name AS service_name, s.slug AS service_slug
                   FROM phone_numbers p
-                  LEFT JOIN phone_groups g ON g.id = p.group_id'
+                  LEFT JOIN phone_groups g ON g.id = p.group_id
+                  LEFT JOIN services s ON s.phone_number_id = p.id AND s.deleted_at IS NULL'
             . $where
-            . ' ORDER BY g.name ASC, p.priority ASC, p.number ASC LIMIT ' . $perPage . ' OFFSET ' . $offset;
+            . ' ORDER BY p.number ASC LIMIT ' . $perPage . ' OFFSET ' . $offset;
 
         $statement = $this->pdo()->prepare($sql);
         $statement->execute($params);
@@ -115,9 +117,11 @@ final class PhoneNumberModel extends BaseModel
     /** @return array<string,mixed> */
     public function adminFind(int $id, bool $withDeleted = false): array
     {
-        $sql = 'SELECT p.*, g.name AS group_name
+        $sql = 'SELECT p.*, g.name AS group_name,
+                       s.id AS service_id, s.name AS service_name, s.slug AS service_slug
                   FROM phone_numbers p
                   LEFT JOIN phone_groups g ON g.id = p.group_id
+                  LEFT JOIN services s ON s.phone_number_id = p.id AND s.deleted_at IS NULL
                  WHERE p.id = :id' . ($withDeleted ? '' : ' AND p.deleted_at IS NULL') . ' LIMIT 1';
         $statement = $this->pdo()->prepare($sql);
         $statement->execute([':id' => $id]);
@@ -202,8 +206,11 @@ final class PhoneNumberModel extends BaseModel
         return [
             'id' => (int) $row['id'],
             'external_id' => $row['external_id'],
-            'group_id' => $row['group_id'],
+            'group_id' => $row['group_id'] ?? null,
             'group_name' => $row['group_name'] ?? null,
+            'service_id' => isset($row['service_id']) ? (int) $row['service_id'] : null,
+            'service_name' => $row['service_name'] ?? null,
+            'service_slug' => $row['service_slug'] ?? null,
             'number' => $row['number'],
             'tel' => 'tel:+1' . preg_replace('/\D+/', '', (string) $row['number']),
             'label' => $row['label'],

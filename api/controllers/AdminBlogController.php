@@ -35,8 +35,10 @@ final class AdminBlogController extends Controller
         unset($request);
         ['page' => $page, 'per_page' => $perPage] = $this->pagination(20);
 
+        // 'all' is the UI's "no filter" value — never turn it into a WHERE clause.
+        $status = $this->filter('status', 20);
         $result = $this->blog->adminList([
-            'status' => $this->filter('status', 20),
+            'status' => $status === null || $status === 'all' ? null : $status,
             'category' => $this->filter('category', 120),
             'q' => $this->filter('q', 120),
             'include_deleted' => $this->boolFilter('include_deleted'),

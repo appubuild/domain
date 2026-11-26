@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import { CallSheetProvider } from '@/components/calls/CallContext'
 import ContentBridge from '@/components/ContentBridge'
+import { ContentGate } from '@/components/ContentGate'
 import AnalyticsBeacon from '@/components/AnalyticsBeacon'
 import { Layout } from '@/components/Layout'
 import Home from '@/pages/Home'
@@ -48,7 +49,13 @@ const App = () => (
             </Suspense>
           }
         />
-        <Route element={<Layout />}>
+        <Route
+          element={
+            <ContentGate>
+              <Layout />
+            </ContentGate>
+          }
+        >
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />

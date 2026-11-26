@@ -38,6 +38,8 @@ const { endpoints, version } = ADMIN_CONFIG.api
 /* -------------------------------------------------------------------------- */
 
 interface ApiService {
+  phone_number_id?: number | null
+  phone_number?: string | null
   id: number
   slug: string
   name: string
@@ -53,12 +55,25 @@ interface ApiService {
   meta_description: string | null
   updated_at: string
   phone_group_ids?: string[]
+  image?: string | null
+  hero_headline?: string | null
+  hero_subheadline?: string | null
+  process_note?: string | null
+  intro?: string[]
+  common_needs?: Array<{ title: string; description: string }>
+  options?: Array<{ title: string; description: string }>
+  faqs?: Array<{ question: string; answer: string }>
+  related?: string[]
+  search_terms?: string[]
+  phone_groups?: unknown
 }
 
 interface ApiNumber {
   id: number
   external_id: string
-  group_id: string
+  group_id: string | null
+  service_id?: number | null
+  service_name?: string | null
   number: string
   label: string | null
   priority: number
@@ -175,6 +190,8 @@ const mapService = (service: ApiService): ServiceRecord => ({
   slug: service.slug,
   name: service.name,
   groupId: service.phone_group_ids?.[0] ?? null,
+  phoneNumberId: service.phone_number_id ? String(service.phone_number_id) : null,
+  phoneNumber: service.phone_number ?? null,
   nicheId: service.niche_id === null ? null : String(service.niche_id),
   category: service.category_id ?? '',
   icon: service.icon,
@@ -182,6 +199,16 @@ const mapService = (service: ApiService): ServiceRecord => ({
   status: service.status,
   sortOrder: service.sort_order,
   shortDescription: service.short_description ?? '',
+  image: service.image ?? '',
+  heroHeadline: service.hero_headline ?? '',
+  heroSubheadline: service.hero_subheadline ?? '',
+  intro: service.intro ?? [],
+  commonNeeds: service.common_needs ?? [],
+  options: service.options ?? [],
+  processNote: service.process_note ?? '',
+  faqs: service.faqs ?? [],
+  related: service.related ?? [],
+  searchTerms: service.search_terms ?? [],
   metaTitle: service.meta_title ?? '',
   metaDescription: service.meta_description ?? '',
   updatedAt: service.updated_at,
@@ -201,7 +228,17 @@ const servicePayload = (input: Partial<NewService>): Record<string, unknown> => 
   if (input.metaTitle !== undefined) payload.meta_title = input.metaTitle
   if (input.metaDescription !== undefined) payload.meta_description = input.metaDescription
   if (input.nicheId !== undefined) payload.niche_id = input.nicheId ? Number(input.nicheId) : null
-  if (input.groupId !== undefined) payload.phone_group_ids = input.groupId ? [input.groupId] : []
+  if (input.image !== undefined) payload.image = input.image || null
+  if (input.heroHeadline !== undefined) payload.hero_headline = input.heroHeadline || null
+  if (input.heroSubheadline !== undefined) payload.hero_subheadline = input.heroSubheadline || null
+  if (input.processNote !== undefined) payload.process_note = input.processNote || null
+  if (input.intro !== undefined) payload.intro = input.intro
+  if (input.commonNeeds !== undefined) payload.common_needs = input.commonNeeds
+  if (input.options !== undefined) payload.options = input.options
+  if (input.faqs !== undefined) payload.faqs = input.faqs
+  if (input.related !== undefined) payload.related = input.related
+  if (input.searchTerms !== undefined) payload.search_terms = input.searchTerms
+  if (input.phoneNumberId !== undefined) payload.phone_number_id = input.phoneNumberId ? Number(input.phoneNumberId) : null
 
   return payload
 }
@@ -209,6 +246,8 @@ const servicePayload = (input: Partial<NewService>): Record<string, unknown> => 
 const mapNumber = (number: ApiNumber): TrackingNumber => ({
   id: String(number.id),
   groupId: number.group_id,
+  serviceId: number.service_id ? String(number.service_id) : null,
+  serviceName: number.service_name ?? null,
   number: number.number,
   label: number.label ?? '',
   priority: number.priority,
@@ -222,6 +261,7 @@ const mapNumber = (number: ApiNumber): TrackingNumber => ({
 
 const numberPayload = (input: Partial<NewNumber>): Record<string, unknown> => {
   const payload: Record<string, unknown> = {}
+  if (input.serviceId !== undefined) payload.service_id = input.serviceId ? Number(input.serviceId) : null
   if (input.groupId !== undefined) payload.group_id = input.groupId
   if (input.number !== undefined) payload.number = input.number
   if (input.label !== undefined) payload.label = input.label
@@ -498,7 +538,7 @@ export const createApiRepository = (): AdminRepository => ({
   },
 
   async createNumber(input: NewNumber): Promise<TrackingNumber> {
-    const payload = { ...numberPayload(input), external_id: makeExternalId(input.groupId, input.number) }
+    const payload = numberPayload(input)
     const created = await apiClient.request<ApiNumber>(adminPath(endpoints.numbers), { method: 'POST', body: payload })
     return mapNumber(created)
   },
@@ -755,12 +795,5 @@ export const createApiRepository = (): AdminRepository => ({
     return Promise.resolve()
   },
 })
-
-/** External id is required by the API and must be stable and unique. */
-const makeExternalId = (groupId: string, number: string): string => {
-  const digits = number.replace(/\D/g, '').slice(-4)
-  const base = `${groupId}-${digits}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
-  return `${base}-${Date.now().toString(36).slice(-4)}`
-}
 
 export const API_REPOSITORY_VERSION = version
