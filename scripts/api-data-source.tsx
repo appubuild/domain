@@ -1,5 +1,5 @@
 import { SERVICES, SERVICE_CATEGORIES } from '@/config/services'
-import { SITE } from '@/config/site'
+import { FOOTER_COMPANY_LINKS, FOOTER_LEGAL_LINKS, FOOTER_TITLES, NAV_LINKS, SITE } from '@/config/site'
 import { SERVICE_PHONE_NUMBERS } from '@/data/serviceNumbers'
 import { SERVICE_NUMBER_MAP, CALL_DIRECTORY_CATEGORIES } from '@/data/serviceNumberMapping'
 import { HOME_FAQS, HOW_IT_WORKS_FAQS } from '@/config/faqs'
@@ -9,6 +9,7 @@ const seed = buildSeedWorkspace()
 
 globalThis.__SHN_DATA__ = {
   site: SITE,
+  navigation: { nav: NAV_LINKS, company: FOOTER_COMPANY_LINKS, legal: FOOTER_LEGAL_LINKS, titles: FOOTER_TITLES },
   categories: SERVICE_CATEGORIES,
   services: SERVICES,
   groups: SERVICE_PHONE_NUMBERS,

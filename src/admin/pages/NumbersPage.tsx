@@ -1,15 +1,19 @@
+/**
+ * Tracking numbers.
+ *
+ * One number, one service. The form asks for three things — the number, an
+ * optional label and the service it belongs to — and nothing else. There are no
+ * directory groups, no priorities and no "alternate line" concept any more: a
+ * service shows exactly one line, and a line can only belong to one service.
+ *
+ * The same relationship can be set from the service form; both screens write
+ * `services.phone_number_id`, so the two views can never disagree.
+ */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { Pencil, PhoneCall, PhoneOff, Plus, Power, Trash2 } from 'lucide-react'
 import { repository, type NewNumber } from '@/admin/data/repository'
 import type { PhoneStatus, ServiceRecord, TrackingNumber } from '@/admin/types/admin'
-import {
-  DIRECTORY_GROUPS,
-  groupName,
-  phoneStatusTone,
-  roleLabel,
-  servicesForGroup,
-} from '@/admin/lib/selectors'
+import { phoneStatusTone } from '@/admin/lib/selectors'
 import { formatDate } from '@/admin/lib/format'
 import { DataTable, type Column } from '@/admin/components/DataTable'
 import {
@@ -23,41 +27,28 @@ import {
   Modal,
   PageHeader,
   Select,
-  Textarea,
 } from '@/admin/components/ui'
 import { useToast } from '@/admin/context/ToastContext'
 
 interface NumberFormState {
-  serviceId: string
-  groupId: string
   number: string
   label: string
-  priority: number
   status: PhoneStatus
-  network: string
-  campaign: string
-  notes: string
+  serviceId: string
 }
 
 const emptyForm: NumberFormState = {
-  serviceId: '',
-  groupId: '',
   number: '',
   label: '',
-  priority: 1,
-  status: 'pending-verification',
-  network: '',
-  campaign: '',
-  notes: '',
+  status: 'active',
+  serviceId: '',
 }
 
 export const NumbersPage = () => {
   const toast = useToast()
-  const [params] = useSearchParams()
   const [numbers, setNumbers] = useState<TrackingNumber[]>([])
   const [services, setServices] = useState<ServiceRecord[]>([])
   const [loading, setLoading] = useState(true)
-  const [groupFilter, setGroupFilter] = useState(params.get('group') ?? 'all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [editing, setEditing] = useState<TrackingNumber | null>(null)
   const [form, setForm] = useState<NumberFormState>(emptyForm)
@@ -80,16 +71,15 @@ export const NumbersPage = () => {
   }, [toast])
 
   useEffect(() => {
-    load()
+    void load()
   }, [load])
 
   const filtered = useMemo(
     () =>
       numbers
-        .filter((row) => (groupFilter === 'all' ? true : row.groupId === groupFilter))
         .filter((row) => (statusFilter === 'all' ? true : row.status === statusFilter))
-        .sort((a, b) => a.groupId.localeCompare(b.groupId) || a.priority - b.priority),
-    [numbers, groupFilter, statusFilter],
+        .sort((a, b) => a.number.localeCompare(b.number)),
+    [numbers, statusFilter],
   )
 
   const counts = useMemo(
@@ -98,8 +88,15 @@ export const NumbersPage = () => {
       active: numbers.filter((row) => row.status === 'active').length,
       pending: numbers.filter((row) => row.status === 'pending-verification').length,
       inactive: numbers.filter((row) => row.status === 'inactive').length,
+      unassigned: numbers.filter((row) => !row.serviceId).length,
     }),
     [numbers],
+  )
+
+  /** A service can only show one line, so a number already used elsewhere is hidden. */
+  const availableServices = useMemo(
+    () => services.filter((service) => !service.phoneNumberId || service.id === form.serviceId),
+    [services, form.serviceId],
   )
 
   const openCreate = () => {
@@ -112,15 +109,10 @@ export const NumbersPage = () => {
   const openEdit = (row: TrackingNumber) => {
     setEditing(row)
     setForm({
-      serviceId: services.find((service) => service.groupId === row.groupId)?.id ?? '',
-      groupId: row.groupId,
       number: row.number,
       label: row.label,
-      priority: row.priority,
       status: row.status,
-      network: row.network,
-      campaign: row.campaign,
-      notes: row.notes,
+      serviceId: row.serviceId ?? '',
     })
     setFormError(null)
     setModalOpen(true)
@@ -128,33 +120,38 @@ export const NumbersPage = () => {
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.groupId) {
-      setFormError('Choose the service (or its directory group) this number belongs to.')
-      return
-    }
     if (!form.number.trim()) {
       setFormError('A phone number is required.')
       return
     }
+
     setSaving(true)
     setFormError(null)
+
+    const service = services.find((entry) => entry.id === form.serviceId)
     const payload: NewNumber = {
-      groupId: form.groupId,
       number: form.number.trim(),
-      label: form.label.trim() || `${groupName(form.groupId)} line`,
-      priority: Number.isFinite(form.priority) ? Math.max(1, Math.round(form.priority)) : 1,
+      label: form.label.trim(),
       status: form.status,
-      network: form.network.trim(),
-      campaign: form.campaign.trim(),
-      notes: form.notes.trim(),
+      serviceId: form.serviceId || null,
+      serviceName: service?.name ?? null,
+      groupId: null,
+      priority: 1,
+      network: '',
+      campaign: '',
+      notes: '',
     }
+
     try {
       if (editing) {
         await repository.updateNumber(editing.id, payload)
         toast.success('Number updated', `${payload.number} saved.`)
       } else {
         await repository.createNumber(payload)
-        toast.success('Number added', `${payload.number} assigned to ${groupName(payload.groupId)}.`)
+        toast.success(
+          'Number added',
+          service ? `${payload.number} is now the line for ${service.name}.` : `${payload.number} added. Assign it to a service when you are ready.`,
+        )
       }
       setModalOpen(false)
       await load()
@@ -183,7 +180,7 @@ export const NumbersPage = () => {
     setDeleting(true)
     try {
       await repository.deleteNumber(pendingDelete.id)
-      toast.success('Number deleted', `${pendingDelete.number} removed from the directory.`)
+      toast.success('Number deleted', `${pendingDelete.number} removed.`)
       setPendingDelete(null)
       await load()
     } catch (error) {
@@ -200,36 +197,21 @@ export const NumbersPage = () => {
       render: (row) => (
         <div className="min-w-0">
           <p className="font-mono text-sm font-semibold text-ink">{row.number}</p>
-          <p className="truncate text-2xs text-muted">{row.label}</p>
+          <p className="truncate text-2xs text-muted">{row.label || 'No label'}</p>
         </div>
       ),
       sortValue: (row) => row.number,
     },
     {
-      key: 'group',
-      header: 'Service / group',
-      render: (row) => {
-        const linked = servicesForGroup(services, row.groupId)
-        return (
-          <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-ink">{groupName(row.groupId)}</p>
-            <p className="truncate text-2xs text-muted">
-              {linked.length > 0 ? linked.map((service) => service.name).join(', ') : 'No website page'}
-            </p>
-          </div>
-        )
-      },
-      sortValue: (row) => row.groupId,
-    },
-    {
-      key: 'role',
-      header: 'Role',
-      render: (row) => (
-        <Badge tone={row.priority === 1 ? 'brand' : 'slate'}>
-          {roleLabel(row.priority)} · P{row.priority}
-        </Badge>
-      ),
-      sortValue: (row) => row.priority,
+      key: 'service',
+      header: 'Service',
+      render: (row) =>
+        row.serviceName ? (
+          <span className="text-xs font-medium text-ink">{row.serviceName}</span>
+        ) : (
+          <Badge tone="amber">Not assigned</Badge>
+        ),
+      sortValue: (row) => row.serviceName ?? '',
     },
     {
       key: 'status',
@@ -238,21 +220,9 @@ export const NumbersPage = () => {
       sortValue: (row) => row.status,
     },
     {
-      key: 'network',
-      header: 'Network / campaign',
-      hideBelow: 'md',
-      render: (row) => (
-        <div className="min-w-0">
-          <p className="truncate text-xs text-ink">{row.network || '—'}</p>
-          <p className="truncate text-2xs text-muted">{row.campaign || 'No campaign'}</p>
-        </div>
-      ),
-      sortValue: (row) => row.network,
-    },
-    {
       key: 'updated',
       header: 'Updated',
-      hideBelow: 'lg',
+      hideBelow: 'md',
       render: (row) => <span className="text-xs text-muted">{formatDate(row.updatedAt)}</span>,
       sortValue: (row) => row.updatedAt,
     },
@@ -264,7 +234,7 @@ export const NumbersPage = () => {
         <div className="flex items-center justify-end gap-1.5">
           <IconButton
             label={row.status === 'active' ? `Pause ${row.number}` : `Activate ${row.number}`}
-            onClick={() => toggleStatus(row)}
+            onClick={() => void toggleStatus(row)}
           >
             <Power className="h-3.5 w-3.5" />
           </IconButton>
@@ -283,13 +253,14 @@ export const NumbersPage = () => {
     <div className="space-y-4">
       <PageHeader
         title="Tracking numbers"
-        description="Every line that can appear on the website. Priority 1 is the “Call Now” button; higher priorities become “Call Alternate”."
+        description="One line per service. Add the number, pick the service, done — the public call button uses it automatically."
         meta={
           <>
             <Badge tone="brand">{counts.total} numbers</Badge>
             <Badge tone="success">{counts.active} active</Badge>
             <Badge tone="amber">{counts.pending} pending</Badge>
             <Badge tone="slate">{counts.inactive} inactive</Badge>
+            {counts.unassigned > 0 ? <Badge tone="violet">{counts.unassigned} unassigned</Badge> : null}
           </>
         }
         actions={
@@ -305,38 +276,23 @@ export const NumbersPage = () => {
           columns={columns}
           rowKey={(row) => row.id}
           loading={loading}
-          searchText={(row) => `${row.number} ${row.label} ${row.network} ${row.campaign} ${groupName(row.groupId)}`}
-          searchPlaceholder="Search number, service or network…"
+          searchText={(row) => `${row.number} ${row.label} ${row.serviceName ?? ''}`}
+          searchPlaceholder="Search number or service…"
           pageSize={10}
           emptyTitle="No numbers match the filters"
-          emptyDescription="Add a line or clear the filters to see the full directory."
+          emptyDescription="Add a line, or clear the filter to see every number."
           toolbar={
-            <>
-              <Select
-                value={groupFilter}
-                onChange={(event) => setGroupFilter(event.target.value)}
-                aria-label="Filter by service group"
-                className="w-44"
-              >
-                <option value="all">All groups</option>
-                {DIRECTORY_GROUPS.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                aria-label="Filter by status"
-                className="w-40"
-              >
-                <option value="all">All statuses</option>
-                <option value="active">Active</option>
-                <option value="pending-verification">Pending</option>
-                <option value="inactive">Inactive</option>
-              </Select>
-            </>
+            <Select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              aria-label="Filter by status"
+              className="w-40"
+            >
+              <option value="all">All statuses</option>
+              <option value="active">Active</option>
+              <option value="pending-verification">Pending</option>
+              <option value="inactive">Inactive</option>
+            </Select>
           }
         />
       </Card>
@@ -344,8 +300,8 @@ export const NumbersPage = () => {
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editing ? `Edit ${editing.number}` : 'Add tracking number'}
-        description="Numbers are grouped by service so each trade only ever shows its own lines."
+        title={editing ? `Edit ${editing.number}` : 'Add phone number'}
+        description="A number belongs to one service. Pick the service here, or assign the number from the service form later."
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setModalOpen(false)}>
@@ -364,46 +320,6 @@ export const NumbersPage = () => {
             </p>
           ) : null}
 
-          <Field label="Service" htmlFor="number-service" hint="The service determines which directory group the number joins.">
-            <Select
-              id="number-service"
-              value={form.serviceId}
-              onChange={(event) => {
-                const service = services.find((entry) => entry.id === event.target.value)
-                setForm((current) => ({
-                  ...current,
-                  serviceId: event.target.value,
-                  groupId: service?.groupId ?? current.groupId,
-                  label: service ? `${service.name} line` : current.label,
-                }))
-              }}
-            >
-              <option value="">Choose a service…</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                  {service.groupId ? '' : ' — no group'}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
-          <Field label="Directory group" htmlFor="number-group" required hint="Several services can share one group (e.g. roofing + roof repair).">
-            <Select
-              id="number-group"
-              value={form.groupId}
-              onChange={(event) => setForm((current) => ({ ...current, groupId: event.target.value }))}
-              required
-            >
-              <option value="">Choose a group…</option>
-              {DIRECTORY_GROUPS.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Phone number" htmlFor="number-value" required hint="Format: 800-555-0100">
               <Input
@@ -411,31 +327,10 @@ export const NumbersPage = () => {
                 value={form.number}
                 onChange={(event) => setForm((current) => ({ ...current, number: event.target.value }))}
                 placeholder="800-555-0100"
+                inputMode="tel"
                 required
               />
             </Field>
-            <Field label="Priority" htmlFor="number-priority" hint="1 = Call Now, 2+ = Call Alternate">
-              <Input
-                id="number-priority"
-                type="number"
-                min={1}
-                max={9}
-                value={form.priority}
-                onChange={(event) => setForm((current) => ({ ...current, priority: Number(event.target.value) }))}
-              />
-            </Field>
-          </div>
-
-          <Field label="Description" htmlFor="number-label" hint="Shown in the admin table only.">
-            <Input
-              id="number-label"
-              value={form.label}
-              onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))}
-              placeholder="Roofing — primary line"
-            />
-          </Field>
-
-          <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Status" htmlFor="number-status">
               <Select
                 id="number-status"
@@ -447,46 +342,50 @@ export const NumbersPage = () => {
                 <option value="inactive">Inactive (hidden)</option>
               </Select>
             </Field>
-            <Field label="Network" htmlFor="number-network">
-              <Input
-                id="number-network"
-                value={form.network}
-                onChange={(event) => setForm((current) => ({ ...current, network: event.target.value }))}
-                placeholder="CallRail / Ringba / direct"
-              />
-            </Field>
           </div>
 
-          <Field label="Campaign" htmlFor="number-campaign">
-            <Input
-              id="number-campaign"
-              value={form.campaign}
-              onChange={(event) => setForm((current) => ({ ...current, campaign: event.target.value }))}
-              placeholder="Q4 roofing nationwide"
-            />
+          <Field label="Service" htmlFor="number-service" hint="Optional. A service shows exactly one line.">
+            <Select
+              id="number-service"
+              value={form.serviceId}
+              onChange={(event) => {
+                const service = services.find((entry) => entry.id === event.target.value)
+                setForm((current) => ({
+                  ...current,
+                  serviceId: event.target.value,
+                  label: current.label || (service ? `${service.name} line` : current.label),
+                }))
+              }}
+            >
+              <option value="">Not assigned yet</option>
+              {availableServices.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
+            </Select>
           </Field>
 
-          <Field label="Notes" htmlFor="number-notes">
-            <Textarea
-              id="number-notes"
-              rows={3}
-              value={form.notes}
-              onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))}
-              placeholder="Confirmation details, restrictions or billing notes."
+          <Field label="Label" htmlFor="number-label" hint="Optional. Appears on the service page under the call button.">
+            <Input
+              id="number-label"
+              value={form.label}
+              onChange={(event) => setForm((current) => ({ ...current, label: event.target.value }))}
+              placeholder="Roofing service line"
             />
           </Field>
 
           <p className="flex items-start gap-2 rounded-lg bg-soft px-3 py-2 text-2xs text-muted">
             <PhoneCall className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            Only `active` numbers are published. Pending and inactive lines stay hidden on the public site.
+            Only active numbers are published. Pending and inactive lines stay hidden on the public site.
           </p>
         </form>
       </Modal>
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}
-        title="Delete tracking number?"
-        description={`${pendingDelete?.number ?? ''} will be removed from ${groupName(pendingDelete?.groupId ?? null)}. This cannot be undone in the demo workspace.`}
+        title="Delete phone number?"
+        description={`${pendingDelete?.number ?? ''} will be removed${pendingDelete?.serviceName ? ` from ${pendingDelete.serviceName}` : ''}. This cannot be undone.`}
         confirmLabel="Delete number"
         loading={deleting}
         onCancel={() => setPendingDelete(null)}
@@ -495,9 +394,11 @@ export const NumbersPage = () => {
 
       {!loading && numbers.length === 0 ? (
         <Card className="flex items-center gap-3 px-5 py-4 text-sm text-muted">
-          <PhoneOff className="h-4 w-4" /> No numbers in the directory yet.
+          <PhoneOff className="h-4 w-4" /> No numbers yet. Add one, then assign it to a service.
         </Card>
       ) : null}
     </div>
   )
 }
+
+export default NumbersPage

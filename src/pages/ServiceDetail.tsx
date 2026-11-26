@@ -127,21 +127,27 @@ const ServiceDetail = () => {
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <BadgeCheck className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
-                  Primary &amp; alternate call lines
+                  One verified service line
                 </span>
               </div>
             </div>
 
             <div className="relative">
               <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card lg:rounded-3xl">
-                <img
-                  src={service.image}
-                  alt={`${service.name} work in a residential home`}
-                  className="h-56 w-full object-cover sm:h-72 lg:h-[21rem]"
-                  width={1376}
-                  height={768}
-                          decoding="async"
-                />
+                {service.image ? (
+                  <img
+                    src={service.image}
+                    alt={`${service.name} work in a residential home`}
+                    className="h-56 w-full object-cover sm:h-72 lg:h-[21rem]"
+                    width={1376}
+                    height={768}
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="flex h-56 w-full items-center justify-center bg-soft sm:h-72 lg:h-[21rem]">
+                    <ServiceIcon name={service.icon} className="h-14 w-14 text-brand-500/60" />
+                  </div>
+                )}
               </div>
             </div>
           </div>

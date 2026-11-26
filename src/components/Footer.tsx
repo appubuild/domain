@@ -3,6 +3,7 @@ import { ArrowUpRight, Clock, Mail, MapPin, Phone, ShieldCheck } from 'lucide-re
 import {
   FOOTER_COMPANY_LINKS,
   FOOTER_LEGAL_LINKS,
+  FOOTER_TITLES,
   SITE,
   hasPhone,
   telHref,
@@ -47,7 +48,7 @@ export const Footer = () => {
 
           {/* Company */}
           <nav aria-label="Company">
-            <h2 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">Company</h2>
+            <h2 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">{FOOTER_TITLES.company}</h2>
             <ul className="mt-4 space-y-2.5">
               {FOOTER_COMPANY_LINKS.map((link) => (
                 <li key={link.to}>
@@ -62,7 +63,7 @@ export const Footer = () => {
           {/* Services */}
           <nav aria-label="Service categories">
             <h2 className="font-display text-sm font-bold uppercase tracking-[0.14em] text-white">
-              Services
+              {FOOTER_TITLES.services}
             </h2>
             <ul className="mt-4 space-y-2.5">
               {SERVICE_CATEGORIES.map((category) => (
@@ -172,7 +173,7 @@ export const Footer = () => {
           <p className="text-xs text-white/65">
             © {year} {SITE.legalName}. All rights reserved.
           </p>
-          <nav aria-label="Legal">
+          <nav aria-label={FOOTER_TITLES.legal}>
             <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
               {FOOTER_LEGAL_LINKS.map((link) => (
                 <li key={link.to}>

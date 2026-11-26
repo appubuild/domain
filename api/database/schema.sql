@@ -68,6 +68,7 @@ CREATE TABLE `services` (
   `short_name`         VARCHAR(80)  NULL,
   `category_id`        VARCHAR(32)  NULL,
   `niche_id`           INT UNSIGNED NULL,
+  `phone_number_id`    INT UNSIGNED NULL,   -- the one line this service exposes
   `icon`               VARCHAR(60)  NOT NULL DEFAULT 'Wrench',
   `image`              VARCHAR(255) NULL,
   `featured`           TINYINT(1)   NOT NULL DEFAULT 0,
@@ -94,6 +95,9 @@ CREATE TABLE `services` (
   KEY `idx_services_category` (`category_id`),
   KEY `idx_services_niche` (`niche_id`),
   KEY `idx_services_sort` (`sort_order`),
+  -- One line per service. NULL is allowed (a service may have no line yet) and
+  -- MySQL permits many NULLs in a unique index, so this is the invariant we want.
+  UNIQUE KEY `uniq_services_phone` (`phone_number_id`),
   CONSTRAINT `fk_services_category` FOREIGN KEY (`category_id`) REFERENCES `service_categories` (`id`) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT `fk_services_niche` FOREIGN KEY (`niche_id`) REFERENCES `niches` (`id`) ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -112,8 +116,8 @@ CREATE TABLE `phone_groups` (
 
 CREATE TABLE `phone_numbers` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `external_id`          VARCHAR(64)  NOT NULL,           -- stable id used by the frontend ('roofing-1')
-  `group_id`             VARCHAR(64)  NOT NULL,
+  `external_id`          VARCHAR(64)  NOT NULL,           -- stable id used by the frontend ('line-8007793921')
+  `group_id`             VARCHAR(64)  NULL,               -- legacy: groups are no longer used
   `number`               VARCHAR(24)  NOT NULL,           -- display format 800-779-3921
   `label`                VARCHAR(160) NULL,
   `priority`             TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- 1 = Call Now, 2+ = Call Alternate
@@ -132,11 +136,11 @@ CREATE TABLE `phone_numbers` (
   UNIQUE KEY `uniq_numbers_external` (`external_id`),
   UNIQUE KEY `uniq_numbers_number` (`number`),
   KEY `idx_numbers_group` (`group_id`, `priority`),
-  KEY `idx_numbers_status` (`status`),
-  CONSTRAINT `fk_numbers_group` FOREIGN KEY (`group_id`) REFERENCES `phone_groups` (`id`) ON UPDATE CASCADE ON DELETE RESTRICT
+  KEY `idx_numbers_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- A service can draw from more than one group; position keeps them ordered.
+-- DEPRECATED (kept for old data only): services now own one line through
+-- services.phone_number_id, so nothing in the app reads or writes this table.
 CREATE TABLE `service_phone_groups` (
   `service_id` INT UNSIGNED NOT NULL,
   `group_id`   VARCHAR(64)  NOT NULL,

@@ -26,6 +26,7 @@ final class AdminServiceController extends Controller
         'short_name' => 'nullable|string|max:80',
         'category_id' => 'nullable|string|max:32',
         'niche_id' => 'nullable|int',
+        'phone_number_id' => 'nullable|int',
         'icon' => 'nullable|string|max:60',
         'image' => 'nullable|string|max:255',
         'featured' => 'nullable|bool',
@@ -81,8 +82,10 @@ final class AdminServiceController extends Controller
             $this->translateWriteError($exception);
         }
 
-        if (array_key_exists('phone_group_ids', $request->body())) {
-            $this->services->syncGroups($id, $this->groupIds($request));
+        // One line per service. The number can also be assigned from the number
+        // form; both screens write the same column through assignNumber().
+        if (array_key_exists('phone_number_id', $request->body())) {
+            $this->services->assignNumber($id, $this->numberId($request));
         }
 
         Logger::audit($request->admin, 'service.created', 'service', $id, 'Created service ' . ($data['name'] ?? ''), $request->ip());
@@ -104,8 +107,8 @@ final class AdminServiceController extends Controller
             $this->translateWriteError($exception);
         }
 
-        if (array_key_exists('phone_group_ids', $request->body())) {
-            $this->services->syncGroups($serviceId, $this->groupIds($request));
+        if (array_key_exists('phone_number_id', $request->body())) {
+            $this->services->assignNumber($serviceId, $this->numberId($request));
         }
 
         Logger::audit($request->admin, 'service.updated', 'service', $serviceId, 'Updated service ' . ($data['name'] ?? ''), $request->ip());
@@ -279,6 +282,21 @@ final class AdminServiceController extends Controller
     }
 
     /** @return array<int,string> */
+    /** The single phone number a service should point at (null clears it). */
+    private function numberId(Request $request): ?int
+    {
+        $value = $request->input('phone_number_id');
+
+        if ($value === null || $value === '' || $value === 0 || $value === '0') {
+            return null;
+        }
+        if (!is_scalar($value) || !ctype_digit((string) $value)) {
+            throw ApiException::unprocessable('phone_number_id must be a number id.', ['phone_number_id' => 'Invalid number id.']);
+        }
+
+        return (int) $value;
+    }
+
     private function groupIds(Request $request): array
     {
         $value = $request->input('phone_group_ids', []);

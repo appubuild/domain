@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AlertTriangle, Building2, Globe2, RotateCcw, Save, Share2, SlidersHorizontal } from 'lucide-react'
+import {
+  AlertTriangle,
+  Building2,
+  Globe2,
+  Link2,
+  Plus,
+  RotateCcw,
+  Save,
+  Share2,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react'
 import { repository } from '@/admin/data/repository'
-import type { SiteSettings } from '@/admin/types/admin'
+import type { SiteLinkRecord, SiteSettings } from '@/admin/types/admin'
 import { formatDateTime } from '@/admin/lib/format'
 import {
   Badge,
@@ -17,6 +28,102 @@ import {
 } from '@/admin/components/ui'
 import { useToast } from '@/admin/context/ToastContext'
 import { ADMIN_CONFIG } from '@/admin/config/adminConfig'
+
+type LinkListKey = 'navLinks' | 'footerCompanyLinks' | 'footerLegalLinks'
+
+const LINK_LISTS: { key: LinkListKey; title: string; description: string }[] = [
+  { key: 'navLinks', title: 'Header menu', description: 'Top navigation, in display order.' },
+  { key: 'footerCompanyLinks', title: 'Footer — company', description: 'First footer column.' },
+  { key: 'footerLegalLinks', title: 'Footer — legal', description: 'Legal links in the bottom bar.' },
+]
+
+const LinkListEditor = ({
+  id,
+  title,
+  description,
+  links,
+  onChange,
+}: {
+  id: string
+  title: string
+  description: string
+  links: SiteLinkRecord[]
+  onChange: (next: SiteLinkRecord[]) => void
+}) => {
+  const patch = (index: number, key: keyof SiteLinkRecord, value: string) =>
+    onChange(links.map((link, position) => (position === index ? { ...link, [key]: value } : link)))
+
+  const move = (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (target < 0 || target >= links.length) return
+    const next = [...links]
+    const [row] = next.splice(index, 1)
+    next.splice(target, 0, row)
+    onChange(next)
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-ink">{title}</p>
+          <p className="text-2xs text-muted">{description}</p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          iconLeft={<Plus className="h-3.5 w-3.5" />}
+          onClick={() => onChange([...links, { label: '', to: '/' }])}
+        >
+          Add
+        </Button>
+      </div>
+
+      {links.length === 0 ? (
+        <p className="rounded-lg bg-soft px-3 py-2 text-2xs text-muted">
+          No links — this list is hidden on the website.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {links.map((link, index) => (
+            <div key={`${id}-${index}`} className="flex items-center gap-2">
+              <Input
+                aria-label={`${title} label ${index + 1}`}
+                placeholder="Label"
+                value={link.label}
+                onChange={(event) => patch(index, 'label', event.target.value)}
+              />
+              <Input
+                aria-label={`${title} path ${index + 1}`}
+                placeholder="/path"
+                value={link.to}
+                onChange={(event) => patch(index, 'to', event.target.value)}
+              />
+              <div className="flex shrink-0 items-center gap-1">
+                <Button type="button" size="sm" variant="ghost" aria-label="Move up" onClick={() => move(index, -1)}>
+                  ↑
+                </Button>
+                <Button type="button" size="sm" variant="ghost" aria-label="Move down" onClick={() => move(index, 1)}>
+                  ↓
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`Remove ${link.label || 'link'}`}
+                  onClick={() => onChange(links.filter((_, position) => position !== index))}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export const SettingsPage = () => {
   const toast = useToast()
@@ -224,6 +331,54 @@ export const SettingsPage = () => {
           </div>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader
+          title="Menu & footer links"
+          description="The header menu and both footer columns are driven by these lists — no code change needed."
+          action={<Link2 className="h-4 w-4 text-muted" />}
+        />
+        <div className="grid gap-5 p-5 xl:grid-cols-3">
+          {LINK_LISTS.map((list) => (
+            <LinkListEditor
+              key={list.key}
+              id={list.key}
+              title={list.title}
+              description={list.description}
+              links={draft[list.key]}
+              onChange={(next) => update(list.key, next)}
+            />
+          ))}
+        </div>
+        <div className="grid gap-3 border-t border-line px-5 py-4 sm:grid-cols-3">
+          <Field label="Company column title" htmlFor="settings-footer-company-title">
+            <Input
+              id="settings-footer-company-title"
+              value={draft.footerCompanyTitle}
+              onChange={(event) => update('footerCompanyTitle', event.target.value)}
+            />
+          </Field>
+          <Field label="Services column title" htmlFor="settings-footer-services-title">
+            <Input
+              id="settings-footer-services-title"
+              value={draft.footerServicesTitle}
+              onChange={(event) => update('footerServicesTitle', event.target.value)}
+            />
+          </Field>
+          <Field label="Legal column title" htmlFor="settings-footer-legal-title">
+            <Input
+              id="settings-footer-legal-title"
+              value={draft.footerLegalTitle}
+              onChange={(event) => update('footerLegalTitle', event.target.value)}
+            />
+          </Field>
+        </div>
+
+        <p className="border-t border-line px-5 py-3 text-2xs leading-relaxed text-muted">
+          Use internal paths such as <code>/services</code> or <code>/blog</code>. Empty rows are ignored, and an
+          empty list removes that block from the site.
+        </p>
+      </Card>
 
       {ADMIN_CONFIG.api.enabled ? null : (
         <>

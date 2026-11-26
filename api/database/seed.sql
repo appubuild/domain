@@ -88,6 +88,14 @@ INSERT INTO `service_phone_groups` (`service_id`, `group_id`, `position`) SELECT
 INSERT INTO `service_phone_groups` (`service_id`, `group_id`, `position`) SELECT `id`, 'bathroom-kitchen-remodeling', 1 FROM `services` WHERE `slug` = 'bathroom-remodeling';
 INSERT INTO `service_phone_groups` (`service_id`, `group_id`, `position`) SELECT `id`, 'window', 1 FROM `services` WHERE `slug` = 'window-installation';
 
+-- One line per service (services.phone_number_id)
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'roofing' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'roofing';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'plumbing' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'plumbing';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'hvac' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'hvac';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'electrical' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'electrical';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'bathroom-kitchen-remodeling' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'kitchen-remodeling';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'window' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'window-installation';
+
 -- Pages
 INSERT INTO `pages` (`slug`, `title`, `template`, `status`, `excerpt`, `body`, `seo_title`, `seo_description`, `published_at`, `updated_by`) VALUES ('/', 'Home', 'landing', 'published', 'Hero, service picker, trust markers and popular categories.', NULL, 'Safe Home Network — Home Services, One Call Away', 'Pick a service and call the published line for that trade.', '2026-11-06 09:00:00', 1);
 INSERT INTO `pages` (`slug`, `title`, `template`, `status`, `excerpt`, `body`, `seo_title`, `seo_description`, `published_at`, `updated_by`) VALUES ('/about', 'About', 'standard', 'published', 'How the directory works and what we do not promise.', NULL, 'About Safe Home Network', 'A directory that connects homeowners with published service lines.', '2026-11-03 09:00:00', 1);
@@ -175,6 +183,12 @@ INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `settin
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('social_linkedin', 'social', NULL, 'string', 1, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('social_x', 'social', NULL, 'string', 1, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('social_youtube', 'social', NULL, 'string', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('nav_links', 'navigation', '[{"label":"Home","to":"/"},{"label":"Services","to":"/services"},{"label":"How It Works","to":"/how-it-works"},{"label":"Blog","to":"/blog"},{"label":"About Us","to":"/about"},{"label":"Contact","to":"/contact"}]', 'json', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_company_links', 'navigation', '[{"label":"About Us","to":"/about"},{"label":"How It Works","to":"/how-it-works"},{"label":"Service Area","to":"/service-area"},{"label":"All Services","to":"/services"},{"label":"Contact","to":"/contact"}]', 'json', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_legal_links', 'navigation', '[{"label":"Privacy Policy","to":"/privacy-policy"},{"label":"Terms & Conditions","to":"/terms-and-conditions"},{"label":"Disclaimer","to":"/disclaimer"},{"label":"Do Not Sell or Share My Personal Information","to":"/do-not-sell-or-share"},{"label":"Accessibility Statement","to":"/accessibility"}]', 'json', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_company_title', 'navigation', 'Company', 'string', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_services_title', 'navigation', 'Services', 'string', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_legal_title', 'navigation', 'Legal', 'string', 1, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('analytics_id', 'integrations', NULL, 'string', 0, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('google_verification', 'integrations', NULL, 'string', 0, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('header_scripts', 'integrations', NULL, 'script', 0, 1);

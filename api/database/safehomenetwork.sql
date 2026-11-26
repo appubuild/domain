@@ -68,6 +68,7 @@ CREATE TABLE `services` (
   `short_name`         VARCHAR(80)  NULL,
   `category_id`        VARCHAR(32)  NULL,
   `niche_id`           INT UNSIGNED NULL,
+  `phone_number_id`    INT UNSIGNED NULL,   -- the one line this service exposes
   `icon`               VARCHAR(60)  NOT NULL DEFAULT 'Wrench',
   `image`              VARCHAR(255) NULL,
   `featured`           TINYINT(1)   NOT NULL DEFAULT 0,
@@ -94,6 +95,9 @@ CREATE TABLE `services` (
   KEY `idx_services_category` (`category_id`),
   KEY `idx_services_niche` (`niche_id`),
   KEY `idx_services_sort` (`sort_order`),
+  -- One line per service. NULL is allowed (a service may have no line yet) and
+  -- MySQL permits many NULLs in a unique index, so this is the invariant we want.
+  UNIQUE KEY `uniq_services_phone` (`phone_number_id`),
   CONSTRAINT `fk_services_category` FOREIGN KEY (`category_id`) REFERENCES `service_categories` (`id`) ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT `fk_services_niche` FOREIGN KEY (`niche_id`) REFERENCES `niches` (`id`) ON UPDATE CASCADE ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -112,8 +116,8 @@ CREATE TABLE `phone_groups` (
 
 CREATE TABLE `phone_numbers` (
   `id`                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  `external_id`          VARCHAR(64)  NOT NULL,           -- stable id used by the frontend ('roofing-1')
-  `group_id`             VARCHAR(64)  NOT NULL,
+  `external_id`          VARCHAR(64)  NOT NULL,           -- stable id used by the frontend ('line-8007793921')
+  `group_id`             VARCHAR(64)  NULL,               -- legacy: groups are no longer used
   `number`               VARCHAR(24)  NOT NULL,           -- display format 800-779-3921
   `label`                VARCHAR(160) NULL,
   `priority`             TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- 1 = Call Now, 2+ = Call Alternate
@@ -132,11 +136,11 @@ CREATE TABLE `phone_numbers` (
   UNIQUE KEY `uniq_numbers_external` (`external_id`),
   UNIQUE KEY `uniq_numbers_number` (`number`),
   KEY `idx_numbers_group` (`group_id`, `priority`),
-  KEY `idx_numbers_status` (`status`),
-  CONSTRAINT `fk_numbers_group` FOREIGN KEY (`group_id`) REFERENCES `phone_groups` (`id`) ON UPDATE CASCADE ON DELETE RESTRICT
+  KEY `idx_numbers_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- A service can draw from more than one group; position keeps them ordered.
+-- DEPRECATED (kept for old data only): services now own one line through
+-- services.phone_number_id, so nothing in the app reads or writes this table.
 CREATE TABLE `service_phone_groups` (
   `service_id` INT UNSIGNED NOT NULL,
   `group_id`   VARCHAR(64)  NOT NULL,
@@ -696,6 +700,14 @@ INSERT INTO `service_phone_groups` (`service_id`, `group_id`, `position`) SELECT
 INSERT INTO `service_phone_groups` (`service_id`, `group_id`, `position`) SELECT `id`, 'bathroom-kitchen-remodeling', 1 FROM `services` WHERE `slug` = 'bathroom-remodeling';
 INSERT INTO `service_phone_groups` (`service_id`, `group_id`, `position`) SELECT `id`, 'window', 1 FROM `services` WHERE `slug` = 'window-installation';
 
+-- One line per service (services.phone_number_id)
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'roofing' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'roofing';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'plumbing' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'plumbing';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'hvac' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'hvac';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'electrical' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'electrical';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'bathroom-kitchen-remodeling' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'kitchen-remodeling';
+UPDATE `services` SET `phone_number_id` = (SELECT `id` FROM `phone_numbers` WHERE `group_id` = 'window' AND `deleted_at` IS NULL ORDER BY `priority` ASC, `id` ASC LIMIT 1) WHERE `slug` = 'window-installation';
+
 -- Pages
 INSERT INTO `pages` (`slug`, `title`, `template`, `status`, `excerpt`, `body`, `seo_title`, `seo_description`, `published_at`, `updated_by`) VALUES ('/', 'Home', 'landing', 'published', 'Hero, service picker, trust markers and popular categories.', NULL, 'Safe Home Network — Home Services, One Call Away', 'Pick a service and call the published line for that trade.', '2026-11-06 09:00:00', 1);
 INSERT INTO `pages` (`slug`, `title`, `template`, `status`, `excerpt`, `body`, `seo_title`, `seo_description`, `published_at`, `updated_by`) VALUES ('/about', 'About', 'standard', 'published', 'How the directory works and what we do not promise.', NULL, 'About Safe Home Network', 'A directory that connects homeowners with published service lines.', '2026-11-03 09:00:00', 1);
@@ -783,6 +795,12 @@ INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `settin
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('social_linkedin', 'social', NULL, 'string', 1, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('social_x', 'social', NULL, 'string', 1, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('social_youtube', 'social', NULL, 'string', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('nav_links', 'navigation', '[{"label":"Home","to":"/"},{"label":"Services","to":"/services"},{"label":"How It Works","to":"/how-it-works"},{"label":"Blog","to":"/blog"},{"label":"About Us","to":"/about"},{"label":"Contact","to":"/contact"}]', 'json', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_company_links', 'navigation', '[{"label":"About Us","to":"/about"},{"label":"How It Works","to":"/how-it-works"},{"label":"Service Area","to":"/service-area"},{"label":"All Services","to":"/services"},{"label":"Contact","to":"/contact"}]', 'json', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_legal_links', 'navigation', '[{"label":"Privacy Policy","to":"/privacy-policy"},{"label":"Terms & Conditions","to":"/terms-and-conditions"},{"label":"Disclaimer","to":"/disclaimer"},{"label":"Do Not Sell or Share My Personal Information","to":"/do-not-sell-or-share"},{"label":"Accessibility Statement","to":"/accessibility"}]', 'json', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_company_title', 'navigation', 'Company', 'string', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_services_title', 'navigation', 'Services', 'string', 1, 1);
+INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('footer_legal_title', 'navigation', 'Legal', 'string', 1, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('analytics_id', 'integrations', NULL, 'string', 0, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('google_verification', 'integrations', NULL, 'string', 0, 1);
 INSERT INTO `settings` (`setting_key`, `setting_group`, `setting_value`, `setting_type`, `is_public`, `updated_by`) VALUES ('header_scripts', 'integrations', NULL, 'script', 0, 1);

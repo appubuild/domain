@@ -35,10 +35,12 @@ final class ServiceModel extends BaseModel
     {
         $sql = 'SELECT s.id, s.slug, s.name, s.short_name, s.category_id, s.niche_id, s.icon, s.image,
                        s.featured, s.hero_headline, s.hero_subheadline, s.short_description,
-                       s.meta_title, s.meta_description, s.sort_order,
+                       s.meta_title, s.meta_description, s.sort_order, s.phone_number_id,
                        c.name AS category_name, n.name AS niche_name, n.slug AS niche_slug,
-                       (SELECT COUNT(*) FROM service_phone_groups spg WHERE spg.service_id = s.id) AS phone_group_count
+                       pn.number AS phone_number, pn.label AS phone_label
                   FROM services s
+                  LEFT JOIN phone_numbers pn ON pn.id = s.phone_number_id
+                        AND pn.deleted_at IS NULL AND pn.status = "active"
                   LEFT JOIN service_categories c ON c.id = s.category_id
                   LEFT JOIN niches n ON n.id = s.niche_id
                  WHERE s.deleted_at IS NULL AND s.status = "published"
@@ -68,7 +70,7 @@ final class ServiceModel extends BaseModel
                 'short_description' => $row['short_description'],
                 'meta_title' => $row['meta_title'],
                 'meta_description' => $row['meta_description'],
-                'phone_group_count' => (int) $row['phone_group_count'],
+                'number' => self::numberPayload($row['phone_number'] ?? null, $row['phone_label'] ?? null),
             ];
         }, $rows);
     }
@@ -78,7 +80,7 @@ final class ServiceModel extends BaseModel
     public function publishedDetail(string $slug): ?array
     {
         $statement = $this->pdo()->prepare(
-            'SELECT s.*, c.name AS category_name, n.name AS niche_name
+            'SELECT s.*, c.name AS category_name, n.name AS niche_name, n.slug AS niche_slug
                FROM services s
                LEFT JOIN service_categories c ON c.id = s.category_id
                LEFT JOIN niches n ON n.id = s.niche_id
@@ -120,7 +122,7 @@ final class ServiceModel extends BaseModel
             'meta_title' => $row['meta_title'],
             'meta_description' => $row['meta_description'],
             'updated_at' => $row['updated_at'],
-            'phone_groups' => $this->publicGroups((int) $row['id']),
+            'number' => $this->publicNumberFor((int) $row['id']),
         ];
 
         return $service;
@@ -136,6 +138,67 @@ final class ServiceModel extends BaseModel
     public function publicGroups(int $serviceId): array
     {
         return $this->publicGroupsForServices([$serviceId])[$serviceId] ?? [];
+    }
+
+    /**
+     * The one public line of a service, or null.
+     *
+     * Only an active, non-deleted number is ever exposed: a number that is
+     * pending verification or retired must never reach a visitor.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function publicNumberFor(int $serviceId): ?array
+    {
+        return $this->publicNumbersForServices([$serviceId])[$serviceId] ?? null;
+    }
+
+    /**
+     * Public lines for many services in one query (no N+1 on the directory).
+     *
+     * @param array<int,int> $serviceIds
+     * @return array<int,array<string,mixed>>
+     */
+    public function publicNumbersForServices(array $serviceIds): array
+    {
+        $serviceIds = array_values(array_filter(array_map('intval', $serviceIds)));
+        if ($serviceIds === []) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($serviceIds), '?'));
+        $statement = $this->pdo()->prepare(
+            'SELECT s.id AS service_id, p.number, p.label
+               FROM services s
+               JOIN phone_numbers p ON p.id = s.phone_number_id
+              WHERE s.id IN (' . $placeholders . ')
+                AND p.deleted_at IS NULL AND p.status = "active"',
+        );
+        $statement->execute($serviceIds);
+
+        $numbers = [];
+        foreach ($statement->fetchAll(PDO::FETCH_ASSOC) ?: [] as $row) {
+            $payload = self::numberPayload($row['number'] ?? null, $row['label'] ?? null);
+            if ($payload !== null) {
+                $numbers[(int) $row['service_id']] = $payload;
+            }
+        }
+
+        return $numbers;
+    }
+
+    /** @return array<string,string>|null */
+    private static function numberPayload(?string $number, ?string $label): ?array
+    {
+        if ($number === null || trim($number) === '') {
+            return null;
+        }
+
+        return [
+            'number' => $number,
+            'label' => $label ?? '',
+            'tel' => 'tel:+1' . preg_replace('/\D+/', '', $number),
+        ];
     }
 
     /**
@@ -159,9 +222,9 @@ final class ServiceModel extends BaseModel
         }
 
         $ids = array_map(static fn (array $row): int => (int) $row['id'], $rows);
-        $groups = $this->publicGroupsForServices($ids);
+        $numbers = $this->publicNumbersForServices($ids);
 
-        return array_map(function (array $row) use ($groups): array {
+        return array_map(function (array $row) use ($numbers): array {
             $id = (int) $row['id'];
 
             return [
@@ -193,7 +256,7 @@ final class ServiceModel extends BaseModel
                 'meta_title' => $row['meta_title'],
                 'meta_description' => $row['meta_description'],
                 'updated_at' => $row['updated_at'],
-                'phone_groups' => $groups[$id] ?? [],
+                'number' => $numbers[$id] ?? null,
             ];
         }, $rows);
     }
@@ -334,10 +397,12 @@ final class ServiceModel extends BaseModel
         $total = (int) $countStatement->fetchColumn();
 
         $offset = ($page - 1) * $perPage;
-        $sql = 'SELECT s.*, c.name AS category_name, n.name AS niche_name, n.slug AS niche_slug
+        $sql = 'SELECT s.*, c.name AS category_name, n.name AS niche_name, n.slug AS niche_slug,
+                       pn.number AS phone_number
                   FROM services s
                   LEFT JOIN service_categories c ON c.id = s.category_id
-                  LEFT JOIN niches n ON n.id = s.niche_id'
+                  LEFT JOIN niches n ON n.id = s.niche_id
+                  LEFT JOIN phone_numbers pn ON pn.id = s.phone_number_id AND pn.deleted_at IS NULL'
             . $where
             . ' ORDER BY s.sort_order ASC, s.name ASC LIMIT ' . $perPage . ' OFFSET ' . $offset;
 
@@ -354,10 +419,12 @@ final class ServiceModel extends BaseModel
     /** @return array<string,mixed> */
     public function adminFind(int $id, bool $withDeleted = false): array
     {
-        $sql = 'SELECT s.*, c.name AS category_name, n.name AS niche_name, n.slug AS niche_slug
+        $sql = 'SELECT s.*, c.name AS category_name, n.name AS niche_name, n.slug AS niche_slug,
+                       pn.number AS phone_number
                   FROM services s
                   LEFT JOIN service_categories c ON c.id = s.category_id
                   LEFT JOIN niches n ON n.id = s.niche_id
+                  LEFT JOIN phone_numbers pn ON pn.id = s.phone_number_id AND pn.deleted_at IS NULL
                  WHERE s.id = :id' . ($withDeleted ? '' : ' AND s.deleted_at IS NULL') . ' LIMIT 1';
         $statement = $this->pdo()->prepare($sql);
         $statement->execute([':id' => $id]);
@@ -405,6 +472,45 @@ final class ServiceModel extends BaseModel
 
         $statement = $this->pdo()->prepare($sql);
         $statement->execute($this->bindings($payload) + [':id' => $id]);
+    }
+
+    /**
+     * Points a service at exactly one number (or at none).
+     *
+     * This is the only place the link is written, whether it was set from the
+     * service form or from the number form, so the relationship can never drift
+     * between the two screens. A number can only belong to one service, so the
+     * previous owner is released first.
+     */
+    public function assignNumber(int $serviceId, ?int $numberId): void
+    {
+        $pdo = $this->pdo();
+
+        if ($numberId !== null) {
+            $exists = $pdo->prepare('SELECT id FROM phone_numbers WHERE id = :id AND deleted_at IS NULL LIMIT 1');
+            $exists->execute([':id' => $numberId]);
+            if ($exists->fetchColumn() === false) {
+                throw ApiException::unprocessable('That phone number does not exist.', ['phone_number_id' => 'Unknown number.']);
+            }
+
+            $release = $pdo->prepare('UPDATE services SET phone_number_id = NULL WHERE phone_number_id = :number AND id <> :service');
+            $release->execute([':number' => $numberId, ':service' => $serviceId]);
+        }
+
+        $statement = $pdo->prepare('UPDATE services SET phone_number_id = :number WHERE id = :service AND deleted_at IS NULL');
+        $statement->execute([':number' => $numberId, ':service' => $serviceId]);
+    }
+
+    /** The service a number is assigned to, if any. @return array<string,mixed>|null */
+    public function serviceForNumber(int $numberId): ?array
+    {
+        $statement = $this->pdo()->prepare(
+            'SELECT id, slug, name FROM services WHERE phone_number_id = :number AND deleted_at IS NULL LIMIT 1',
+        );
+        $statement->execute([':number' => $numberId]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($row) ? ['id' => (int) $row['id'], 'slug' => $row['slug'], 'name' => $row['name']] : null;
     }
 
     /** @param array<int,string> $groupIds */
@@ -476,6 +582,8 @@ final class ServiceModel extends BaseModel
             'niche_id' => $row['niche_id'] !== null ? (int) $row['niche_id'] : null,
             'niche_name' => $row['niche_name'] ?? null,
             'niche_slug' => $row['niche_slug'] ?? null,
+            'phone_number_id' => $row['phone_number_id'] !== null ? (int) $row['phone_number_id'] : null,
+            'phone_number' => $row['phone_number'] ?? null,
             'icon' => $row['icon'],
             'image' => $row['image'],
             'featured' => (int) $row['featured'] === 1,

@@ -146,15 +146,15 @@ export const CALL_DIRECTORY_CATEGORIES: CallDirectoryCategory[] = [
   },
 ]
 
-const GROUPS_BY_ID: Record<string, ServicePhoneGroup> = SERVICE_PHONE_NUMBERS.reduce(
-  (acc, group) => {
-    acc[group.id] = group
-    return acc
-  },
-  {} as Record<string, ServicePhoneGroup>,
-)
+/**
+ * Live lookup, never a snapshot: the hydrate* helpers replace the array in
+ * place, so a cached id→group map would keep serving bundled demo lines after
+ * the API has answered.
+ */
+const findGroup = (groupId: string): ServicePhoneGroup | undefined =>
+  SERVICE_PHONE_NUMBERS.find((group) => group.id === groupId)
 
-export const getPhoneGroup = (groupId: string): ServicePhoneGroup | undefined => GROUPS_BY_ID[groupId]
+export const getPhoneGroup = (groupId: string): ServicePhoneGroup | undefined => findGroup(groupId)
 
 /**
  * Directory groups mapped to a website service slug (may be empty).
@@ -165,12 +165,12 @@ export const getGroupsForService = (serviceKey: string): ServicePhoneGroup[] => 
   const mapping = SERVICE_NUMBER_MAP[serviceKey]
   if (mapping) {
     return mapping.groupIds
-      .map((id) => GROUPS_BY_ID[id])
+      .map((id) => findGroup(id))
       .filter((group): group is ServicePhoneGroup => Boolean(group))
   }
-  const direct = GROUPS_BY_ID[serviceKey]
+  const direct = findGroup(serviceKey)
   return direct ? [direct] : []
 }
 
 export const getServiceNumberLabel = (serviceKey: string, fallbackName: string): string =>
-  SERVICE_NUMBER_MAP[serviceKey]?.label ?? GROUPS_BY_ID[serviceKey]?.name ?? fallbackName
+  SERVICE_NUMBER_MAP[serviceKey]?.label ?? findGroup(serviceKey)?.name ?? fallbackName

@@ -109,29 +109,43 @@ export const BlogPage = () => {
       />
 
       <Card>
-        <div className="flex flex-wrap items-center gap-2 border-b border-line p-3">
-          <SearchInput
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onClear={() => setQuery('')}
-            placeholder="Search title, slug or excerpt"
-            className="min-w-[220px] flex-1"
-          />
-          <Select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter by status" className="w-auto">
-            <option value="all">All statuses</option>
-            <option value="published">Published</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="draft">Drafts</option>
-          </Select>
-          <Select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filter by category" className="w-auto">
-            <option value="all">All categories</option>
-            {categories.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name}
-              </option>
-            ))}
-          </Select>
-          <Button variant="ghost" size="sm" iconLeft={<Search className="h-4 w-4" />} onClick={() => void load()}>
+        {/* One row: search grows, the two selects and the refresh button keep a
+            fixed width. Select renders `w-full`, so each one is wrapped rather
+            than sized directly — that is what made them stack one per line. */}
+        <div className="flex items-center gap-2 overflow-x-auto border-b border-line p-3">
+          <div className="min-w-[200px] flex-1">
+            <SearchInput
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onClear={() => setQuery('')}
+              placeholder="Search title, slug or excerpt"
+            />
+          </div>
+          <div className="w-[9.5rem] shrink-0">
+            <Select value={status} onChange={(event) => setStatus(event.target.value)} aria-label="Filter by status">
+              <option value="all">All statuses</option>
+              <option value="published">Published</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="draft">Drafts</option>
+            </Select>
+          </div>
+          <div className="w-[11.5rem] shrink-0">
+            <Select value={category} onChange={(event) => setCategory(event.target.value)} aria-label="Filter by category">
+              <option value="all">All categories</option>
+              {categories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0"
+            iconLeft={<Search className="h-4 w-4" />}
+            onClick={() => void load()}
+          >
             Refresh
           </Button>
         </div>
@@ -160,17 +174,43 @@ export const BlogPage = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line bg-soft/60 text-left text-2xs uppercase tracking-wide text-muted">
-                  <th className="px-4 py-2 font-semibold">Post</th>
+                  <th className="py-2 pl-4 pr-2 font-semibold">
+                    <span className="sr-only">Image</span>
+                  </th>
+                  <th className="px-2 py-2 font-semibold">Title</th>
                   <th className="px-4 py-2 font-semibold">Category</th>
                   <th className="px-4 py-2 font-semibold">Status</th>
-                  <th className="px-4 py-2 font-semibold">Publish / schedule</th>
                   <th className="px-4 py-2 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {posts.map((post) => (
                   <tr key={post.id} className="border-b border-line last:border-0 hover:bg-soft/40">
-                    <td className="max-w-[420px] px-4 py-2.5">
+                    <td className="py-2.5 pl-4 pr-2 align-middle">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/admin/blog/${post.id}`)}
+                        aria-label={`Open ${post.title}`}
+                        className="block h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-line bg-soft"
+                      >
+                        {post.featuredImage ? (
+                          <img
+                            src={post.featuredImage}
+                            alt={post.featuredImageAlt || ''}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                            onError={(event) => {
+                              event.currentTarget.style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-muted">
+                            <Newspaper className="h-4 w-4" />
+                          </span>
+                        )}
+                      </button>
+                    </td>
+                    <td className="max-w-[420px] px-2 py-2.5">
                       <button
                         type="button"
                         onClick={() => navigate(`/admin/blog/${post.id}`)}
@@ -185,18 +225,13 @@ export const BlogPage = () => {
                     </td>
                     <td className="px-4 py-2.5">
                       <Badge tone={STATUS_TONE[post.status]}>{post.status}</Badge>
-                      {post.focusKeyword ? (
-                        <span className="mt-1 block truncate text-2xs text-muted" title={post.focusKeyword}>
-                          {post.focusKeyword}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2.5 text-xs text-muted">
-                      {post.status === 'scheduled'
-                        ? formatUtc(post.scheduledAt || post.publishedAt, ADMIN_CONFIG.publishing.timezone)
-                        : post.status === 'published'
-                          ? formatUtc(post.publishedAt, ADMIN_CONFIG.publishing.timezone)
-                          : '—'}
+                      <span className="mt-1 block whitespace-nowrap text-2xs text-muted">
+                        {post.status === 'scheduled'
+                          ? `Goes live ${formatUtc(post.scheduledAt || post.publishedAt, ADMIN_CONFIG.publishing.timezone)}`
+                          : post.status === 'published'
+                            ? formatUtc(post.publishedAt, ADMIN_CONFIG.publishing.timezone)
+                            : 'Not scheduled'}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex justify-end gap-1">

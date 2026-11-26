@@ -82,7 +82,7 @@ final class BlogModel extends BaseModel
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         return [
-            'items' => array_map(static fn (array $row): array => [
+            'items' => array_map(fn (array $row): array => [
                 'id' => (int) $row['id'],
                 'slug' => $row['slug'],
                 'title' => $row['title'],

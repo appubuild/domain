@@ -44,6 +44,12 @@ final class SettingModel extends BaseModel
         'social_linkedin' => ['social', 'string', true],
         'social_x' => ['social', 'string', true],
         'social_youtube' => ['social', 'string', true],
+        'nav_links' => ['navigation', 'json', true],
+        'footer_company_links' => ['navigation', 'json', true],
+        'footer_legal_links' => ['navigation', 'json', true],
+        'footer_company_title' => ['navigation', 'string', true],
+        'footer_services_title' => ['navigation', 'string', true],
+        'footer_legal_title' => ['navigation', 'string', true],
         'analytics_id' => ['integrations', 'string', false],
         'google_verification' => ['integrations', 'string', false],
         'header_scripts' => ['integrations', 'script', false],
@@ -178,8 +184,13 @@ final class SettingModel extends BaseModel
             return [];
         }
 
+        // Upsert, not update: a setting added to DEFINITIONS after an install was
+        // created (navigation links, for example) has no row yet, and the owner
+        // must still be able to save it.
         $statement = $this->pdo()->prepare(
-            'UPDATE settings SET setting_value = :value, updated_by = :admin WHERE setting_key = :key',
+            'INSERT INTO settings (setting_key, setting_group, setting_value, setting_type, is_public, updated_by)
+             VALUES (:key, :group, :value, :type, :public, :admin)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_by = VALUES(updated_by)',
         );
 
         $pdo = $this->pdo();
@@ -190,6 +201,9 @@ final class SettingModel extends BaseModel
                     ':value' => $update['value'],
                     ':admin' => $adminId,
                     ':key' => $update['key'],
+                    ':group' => $update['group'],
+                    ':type' => $update['type'],
+                    ':public' => self::DEFINITIONS[$update['key']][2] ? 1 : 0,
                 ]);
             }
             $pdo->commit();

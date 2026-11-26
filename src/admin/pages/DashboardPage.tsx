@@ -80,7 +80,7 @@ export const DashboardPage = () => {
     load()
   }, [load])
 
-  const { live, version, error: liveError } = useLiveAnalytics()
+  const { live, loading, version, error: liveError } = useLiveAnalytics()
 
   const analytics = useMemo(() => buildAnalytics(90), [refreshedAt, version])
   const daily = useMemo(() => rangeFor(range), [range, version])
@@ -153,7 +153,7 @@ export const DashboardPage = () => {
         }
       />
 
-      {live ? null : <SimulatedNotice compact />}
+      {live || loading ? null : <SimulatedNotice compact />}
       {ADMIN_CONFIG.api.enabled && liveError ? (
         <p className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
           Live analytics could not be loaded ({liveError}). The figures below are demo data.

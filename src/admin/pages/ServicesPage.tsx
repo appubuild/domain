@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { Pencil, Plus, PhoneCall, Trash2, Wrench } from 'lucide-react'
 import { repository, type NewService } from '@/admin/data/repository'
 import type { NicheRecord, ServiceRecord, TrackingNumber } from '@/admin/types/admin'
-import { DIRECTORY_GROUPS, contentStatusTone, groupName, numbersForService } from '@/admin/lib/selectors'
+import { contentStatusTone, numbersForService } from '@/admin/lib/selectors'
+import { MediaPicker } from '@/admin/components/editor/MediaPicker'
 import { formatDate } from '@/admin/lib/format'
 import { DataTable, type Column } from '@/admin/components/DataTable'
 import {
@@ -34,12 +35,27 @@ interface ServiceFormState {
   name: string
   slug: string
   nicheId: string
-  groupId: string
+  phoneNumberId: string
   category: string
   icon: string
+  image: string
   status: ServiceRecord['status']
   featured: boolean
   shortDescription: string
+  heroHeadline: string
+  heroSubheadline: string
+  /** One paragraph per line. */
+  intro: string
+  /** "Title | Description" per line. */
+  commonNeeds: string
+  /** "Title | Description" per line. */
+  options: string
+  processNote: string
+  /** "Question | Answer" per line. */
+  faqs: string
+  /** Comma-separated service slugs. */
+  related: string
+  searchTerms: string
   metaTitle: string
   metaDescription: string
 }
@@ -48,15 +64,55 @@ const emptyForm: ServiceFormState = {
   name: '',
   slug: '',
   nicheId: '',
-  groupId: '',
+  phoneNumberId: '',
   category: 'exterior',
   icon: 'Wrench',
+  image: '',
   status: 'draft',
   featured: false,
   shortDescription: '',
+  heroHeadline: '',
+  heroSubheadline: '',
+  intro: '',
+  commonNeeds: '',
+  options: '',
+  processNote: '',
+  faqs: '',
+  related: '',
+  searchTerms: '',
   metaTitle: '',
   metaDescription: '',
 }
+
+/** "a | b" lines → [{ title, description }] */
+const parsePairs = (value: string): Array<{ title: string; description: string }> =>
+  value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, ...rest] = line.split('|')
+      return { title: (title ?? '').trim(), description: rest.join('|').trim() }
+    })
+    .filter((entry) => entry.title.length > 0)
+
+/** "q | a" lines → [{ question, answer }] */
+const parseFaqs = (value: string): Array<{ question: string; answer: string }> =>
+  value
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [question, ...rest] = line.split('|')
+      return { question: (question ?? '').trim(), answer: rest.join('|').trim() }
+    })
+    .filter((entry) => entry.question.length > 0 && entry.answer.length > 0)
+
+const pairText = (rows?: Array<{ title: string; description: string }>): string =>
+  (rows ?? []).map((row) => `${row.title} | ${row.description}`).join('\n')
+
+const faqText = (rows?: Array<{ question: string; answer: string }>): string =>
+  (rows ?? []).map((row) => `${row.question} | ${row.answer}`).join('\n')
 
 export const ServicesPage = () => {
   const toast = useToast()
@@ -72,6 +128,7 @@ export const ServicesPage = () => {
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<ServiceRecord | null>(null)
+  const [imageOpen, setImageOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
@@ -118,15 +175,26 @@ export const ServicesPage = () => {
       name: service.name,
       slug: service.slug,
       nicheId: service.nicheId ?? '',
-      groupId: service.groupId ?? '',
+      phoneNumberId: service.phoneNumberId ?? '',
       category: service.category,
       icon: service.icon,
+      image: service.image ?? '',
       status: service.status,
       featured: service.featured,
       shortDescription: service.shortDescription,
+      heroHeadline: service.heroHeadline ?? '',
+      heroSubheadline: service.heroSubheadline ?? '',
+      intro: (service.intro ?? []).join('\n'),
+      commonNeeds: pairText(service.commonNeeds),
+      options: pairText(service.options),
+      processNote: service.processNote ?? '',
+      faqs: faqText(service.faqs),
+      related: (service.related ?? []).join(', '),
+      searchTerms: (service.searchTerms ?? []).join(', '),
       metaTitle: service.metaTitle,
       metaDescription: service.metaDescription,
     })
+    setImageOpen(false)
     setFormError(null)
     setModalOpen(true)
   }
@@ -143,13 +211,25 @@ export const ServicesPage = () => {
       name: form.name.trim(),
       slug: form.slug.trim(),
       nicheId: form.nicheId || null,
-      groupId: form.groupId || null,
+      phoneNumberId: form.phoneNumberId || null,
+      phoneNumber: numbers.find((row) => row.id === form.phoneNumberId)?.number ?? null,
+      groupId: null,
       category: form.category,
       icon: form.icon || 'Wrench',
+      image: form.image.trim(),
       featured: form.featured,
       status: form.status,
       sortOrder: editing?.sortOrder ?? services.length + 1,
       shortDescription: form.shortDescription,
+      heroHeadline: form.heroHeadline.trim(),
+      heroSubheadline: form.heroSubheadline.trim(),
+      intro: form.intro.split('\n').map((line) => line.trim()).filter(Boolean),
+      commonNeeds: parsePairs(form.commonNeeds),
+      options: parsePairs(form.options),
+      processNote: form.processNote.trim(),
+      faqs: parseFaqs(form.faqs),
+      related: form.related.split(',').map((slug) => slug.trim()).filter(Boolean),
+      searchTerms: form.searchTerms.split(',').map((term) => term.trim()).filter(Boolean),
       metaTitle: form.metaTitle,
       metaDescription: form.metaDescription,
     }
@@ -299,7 +379,7 @@ export const ServicesPage = () => {
           columns={columns}
           rowKey={(row) => row.id}
           loading={loading}
-          searchText={(row) => `${row.name} ${row.slug} ${row.groupId ?? ''} ${groupName(row.groupId)}`}
+          searchText={(row) => `${row.name} ${row.slug} ${row.phoneNumber ?? ''} ${row.category}`}
           searchPlaceholder="Search services…"
           pageSize={8}
           initialSort={{ key: 'name', direction: 'asc' }}
@@ -421,22 +501,60 @@ export const ServicesPage = () => {
           </div>
 
           <Field
-            label="Phone directory group"
-            htmlFor="service-group"
-            hint="The numbers assigned to this group are the ones shown for the service."
+            label="Phone number"
+            htmlFor="service-number"
+            hint="The one line this service publishes. A number already used by another service is not listed."
           >
             <Select
-              id="service-group"
-              value={form.groupId}
-              onChange={(event) => setForm((current) => ({ ...current, groupId: event.target.value }))}
+              id="service-number"
+              value={form.phoneNumberId}
+              onChange={(event) => setForm((current) => ({ ...current, phoneNumberId: event.target.value }))}
             >
-              <option value="">No call group (shows contact message)</option>
-              {DIRECTORY_GROUPS.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name} · {group.numberCount} numbers
-                </option>
-              ))}
+              <option value="">No number (the page shows a contact message)</option>
+              {numbers
+                .filter(
+                  (row) =>
+                    !row.serviceId ||
+                    row.id === form.phoneNumberId ||
+                    row.serviceId === editing?.id,
+                )
+                .map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.number}
+                    {row.status !== 'active' ? ` (${row.status.replace('-', ' ')})` : ''}
+                  </option>
+                ))}
             </Select>
+          </Field>
+
+          <Field label="Service image" htmlFor="service-image" hint="Uploaded to /uploads on your hosting, then linked automatically.">
+            <div className="flex items-start gap-3">
+              <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-soft">
+                {form.image ? (
+                  <img src={form.image} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-2xs text-muted">No image</span>
+                )}
+              </div>
+              <div className="min-w-0 flex-1 space-y-2">
+                <Input
+                  id="service-image"
+                  value={form.image}
+                  onChange={(event) => setForm((current) => ({ ...current, image: event.target.value }))}
+                  placeholder="/uploads/library/2026/11/service-image.jpg"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={() => setImageOpen(true)}>
+                    Upload / choose image
+                  </Button>
+                  {form.image ? (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setForm((current) => ({ ...current, image: '' }))}>
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -479,6 +597,102 @@ export const ServicesPage = () => {
             />
           </Field>
 
+          <div className="rounded-xl border border-line bg-soft/40 px-3.5 py-3">
+            <p className="text-xs font-semibold text-ink">Page content</p>
+            <p className="mt-1 text-2xs leading-relaxed text-muted">
+              Everything here is published from the database. One item per line: intro takes plain paragraphs,
+              needs and options take “Title | Description”, FAQs take “Question | Answer”, related takes service slugs.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Hero headline" htmlFor="service-hero">
+              <Input
+                id="service-hero"
+                value={form.heroHeadline}
+                onChange={(event) => setForm((current) => ({ ...current, heroHeadline: event.target.value }))}
+                placeholder="Roofing options for a full replacement"
+              />
+            </Field>
+            <Field label="Hero subheadline" htmlFor="service-hero-sub">
+              <Input
+                id="service-hero-sub"
+                value={form.heroSubheadline}
+                onChange={(event) => setForm((current) => ({ ...current, heroSubheadline: event.target.value }))}
+                placeholder="What a replacement involves and how to compare quotes."
+              />
+            </Field>
+          </div>
+
+          <Field label="Intro paragraphs" htmlFor="service-intro" hint="One paragraph per line.">
+            <Textarea
+              id="service-intro"
+              rows={3}
+              value={form.intro}
+              onChange={(event) => setForm((current) => ({ ...current, intro: event.target.value }))}
+              placeholder="A roof is the one part of your home that works every day…"
+            />
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Common needs" htmlFor="service-needs" hint="Title | Description, one per line.">
+              <Textarea
+                id="service-needs"
+                rows={4}
+                value={form.commonNeeds}
+                onChange={(event) => setForm((current) => ({ ...current, commonNeeds: event.target.value }))}
+                placeholder="Storm and hail damage | Missing shingles or dented flashing."
+              />
+            </Field>
+            <Field label="Options" htmlFor="service-options" hint="Title | Description, one per line.">
+              <Textarea
+                id="service-options"
+                rows={4}
+                value={form.options}
+                onChange={(event) => setForm((current) => ({ ...current, options: event.target.value }))}
+                placeholder="Architectural asphalt shingles | The most common US choice."
+              />
+            </Field>
+          </div>
+
+          <Field label="Process note" htmlFor="service-process" hint="Shown under the call panel. Explains how requests are shared.">
+            <Textarea
+              id="service-process"
+              rows={2}
+              value={form.processNote}
+              onChange={(event) => setForm((current) => ({ ...current, processNote: event.target.value }))}
+            />
+          </Field>
+
+          <Field label="FAQs" htmlFor="service-faqs" hint="Question | Answer, one per line. Also feeds FAQ structured data.">
+            <Textarea
+              id="service-faqs"
+              rows={4}
+              value={form.faqs}
+              onChange={(event) => setForm((current) => ({ ...current, faqs: event.target.value }))}
+              placeholder="How long does a roof replacement take? | One to three days for most homes."
+            />
+          </Field>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Related services" htmlFor="service-related" hint="Comma-separated slugs.">
+              <Input
+                id="service-related"
+                value={form.related}
+                onChange={(event) => setForm((current) => ({ ...current, related: event.target.value }))}
+                placeholder="roof-repair, gutters"
+              />
+            </Field>
+            <Field label="Search terms" htmlFor="service-terms" hint="Comma-separated.">
+              <Input
+                id="service-terms"
+                value={form.searchTerms}
+                onChange={(event) => setForm((current) => ({ ...current, searchTerms: event.target.value }))}
+                placeholder="roof replacement, roofer"
+              />
+            </Field>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="SEO title" htmlFor="service-seo-title">
               <Input
@@ -497,6 +711,16 @@ export const ServicesPage = () => {
           </div>
         </form>
       </Modal>
+
+      <MediaPicker
+        open={imageOpen}
+        onClose={() => setImageOpen(false)}
+        title="Service image"
+        onSelect={(asset) => {
+          setForm((current) => ({ ...current, image: asset.path }))
+          setImageOpen(false)
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingDelete)}

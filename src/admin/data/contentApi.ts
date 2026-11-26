@@ -692,7 +692,7 @@ export const contentApi = {
         query: {
           page,
           per_page: perPage,
-          status: filters.status || undefined,
+          status: filters.status && filters.status !== 'all' ? filters.status : undefined,
           category: filters.category && filters.category !== 'all' ? filters.category : undefined,
           q: filters.q || undefined,
         },

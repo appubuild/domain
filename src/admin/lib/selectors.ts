@@ -34,10 +34,8 @@ export const numbersForService = (
   numbers: TrackingNumber[],
   service: ServiceRecord | undefined,
 ): TrackingNumber[] => {
-  if (!service?.groupId) return []
-  return numbers
-    .filter((row) => row.groupId === service.groupId)
-    .sort((a, b) => a.priority - b.priority || a.number.localeCompare(b.number))
+  if (!service?.phoneNumberId) return []
+  return numbers.filter((row) => row.id === service.phoneNumberId)
 }
 
 export const servicesForGroup = (services: ServiceRecord[], groupId: string): ServiceRecord[] =>

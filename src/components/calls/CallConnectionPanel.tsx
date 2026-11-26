@@ -73,7 +73,7 @@ const NumberCard = ({
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-2xs font-bold uppercase tracking-[0.14em] text-muted">
-          {isPrimary ? 'Primary line' : 'Alternate line'}
+          {isPrimary ? 'Service line' : 'Alternate line'}
         </p>
         {!number.published ? (
           <span className="rounded-full border border-amber-500/40 bg-amber-50 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">

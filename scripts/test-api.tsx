@@ -27,7 +27,7 @@ import { resolveServiceCall } from '@/lib/phoneDirectory'
 import { SERVICES, hydrateServices, getService } from '@/config/services'
 import { hydrateServicePhoneNumbers } from '@/data/serviceNumbers'
 import { hydrateServiceNumberMap } from '@/data/serviceNumberMapping'
-import { hydrateSite, SITE } from '@/config/site'
+import { FOOTER_COMPANY_LINKS, FOOTER_LEGAL_LINKS, FOOTER_TITLES, NAV_LINKS, hydrateNavigation, hydrateSite, SITE } from '@/config/site'
 import { HOME_FAQS, hydrateFaqs } from '@/config/faqs'
 
 let passed = 0
@@ -49,32 +49,24 @@ const group = (title: string): void => console.log(`\n── ${title} ───�
 /*  Fixtures                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const buildFixtureService = (slug: string, name: string, categoryId: string): ApiServiceDetail => {
-  const mapping = SERVICE_NUMBER_MAP[slug]
-  const groupIds = mapping?.groupIds ?? []
-
-  const phoneGroups = groupIds.flatMap((groupId) => {
-    const directoryGroup = SERVICE_PHONE_NUMBERS.find((entry) => entry.id === groupId)
-    if (!directoryGroup) return []
-    return [
-      {
-        id: directoryGroup.id,
-        name: directoryGroup.name,
-        label: directoryGroup.name,
-        blurb: `${directoryGroup.name} services`,
-        icon: 'wrench',
-        numbers: directoryGroup.numbers.map((number, index) => ({
-          id: 1000 + index + directoryGroup.id.length,
-          external_id: number.id,
-          number: number.number,
-          label: null,
-          priority: number.priority,
-          priority_label: number.priority === 1 ? 'Call Now' : 'Call Alternate',
-          tel: `tel:+1${number.number.replace(/\D/g, '')}`,
-        })),
-      },
-    ]
+// The API allows one owner per number: the first service of a group claims the
+// group's primary line, every other service starts without one.
+const fixtureOwners = (() => {
+  const owners = new Map<string, string>()
+  SERVICES.forEach((service) => {
+    const groupId = SERVICE_NUMBER_MAP[service.slug]?.groupIds[0]
+    if (groupId && !owners.has(groupId)) owners.set(groupId, service.slug)
   })
+  return owners
+})()
+
+const buildFixtureService = (slug: string, name: string, categoryId: string): ApiServiceDetail => {
+  // One line per service, exactly like the API returns it.
+  const groupId = SERVICE_NUMBER_MAP[slug]?.groupIds[0]
+  const owned = groupId ? fixtureOwners.get(groupId) === slug : false
+  const phone = owned
+    ? SERVICE_PHONE_NUMBERS.find((entry) => entry.id === groupId)?.numbers.find((row) => row.priority === 1)
+    : undefined
 
   return {
     id: 1,
@@ -99,7 +91,9 @@ const buildFixtureService = (slug: string, name: string, categoryId: string): Ap
     meta_title: `${name} title`,
     meta_description: `${name} meta description`,
     updated_at: '2026-11-07T10:00:00Z',
-    phone_groups: phoneGroups,
+    number: phone
+      ? { number: phone.number, label: `${name} line`, tel: `tel:+1${phone.number.replace(/\D/g, '')}` }
+      : null,
   }
 }
 
@@ -153,30 +147,28 @@ check('service keeps its slug and category', mappedService.slug === fixtureServi
 check('service maps FAQs', mappedService.faqs[0]?.question === 'Question?')
 
 const directory = mapDirectory(fixtureServices)
-const reachableGroupIds = new Set(Object.values(SERVICE_NUMBER_MAP).flatMap((entry) => entry.groupIds))
-const reachableNumbers = SERVICE_PHONE_NUMBERS.filter((group) => reachableGroupIds.has(group.id)).reduce(
-  (sum, group) => sum + group.numbers.length,
-  0,
-)
+const servicesWithNumber = fixtureServices.filter((service) => service.number)
+const servicesWithoutNumber = fixtureServices.filter((service) => !service.number)
 
 check('bundled directory ships 10 groups / 20 numbers', SERVICE_PHONE_NUMBERS.length === 10 &&
   SERVICE_PHONE_NUMBERS.reduce((sum, group) => sum + group.numbers.length, 0) === 20)
 check(
-  'directory maps every group reachable from a service',
-  directory.groups.length === reachableGroupIds.size,
-  `${directory.groups.length} vs ${reachableGroupIds.size}`,
+  'directory makes one group per service that has a number',
+  directory.groups.length === servicesWithNumber.length,
+  `${directory.groups.length} vs ${servicesWithNumber.length}`,
 )
+check('every directory group holds exactly one line', directory.groups.every((entry) => entry.numbers.length === 1))
 check(
-  'directory maps every reachable number',
-  Object.keys(directory.numberIndex).length === reachableNumbers,
-  `${Object.keys(directory.numberIndex).length} vs ${reachableNumbers}`,
+  'directory indexes every published line',
+  Object.keys(directory.numberIndex).length === servicesWithNumber.length,
+  `${Object.keys(directory.numberIndex).length} vs ${servicesWithNumber.length}`,
 )
-check('every reachable group has numbers', directory.groups.every((entry) => entry.numbers.length >= 2))
+check('directory keys groups by service slug', servicesWithNumber.every((service) => directory.groups.some((entry) => entry.id === service.slug)))
 check('directory maps every service', Object.keys(directory.serviceIds).length === SERVICES.length)
-check('every group has a mapping entry', Object.keys(directory.mapping).length === SERVICES.length)
+check('every service has a mapping entry', Object.keys(directory.mapping).length === SERVICES.length)
 check(
-  'services without a group map to an empty list',
-  (directory.mapping['water-damage']?.groupIds.length ?? -1) === 0,
+  'services without a number map to an empty list',
+  servicesWithoutNumber.every((service) => (directory.mapping[service.slug]?.groupIds.length ?? -1) === 0),
 )
 
 const settingsPatch = mapSettingsToSitePatch({
@@ -188,6 +180,34 @@ const settingsPatch = mapSettingsToSitePatch({
 check('settings mapping copies site name', settingsPatch.name === 'Safe Home Network')
 check('settings mapping copies contact details', settingsPatch.contact.email === 'hello@example.com')
 check('settings mapping keeps address lines', settingsPatch.contact.addressLines?.length === 1)
+
+const navPatch = mapSettingsToSitePatch({
+  nav_links: [
+    { label: 'Home', to: '/' },
+    { label: 'Trades', to: '/services' },
+  ],
+  footer_company_links: [{ label: 'About', to: '/about' }],
+  footer_legal_links: [{ label: 'Privacy', to: '/privacy-policy' }],
+  footer_company_title: 'Company links',
+  footer_legal_title: 'Policies',
+})
+check('settings mapping reads the header menu', navPatch.navigation?.nav?.length === 2)
+check(
+  'settings mapping accepts {label, path} rows',
+  mapSettingsToSitePatch({ nav_links: [{ label: 'Blog', path: '/blog' }] }).navigation?.nav?.[0]?.to === '/blog',
+)
+check(
+  'settings mapping drops incomplete rows',
+  (mapSettingsToSitePatch({ nav_links: [{ label: '', to: '/x' }, { label: 'Ok', to: '/y' }] }).navigation?.nav ?? [])
+    .length === 1,
+)
+
+hydrateSite(navPatch)
+check('site hydration replaces the header menu', NAV_LINKS.length === 2 && NAV_LINKS[1].label === 'Trades')
+check('site hydration replaces the footer lists', FOOTER_COMPANY_LINKS.length === 1 && FOOTER_LEGAL_LINKS[0].to === '/privacy-policy')
+check('site hydration renames the footer column titles', FOOTER_TITLES.company === 'Company links' && FOOTER_TITLES.legal === 'Policies')
+hydrateNavigation({ nav: [], company: [], legal: [] })
+check('an empty link list clears the menu', NAV_LINKS.length === 0)
 
 /* -------------------------------------------------------------------------- */
 /*  Snippet allow-list (defence in depth)                                     */
@@ -217,17 +237,25 @@ hydrateServicePhoneNumbers(directory.groups)
 hydrateServiceNumberMap(directory.mapping)
 
 const hydratedGroups = SERVICES.flatMap((service) => getGroupsForService(service.slug))
-check('mapping resolves groups after hydration', hydratedGroups.length === 9)
+check(
+  'mapping resolves one group per service with a line',
+  hydratedGroups.length === servicesWithNumber.length,
+  `${hydratedGroups.length} vs ${servicesWithNumber.length}`,
+)
 
 const callState = resolveServiceCall({ serviceSlug: 'roofing', serviceName: 'Roofing' })
 check('hydrated service resolves a published number', callState.kind === 'ready', callState.kind)
 check(
-  'hydrated numbers keep their priority order',
-  callState.kind === 'ready' && callState.numbers[0]?.priority <= callState.numbers[1]?.priority,
+  'hydrated service exposes exactly one line',
+  callState.kind === 'ready' && callState.numbers.length === 1,
+  callState.kind === 'ready' ? String(callState.numbers.length) : callState.kind,
 )
 
-const unmapped = resolveServiceCall({ serviceSlug: 'water-damage', serviceName: 'Water damage' })
-check('service with no group still shows the contact message', unmapped.kind === 'no-directory', unmapped.kind)
+const unmapped = resolveServiceCall({
+  serviceSlug: servicesWithoutNumber[0]?.slug ?? 'water-damage',
+  serviceName: 'Water damage',
+})
+check('service with no number still shows the contact message', unmapped.kind === 'no-directory', unmapped.kind)
 
 hydrateSite({ name: 'API Site Name', contact: { email: 'api@example.com' } })
 check('site hydration updates the name', SITE.name === 'API Site Name')

@@ -18,12 +18,14 @@ use Shn\Helpers\Response;
 use Shn\Helpers\Validator;
 use Shn\Models\PhoneGroupModel;
 use Shn\Models\PhoneNumberModel;
+use Shn\Models\ServiceModel;
 
 final class AdminPhoneNumberController extends Controller
 {
     private const RULES = [
-        'external_id' => 'required|string|min:2|max:64|regex:/^[a-z0-9][a-z0-9-]*$/',
-        'group_id' => 'required|string|max:64',
+        'external_id' => 'nullable|string|min:2|max:64|regex:/^[a-z0-9][a-z0-9-]*$/',
+        'group_id' => 'nullable|string|max:64',
+        'service_id' => 'nullable|int',
         'number' => 'required|phone|max:24',
         'label' => 'nullable|string|max:160',
         'priority' => 'nullable|int|min:1|max:9',
@@ -39,6 +41,7 @@ final class AdminPhoneNumberController extends Controller
         Request $request,
         private readonly PhoneNumberModel $numbers = new PhoneNumberModel(),
         private readonly PhoneGroupModel $groups = new PhoneGroupModel(),
+        private readonly ServiceModel $services = new ServiceModel(),
     ) {
         parent::__construct($request);
     }
@@ -68,13 +71,21 @@ final class AdminPhoneNumberController extends Controller
     public function store(Request $request): void
     {
         $data = $this->validatePayload($request, true);
-        $this->assertGroup((string) $data['group_id']);
+
+        if (empty($data['external_id'])) {
+            $data['external_id'] = 'line-' . preg_replace('/\D+/', '', (string) ($data['number'] ?? ''));
+        }
+        if (isset($data['group_id'])) {
+            $this->assertGroup((string) $data['group_id']);
+        }
 
         try {
             $id = $this->numbers->create($data);
         } catch (PDOException $exception) {
             $this->translateWriteError($exception);
         }
+
+        $this->syncService($request, $id);
 
         Logger::audit($request->admin, 'number.created', 'phone_number', $id, 'Added number ' . ($data['number'] ?? ''), $request->ip());
 
@@ -97,9 +108,38 @@ final class AdminPhoneNumberController extends Controller
             $this->translateWriteError($exception);
         }
 
+        $this->syncService($request, $numberId);
+
         Logger::audit($request->admin, 'number.updated', 'phone_number', $numberId, 'Updated a tracking number', $request->ip());
 
         Response::ok($this->numbers->adminFind($numberId));
+    }
+
+    /**
+     * Mirrors the "Service" select on the number form into
+     * services.phone_number_id — the same column the service form writes, so
+     * the relationship stays identical no matter which screen set it.
+     */
+    private function syncService(Request $request, int $numberId): void
+    {
+        if (!array_key_exists('service_id', $request->body())) {
+            return;
+        }
+
+        $value = $request->input('service_id');
+        $serviceId = $value === null || $value === '' || $value === 0 || $value === '0' ? null : (int) $value;
+
+        if ($serviceId === null) {
+            // Unassign: clear whichever service currently points at this number.
+            $current = $this->services->serviceForNumber($numberId);
+            if ($current !== null) {
+                $this->services->assignNumber((int) $current['id'], null);
+            }
+            return;
+        }
+
+        $this->services->adminFind($serviceId); // 404s when the service is gone
+        $this->services->assignNumber($serviceId, $numberId);
     }
 
     /** Marks a number as verified and active. */
